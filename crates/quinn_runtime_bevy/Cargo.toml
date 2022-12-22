@@ -1,0 +1,17 @@
+[package]
+name = "quinn_runtime_bevy"
+description = "Quinn runtime implementation built on Bevy's IO task pool."
+version = "0.1.0"
+edition = "2021"
+authors = ["The Fish Folk & Spicy Lobster Developers"]
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+quinn = { version = "0.9.1", default-features = false, features = ["native-certs", "tls-rustls"] }
+quinn-udp = { version = "0.3.0",  default-features = false }
+quinn-proto = { version = "0.9",  default-features = false }
+bevy_tasks = "0.8.1"
+async-executor = "1.4.1"
+async-io = "1.9.0"
+pin-project = "1.0.12"
+futures-lite = "1.12.0"

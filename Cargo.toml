@@ -1,0 +1,16 @@
+[package]
+name = "bones"
+version = "2.0.0"
+description = "Opinionated game meta-engine built on Bevy"
+authors = ["The Fish Folks & Spicy Lobster Developers"]
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[workspace]
+members = [
+    ".",
+    "crates/*",
+]
+
+[dependencies]
+bones_ecs = { path = "./crates/bones_ecs" }

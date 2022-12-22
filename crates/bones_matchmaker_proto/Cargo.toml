@@ -1,0 +1,10 @@
+[package]
+name = "bones_matchmaker_proto"
+version = "0.1.0"
+edition = "2021"
+authors = ["The Fish Folk & Spicy Lobster Developers"]
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+serde = { version = "1.0.147", features = ["derive"] }
+ulid = { version = "1.0.0", features = ["serde"] }

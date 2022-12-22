@@ -1,0 +1,17 @@
+[package]
+name = "bones_has_load_progress"
+version = "0.1.0"
+edition = "2021"
+authors = ["The Fish Folk & Spicy Lobster Developers"]
+license = "MIT OR Apache-2.0"
+
+[dependencies.bevy]
+version = "0.8.1"
+default-features = false
+features = [
+    "bevy_asset"
+]
+
+[dependencies]
+macros = { package = "bones_has_load_progress_macros", path = "./macros" }
+bevy_egui = { version = "0.16.1", optional = true }
