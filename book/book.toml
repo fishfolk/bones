@@ -1,0 +1,15 @@
+[book]
+authors = ["Fish Folk & Spicy Lobster Contributors"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Bones Book"
+
+[build]
+build-dir = "dist"
+create-missing = false
+
+[output.html]
+default-theme = "navy"
+git-repository-url = "https://github.com/fishfolk/bones"
+git-repository-icon = "fa-github"
