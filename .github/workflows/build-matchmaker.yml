@@ -1,4 +1,4 @@
-name: Build & Publish Matchmaker Docker Image
+name: Build Matchmaker
 
 on:
   push:
