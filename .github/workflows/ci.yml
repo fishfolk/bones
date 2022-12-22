@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - trying
+  pull_request:
+
+jobs:
+  check_formatting:
+    runs-on: ubuntu-latest
+    name: Check Rust formatting
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rustfmt
+        uses: actions-rs/toolchain@v1
+        with:
+          components: rustfmt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  clippy_correctness_checks:
+    runs-on: ubuntu-latest
+    name: Clippy correctness checks
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { target: "x86_64-unknown-linux-gnu", target_dir: "target" }
+          # Disable WASM Target until we fix WASM compile
+          # - { target: 'wasm32-unknown-unknown', target_dir: 'web-target' }
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y -q \
+              libasound2-dev \
+              libudev-dev
+      - uses: actions/checkout@v3
+      - name: Install WASM Target
+        if: matrix.config.target == 'wasm32-unknown-unknown'
+        uses: actions-rs/toolchain@v1
+        with:
+          target: ${{ matrix.config.target }}
+          components: clippy
+      - name: Install Clippy
+        if: matrix.config.target != 'wasm32-unknown-unknown'
+        uses: actions-rs/toolchain@v1
+        with:
+          components: clippy
+      - uses: actions/cache@v3
+        name: Cache cargo registry
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: cargo-registry
+      - uses: actions/cache@v3
+        name: Cache cargo target
+        with:
+          path: |
+            target/
+            web-target/
+          key: ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions-rs/cargo@v1
+        env:
+          CARGO_TARGET_DIR: ${{ matrix.config.target_dir }}
+        with:
+          command: clippy
+          args: --target ${{ matrix.config.target }} -- -W clippy::correctness -D warnings
+
+  miri_tests:
+    runs-on: ubuntu-latest
+    name: Miri tests
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y -q \
+              libasound2-dev \
+              libudev-dev
+      - uses: actions/checkout@v3
+      - name: Install Miri
+        run: |
+          rustup toolchain install nightly --component miri
+          rustup override set nightly
+          cargo miri setup
+      - uses: actions/cache@v3
+        name: Cache cargo registry
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: cargo-registry
+      - uses: actions/cache@v3
+        name: Cache miri target
+        with:
+          path: |
+            target/
+          key: miri-target
+      - name: Test with Miri
+        run: |
+          # Try multiple seeds to catch possible alignment issues
+          for SEED in $(seq 0 10); do
+            echo "Trying seed: $SEED"
+            MIRIFLAGS=-Zmiri-seed=$SEED cargo miri test || { echo "Failing seed: $SEED"; exit 1; };
+          done

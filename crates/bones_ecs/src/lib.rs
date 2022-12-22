@@ -79,7 +79,7 @@ impl<T: type_uuid::TypeUuid + EcsData> TypedEcsData for T {}
 /// # Example
 ///
 /// ```
-/// # use board_ecs::prelude::*;
+/// # use bones_ecs::prelude::*;
 /// # use core::alloc::Layout;
 /// let components = unsafe {
 ///     UntypedComponentStore::new(Layout::new::<String>(), String::raw_clone, Some(String::raw_drop));

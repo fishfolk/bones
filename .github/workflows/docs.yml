@@ -1,0 +1,65 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - trying
+  pull_request:
+
+jobs:
+  book:
+    name: Build Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y -q \
+              libasound2-dev \
+              libudev-dev
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+
+      - name: Install mdbook
+        uses: peaceiris/actions-mdbook@v1
+        with:
+          mdbook-version: "0.4.22"
+
+      - uses: actions/cache@v3
+        name: Cache cargo registry
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: cargo-registry
+      - uses: actions/cache@v3
+        name: Cache cargo target
+        with:
+          path: |
+            target/
+            web-target/
+          key: Linux-cargo-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build Rustdoc
+        run: |
+          cargo doc --workspace --no-deps
+          mv target/doc book/src/rustdoc
+
+      - name: Build MDBook
+        run: |
+            cd book
+            mdbook build
+
+      - name: Deploy 🚀
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./book/dist

@@ -1,6 +1,6 @@
 use bevy_tasks::IoTaskPool;
-use futures_lite::future;
 use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse};
+use futures_lite::future;
 use once_cell::sync::Lazy;
 use quinn::{Connection, ConnectionError};
 use scc::HashMap;

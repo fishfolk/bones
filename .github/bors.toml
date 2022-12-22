@@ -1,0 +1,10 @@
+use_squash_merge = true
+cut_body_after = "_ _ _"
+pr_status = [
+  "Validate conventional PR title",
+]
+status = [
+  "Check Rust formatting",
+  "Clippy correctness checks (%)",
+  "Build Docs",
+]

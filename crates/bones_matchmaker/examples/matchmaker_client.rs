@@ -1,8 +1,8 @@
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use bevy_tasks::{IoTaskPool, TaskPool};
-use certs::SkipServerVerification;
 use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse};
+use certs::SkipServerVerification;
 use quinn::{ClientConfig, Endpoint, EndpointConfig};
 use quinn_runtime_bevy::BevyIoTaskPoolExecutor;
 use serde::{Deserialize, Serialize};
