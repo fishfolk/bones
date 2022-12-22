@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"bones_has_load_progress":[["impl&lt;'w, 's&gt; SystemParam for <a class=\"struct\" href=\"bones_has_load_progress/struct.LoadingResources.html\" title=\"struct bones_has_load_progress::LoadingResources\">LoadingResources</a>&lt;'w, 's&gt;"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
