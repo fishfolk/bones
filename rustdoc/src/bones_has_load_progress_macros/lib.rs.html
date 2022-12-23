@@ -160,7 +160,7 @@
     <span class="comment">// If we are skipping all fields
     </span><span class="kw">if </span>skip_all_fields {
         impl_function_body = <span class="macro">quote! </span>{
-            bevy_has_load_progress::LoadProgress::default()
+            bones_has_load_progress::LoadProgress::default()
         };
 
     <span class="comment">// If we should process struct fields
@@ -194,7 +194,7 @@
             <span class="comment">// Add this fields load progress to the list of progresses
             </span><span class="kw">let </span>field_ident = field.ident.as_ref().expect(<span class="string">&quot;Field ident&quot;</span>);
             progresses.push(<span class="macro">quote_spanned! </span>{ field_ident.span() =&gt;
-                bevy_has_load_progress::HasLoadProgress::load_progress(
+                bones_has_load_progress::HasLoadProgress::load_progress(
                     <span class="kw-2">&amp;</span><span class="self">self</span>.#field_ident,
                     loading_resources
                 )
@@ -204,17 +204,17 @@
         <span class="comment">// Retrun the merged progress result
         </span>impl_function_body = <span class="macro">quote! </span>{
             #impl_function_body
-            bevy_has_load_progress::LoadProgress::merged([ #( #progresses),* ])
+            bones_has_load_progress::LoadProgress::merged([ #( #progresses),* ])
         };
     }
 
     <span class="comment">// Fill out rest of impl block
     </span><span class="macro">quote! </span>{
-        <span class="kw">impl </span>bevy_has_load_progress::HasLoadProgress <span class="kw">for </span>#item_ident {
+        <span class="kw">impl </span>bones_has_load_progress::HasLoadProgress <span class="kw">for </span>#item_ident {
             <span class="kw">fn </span>load_progress(
                 <span class="kw-2">&amp;</span><span class="self">self</span>,
-                loading_resources: <span class="kw-2">&amp;</span>bevy_has_load_progress::LoadingResources
-            ) -&gt; bevy_has_load_progress::LoadProgress {
+                loading_resources: <span class="kw-2">&amp;</span>bones_has_load_progress::LoadingResources
+            ) -&gt; bones_has_load_progress::LoadProgress {
                 #impl_function_body
             }
         }
