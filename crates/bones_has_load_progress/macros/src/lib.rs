@@ -49,7 +49,7 @@ fn impl_has_load_progress(input: &syn::DeriveInput) -> TokenStream2 {
     // If we are skipping all fields
     if skip_all_fields {
         impl_function_body = quote! {
-            bevy_has_load_progress::LoadProgress::default()
+            bones_has_load_progress::LoadProgress::default()
         };
 
     // If we should process struct fields
@@ -83,7 +83,7 @@ fn impl_has_load_progress(input: &syn::DeriveInput) -> TokenStream2 {
             // Add this fields load progress to the list of progresses
             let field_ident = field.ident.as_ref().expect("Field ident");
             progresses.push(quote_spanned! { field_ident.span() =>
-                bevy_has_load_progress::HasLoadProgress::load_progress(
+                bones_has_load_progress::HasLoadProgress::load_progress(
                     &self.#field_ident,
                     loading_resources
                 )
@@ -93,17 +93,17 @@ fn impl_has_load_progress(input: &syn::DeriveInput) -> TokenStream2 {
         // Retrun the merged progress result
         impl_function_body = quote! {
             #impl_function_body
-            bevy_has_load_progress::LoadProgress::merged([ #( #progresses),* ])
+            bones_has_load_progress::LoadProgress::merged([ #( #progresses),* ])
         };
     }
 
     // Fill out rest of impl block
     quote! {
-        impl bevy_has_load_progress::HasLoadProgress for #item_ident {
+        impl bones_has_load_progress::HasLoadProgress for #item_ident {
             fn load_progress(
                 &self,
-                loading_resources: &bevy_has_load_progress::LoadingResources
-            ) -> bevy_has_load_progress::LoadProgress {
+                loading_resources: &bones_has_load_progress::LoadingResources
+            ) -> bones_has_load_progress::LoadProgress {
                 #impl_function_body
             }
         }
