@@ -1,0 +1,9 @@
+{
+    "conventionalCommits.scopes": [
+        "bones_ecs",
+        "bones_has_load_progress",
+        "bones_matchmaker",
+        "bones_matchmaker_proto",
+        "quinn_runtime_bevy",
+    ]
+}
