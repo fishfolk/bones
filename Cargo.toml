@@ -12,5 +12,9 @@ members = [
     "crates/*",
 ]
 
+[features]
+camera_shake = ["dep:bones_camera_shake"]
+
 [dependencies]
 bones_ecs = { path = "./crates/bones_ecs" }
+bones_camera_shake = { path = "./crates/bones_camera_shake", optional = true }
