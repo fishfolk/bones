@@ -7,4 +7,5 @@ status = [
   "Check Rust formatting",
   "Clippy correctness checks (%)",
   "Build Docs",
+  "Miri tests"
 ]
