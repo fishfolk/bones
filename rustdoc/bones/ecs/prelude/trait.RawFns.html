@@ -16,10 +16,16 @@ of scripting or otherwise untyped data access.</p>
 };</code></pre></div>
 </div></details><h2 id="required-methods" class="small-section-header">Required Methods<a href="#required-methods" class="anchor"></a></h2><div class="methods"><details class="rustdoc-toggle" open><summary><div id="tymethod.raw_drop" class="method has-srclink"><h4 class="code-header">unsafe extern &quot;C&quot; fn <a href="#tymethod.raw_drop" class="fnname">raw_drop</a>(ptr: <a class="primitive" href="https://doc.rust-lang.org/1.65.0/std/primitive.pointer.html">*mut </a><a class="primitive" href="https://doc.rust-lang.org/1.65.0/std/primitive.u8.html">u8</a>)</h4></div></summary><div class="docblock"><p>Drop the value at <code>ptr</code>.</p>
 <h5 id="safety"><a href="#safety">Safety</a></h5>
-<p>Pointer must point to a valid instance of the type that this implementation is assocated
-wit</p>
+<ul>
+<li>The pointer must point to a valid instance of the type that this implementation is
+assocated with.</li>
+<li>The pointer must be writable.</li>
+</ul>
 </div></details><details class="rustdoc-toggle" open><summary><div id="tymethod.raw_clone" class="method has-srclink"><h4 class="code-header">unsafe extern &quot;C&quot; fn <a href="#tymethod.raw_clone" class="fnname">raw_clone</a>(src: <a class="primitive" href="https://doc.rust-lang.org/1.65.0/std/primitive.pointer.html">*const </a><a class="primitive" href="https://doc.rust-lang.org/1.65.0/std/primitive.u8.html">u8</a>, dst: <a class="primitive" href="https://doc.rust-lang.org/1.65.0/std/primitive.pointer.html">*mut </a><a class="primitive" href="https://doc.rust-lang.org/1.65.0/std/primitive.u8.html">u8</a>)</h4></div></summary><div class="docblock"><p>Clone the value at <code>src</code>, writing the new value to <code>dst</code>.</p>
 <h5 id="safety-1"><a href="#safety-1">Safety</a></h5>
-<p>Pointer must point to a valid instance of the type that this implementation is assocated
-with, and the destination pointer must be properly aligned and writable.</p>
+<ul>
+<li>The src pointer must point to a valid instance of the type that this implementation is
+assocated with.</li>
+<li>The destination pointer must be properly aligned and writable.</li>
+</ul>
 </div></details></div><h2 id="implementors" class="small-section-header">Implementors<a href="#implementors" class="anchor"></a></h2><div class="item-list" id="implementors-list"><section id="impl-RawFns-for-T" class="impl has-srclink"><a href="#impl-RawFns-for-T" class="anchor"></a><h3 class="code-header in-band">impl&lt;T&gt; <a class="trait" href="../trait.RawFns.html" title="trait bones::ecs::RawFns">RawFns</a> for T<span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="https://doc.rust-lang.org/1.65.0/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a>,</span></h3></section></div><script src="../../../implementors/bones_ecs/trait.RawFns.js" async></script></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="bones" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

@@ -136,6 +136,16 @@
 <span id="136">136</span>
 <span id="137">137</span>
 <span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
 </pre><pre class="rust"><code><span class="attribute">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
@@ -227,20 +237,24 @@
     <span class="doccomment">/// Drop the value at `ptr`.
     ///
     /// # Safety
-    /// Pointer must point to a valid instance of the type that this implementation is assocated
-    /// wit
+    /// - The pointer must point to a valid instance of the type that this implementation is
+    /// assocated with.
+    /// - The pointer must be writable.
     </span><span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>raw_drop(ptr: <span class="kw-2">*mut </span>u8);
 
     <span class="doccomment">/// Clone the value at `src`, writing the new value to `dst`.
     ///
     /// # Safety
-    /// Pointer must point to a valid instance of the type that this implementation is assocated
-    /// with, and the destination pointer must be properly aligned and writable.
+    /// - The src pointer must point to a valid instance of the type that this implementation is
+    /// assocated with.
+    /// - The destination pointer must be properly aligned and writable.
     </span><span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>raw_clone(src: <span class="kw-2">*const </span>u8, dst: <span class="kw-2">*mut </span>u8);
 }
 
 <span class="kw">impl</span>&lt;T: Clone&gt; RawFns <span class="kw">for </span>T {
     <span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>raw_drop(ptr: <span class="kw-2">*mut </span>u8) {
+        <span class="kw">use </span>std::io::{<span class="self">self</span>, Write};
+
         <span class="kw">let </span>result = std::panic::catch_unwind(|| {
             <span class="kw">if </span>std::mem::needs_drop::&lt;T&gt;() {
                 (ptr <span class="kw">as </span><span class="kw-2">*mut </span>T).drop_in_place()
@@ -248,16 +262,20 @@
         });
 
         <span class="kw">if </span>result.is_err() {
-            <span class="macro">eprintln!</span>(
+            <span class="macro">writeln!</span>(
+                io::stderr(),
                 <span class="string">&quot;Rust type {} panicked in destructor.\n\
                 Unable to panic across C ABI: aborting.&quot;</span>,
                 std::any::type_name::&lt;T&gt;()
-            );
+            )
+            .ok();
             std::process::abort();
         }
     }
 
     <span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>raw_clone(src: <span class="kw-2">*const </span>u8, dst: <span class="kw-2">*mut </span>u8) {
+        <span class="kw">use </span>std::io::{<span class="self">self</span>, Write};
+
         <span class="kw">let </span>result = std::panic::catch_unwind(|| {
             <span class="kw">let </span>t = <span class="kw-2">&amp;*</span>(src <span class="kw">as </span><span class="kw-2">*const </span>T);
             <span class="kw">let </span>t = t.clone();
@@ -265,11 +283,13 @@
         });
 
         <span class="kw">if </span>result.is_err() {
-            <span class="macro">eprintln!</span>(
+            <span class="macro">writeln!</span>(
+                io::stderr(),
                 <span class="string">&quot;Rust type {} panicked in clone implementation.\n\
                 Unable to panic across C ABI: aborting.&quot;</span>,
                 std::any::type_name::&lt;T&gt;()
-            );
+            )
+            .ok();
             std::process::abort();
         }
     }

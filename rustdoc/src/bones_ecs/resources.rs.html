@@ -345,8 +345,9 @@
 </span><span class="kw">use </span>std::{
     alloc::{<span class="self">self</span>, Layout},
     any::TypeId,
+    io::Write,
     marker::PhantomData,
-    mem::{<span class="self">self</span>, ManuallyDrop},
+    mem,
     ptr::NonNull,
     sync::Arc,
 };
@@ -391,14 +392,32 @@
     ///
     /// # Safety
     ///
-    /// The implementations for `clone_fn` and `drop_fn` must not do anything unsound when given
-    /// valid pointers to clone or drop.
+    /// - The implementations for `info.clone_fn` and `info.drop_fn` must not do anything unsound
+    ///   when given valid pointers to clone or drop.
+    /// - The `info.cell` must contain a pointer that is writable and points to data with a layout
+    ///   matching `info.layout`.
     </span><span class="kw">pub unsafe fn </span>new_raw(info: UntypedResourceInfo) -&gt; <span class="self">Self </span>{
         UntypedResource {
             layout: info.layout,
             cell: info.cell,
             clone_fn: info.clone_fn,
             drop_fn: info.drop_fn,
+        }
+    }
+
+    <span class="doccomment">/// Creates a new [`UntypedResource`] from an instance of a Rust type.
+    ///
+    /// This is the safest way to construct a valid [`UntypedResource`].
+    </span><span class="kw">pub fn </span>new&lt;T: Clone + Sync + Send&gt;(resource: T) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>layout = Layout::new::&lt;T&gt;();
+
+        <span class="kw">let </span>ptr = Box::into_raw(Box::new(resource)) <span class="kw">as </span><span class="kw-2">*mut </span>u8;
+
+        <span class="self">Self </span>{
+            cell: Arc::new(AtomicRefCell::new(ptr)),
+            clone_fn: T::raw_clone,
+            drop_fn: <span class="prelude-val">Some</span>(T::raw_drop),
+            layout,
         }
     }
 }
@@ -416,6 +435,15 @@
             </span><span class="kw">unsafe </span>{ std::alloc::alloc(<span class="self">self</span>.layout) }
         };
 
+        <span class="kw">if </span>new_ptr.is_null() {
+            <span class="macro">writeln!</span>(
+                std::io::stderr(),
+                <span class="string">&quot;Error alloating memory while cloning resource&quot;
+            </span>)
+            .ok();
+            std::process::abort();
+        }
+
         <span class="comment">// SAFE: UntypedResource can only be constructed with an unsafe function where the user
         // promises not to do anything unsound while dropping.
         //
@@ -429,34 +457,6 @@
             clone_fn: <span class="self">self</span>.clone_fn,
             drop_fn: <span class="self">self</span>.drop_fn,
             layout: <span class="self">self</span>.layout,
-        }
-    }
-}
-
-<span class="kw">impl </span>UntypedResource {
-    <span class="doccomment">/// Creates a new [`UntypedResource`] from an instance of a Rust type.
-    ///
-    /// This is the safest way to construct a valid [`UntypedResource`].
-    </span><span class="kw">pub fn </span>new&lt;T: Clone + Sync + Send&gt;(resource: T) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>layout = Layout::new::&lt;T&gt;();
-
-        <span class="kw">let </span>ptr = <span class="kw">if </span>layout.size() == <span class="number">0 </span>{
-            NonNull::dangling().as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>u8
-        } <span class="kw">else </span>{
-            <span class="kw">let </span>resource = ManuallyDrop::new(resource);
-            <span class="comment">// SAFE: non-zero layout size
-            </span><span class="kw">let </span>ptr = <span class="kw">unsafe </span>{ std::alloc::alloc(layout) };
-            <span class="kw">let </span>ptr_t = ptr <span class="kw">as </span><span class="kw-2">*mut </span>ManuallyDrop&lt;T&gt;;
-            <span class="comment">// SAFE: ptr is valid for writes and properly aligned
-            </span><span class="kw">unsafe </span>{ ptr_t.write(resource) };
-            ptr_t <span class="kw">as </span><span class="kw-2">*mut </span>u8
-        };
-
-        <span class="self">Self </span>{
-            cell: Arc::new(AtomicRefCell::new(ptr)),
-            clone_fn: T::raw_clone,
-            drop_fn: <span class="prelude-val">Some</span>(T::raw_drop),
-            layout,
         }
     }
 }
