@@ -3,8 +3,9 @@
 use std::{
     alloc::{self, Layout},
     any::TypeId,
+    io::Write,
     marker::PhantomData,
-    mem::{self, ManuallyDrop},
+    mem,
     ptr::NonNull,
     sync::Arc,
 };
@@ -49,14 +50,32 @@ impl UntypedResource {
     ///
     /// # Safety
     ///
-    /// The implementations for `clone_fn` and `drop_fn` must not do anything unsound when given
-    /// valid pointers to clone or drop.
+    /// - The implementations for `info.clone_fn` and `info.drop_fn` must not do anything unsound
+    ///   when given valid pointers to clone or drop.
+    /// - The `info.cell` must contain a pointer that is writable and points to data with a layout
+    ///   matching `info.layout`.
     pub unsafe fn new_raw(info: UntypedResourceInfo) -> Self {
         UntypedResource {
             layout: info.layout,
             cell: info.cell,
             clone_fn: info.clone_fn,
             drop_fn: info.drop_fn,
+        }
+    }
+
+    /// Creates a new [`UntypedResource`] from an instance of a Rust type.
+    ///
+    /// This is the safest way to construct a valid [`UntypedResource`].
+    pub fn new<T: Clone + Sync + Send>(resource: T) -> Self {
+        let layout = Layout::new::<T>();
+
+        let ptr = Box::into_raw(Box::new(resource)) as *mut u8;
+
+        Self {
+            cell: Arc::new(AtomicRefCell::new(ptr)),
+            clone_fn: T::raw_clone,
+            drop_fn: Some(T::raw_drop),
+            layout,
         }
     }
 }
@@ -74,6 +93,15 @@ impl Clone for UntypedResource {
             unsafe { std::alloc::alloc(self.layout) }
         };
 
+        if new_ptr.is_null() {
+            writeln!(
+                std::io::stderr(),
+                "Error alloating memory while cloning resource"
+            )
+            .ok();
+            std::process::abort();
+        }
+
         // SAFE: UntypedResource can only be constructed with an unsafe function where the user
         // promises not to do anything unsound while dropping.
         //
@@ -87,34 +115,6 @@ impl Clone for UntypedResource {
             clone_fn: self.clone_fn,
             drop_fn: self.drop_fn,
             layout: self.layout,
-        }
-    }
-}
-
-impl UntypedResource {
-    /// Creates a new [`UntypedResource`] from an instance of a Rust type.
-    ///
-    /// This is the safest way to construct a valid [`UntypedResource`].
-    pub fn new<T: Clone + Sync + Send>(resource: T) -> Self {
-        let layout = Layout::new::<T>();
-
-        let ptr = if layout.size() == 0 {
-            NonNull::dangling().as_ptr() as *mut u8
-        } else {
-            let resource = ManuallyDrop::new(resource);
-            // SAFE: non-zero layout size
-            let ptr = unsafe { std::alloc::alloc(layout) };
-            let ptr_t = ptr as *mut ManuallyDrop<T>;
-            // SAFE: ptr is valid for writes and properly aligned
-            unsafe { ptr_t.write(resource) };
-            ptr_t as *mut u8
-        };
-
-        Self {
-            cell: Arc::new(AtomicRefCell::new(ptr)),
-            clone_fn: T::raw_clone,
-            drop_fn: Some(T::raw_drop),
-            layout,
         }
     }
 }
