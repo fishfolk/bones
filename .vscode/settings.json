@@ -4,6 +4,7 @@
         "bones_has_load_progress",
         "bones_matchmaker",
         "bones_matchmaker_proto",
+        "bones_camera_shake",
         "quinn_runtime_bevy",
     ]
 }
