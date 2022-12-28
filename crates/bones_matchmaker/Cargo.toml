@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 anyhow = "1.0.66"
-bevy_tasks = "0.8.1"
+bevy_tasks = "0.9.1"
 bones_matchmaker_proto = { path = "../bones_matchmaker_proto" }
 bytes = "1.2.1"
 clap = { version = "4.0.18", features = ["derive", "env"] }
@@ -21,7 +21,7 @@ quinn_runtime_bevy = { path = "../quinn_runtime_bevy" }
 rand = "0.8.5"
 rcgen = "0.10.0"
 rustls = { version = "0.20.7", features = ["dangerous_configuration", "quic"] }
-scc = "0.12.3"
+scc = "1.0.1"
 serde = { version = "1.0.147", features = ["derive"] }
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }

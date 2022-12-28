@@ -1206,7 +1206,7 @@ version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-io",
- "bevy_tasks 0.8.1",
+ "bevy_tasks 0.9.1",
  "bones_matchmaker_proto",
  "bytes",
  "clap",
@@ -3179,12 +3179,9 @@ dependencies = [
 
 [[package]]
 name = "scc"
-version = "0.12.3"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c7ab7aaaf543c12c5e2347845e1c5551c9e14c63765b781b1571f3d0f1dad63"
-dependencies = [
- "scopeguard",
-]
+checksum = "629fa60ab4f329c71e5d2edc4ecd47b4e9b9e075b9203d112cf181615c475c00"
 
 [[package]]
 name = "schannel"
