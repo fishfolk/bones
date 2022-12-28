@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["CameraShake","Component for an entity with camera shake."],["CameraShakePlugin","Add this plugin to your app to enable camera shake."],["CameraTrauma","Event to add trauma to the camera. Provide a value between 0 and 1 for the trauma amount."]]};

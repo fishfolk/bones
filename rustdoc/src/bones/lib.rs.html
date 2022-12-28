@@ -4,11 +4,25 @@
 <span id="4">4</span>
 <span id="5">5</span>
 <span id="6">6</span>
+<span id="7">7</span>
+<span id="8">8</span>
+<span id="9">9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Opinionated game meta-engine built on Bevy.
 
 /// Entity component system for the bones library.
 </span><span class="kw">pub mod </span>ecs {
     <span class="kw">pub use </span>bones_ecs::<span class="kw-2">*</span>;
+}
+
+<span class="doccomment">/// This crate provides 2D camera shake using the methodology described in this excellent [GDC
+/// talk](https://www.youtube.com/watch?v=tu-Qe66AvtY) by Squirrel Eiserloh.
+</span><span class="attribute">#[cfg(feature = <span class="string">&quot;camera_shake&quot;</span>)]
+</span><span class="kw">pub mod </span>camera_shake {
+    <span class="kw">pub use </span>bones_camera_shake::<span class="kw-2">*</span>;
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="bones" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>
