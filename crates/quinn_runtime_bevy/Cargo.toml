@@ -10,7 +10,7 @@ license = "MIT OR Apache-2.0"
 quinn = { version = "0.9.1", default-features = false, features = ["native-certs", "tls-rustls"] }
 quinn-udp = { version = "0.3.0",  default-features = false }
 quinn-proto = { version = "0.9",  default-features = false }
-bevy_tasks = "0.8.1"
+bevy_tasks = "0.9.1"
 async-executor = "1.4.1"
 async-io = "1.9.0"
 pin-project = "1.0.12"
