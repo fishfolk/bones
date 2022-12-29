@@ -146,12 +146,13 @@ mod tests {
 
     #[test]
     fn join_components() {
-        #[derive(TypeUuid, Clone)]
-        #[uuid = "f92ee887-6d2f-4fea-9c6c-d47754d4873a"]
+        #[derive(TypeUlid, Clone)]
+        #[ulid = "01GNDJCYWP4PPSVNH946ADNQ3Y"]
         struct A;
-        #[derive(TypeUuid, Clone)]
-        #[uuid = "8fe1f4cb-be2d-4be1-8dbc-2e55da7b101e"]
+        #[derive(TypeUlid, Clone)]
+        #[ulid = "01GNDJDEVQGMWK83J8J5AVFFPP"]
         struct B;
+
         let comp1 = ComponentStore::<A>::default();
         let comp2 = ComponentStore::<B>::default();
         join!(&comp1 && &comp2).for_each(|_| {});
@@ -159,11 +160,11 @@ mod tests {
 
     #[test]
     fn join_components_atomic() {
-        #[derive(TypeUuid, Clone)]
-        #[uuid = "f92ee887-6d2f-4fea-9c6c-d47754d4873a"]
+        #[derive(TypeUlid, Clone)]
+        #[ulid = "01GNDJFV61SXBNPF49ZERXARF1"]
         struct A;
-        #[derive(TypeUuid, Clone)]
-        #[uuid = "8fe1f4cb-be2d-4be1-8dbc-2e55da7b101e"]
+        #[derive(TypeUlid, Clone)]
+        #[ulid = "01GNDJG5TDY54NYCG5T8JTM645"]
         struct B;
         let comp1 = AtomicComponentStore::<A>::default();
         let comp1 = comp1.borrow_mut();
@@ -174,14 +175,14 @@ mod tests {
 
     #[test]
     fn complex_join() {
-        #[derive(TypeUuid, Clone)]
-        #[uuid = "f92ee887-6d2f-4fea-9c6c-d47754d4873a"]
+        #[derive(TypeUlid, Clone)]
+        #[ulid = "01GNDJGHGSWN01FK311SZZT8K5"]
         struct A;
-        #[derive(TypeUuid, Clone)]
-        #[uuid = "8fe1f4cb-be2d-4be1-8dbc-2e55da7b101e"]
+        #[derive(TypeUlid, Clone)]
+        #[ulid = "01GNDJGQWX3E2W5Q3WFT1543WR"]
         struct B;
-        #[derive(TypeUuid, Clone)]
-        #[uuid = "f227d3fe-d525-48cc-8aa9-c1c43e69b4f9"]
+        #[derive(TypeUlid, Clone)]
+        #[ulid = "01GNDJGYYVAF6RRTN7W7AZKMB7"]
         struct C;
         let mut storage1 = ComponentStore::<A>::default();
         let storage2 = ComponentStore::<B>::default();
@@ -195,11 +196,11 @@ mod tests {
 
     #[test]
     fn start_with_not() {
-        #[derive(TypeUuid, Clone)]
-        #[uuid = "f92ee887-6d2f-4fea-9c6c-d47754d4873a"]
+        #[derive(TypeUlid, Clone)]
+        #[ulid = "01GNDJHBP5GYXYTXK8YY61CVDD"]
         struct A;
-        #[derive(TypeUuid, Clone)]
-        #[uuid = "8fe1f4cb-be2d-4be1-8dbc-2e55da7b101e"]
+        #[derive(TypeUlid, Clone)]
+        #[ulid = "01GNDJHJW7N8N05R8HVK7YB7GE"]
         struct B;
         let comp1 = ComponentStore::<A>::default();
         let comp2 = ComponentStore::<B>::default();

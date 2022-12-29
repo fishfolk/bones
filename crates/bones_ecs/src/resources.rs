@@ -20,7 +20,7 @@ use crate::prelude::*;
 /// should use [`Resources`] instead.
 #[derive(Clone, Default)]
 pub struct UntypedResources {
-    resources: UuidMap<UntypedResource>,
+    resources: UlidMap<UntypedResource>,
 }
 
 /// Used to construct an [`UntypedResource`].
@@ -153,17 +153,17 @@ impl UntypedResources {
     }
 
     /// Insert a new resource
-    pub fn insert(&mut self, uuid: Uuid, resource: UntypedResource) -> Option<UntypedResource> {
+    pub fn insert(&mut self, uuid: Ulid, resource: UntypedResource) -> Option<UntypedResource> {
         self.resources.insert(uuid, resource)
     }
 
     /// Get a cell containing the resource data pointer for the given ID
-    pub fn get(&self, uuid: Uuid) -> Option<Arc<AtomicRefCell<*mut u8>>> {
+    pub fn get(&self, uuid: Ulid) -> Option<Arc<AtomicRefCell<*mut u8>>> {
         self.resources.get(&uuid).map(|x| x.cell.clone())
     }
 
     /// Remove a resource
-    pub fn remove(&mut self, uuid: Uuid) -> Option<UntypedResource> {
+    pub fn remove(&mut self, uuid: Ulid) -> Option<UntypedResource> {
         self.resources.remove(&uuid)
     }
 }
@@ -174,7 +174,7 @@ impl UntypedResources {
 #[derive(Clone, Default)]
 pub struct Resources {
     untyped: UntypedResources,
-    type_ids: UuidMap<TypeId>,
+    type_ids: UlidMap<TypeId>,
 }
 
 impl Resources {
@@ -195,7 +195,7 @@ impl Resources {
     /// # Panics
     ///
     /// Panics if you try to insert a Rust type with a different [`TypeId`], but the same
-    /// [`TypeUuid`] as another resource in the store.
+    /// [`TypeUlid`] as another resource in the store.
     #[track_caller]
     pub fn insert<T: TypedEcsData>(&mut self, resource: T) {
         self.try_insert(resource).unwrap();
@@ -206,15 +206,15 @@ impl Resources {
     /// # Errors
     ///
     /// Errors if you try to insert a Rust type with a different [`TypeId`], but the same
-    /// [`TypeUuid`] as another resource in the store.
+    /// [`TypeUlid`] as another resource in the store.
     pub fn try_insert<T: TypedEcsData>(&mut self, resource: T) -> Result<(), EcsError> {
-        let uuid = T::uuid();
+        let uuid = T::ulid();
         let type_id = TypeId::of::<T>();
 
         match self.type_ids.entry(uuid) {
             std::collections::hash_map::Entry::Occupied(entry) => {
                 if entry.get() != &type_id {
-                    return Err(EcsError::TypeUuidCollision);
+                    return Err(EcsError::TypeUlidCollision);
                 }
 
                 self.untyped.insert(uuid, UntypedResource::new(resource));
@@ -247,12 +247,12 @@ impl Resources {
     ///
     /// See [get()][Self::get]
     pub fn contains<T: TypedEcsData>(&self) -> bool {
-        self.untyped.resources.contains_key(&T::uuid())
+        self.untyped.resources.contains_key(&T::ulid())
     }
 
     /// Gets a resource handle from the store if it exists.
     pub fn try_get<T: TypedEcsData>(&self) -> Option<AtomicResource<T>> {
-        let untyped = self.untyped.get(T::uuid())?;
+        let untyped = self.untyped.get(T::ulid())?;
 
         Some(AtomicResource {
             untyped,
@@ -311,12 +311,12 @@ mod test {
 
     #[test]
     fn sanity_check() {
-        #[derive(TypeUuid, Clone, Debug)]
-        #[uuid = "697703ea-b686-4e95-8fed-b46bed3a67f7"]
+        #[derive(TypeUlid, Clone, Debug)]
+        #[ulid = "01GNDJJ42DY5GSP9PGXPGF65GE"]
         struct A(Vec<u32>);
 
-        #[derive(TypeUuid, Clone, Debug)]
-        #[uuid = "639d5edf-ecaa-4a66-ba89-e9330e956a81"]
+        #[derive(TypeUlid, Clone, Debug)]
+        #[ulid = "01GNDJJDS0JRRN6TP3S89R4FQB"]
         struct B(u32);
 
         let mut resources = Resources::new();

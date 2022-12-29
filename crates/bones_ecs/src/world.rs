@@ -76,16 +76,16 @@ impl World {
 mod tests {
     use crate::prelude::*;
 
-    #[derive(Clone, TypeUuid, Debug, Eq, PartialEq)]
-    #[uuid = "428b375f-909f-4308-b2c7-a818b0cca247"]
+    #[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
+    #[ulid = "01GNDN2QYC1TRE763R54HVWZ0W"]
     struct Pos(i32, i32);
 
-    #[derive(Clone, TypeUuid, Debug, Eq, PartialEq)]
-    #[uuid = "009ee621-57bb-47f5-9693-d9fbe06e824b"]
+    #[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
+    #[ulid = "01GNDN3HCY2F1SGYE8Z0GGDMXB"]
     struct Vel(i32, i32);
 
-    #[derive(Clone, TypeUuid, Debug, Eq, PartialEq)]
-    #[uuid = "1259ccba-4f0a-4726-8caa-c9d4bd6654d0"]
+    #[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
+    #[ulid = "01GNDN3QJD1SP7ANTZ0TG6Q804"]
     struct Marker;
 
     // Sets up the world with a couple entities.
@@ -189,15 +189,15 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "TypeUuidCollision")]
+    #[should_panic(expected = "TypeUlidCollision")]
     fn no_duplicate_component_uuids() {
-        #[derive(Clone, TypeUuid)]
-        #[uuid = "428b375f-909f-4308-b2c7-a818b0cca247"]
+        #[derive(Clone, TypeUlid)]
+        #[ulid = "01GNDN440Q4FYH34TY8MV8CTTB"]
         struct A;
 
         /// This struct has the same UUID as struct [`A`]. Big no no!!
-        #[derive(Clone, TypeUuid)]
-        #[uuid = "428b375f-909f-4308-b2c7-a818b0cca247"]
+        #[derive(Clone, TypeUlid)]
+        #[ulid = "01GNDN440Q4FYH34TY8MV8CTTB"]
         struct B;
 
         let mut w = World::default();

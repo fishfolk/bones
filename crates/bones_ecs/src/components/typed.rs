@@ -298,8 +298,8 @@ mod tests {
 
     #[test]
     fn create_remove_components() {
-        #[derive(Debug, Clone, PartialEq, Eq, TypeUuid)]
-        #[uuid = "f78f06cb-5e6e-4e28-99bd-2294c95e9348"]
+        #[derive(Debug, Clone, PartialEq, Eq, TypeUlid)]
+        #[ulid = "01GNDP2GNMKQZF9V4JTC88CQ7X"]
         struct A(String);
 
         let mut entities = Entities::default();

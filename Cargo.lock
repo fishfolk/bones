@@ -542,7 +542,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
- "uuid 1.2.2",
+ "uuid",
 ]
 
 [[package]]
@@ -651,7 +651,7 @@ dependencies = [
  "hashbrown",
  "instant",
  "tracing",
- "uuid 1.2.2",
+ "uuid",
 ]
 
 [[package]]
@@ -735,8 +735,7 @@ dependencies = [
  "itertools",
  "serde",
  "thiserror",
- "type-uuid",
- "uuid 1.2.2",
+ "type_ulid",
 ]
 
 [[package]]
@@ -2903,23 +2902,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "375812fa44dab6df41c195cd2f7fecb488f6c09fbaafb62807488cefab642bff"
 
 [[package]]
-name = "type-uuid"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15043bca41f43205c9b0055d365a405d81b8e4a8ff99c36b263cf79ad1f4c051"
+name = "type_ulid"
+version = "0.1.0"
 dependencies = [
- "type-uuid-derive",
+ "type_ulid_macros",
+ "ulid",
 ]
 
 [[package]]
-name = "type-uuid-derive"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e090ee857961c746ecf7fb596022493ffaad54d189061df49f7a0cf17796dc1"
+name = "type_ulid_macros"
+version = "0.1.0"
 dependencies = [
+ "proc-macro2",
  "quote",
  "syn",
- "uuid 0.8.2",
+ "ulid",
 ]
 
 [[package]]
@@ -2981,12 +2978,6 @@ dependencies = [
  "idna",
  "percent-encoding",
 ]
-
-[[package]]
-name = "uuid"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
 
 [[package]]
 name = "uuid"

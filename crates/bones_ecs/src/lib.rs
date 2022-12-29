@@ -17,7 +17,7 @@ pub mod dispatcher;
 pub mod entities;
 pub mod resources;
 pub mod system;
-pub mod uuid;
+pub mod ulid;
 
 #[doc(hidden)]
 #[macro_use]
@@ -33,8 +33,7 @@ pub use world::World;
 pub mod prelude {
     pub use atomic_refcell::*;
     pub use bitset_core::BitSet;
-    pub use type_uuid::TypeUuid;
-    pub use uuid::Uuid;
+    pub use type_ulid::{TypeUlid, Ulid};
 
     pub use crate::bitset::*;
     pub use crate::components::*;
@@ -44,7 +43,7 @@ pub mod prelude {
     pub use crate::join;
     pub use crate::resources::*;
     pub use crate::system::*;
-    pub use crate::uuid::*;
+    pub use crate::ulid::*;
     pub use crate::World;
     pub use crate::{EcsData, RawFns, TypedEcsData};
     pub use bevy_derive::{Deref, DerefMut};
@@ -63,8 +62,8 @@ impl<T: Clone + Sync + Send + 'static> EcsData for T {}
 ///
 /// Examples of typed storage are [`Resources<T>`][crate::resources::Resources] and
 /// [`ComponentStore<T>`][crate::components::ComponentStore].
-pub trait TypedEcsData: type_uuid::TypeUuid + EcsData {}
-impl<T: type_uuid::TypeUuid + EcsData> TypedEcsData for T {}
+pub trait TypedEcsData: type_ulid::TypeUlid + EcsData {}
+impl<T: type_ulid::TypeUlid + EcsData> TypedEcsData for T {}
 
 /// Helper trait that is auto-implemented for all `Clone`-able types. Provides easy access to drop
 /// and clone funcitons for raw pointers.

@@ -29,9 +29,7 @@ either = "1.8.0"
 fxhash = "0.2.1"
 itertools = "0.10.5"
 thiserror = "1.0.37"
-# TODO: Replace with our own macros
-type-uuid = "0.1.2"
-uuid = "1.2.2"
+type_ulid = { version = "0.1.0", path = "../type_ulid" }
 serde = { version = "1.0", features = ["derive"], optional = true }
 
 [dev-dependencies]

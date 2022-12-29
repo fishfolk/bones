@@ -348,11 +348,11 @@ mod tests {
 
     #[test]
     fn system_replace_resource() {
-        #[derive(Default, TypeUuid, Clone, PartialEq, Eq, Debug)]
-        #[uuid = "89062d2d-221a-4178-ab98-d22c3a94103f"]
+        #[derive(Default, TypeUlid, Clone, PartialEq, Eq, Debug)]
+        #[ulid = "01GNDP03R29SDA1S009KTQF18Y"]
         pub struct A;
-        #[derive(Default, TypeUuid, Clone, Debug)]
-        #[uuid = "4db13819-a844-4aff-88ab-a4ea166abd5d"]
+        #[derive(Default, TypeUlid, Clone, Debug)]
+        #[ulid = "01GNDP0C73TAV0TDKZZB39NQ8C"]
         pub struct B {
             x: u32,
         }

@@ -25,13 +25,13 @@ pub enum EcsError {
     /// To create an error of this type easily, use the `system_error!` macro.
     #[error("System errored: {0}")]
     SystemError(Box<dyn Error + Send>),
-    /// This happens when two Rust types have the same [`TypeUuid`][crate::uuid::TypeUuid], which
+    /// This happens when two Rust types have the same [`TypeUlid`][crate::ulid::TypeUlid], which
     /// must not happen in the same [`World`][crate::world::World].
     #[error(
-        "Attempted to initialize resource/component with the same TypeUuid as another type \
+        "Attempted to initialize resource/component with the same TypeUlid as another type \
         that has already been initialized."
     )]
-    TypeUuidCollision,
+    TypeUlidCollision,
 }
 
 /// The result of a `System`'s execution.

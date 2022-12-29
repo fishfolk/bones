@@ -3,14 +3,14 @@ use glam::Vec2;
 
 // Define our component types.
 //
-// Each component must be Clone + Sync + Send + TypeUuid.
+// Each component must be Clone + Sync + Send + TypeUlid.
 
-#[derive(Clone, Debug, Deref, DerefMut, TypeUuid)]
-#[uuid = "2023e52e-60d4-4e63-b2e6-e40c8406a663"]
+#[derive(Clone, Debug, Deref, DerefMut, TypeUlid)]
+#[ulid = "01GNDP2WAAN8C6C8XA5ZBXGHFR"]
 pub struct Vel(pub Vec2);
 
-#[derive(Clone, Debug, Deref, DerefMut, TypeUuid)]
-#[uuid = "e7892ff2-464b-47c6-9ebd-74cdffa8a785"]
+#[derive(Clone, Debug, Deref, DerefMut, TypeUlid)]
+#[ulid = "01GNDP34A7TMS8PFZAGSQJ5DDX"]
 pub struct Pos(pub Vec2);
 
 fn main() {
