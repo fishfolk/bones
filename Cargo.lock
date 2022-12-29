@@ -787,7 +787,6 @@ name = "bones_matchmaker_proto"
 version = "0.1.0"
 dependencies = [
  "serde",
- "ulid",
 ]
 
 [[package]]
@@ -2924,10 +2923,6 @@ name = "ulid"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13a3aaa69b04e5b66cc27309710a569ea23593612387d67daaf102e73aa974fd"
-dependencies = [
- "rand 0.8.5",
- "serde",
-]
 
 [[package]]
 name = "unicode-bidi"
