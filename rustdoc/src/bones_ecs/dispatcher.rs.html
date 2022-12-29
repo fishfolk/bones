@@ -194,12 +194,12 @@
 <span class="attribute">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-    <span class="kw">use </span>type_uuid::TypeUuid;
+    <span class="kw">use </span>type_ulid::TypeUlid;
 
     <span class="attribute">#[test]
     </span><span class="kw">fn </span>simple_dispatcher() {
-        <span class="attribute">#[derive(Default, TypeUuid, Clone)]
-        #[uuid = <span class="string">&quot;89062d2d-221a-4178-ab98-d22c3a94103f&quot;</span>]
+        <span class="attribute">#[derive(Default, TypeUlid, Clone)]
+        #[ulid = <span class="string">&quot;01GNDP1E21HK0E4QK0NAF4GK52&quot;</span>]
         </span><span class="kw">pub struct </span>A;
         <span class="kw">let </span><span class="kw-2">mut </span>world = World::default();
         <span class="kw">let </span>sys = (|_comps: Res&lt;A&gt;| <span class="prelude-val">Ok</span>(())).system();
@@ -212,8 +212,8 @@
 
     <span class="attribute">#[test]
     </span><span class="kw">fn </span>generic_simple_dispatcher() {
-        <span class="attribute">#[derive(Default, TypeUuid, Clone)]
-        #[uuid = <span class="string">&quot;89062d2d-221a-4178-ab98-d22c3a94103f&quot;</span>]
+        <span class="attribute">#[derive(Default, TypeUlid, Clone)]
+        #[ulid = <span class="string">&quot;01GNDP1KX34R7ARHG8Y8SGZWJ9&quot;</span>]
         </span><span class="kw">pub struct </span>A;
         <span class="kw">let </span><span class="kw-2">mut </span>world = World::default();
         <span class="kw">let </span><span class="kw-2">mut </span>dispatch = DispatcherBuilder::new()

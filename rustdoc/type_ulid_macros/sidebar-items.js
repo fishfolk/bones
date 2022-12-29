@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"derive":[["TypeUlid","Derive macro for the `TypeUlid` trait."]]};

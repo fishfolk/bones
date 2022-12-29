@@ -290,16 +290,16 @@
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
-    <span class="attribute">#[derive(Clone, TypeUuid, Debug, Eq, PartialEq)]
-    #[uuid = <span class="string">&quot;428b375f-909f-4308-b2c7-a818b0cca247&quot;</span>]
+    <span class="attribute">#[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
+    #[ulid = <span class="string">&quot;01GNDN2QYC1TRE763R54HVWZ0W&quot;</span>]
     </span><span class="kw">struct </span>Pos(i32, i32);
 
-    <span class="attribute">#[derive(Clone, TypeUuid, Debug, Eq, PartialEq)]
-    #[uuid = <span class="string">&quot;009ee621-57bb-47f5-9693-d9fbe06e824b&quot;</span>]
+    <span class="attribute">#[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
+    #[ulid = <span class="string">&quot;01GNDN3HCY2F1SGYE8Z0GGDMXB&quot;</span>]
     </span><span class="kw">struct </span>Vel(i32, i32);
 
-    <span class="attribute">#[derive(Clone, TypeUuid, Debug, Eq, PartialEq)]
-    #[uuid = <span class="string">&quot;1259ccba-4f0a-4726-8caa-c9d4bd6654d0&quot;</span>]
+    <span class="attribute">#[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
+    #[ulid = <span class="string">&quot;01GNDN3QJD1SP7ANTZ0TG6Q804&quot;</span>]
     </span><span class="kw">struct </span>Marker;
 
     <span class="comment">// Sets up the world with a couple entities.
@@ -403,15 +403,15 @@
     }
 
     <span class="attribute">#[test]
-    #[should_panic(expected = <span class="string">&quot;TypeUuidCollision&quot;</span>)]
+    #[should_panic(expected = <span class="string">&quot;TypeUlidCollision&quot;</span>)]
     </span><span class="kw">fn </span>no_duplicate_component_uuids() {
-        <span class="attribute">#[derive(Clone, TypeUuid)]
-        #[uuid = <span class="string">&quot;428b375f-909f-4308-b2c7-a818b0cca247&quot;</span>]
+        <span class="attribute">#[derive(Clone, TypeUlid)]
+        #[ulid = <span class="string">&quot;01GNDN440Q4FYH34TY8MV8CTTB&quot;</span>]
         </span><span class="kw">struct </span>A;
 
         <span class="doccomment">/// This struct has the same UUID as struct [`A`]. Big no no!!
-        </span><span class="attribute">#[derive(Clone, TypeUuid)]
-        #[uuid = <span class="string">&quot;428b375f-909f-4308-b2c7-a818b0cca247&quot;</span>]
+        </span><span class="attribute">#[derive(Clone, TypeUlid)]
+        #[ulid = <span class="string">&quot;01GNDN440Q4FYH34TY8MV8CTTB&quot;</span>]
         </span><span class="kw">struct </span>B;
 
         <span class="kw">let </span><span class="kw-2">mut </span>w = World::default();

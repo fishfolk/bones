@@ -362,7 +362,7 @@
 /// should use [`Resources`] instead.
 </span><span class="attribute">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>UntypedResources {
-    resources: UuidMap&lt;UntypedResource&gt;,
+    resources: UlidMap&lt;UntypedResource&gt;,
 }
 
 <span class="doccomment">/// Used to construct an [`UntypedResource`].
@@ -495,17 +495,17 @@
     }
 
     <span class="doccomment">/// Insert a new resource
-    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, uuid: Uuid, resource: UntypedResource) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedResource&gt; {
+    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, uuid: Ulid, resource: UntypedResource) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedResource&gt; {
         <span class="self">self</span>.resources.insert(uuid, resource)
     }
 
     <span class="doccomment">/// Get a cell containing the resource data pointer for the given ID
-    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, uuid: Uuid) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;AtomicRefCell&lt;<span class="kw-2">*mut </span>u8&gt;&gt;&gt; {
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, uuid: Ulid) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;AtomicRefCell&lt;<span class="kw-2">*mut </span>u8&gt;&gt;&gt; {
         <span class="self">self</span>.resources.get(<span class="kw-2">&amp;</span>uuid).map(|x| x.cell.clone())
     }
 
     <span class="doccomment">/// Remove a resource
-    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, uuid: Uuid) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedResource&gt; {
+    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, uuid: Ulid) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedResource&gt; {
         <span class="self">self</span>.resources.remove(<span class="kw-2">&amp;</span>uuid)
     }
 }
@@ -516,7 +516,7 @@
 </span><span class="attribute">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>Resources {
     untyped: UntypedResources,
-    type_ids: UuidMap&lt;TypeId&gt;,
+    type_ids: UlidMap&lt;TypeId&gt;,
 }
 
 <span class="kw">impl </span>Resources {
@@ -537,7 +537,7 @@
     /// # Panics
     ///
     /// Panics if you try to insert a Rust type with a different [`TypeId`], but the same
-    /// [`TypeUuid`] as another resource in the store.
+    /// [`TypeUlid`] as another resource in the store.
     </span><span class="attribute">#[track_caller]
     </span><span class="kw">pub fn </span>insert&lt;T: TypedEcsData&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: T) {
         <span class="self">self</span>.try_insert(resource).unwrap();
@@ -548,15 +548,15 @@
     /// # Errors
     ///
     /// Errors if you try to insert a Rust type with a different [`TypeId`], but the same
-    /// [`TypeUuid`] as another resource in the store.
+    /// [`TypeUlid`] as another resource in the store.
     </span><span class="kw">pub fn </span>try_insert&lt;T: TypedEcsData&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), EcsError&gt; {
-        <span class="kw">let </span>uuid = T::uuid();
+        <span class="kw">let </span>uuid = T::ulid();
         <span class="kw">let </span>type_id = TypeId::of::&lt;T&gt;();
 
         <span class="kw">match </span><span class="self">self</span>.type_ids.entry(uuid) {
             std::collections::hash_map::Entry::Occupied(entry) =&gt; {
                 <span class="kw">if </span>entry.get() != <span class="kw-2">&amp;</span>type_id {
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(EcsError::TypeUuidCollision);
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(EcsError::TypeUlidCollision);
                 }
 
                 <span class="self">self</span>.untyped.insert(uuid, UntypedResource::new(resource));
@@ -589,12 +589,12 @@
     ///
     /// See [get()][Self::get]
     </span><span class="kw">pub fn </span>contains&lt;T: TypedEcsData&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="self">self</span>.untyped.resources.contains_key(<span class="kw-2">&amp;</span>T::uuid())
+        <span class="self">self</span>.untyped.resources.contains_key(<span class="kw-2">&amp;</span>T::ulid())
     }
 
     <span class="doccomment">/// Gets a resource handle from the store if it exists.
     </span><span class="kw">pub fn </span>try_get&lt;T: TypedEcsData&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;T&gt;&gt; {
-        <span class="kw">let </span>untyped = <span class="self">self</span>.untyped.get(T::uuid())<span class="question-mark">?</span>;
+        <span class="kw">let </span>untyped = <span class="self">self</span>.untyped.get(T::ulid())<span class="question-mark">?</span>;
 
         <span class="prelude-val">Some</span>(AtomicResource {
             untyped,
@@ -653,12 +653,12 @@
 
     <span class="attribute">#[test]
     </span><span class="kw">fn </span>sanity_check() {
-        <span class="attribute">#[derive(TypeUuid, Clone, Debug)]
-        #[uuid = <span class="string">&quot;697703ea-b686-4e95-8fed-b46bed3a67f7&quot;</span>]
+        <span class="attribute">#[derive(TypeUlid, Clone, Debug)]
+        #[ulid = <span class="string">&quot;01GNDJJ42DY5GSP9PGXPGF65GE&quot;</span>]
         </span><span class="kw">struct </span>A(Vec&lt;u32&gt;);
 
-        <span class="attribute">#[derive(TypeUuid, Clone, Debug)]
-        #[uuid = <span class="string">&quot;639d5edf-ecaa-4a66-ba89-e9330e956a81&quot;</span>]
+        <span class="attribute">#[derive(TypeUlid, Clone, Debug)]
+        #[ulid = <span class="string">&quot;01GNDJJDS0JRRN6TP3S89R4FQB&quot;</span>]
         </span><span class="kw">struct </span>B(u32);
 
         <span class="kw">let </span><span class="kw-2">mut </span>resources = Resources::new();

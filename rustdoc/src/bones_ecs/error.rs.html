@@ -63,13 +63,13 @@
     /// To create an error of this type easily, use the `system_error!` macro.
     </span><span class="attribute">#[error(<span class="string">&quot;System errored: {0}&quot;</span>)]
     </span>SystemError(Box&lt;<span class="kw">dyn </span>Error + Send&gt;),
-    <span class="doccomment">/// This happens when two Rust types have the same [`TypeUuid`][crate::uuid::TypeUuid], which
+    <span class="doccomment">/// This happens when two Rust types have the same [`TypeUlid`][crate::ulid::TypeUlid], which
     /// must not happen in the same [`World`][crate::world::World].
     </span><span class="attribute">#[error(
-        <span class="string">&quot;Attempted to initialize resource/component with the same TypeUuid as another type \
+        <span class="string">&quot;Attempted to initialize resource/component with the same TypeUlid as another type \
         that has already been initialized.&quot;
     </span>)]
-    </span>TypeUuidCollision,
+    </span>TypeUlidCollision,
 }
 
 <span class="doccomment">/// The result of a `System`&#39;s execution.

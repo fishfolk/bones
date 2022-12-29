@@ -206,6 +206,7 @@
 <span id="206">206</span>
 <span id="207">207</span>
 <span id="208">208</span>
+<span id="209">209</span>
 </pre><pre class="rust"><code><span class="doccomment">/// Re-export of itertools `izip` which is used in the `join` macro.
 </span><span class="attribute">#[doc(hidden)]
 </span><span class="kw">pub use </span>itertools::izip;
@@ -354,12 +355,13 @@
 
     <span class="attribute">#[test]
     </span><span class="kw">fn </span>join_components() {
-        <span class="attribute">#[derive(TypeUuid, Clone)]
-        #[uuid = <span class="string">&quot;f92ee887-6d2f-4fea-9c6c-d47754d4873a&quot;</span>]
+        <span class="attribute">#[derive(TypeUlid, Clone)]
+        #[ulid = <span class="string">&quot;01GNDJCYWP4PPSVNH946ADNQ3Y&quot;</span>]
         </span><span class="kw">struct </span>A;
-        <span class="attribute">#[derive(TypeUuid, Clone)]
-        #[uuid = <span class="string">&quot;8fe1f4cb-be2d-4be1-8dbc-2e55da7b101e&quot;</span>]
+        <span class="attribute">#[derive(TypeUlid, Clone)]
+        #[ulid = <span class="string">&quot;01GNDJDEVQGMWK83J8J5AVFFPP&quot;</span>]
         </span><span class="kw">struct </span>B;
+
         <span class="kw">let </span>comp1 = ComponentStore::&lt;A&gt;::default();
         <span class="kw">let </span>comp2 = ComponentStore::&lt;B&gt;::default();
         <span class="macro">join!</span>(<span class="kw-2">&amp;</span>comp1 &amp;&amp; <span class="kw-2">&amp;</span>comp2).for_each(|<span class="kw">_</span>| {});
@@ -367,11 +369,11 @@
 
     <span class="attribute">#[test]
     </span><span class="kw">fn </span>join_components_atomic() {
-        <span class="attribute">#[derive(TypeUuid, Clone)]
-        #[uuid = <span class="string">&quot;f92ee887-6d2f-4fea-9c6c-d47754d4873a&quot;</span>]
+        <span class="attribute">#[derive(TypeUlid, Clone)]
+        #[ulid = <span class="string">&quot;01GNDJFV61SXBNPF49ZERXARF1&quot;</span>]
         </span><span class="kw">struct </span>A;
-        <span class="attribute">#[derive(TypeUuid, Clone)]
-        #[uuid = <span class="string">&quot;8fe1f4cb-be2d-4be1-8dbc-2e55da7b101e&quot;</span>]
+        <span class="attribute">#[derive(TypeUlid, Clone)]
+        #[ulid = <span class="string">&quot;01GNDJG5TDY54NYCG5T8JTM645&quot;</span>]
         </span><span class="kw">struct </span>B;
         <span class="kw">let </span>comp1 = AtomicComponentStore::&lt;A&gt;::default();
         <span class="kw">let </span>comp1 = comp1.borrow_mut();
@@ -382,14 +384,14 @@
 
     <span class="attribute">#[test]
     </span><span class="kw">fn </span>complex_join() {
-        <span class="attribute">#[derive(TypeUuid, Clone)]
-        #[uuid = <span class="string">&quot;f92ee887-6d2f-4fea-9c6c-d47754d4873a&quot;</span>]
+        <span class="attribute">#[derive(TypeUlid, Clone)]
+        #[ulid = <span class="string">&quot;01GNDJGHGSWN01FK311SZZT8K5&quot;</span>]
         </span><span class="kw">struct </span>A;
-        <span class="attribute">#[derive(TypeUuid, Clone)]
-        #[uuid = <span class="string">&quot;8fe1f4cb-be2d-4be1-8dbc-2e55da7b101e&quot;</span>]
+        <span class="attribute">#[derive(TypeUlid, Clone)]
+        #[ulid = <span class="string">&quot;01GNDJGQWX3E2W5Q3WFT1543WR&quot;</span>]
         </span><span class="kw">struct </span>B;
-        <span class="attribute">#[derive(TypeUuid, Clone)]
-        #[uuid = <span class="string">&quot;f227d3fe-d525-48cc-8aa9-c1c43e69b4f9&quot;</span>]
+        <span class="attribute">#[derive(TypeUlid, Clone)]
+        #[ulid = <span class="string">&quot;01GNDJGYYVAF6RRTN7W7AZKMB7&quot;</span>]
         </span><span class="kw">struct </span>C;
         <span class="kw">let </span><span class="kw-2">mut </span>storage1 = ComponentStore::&lt;A&gt;::default();
         <span class="kw">let </span>storage2 = ComponentStore::&lt;B&gt;::default();
@@ -403,11 +405,11 @@
 
     <span class="attribute">#[test]
     </span><span class="kw">fn </span>start_with_not() {
-        <span class="attribute">#[derive(TypeUuid, Clone)]
-        #[uuid = <span class="string">&quot;f92ee887-6d2f-4fea-9c6c-d47754d4873a&quot;</span>]
+        <span class="attribute">#[derive(TypeUlid, Clone)]
+        #[ulid = <span class="string">&quot;01GNDJHBP5GYXYTXK8YY61CVDD&quot;</span>]
         </span><span class="kw">struct </span>A;
-        <span class="attribute">#[derive(TypeUuid, Clone)]
-        #[uuid = <span class="string">&quot;8fe1f4cb-be2d-4be1-8dbc-2e55da7b101e&quot;</span>]
+        <span class="attribute">#[derive(TypeUlid, Clone)]
+        #[ulid = <span class="string">&quot;01GNDJHJW7N8N05R8HVK7YB7GE&quot;</span>]
         </span><span class="kw">struct </span>B;
         <span class="kw">let </span>comp1 = ComponentStore::&lt;A&gt;::default();
         <span class="kw">let </span>comp2 = ComponentStore::&lt;B&gt;::default();

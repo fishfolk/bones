@@ -130,11 +130,11 @@
 
 <span class="doccomment">/// Makes sure that the component type `T` matches the component type previously registered with
 /// the same UUID.
-</span><span class="kw">fn </span>validate_type_uuid_match&lt;T: TypeUuid + <span class="lifetime">&#39;static</span>&gt;(
-    type_ids: <span class="kw-2">&amp;</span>UuidMap&lt;TypeId&gt;,
+</span><span class="kw">fn </span>validate_type_uuid_match&lt;T: TypeUlid + <span class="lifetime">&#39;static</span>&gt;(
+    type_ids: <span class="kw-2">&amp;</span>UlidMap&lt;TypeId&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), EcsError&gt; {
-    <span class="kw">if </span>type_ids.get(<span class="kw-2">&amp;</span>T::uuid()).ok_or(EcsError::NotInitialized)<span class="question-mark">? </span>!= <span class="kw-2">&amp;</span>TypeId::of::&lt;T&gt;() {
-        <span class="prelude-val">Err</span>(EcsError::TypeUuidCollision)
+    <span class="kw">if </span>type_ids.get(<span class="kw-2">&amp;</span>T::ulid()).ok_or(EcsError::NotInitialized)<span class="question-mark">? </span>!= <span class="kw-2">&amp;</span>TypeId::of::&lt;T&gt;() {
+        <span class="prelude-val">Err</span>(EcsError::TypeUlidCollision)
     } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(())
     }
@@ -146,8 +146,8 @@
 /// initialized for that world.
 </span><span class="attribute">#[derive(Default)]
 </span><span class="kw">pub struct </span>ComponentStores {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) components: UuidMap&lt;Arc&lt;AtomicRefCell&lt;UntypedComponentStore&gt;&gt;&gt;,
-    type_ids: UuidMap&lt;TypeId&gt;,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) components: UlidMap&lt;Arc&lt;AtomicRefCell&lt;UntypedComponentStore&gt;&gt;&gt;,
+    type_ids: UlidMap&lt;TypeId&gt;,
 }
 
 <span class="kw">impl </span>Clone <span class="kw">for </span>ComponentStores {
@@ -167,15 +167,15 @@
 
 <span class="kw">impl </span>ComponentStores {
     <span class="doccomment">/// Initialize component storage for type `T`.
-    </span><span class="kw">pub fn </span>init&lt;T: Clone + TypeUuid + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    </span><span class="kw">pub fn </span>init&lt;T: Clone + TypeUlid + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.try_init::&lt;T&gt;().unwrap();
     }
 
     <span class="doccomment">/// Initialize component storage for type `T`.
-    </span><span class="kw">pub fn </span>try_init&lt;T: Clone + TypeUuid + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(
+    </span><span class="kw">pub fn </span>try_init&lt;T: Clone + TypeUlid + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), EcsError&gt; {
-        <span class="kw">match </span><span class="self">self</span>.components.entry(T::uuid()) {
+        <span class="kw">match </span><span class="self">self</span>.components.entry(T::ulid()) {
             std::collections::hash_map::Entry::Occupied(<span class="kw">_</span>) =&gt; {
                 validate_type_uuid_match::&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.type_ids)
             }
@@ -183,7 +183,7 @@
                 entry.insert(Arc::new(AtomicRefCell::new(
                     UntypedComponentStore::for_type::&lt;T&gt;(),
                 )));
-                <span class="self">self</span>.type_ids.insert(T::uuid(), TypeId::of::&lt;T&gt;());
+                <span class="self">self</span>.type_ids.insert(T::ulid(), TypeId::of::&lt;T&gt;());
 
                 <span class="prelude-val">Ok</span>(())
             }
@@ -195,16 +195,16 @@
     /// # Panics
     ///
     /// Panics if the component type has not been initialized.
-    </span><span class="kw">pub fn </span>get&lt;T: Clone + TypeUuid + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicComponentStore&lt;T&gt; {
+    </span><span class="kw">pub fn </span>get&lt;T: Clone + TypeUlid + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicComponentStore&lt;T&gt; {
         <span class="self">self</span>.try_get::&lt;T&gt;().unwrap()
     }
 
     <span class="doccomment">/// Get the components of a certain type
-    </span><span class="kw">pub fn </span>try_get&lt;T: Clone + TypeUuid + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(
+    </span><span class="kw">pub fn </span>try_get&lt;T: Clone + TypeUlid + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;AtomicComponentStore&lt;T&gt;, EcsError&gt; {
         validate_type_uuid_match::&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.type_ids)<span class="question-mark">?</span>;
-        <span class="kw">let </span>untyped = <span class="self">self</span>.try_get_by_uuid(T::uuid())<span class="question-mark">?</span>;
+        <span class="kw">let </span>untyped = <span class="self">self</span>.try_get_by_uuid(T::ulid())<span class="question-mark">?</span>;
 
         <span class="comment">// Safe: We&#39;ve made sure that the data initialized in the untyped components matches T
         </span><span class="kw">unsafe </span>{ <span class="prelude-val">Ok</span>(AtomicComponentStore::from_components_unsafe(untyped)) }
@@ -215,14 +215,14 @@
     /// # Panics
     ///
     /// Panics if the component type has not been initialized.
-    </span><span class="kw">pub fn </span>get_by_uuid(<span class="kw-2">&amp;</span><span class="self">self</span>, uuid: Uuid) -&gt; Arc&lt;AtomicRefCell&lt;UntypedComponentStore&gt;&gt; {
+    </span><span class="kw">pub fn </span>get_by_uuid(<span class="kw-2">&amp;</span><span class="self">self</span>, uuid: Ulid) -&gt; Arc&lt;AtomicRefCell&lt;UntypedComponentStore&gt;&gt; {
         <span class="self">self</span>.try_get_by_uuid(uuid).unwrap()
     }
 
     <span class="doccomment">/// Get the untyped component storage by the component&#39;s UUID
     </span><span class="kw">pub fn </span>try_get_by_uuid(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        uuid: Uuid,
+        uuid: Ulid,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;AtomicRefCell&lt;UntypedComponentStore&gt;&gt;, EcsError&gt; {
         <span class="self">self</span>.components
             .get(<span class="kw-2">&amp;</span>uuid)
