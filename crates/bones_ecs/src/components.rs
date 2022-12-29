@@ -14,11 +14,11 @@ pub use untyped::*;
 
 /// Makes sure that the component type `T` matches the component type previously registered with
 /// the same UUID.
-fn validate_type_uuid_match<T: TypeUuid + 'static>(
-    type_ids: &UuidMap<TypeId>,
+fn validate_type_uuid_match<T: TypeUlid + 'static>(
+    type_ids: &UlidMap<TypeId>,
 ) -> Result<(), EcsError> {
-    if type_ids.get(&T::uuid()).ok_or(EcsError::NotInitialized)? != &TypeId::of::<T>() {
-        Err(EcsError::TypeUuidCollision)
+    if type_ids.get(&T::ulid()).ok_or(EcsError::NotInitialized)? != &TypeId::of::<T>() {
+        Err(EcsError::TypeUlidCollision)
     } else {
         Ok(())
     }
@@ -30,8 +30,8 @@ fn validate_type_uuid_match<T: TypeUuid + 'static>(
 /// initialized for that world.
 #[derive(Default)]
 pub struct ComponentStores {
-    pub(crate) components: UuidMap<Arc<AtomicRefCell<UntypedComponentStore>>>,
-    type_ids: UuidMap<TypeId>,
+    pub(crate) components: UlidMap<Arc<AtomicRefCell<UntypedComponentStore>>>,
+    type_ids: UlidMap<TypeId>,
 }
 
 impl Clone for ComponentStores {
@@ -51,15 +51,15 @@ impl Clone for ComponentStores {
 
 impl ComponentStores {
     /// Initialize component storage for type `T`.
-    pub fn init<T: Clone + TypeUuid + Send + Sync + 'static>(&mut self) {
+    pub fn init<T: Clone + TypeUlid + Send + Sync + 'static>(&mut self) {
         self.try_init::<T>().unwrap();
     }
 
     /// Initialize component storage for type `T`.
-    pub fn try_init<T: Clone + TypeUuid + Send + Sync + 'static>(
+    pub fn try_init<T: Clone + TypeUlid + Send + Sync + 'static>(
         &mut self,
     ) -> Result<(), EcsError> {
-        match self.components.entry(T::uuid()) {
+        match self.components.entry(T::ulid()) {
             std::collections::hash_map::Entry::Occupied(_) => {
                 validate_type_uuid_match::<T>(&self.type_ids)
             }
@@ -67,7 +67,7 @@ impl ComponentStores {
                 entry.insert(Arc::new(AtomicRefCell::new(
                     UntypedComponentStore::for_type::<T>(),
                 )));
-                self.type_ids.insert(T::uuid(), TypeId::of::<T>());
+                self.type_ids.insert(T::ulid(), TypeId::of::<T>());
 
                 Ok(())
             }
@@ -79,16 +79,16 @@ impl ComponentStores {
     /// # Panics
     ///
     /// Panics if the component type has not been initialized.
-    pub fn get<T: Clone + TypeUuid + Send + Sync + 'static>(&self) -> AtomicComponentStore<T> {
+    pub fn get<T: Clone + TypeUlid + Send + Sync + 'static>(&self) -> AtomicComponentStore<T> {
         self.try_get::<T>().unwrap()
     }
 
     /// Get the components of a certain type
-    pub fn try_get<T: Clone + TypeUuid + Send + Sync + 'static>(
+    pub fn try_get<T: Clone + TypeUlid + Send + Sync + 'static>(
         &self,
     ) -> Result<AtomicComponentStore<T>, EcsError> {
         validate_type_uuid_match::<T>(&self.type_ids)?;
-        let untyped = self.try_get_by_uuid(T::uuid())?;
+        let untyped = self.try_get_by_uuid(T::ulid())?;
 
         // Safe: We've made sure that the data initialized in the untyped components matches T
         unsafe { Ok(AtomicComponentStore::from_components_unsafe(untyped)) }
@@ -99,14 +99,14 @@ impl ComponentStores {
     /// # Panics
     ///
     /// Panics if the component type has not been initialized.
-    pub fn get_by_uuid(&self, uuid: Uuid) -> Arc<AtomicRefCell<UntypedComponentStore>> {
+    pub fn get_by_uuid(&self, uuid: Ulid) -> Arc<AtomicRefCell<UntypedComponentStore>> {
         self.try_get_by_uuid(uuid).unwrap()
     }
 
     /// Get the untyped component storage by the component's UUID
     pub fn try_get_by_uuid(
         &self,
-        uuid: Uuid,
+        uuid: Ulid,
     ) -> Result<Arc<AtomicRefCell<UntypedComponentStore>>, EcsError> {
         self.components
             .get(&uuid)

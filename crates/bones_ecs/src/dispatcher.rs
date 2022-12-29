@@ -80,12 +80,12 @@ impl Dispatcher {
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
-    use type_uuid::TypeUuid;
+    use type_ulid::TypeUlid;
 
     #[test]
     fn simple_dispatcher() {
-        #[derive(Default, TypeUuid, Clone)]
-        #[uuid = "89062d2d-221a-4178-ab98-d22c3a94103f"]
+        #[derive(Default, TypeUlid, Clone)]
+        #[ulid = "01GNDP1E21HK0E4QK0NAF4GK52"]
         pub struct A;
         let mut world = World::default();
         let sys = (|_comps: Res<A>| Ok(())).system();
@@ -98,8 +98,8 @@ mod tests {
 
     #[test]
     fn generic_simple_dispatcher() {
-        #[derive(Default, TypeUuid, Clone)]
-        #[uuid = "89062d2d-221a-4178-ab98-d22c3a94103f"]
+        #[derive(Default, TypeUlid, Clone)]
+        #[ulid = "01GNDP1KX34R7ARHG8Y8SGZWJ9"]
         pub struct A;
         let mut world = World::default();
         let mut dispatch = DispatcherBuilder::new()
