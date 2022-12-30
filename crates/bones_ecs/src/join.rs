@@ -132,7 +132,7 @@ macro_rules! join {
         {
             use $crate::bitset::BitSet;
             // TODO find a way to avoid having this first vec allocation.
-            let mut bitset = std::rc::Rc::new(vec![]);
+            let mut bitset = std::rc::Rc::new($crate::bitset::BitSetVec(vec![]));
             $crate::gen_bitset!(bitset; $($complex)*);
             let iter = $crate::iter_bitset!(bitset ; ; $($complex)*);
             iter

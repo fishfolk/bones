@@ -4,6 +4,8 @@
 //!
 //! [`bitset_core`]: https://docs.rs/bitset_core
 
+use crate::prelude::*;
+
 // 2^32 gives  4 billion concurrent entities for 512MB   of ram per component
 // 2^24 gives 16 million concurrent entities for 2MB     of ram per component
 // 2^20 gives  1 million concurrent entities for 128KB   of ram per component
@@ -26,10 +28,19 @@ pub(crate) const BITSET_SLICE_COUNT: usize = BITSET_SIZE / (32 * 8 / 8);
 
 /// The type of bitsets used to track entities in component storages.
 /// Mostly used to create caches.
-pub type BitSetVec = Vec<[u32; 8]>;
+#[derive(bevy_derive::Deref, bevy_derive::DerefMut, Clone, Debug, Default)]
+pub struct BitSetVec(pub Vec<[u32; 8]>);
+
+impl BitSetVec {
+    /// Check whether or not the bitset contains the given entity.
+    #[inline]
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.bit_test(entity.index() as usize)
+    }
+}
 
 /// Creates a bitset big enough to contain the index of each entity.
 /// Mostly used to create caches.
 pub fn create_bitset() -> BitSetVec {
-    vec![[0u32; 8]; BITSET_SLICE_COUNT]
+    BitSetVec(vec![[0u32; 8]; BITSET_SLICE_COUNT])
 }
