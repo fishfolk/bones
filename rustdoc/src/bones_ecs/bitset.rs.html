@@ -33,13 +33,26 @@
 <span id="33">33</span>
 <span id="34">34</span>
 <span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Bitset implementation.
 //!
 //! Bitsets are powered by the [`bitset_core`] crate.
 //!
 //! [`bitset_core`]: https://docs.rs/bitset_core
 
-</span><span class="comment">// 2^32 gives  4 billion concurrent entities for 512MB   of ram per component
+</span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+
+<span class="comment">// 2^32 gives  4 billion concurrent entities for 512MB   of ram per component
 // 2^24 gives 16 million concurrent entities for 2MB     of ram per component
 // 2^20 gives  1 million concurrent entities for 128KB   of ram per component
 // 2^16 gives 65536      concurrent entities for 8KB     of ram per component
@@ -61,12 +74,21 @@
 
 <span class="doccomment">/// The type of bitsets used to track entities in component storages.
 /// Mostly used to create caches.
-</span><span class="kw">pub type </span>BitSetVec = Vec&lt;[u32; <span class="number">8</span>]&gt;;
+</span><span class="attribute">#[derive(bevy_derive::Deref, bevy_derive::DerefMut, Clone, Debug, Default)]
+</span><span class="kw">pub struct </span>BitSetVec(<span class="kw">pub </span>Vec&lt;[u32; <span class="number">8</span>]&gt;);
+
+<span class="kw">impl </span>BitSetVec {
+    <span class="doccomment">/// Check whether or not the bitset contains the given entity.
+    </span><span class="attribute">#[inline]
+    </span><span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: Entity) -&gt; bool {
+        <span class="self">self</span>.bit_test(entity.index() <span class="kw">as </span>usize)
+    }
+}
 
 <span class="doccomment">/// Creates a bitset big enough to contain the index of each entity.
 /// Mostly used to create caches.
 </span><span class="kw">pub fn </span>create_bitset() -&gt; BitSetVec {
-    <span class="macro">vec!</span>[[<span class="number">0u32</span>; <span class="number">8</span>]; BITSET_SLICE_COUNT]
+    BitSetVec(<span class="macro">vec!</span>[[<span class="number">0u32</span>; <span class="number">8</span>]; BITSET_SLICE_COUNT])
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="bones_ecs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

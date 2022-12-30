@@ -341,7 +341,7 @@
         {
             <span class="kw">use </span><span class="macro-nonterminal">$crate::bitset::BitSet</span>;
             <span class="comment">// TODO find a way to avoid having this first vec allocation.
-            </span><span class="kw">let </span><span class="kw-2">mut </span>bitset = std::rc::Rc::new(<span class="macro">vec!</span>[]);
+            </span><span class="kw">let </span><span class="kw-2">mut </span>bitset = std::rc::Rc::new(<span class="macro-nonterminal">$crate::bitset::BitSetVec</span>(<span class="macro">vec!</span>[]));
             <span class="macro-nonterminal">$</span><span class="macro">crate::gen_bitset!</span>(<span class="macro-nonterminal">bitset</span>; $(<span class="macro-nonterminal">$complex</span>)<span class="kw-2">*</span>);
             <span class="kw">let </span>iter = <span class="macro-nonterminal">$</span><span class="macro">crate::iter_bitset!</span>(<span class="macro-nonterminal">bitset </span>; ; $(<span class="macro-nonterminal">$complex</span>)<span class="kw-2">*</span>);
             iter

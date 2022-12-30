@@ -318,6 +318,24 @@
 <span id="318">318</span>
 <span id="319">319</span>
 <span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{alloc::Layout, marker::PhantomData, sync::Arc};
 
 <span class="kw">use </span>bytemuck::Pod;
@@ -459,6 +477,12 @@
     </span><span class="kw">pub fn </span>bitset(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>BitSetVec {
         <span class="self">self</span>.components.bitset()
     }
+
+    <span class="doccomment">/// Check whether or not this component store has data for the given entity.
+    </span><span class="attribute">#[inline]
+    </span><span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: Entity) -&gt; bool {
+        <span class="self">self</span>.bitset().contains(entity)
+    }
 }
 
 <span class="doccomment">/// A typed, wrapper handle around [`UntypedComponentStore`] that is runtime borrow checked and can
@@ -540,6 +564,12 @@
     </span><span class="kw">pub fn </span>bitset(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>BitSetVec {
         <span class="self">self</span>.components.bitset()
     }
+
+    <span class="doccomment">/// Check whether or not this component store has data for the given entity.
+    </span><span class="attribute">#[inline]
+    </span><span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: Entity) -&gt; bool {
+        <span class="self">self</span>.bitset().contains(entity)
+    }
 }
 
 <span class="doccomment">/// A mutable borrow of [`AtomicComponentStore`].
@@ -609,6 +639,12 @@
     <span class="doccomment">/// Get the bitset representing which entities have this component on it.
     </span><span class="kw">pub fn </span>bitset(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>BitSetVec {
         <span class="self">self</span>.components.bitset()
+    }
+
+    <span class="doccomment">/// Check whether or not this component store has data for the given entity.
+    </span><span class="attribute">#[inline]
+    </span><span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: Entity) -&gt; bool {
+        <span class="self">self</span>.bitset().contains(entity)
     }
 }
 
