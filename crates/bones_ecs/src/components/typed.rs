@@ -139,6 +139,12 @@ impl<T: TypedEcsData> ComponentStore<T> {
     pub fn bitset(&self) -> &BitSetVec {
         self.components.bitset()
     }
+
+    /// Check whether or not this component store has data for the given entity.
+    #[inline]
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.bitset().contains(entity)
+    }
 }
 
 /// A typed, wrapper handle around [`UntypedComponentStore`] that is runtime borrow checked and can
@@ -220,6 +226,12 @@ impl<'a, T: TypedEcsData> AtomicComponentStoreRef<'a, T> {
     pub fn bitset(&self) -> &BitSetVec {
         self.components.bitset()
     }
+
+    /// Check whether or not this component store has data for the given entity.
+    #[inline]
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.bitset().contains(entity)
+    }
 }
 
 /// A mutable borrow of [`AtomicComponentStore`].
@@ -289,6 +301,12 @@ impl<'a, T: TypedEcsData> AtomicComponentStoreRefMut<'a, T> {
     /// Get the bitset representing which entities have this component on it.
     pub fn bitset(&self) -> &BitSetVec {
         self.components.bitset()
+    }
+
+    /// Check whether or not this component store has data for the given entity.
+    #[inline]
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.bitset().contains(entity)
     }
 }
 

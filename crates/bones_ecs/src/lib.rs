@@ -44,8 +44,7 @@ pub mod prelude {
     pub use crate::resources::*;
     pub use crate::system::*;
     pub use crate::ulid::*;
-    pub use crate::World;
-    pub use crate::{EcsData, RawFns, TypedEcsData};
+    pub use crate::{EcsData, RawFns, TypedEcsData, World};
     pub use bevy_derive::{Deref, DerefMut};
 }
 
