@@ -18,3 +18,4 @@ camera_shake = ["dep:bones_camera_shake"]
 [dependencies]
 bones_ecs = { path = "./crates/bones_ecs" }
 bones_camera_shake = { path = "./crates/bones_camera_shake", optional = true }
+Typeulid = { path = "./crates/type_ulid"}
