@@ -133,8 +133,8 @@ pub trait SystemParam: Sized {
 }
 
 /// [`SystemParam`] for getting read access to a resource.
-pub struct Res<'a, T: TypedEcsData>(AtomicRef<'a, T>);
-impl<'a, T: TypedEcsData> std::ops::Deref for Res<'a, T> {
+pub struct Res<'a, T: TypedEcsData + Default>(AtomicRef<'a, T>);
+impl<'a, T: TypedEcsData + Default> std::ops::Deref for Res<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -142,14 +142,14 @@ impl<'a, T: TypedEcsData> std::ops::Deref for Res<'a, T> {
 }
 
 /// [`SystemParam`] for getting mutable access to a resource.
-pub struct ResMut<'a, T>(AtomicRefMut<'a, T>);
-impl<'a, T> std::ops::Deref for ResMut<'a, T> {
+pub struct ResMut<'a, T: TypedEcsData + Default>(AtomicRefMut<'a, T>);
+impl<'a, T: TypedEcsData + Default> std::ops::Deref for ResMut<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<'a, T> std::ops::DerefMut for ResMut<'a, T> {
+impl<'a, T: TypedEcsData + Default> std::ops::DerefMut for ResMut<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
