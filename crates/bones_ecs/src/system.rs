@@ -12,9 +12,9 @@ pub struct System {
     ///
     /// Usually only called once, but this is not guaranteed so the implementation should be
     /// idempotent.
-    pub initialize: Box<dyn Send + Fn(&mut World)>,
+    pub initialize: Box<dyn Send + Sync + Fn(&mut World)>,
     /// This is run every time the system is executed
-    pub run: Box<dyn Send + FnMut(&World) -> SystemResult>,
+    pub run: Box<dyn Send + Sync + FnMut(&World) -> SystemResult>,
     /// A best-effort name for the system, for diagnostic purposes.
     pub name: &'static str,
 }
@@ -72,7 +72,7 @@ impl IntoSystem<System> for System {
 
 impl<F> IntoSystem<(World, F)> for F
 where
-    F: FnMut(&World) + Send + 'static,
+    F: FnMut(&World) + Send + Sync + 'static,
 {
     fn system(mut self) -> System {
         System {
@@ -87,7 +87,7 @@ where
 }
 impl<F> IntoSystem<(World, F, SystemResult)> for F
 where
-    F: FnMut(&World) -> SystemResult + Send + 'static,
+    F: FnMut(&World) -> SystemResult + Send + Sync + 'static,
 {
     fn system(self) -> System {
         System {
@@ -229,7 +229,7 @@ macro_rules! impl_system {
                 $args: SystemParam,
             )*
         > IntoSystem<(F, $($args,)* $($ret)?)> for F
-        where for<'a> F: 'static + Send +
+        where for<'a> F: 'static + Send + Sync +
             FnMut(
                 $(
                     <$args as SystemParam>::Param<'a>,
