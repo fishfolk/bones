@@ -393,9 +393,9 @@
     ///
     /// Usually only called once, but this is not guaranteed so the implementation should be
     /// idempotent.
-    </span><span class="kw">pub </span>initialize: Box&lt;<span class="kw">dyn </span>Send + Fn(<span class="kw-2">&amp;mut </span>World)&gt;,
+    </span><span class="kw">pub </span>initialize: Box&lt;<span class="kw">dyn </span>Send + Sync + Fn(<span class="kw-2">&amp;mut </span>World)&gt;,
     <span class="doccomment">/// This is run every time the system is executed
-    </span><span class="kw">pub </span>run: Box&lt;<span class="kw">dyn </span>Send + FnMut(<span class="kw-2">&amp;</span>World) -&gt; SystemResult&gt;,
+    </span><span class="kw">pub </span>run: Box&lt;<span class="kw">dyn </span>Send + Sync + FnMut(<span class="kw-2">&amp;</span>World) -&gt; SystemResult&gt;,
     <span class="doccomment">/// A best-effort name for the system, for diagnostic purposes.
     </span><span class="kw">pub </span>name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
 }
@@ -453,7 +453,7 @@
 
 <span class="kw">impl</span>&lt;F&gt; IntoSystem&lt;(World, F)&gt; <span class="kw">for </span>F
 <span class="kw">where
-    </span>F: FnMut(<span class="kw-2">&amp;</span>World) + Send + <span class="lifetime">&#39;static</span>,
+    </span>F: FnMut(<span class="kw-2">&amp;</span>World) + Send + Sync + <span class="lifetime">&#39;static</span>,
 {
     <span class="kw">fn </span>system(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; System {
         System {
@@ -468,7 +468,7 @@
 }
 <span class="kw">impl</span>&lt;F&gt; IntoSystem&lt;(World, F, SystemResult)&gt; <span class="kw">for </span>F
 <span class="kw">where
-    </span>F: FnMut(<span class="kw-2">&amp;</span>World) -&gt; SystemResult + Send + <span class="lifetime">&#39;static</span>,
+    </span>F: FnMut(<span class="kw-2">&amp;</span>World) -&gt; SystemResult + Send + Sync + <span class="lifetime">&#39;static</span>,
 {
     <span class="kw">fn </span>system(<span class="self">self</span>) -&gt; System {
         System {
@@ -610,7 +610,7 @@
                 <span class="macro-nonterminal">$args</span>: SystemParam,
             )*
         &gt; IntoSystem&lt;(F, $(<span class="macro-nonterminal">$args</span>,)* $(<span class="macro-nonterminal">$ret</span>)<span class="question-mark">?</span>)&gt; <span class="kw">for </span>F
-        <span class="kw">where for</span>&lt;<span class="lifetime">&#39;a</span>&gt; F: <span class="lifetime">&#39;static </span>+ Send +
+        <span class="kw">where for</span>&lt;<span class="lifetime">&#39;a</span>&gt; F: <span class="lifetime">&#39;static </span>+ Send + Sync +
             FnMut(
                 $(
                     &lt;<span class="macro-nonterminal">$args </span><span class="kw">as </span>SystemParam&gt;::Param&lt;<span class="lifetime">&#39;a</span>&gt;,
