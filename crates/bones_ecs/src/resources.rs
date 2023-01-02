@@ -208,7 +208,7 @@ impl Resources {
     /// Errors if you try to insert a Rust type with a different [`TypeId`], but the same
     /// [`TypeUlid`] as another resource in the store.
     pub fn try_insert<T: TypedEcsData>(&mut self, resource: T) -> Result<(), EcsError> {
-        let uuid = T::ulid();
+        let uuid = T::ULID;
         let type_id = TypeId::of::<T>();
 
         match self.type_ids.entry(uuid) {
@@ -247,12 +247,12 @@ impl Resources {
     ///
     /// See [get()][Self::get]
     pub fn contains<T: TypedEcsData>(&self) -> bool {
-        self.untyped.resources.contains_key(&T::ulid())
+        self.untyped.resources.contains_key(&T::ULID)
     }
 
     /// Gets a resource handle from the store if it exists.
     pub fn try_get<T: TypedEcsData>(&self) -> Option<AtomicResource<T>> {
-        let untyped = self.untyped.get(T::ulid())?;
+        let untyped = self.untyped.get(T::ULID)?;
 
         Some(AtomicResource {
             untyped,

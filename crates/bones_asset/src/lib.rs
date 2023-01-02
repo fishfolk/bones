@@ -29,7 +29,7 @@ impl AssetProviders {
         A: AssetProvider<T> + UntypedAssetProvider + 'static,
     {
         let type_id = TypeId::of::<T>();
-        let type_ulid = T::ulid();
+        let type_ulid = T::ULID;
 
         match self.type_ids.entry(type_ulid) {
             Entry::Occupied(entry) => {
@@ -52,7 +52,7 @@ impl AssetProviders {
 
     /// Get the asset provider for the given asset type, if it exists.
     pub fn try_get<T: TypeUlid>(&self) -> Option<AssetProviderRef<T>> {
-        self.providers.get(&T::ulid()).map(|x| {
+        self.providers.get(&T::ULID).map(|x| {
             let untyped = x.as_ref();
 
             AssetProviderRef {
@@ -69,7 +69,7 @@ impl AssetProviders {
 
     /// Get the asset provider for the given asset type, if it exists.
     pub fn try_get_mut<T: TypeUlid>(&mut self) -> Option<AssetProviderMut<T>> {
-        self.providers.get_mut(&T::ulid()).map(|x| {
+        self.providers.get_mut(&T::ULID).map(|x| {
             let untyped = x.as_mut();
 
             AssetProviderMut {
