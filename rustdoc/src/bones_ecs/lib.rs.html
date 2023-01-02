@@ -144,6 +144,8 @@
 <span id="144">144</span>
 <span id="145">145</span>
 <span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
 </pre><pre class="rust"><code><span class="attribute">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
@@ -177,21 +179,17 @@
 
 <span class="doccomment">/// The prelude.
 </span><span class="kw">pub mod </span>prelude {
-    <span class="kw">pub use </span>atomic_refcell::<span class="kw-2">*</span>;
-    <span class="kw">pub use </span>bitset_core::BitSet;
-    <span class="kw">pub use </span>type_ulid::{TypeUlid, Ulid};
+    <span class="kw">pub use </span>{
+        atomic_refcell::<span class="kw-2">*</span>,
+        bevy_derive::{Deref, DerefMut},
+        bitset_core::BitSet,
+        type_ulid::{TypeUlid, Ulid},
+    };
 
-    <span class="kw">pub use </span><span class="kw">crate</span>::bitset::<span class="kw-2">*</span>;
-    <span class="kw">pub use </span><span class="kw">crate</span>::components::<span class="kw-2">*</span>;
-    <span class="kw">pub use </span><span class="kw">crate</span>::entities::<span class="kw-2">*</span>;
-    <span class="kw">pub use </span><span class="kw">crate</span>::error::<span class="kw-2">*</span>;
-    <span class="kw">pub use </span><span class="kw">crate</span>::join;
-    <span class="kw">pub use </span><span class="kw">crate</span>::resources::<span class="kw-2">*</span>;
-    <span class="kw">pub use </span><span class="kw">crate</span>::stage::<span class="kw-2">*</span>;
-    <span class="kw">pub use </span><span class="kw">crate</span>::system::<span class="kw-2">*</span>;
-    <span class="kw">pub use </span><span class="kw">crate</span>::ulid::<span class="kw-2">*</span>;
-    <span class="kw">pub use crate</span>::{EcsData, RawFns, TypedEcsData, World};
-    <span class="kw">pub use </span>bevy_derive::{Deref, DerefMut};
+    <span class="kw">pub use crate</span>::{
+        bitset::<span class="kw-2">*</span>, components::<span class="kw-2">*</span>, default, entities::<span class="kw-2">*</span>, error::<span class="kw-2">*</span>, join, resources::<span class="kw-2">*</span>, stage::<span class="kw-2">*</span>,
+        system::<span class="kw-2">*</span>, ulid::<span class="kw-2">*</span>, EcsData, RawFns, TypedEcsData, World,
+    };
 }
 
 <span class="doccomment">/// Helper trait that is auto-implemented for anything that may be stored in the ECS&#39;s untyped
@@ -289,6 +287,12 @@
             std::process::abort();
         }
     }
+}
+
+<span class="doccomment">/// Free-standing, shorter equivalent to [`Default::default()`].
+</span><span class="attribute">#[inline]
+</span><span class="kw">pub fn </span>default&lt;T: Default&gt;() -&gt; T {
+    std::default::Default::default()
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="bones_ecs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>
