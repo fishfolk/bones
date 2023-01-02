@@ -256,7 +256,7 @@
         A: AssetProvider&lt;T&gt; + UntypedAssetProvider + <span class="lifetime">&#39;static</span>,
     {
         <span class="kw">let </span>type_id = TypeId::of::&lt;T&gt;();
-        <span class="kw">let </span>type_ulid = T::ulid();
+        <span class="kw">let </span>type_ulid = T::ULID;
 
         <span class="kw">match </span><span class="self">self</span>.type_ids.entry(type_ulid) {
             Entry::Occupied(entry) =&gt; {
@@ -279,7 +279,7 @@
 
     <span class="doccomment">/// Get the asset provider for the given asset type, if it exists.
     </span><span class="kw">pub fn </span>try_get&lt;T: TypeUlid&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AssetProviderRef&lt;T&gt;&gt; {
-        <span class="self">self</span>.providers.get(<span class="kw-2">&amp;</span>T::ulid()).map(|x| {
+        <span class="self">self</span>.providers.get(<span class="kw-2">&amp;</span>T::ULID).map(|x| {
             <span class="kw">let </span>untyped = x.as_ref();
 
             AssetProviderRef {
@@ -296,7 +296,7 @@
 
     <span class="doccomment">/// Get the asset provider for the given asset type, if it exists.
     </span><span class="kw">pub fn </span>try_get_mut&lt;T: TypeUlid&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AssetProviderMut&lt;T&gt;&gt; {
-        <span class="self">self</span>.providers.get_mut(<span class="kw-2">&amp;</span>T::ulid()).map(|x| {
+        <span class="self">self</span>.providers.get_mut(<span class="kw-2">&amp;</span>T::ULID).map(|x| {
             <span class="kw">let </span>untyped = x.as_mut();
 
             AssetProviderMut {

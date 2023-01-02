@@ -550,7 +550,7 @@
     /// Errors if you try to insert a Rust type with a different [`TypeId`], but the same
     /// [`TypeUlid`] as another resource in the store.
     </span><span class="kw">pub fn </span>try_insert&lt;T: TypedEcsData&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), EcsError&gt; {
-        <span class="kw">let </span>uuid = T::ulid();
+        <span class="kw">let </span>uuid = T::ULID;
         <span class="kw">let </span>type_id = TypeId::of::&lt;T&gt;();
 
         <span class="kw">match </span><span class="self">self</span>.type_ids.entry(uuid) {
@@ -589,12 +589,12 @@
     ///
     /// See [get()][Self::get]
     </span><span class="kw">pub fn </span>contains&lt;T: TypedEcsData&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="self">self</span>.untyped.resources.contains_key(<span class="kw-2">&amp;</span>T::ulid())
+        <span class="self">self</span>.untyped.resources.contains_key(<span class="kw-2">&amp;</span>T::ULID)
     }
 
     <span class="doccomment">/// Gets a resource handle from the store if it exists.
     </span><span class="kw">pub fn </span>try_get&lt;T: TypedEcsData&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;T&gt;&gt; {
-        <span class="kw">let </span>untyped = <span class="self">self</span>.untyped.get(T::ulid())<span class="question-mark">?</span>;
+        <span class="kw">let </span>untyped = <span class="self">self</span>.untyped.get(T::ULID)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Some</span>(AtomicResource {
             untyped,

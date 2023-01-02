@@ -67,8 +67,6 @@
 <span id="67">67</span>
 <span id="68">68</span>
 <span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
 </pre><pre class="rust"><code><span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>proc_macro2::TokenStream <span class="kw">as </span>TokenStream2;
 <span class="kw">use </span>quote::{quote, quote_spanned};
@@ -134,9 +132,7 @@
     </span><span class="kw">let </span>id = ulid.<span class="number">0</span>;
     <span class="macro">quote! </span>{
         <span class="kw">impl </span>::type_ulid::TypeUlid <span class="kw">for </span>#item_ident {
-            <span class="kw">fn </span>ulid() -&gt; ::type_ulid::Ulid {
-                ::type_ulid::Ulid(#id)
-            }
+            <span class="kw">const </span>ULID: ::type_ulid::Ulid = ::type_ulid::Ulid(#id);
         }
     }
 }

@@ -83,8 +83,6 @@
 <span id="83">83</span>
 <span id="84">84</span>
 <span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
 </pre><pre class="rust"><code><span class="doccomment">//! A simple crate containing the [`TypeUlid`] trait to allow associating [`Ulid`][ulid::Ulid]
 //! identifiers with Rust types.
 //!
@@ -106,8 +104,8 @@
 /// &gt; **⚠️ Warning:** there is nothing enforcing that the [`Ulid`]s returned by different types will
 /// &gt; be different.
 </span><span class="kw">pub trait </span>TypeUlid {
-    <span class="doccomment">/// Get the type&#39;s [`Ulid`].
-    </span><span class="kw">fn </span>ulid() -&gt; Ulid;
+    <span class="doccomment">/// The type&#39;s [`Ulid`].
+    </span><span class="kw">const </span>ULID: Ulid;
 }
 
 <span class="doccomment">/// Allows reading a type&#39;s [`Ulid`] from the context of a trait object when the concrete Rust type
@@ -121,7 +119,7 @@
 
 <span class="kw">impl</span>&lt;T: TypeUlid&gt; TypeUlidDynamic <span class="kw">for </span>T {
     <span class="kw">fn </span>ulid(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ulid {
-        <span class="self">Self</span>::ulid()
+        <span class="self">Self</span>::ULID
     }
 }
 
@@ -134,9 +132,7 @@
 </span><span class="macro">macro_rules! </span>impl_ulid {
     (<span class="macro-nonterminal">$t</span>:ty, <span class="macro-nonterminal">$ulid</span>:expr) =&gt; {
         <span class="kw">impl </span>TypeUlid <span class="kw">for </span><span class="macro-nonterminal">$t </span>{
-            <span class="kw">fn </span>ulid() -&gt; Ulid {
-                Ulid(<span class="macro-nonterminal">$ulid</span>)
-            }
+            <span class="kw">const </span>ULID: Ulid = Ulid(<span class="macro-nonterminal">$ulid</span>);
         }
     };
 }

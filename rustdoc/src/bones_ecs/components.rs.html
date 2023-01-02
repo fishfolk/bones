@@ -133,7 +133,7 @@
 </span><span class="kw">fn </span>validate_type_uuid_match&lt;T: TypeUlid + <span class="lifetime">&#39;static</span>&gt;(
     type_ids: <span class="kw-2">&amp;</span>UlidMap&lt;TypeId&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), EcsError&gt; {
-    <span class="kw">if </span>type_ids.get(<span class="kw-2">&amp;</span>T::ulid()).ok_or(EcsError::NotInitialized)<span class="question-mark">? </span>!= <span class="kw-2">&amp;</span>TypeId::of::&lt;T&gt;() {
+    <span class="kw">if </span>type_ids.get(<span class="kw-2">&amp;</span>T::ULID).ok_or(EcsError::NotInitialized)<span class="question-mark">? </span>!= <span class="kw-2">&amp;</span>TypeId::of::&lt;T&gt;() {
         <span class="prelude-val">Err</span>(EcsError::TypeUlidCollision)
     } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(())
@@ -175,7 +175,7 @@
     </span><span class="kw">pub fn </span>try_init&lt;T: Clone + TypeUlid + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), EcsError&gt; {
-        <span class="kw">match </span><span class="self">self</span>.components.entry(T::ulid()) {
+        <span class="kw">match </span><span class="self">self</span>.components.entry(T::ULID) {
             std::collections::hash_map::Entry::Occupied(<span class="kw">_</span>) =&gt; {
                 validate_type_uuid_match::&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.type_ids)
             }
@@ -183,7 +183,7 @@
                 entry.insert(Arc::new(AtomicRefCell::new(
                     UntypedComponentStore::for_type::&lt;T&gt;(),
                 )));
-                <span class="self">self</span>.type_ids.insert(T::ulid(), TypeId::of::&lt;T&gt;());
+                <span class="self">self</span>.type_ids.insert(T::ULID, TypeId::of::&lt;T&gt;());
 
                 <span class="prelude-val">Ok</span>(())
             }
@@ -204,7 +204,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;AtomicComponentStore&lt;T&gt;, EcsError&gt; {
         validate_type_uuid_match::&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.type_ids)<span class="question-mark">?</span>;
-        <span class="kw">let </span>untyped = <span class="self">self</span>.try_get_by_uuid(T::ulid())<span class="question-mark">?</span>;
+        <span class="kw">let </span>untyped = <span class="self">self</span>.try_get_by_uuid(T::ULID)<span class="question-mark">?</span>;
 
         <span class="comment">// Safe: We&#39;ve made sure that the data initialized in the untyped components matches T
         </span><span class="kw">unsafe </span>{ <span class="prelude-val">Ok</span>(AtomicComponentStore::from_components_unsafe(untyped)) }
