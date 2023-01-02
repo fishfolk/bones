@@ -31,21 +31,17 @@ pub use world::World;
 
 /// The prelude.
 pub mod prelude {
-    pub use atomic_refcell::*;
-    pub use bitset_core::BitSet;
-    pub use type_ulid::{TypeUlid, Ulid};
+    pub use {
+        atomic_refcell::*,
+        bevy_derive::{Deref, DerefMut},
+        bitset_core::BitSet,
+        type_ulid::{TypeUlid, Ulid},
+    };
 
-    pub use crate::bitset::*;
-    pub use crate::components::*;
-    pub use crate::entities::*;
-    pub use crate::error::*;
-    pub use crate::join;
-    pub use crate::resources::*;
-    pub use crate::stage::*;
-    pub use crate::system::*;
-    pub use crate::ulid::*;
-    pub use crate::{EcsData, RawFns, TypedEcsData, World};
-    pub use bevy_derive::{Deref, DerefMut};
+    pub use crate::{
+        bitset::*, components::*, default, entities::*, error::*, join, resources::*, stage::*,
+        system::*, ulid::*, EcsData, RawFns, TypedEcsData, World,
+    };
 }
 
 /// Helper trait that is auto-implemented for anything that may be stored in the ECS's untyped
@@ -143,4 +139,10 @@ impl<T: Clone> RawFns for T {
             std::process::abort();
         }
     }
+}
+
+/// Free-standing, shorter equivalent to [`Default::default()`].
+#[inline]
+pub fn default<T: Default>() -> T {
+    std::default::Default::default()
 }
