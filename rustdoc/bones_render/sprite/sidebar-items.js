@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Image","Image asset type, contains no data, but [`Handle<Image>`] is still useful because it uniquely represents an image that may be rendered outside of the core."],["Sprite","A 2D sprite component"]]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Time","Resource representing the current game time."]]};

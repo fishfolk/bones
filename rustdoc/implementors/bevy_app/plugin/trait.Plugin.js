@@ -1,3 +1,4 @@
 (function() {var implementors = {
+"bones_bevy_renderer":[["impl&lt;W:&nbsp;<a class=\"trait\" href=\"bones_bevy_renderer/trait.HasBonesWorld.html\" title=\"trait bones_bevy_renderer::HasBonesWorld\">HasBonesWorld</a>&gt; Plugin for <a class=\"struct\" href=\"bones_bevy_renderer/struct.BonesRendererPlugin.html\" title=\"struct bones_bevy_renderer::BonesRendererPlugin\">BonesRendererPlugin</a>&lt;W&gt;"]],
 "bones_camera_shake":[["impl Plugin for <a class=\"struct\" href=\"bones_camera_shake/struct.CameraShakePlugin.html\" title=\"struct bones_camera_shake::CameraShakePlugin\">CameraShakePlugin</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

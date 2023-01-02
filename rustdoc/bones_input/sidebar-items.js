@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":[["prelude","The prelude."]],"struct":[["Time","Resource representing the current game time."]]};

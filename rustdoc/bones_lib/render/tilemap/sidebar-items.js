@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["TileLayer","A tilemap layer."]]};
