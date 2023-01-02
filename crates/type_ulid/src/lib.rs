@@ -23,6 +23,26 @@ pub trait TypeUlid {
     fn ulid() -> Ulid;
 }
 
+/// Allows reading a type's [`Ulid`] from the context of a trait object when the concrete Rust type
+/// is not known at compile time.
+///
+/// This trait is automatically implemented for every type that implements [`TypeUlid`] and is
+/// sealed to make it impossible to implement manually for custom types.
+pub trait TypeUlidDynamic: private::Sealed {
+    fn ulid(&self) -> Ulid;
+}
+
+impl<T: TypeUlid> TypeUlidDynamic for T {
+    fn ulid(&self) -> Ulid {
+        Self::ulid()
+    }
+}
+
+mod private {
+    pub trait Sealed {}
+    impl<T: super::TypeUlid> Sealed for T {}
+}
+
 /// Helper to implement [`TypeUlid`] for a given type.
 macro_rules! impl_ulid {
     ($t:ty, $ulid:expr) => {
@@ -55,3 +75,13 @@ impl_ulid!(std::ffi::OsStr, 2021656632874440750318571899824814504);
 impl_ulid!(std::ffi::OsString, 2021656640805438832313622968989918986);
 impl_ulid!(std::time::Duration, 2021656695577227212934222356752834404);
 impl_ulid!((), 2021656729314635244986430849253282093);
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn type_ulid_dyanmic_is_object_safe() {
+        let _: Box<dyn TypeUlidDynamic> = Box::new(());
+    }
+}
