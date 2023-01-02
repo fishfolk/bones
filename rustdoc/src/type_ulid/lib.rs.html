@@ -55,6 +55,36 @@
 <span id="55">55</span>
 <span id="56">56</span>
 <span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
 </pre><pre class="rust"><code><span class="doccomment">//! A simple crate containing the [`TypeUlid`] trait to allow associating [`Ulid`][ulid::Ulid]
 //! identifiers with Rust types.
 //!
@@ -78,6 +108,26 @@
 </span><span class="kw">pub trait </span>TypeUlid {
     <span class="doccomment">/// Get the type&#39;s [`Ulid`].
     </span><span class="kw">fn </span>ulid() -&gt; Ulid;
+}
+
+<span class="doccomment">/// Allows reading a type&#39;s [`Ulid`] from the context of a trait object when the concrete Rust type
+/// is not known at compile time.
+///
+/// This trait is automatically implemented for every type that implements [`TypeUlid`] and is
+/// sealed to make it impossible to implement manually for custom types.
+</span><span class="kw">pub trait </span>TypeUlidDynamic: private::Sealed {
+    <span class="kw">fn </span>ulid(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ulid;
+}
+
+<span class="kw">impl</span>&lt;T: TypeUlid&gt; TypeUlidDynamic <span class="kw">for </span>T {
+    <span class="kw">fn </span>ulid(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ulid {
+        <span class="self">Self</span>::ulid()
+    }
+}
+
+<span class="kw">mod </span>private {
+    <span class="kw">pub trait </span>Sealed {}
+    <span class="kw">impl</span>&lt;T: <span class="kw">super</span>::TypeUlid&gt; Sealed <span class="kw">for </span>T {}
 }
 
 <span class="doccomment">/// Helper to implement [`TypeUlid`] for a given type.
@@ -112,5 +162,15 @@
 <span class="macro">impl_ulid!</span>(std::ffi::OsString, <span class="number">2021656640805438832313622968989918986</span>);
 <span class="macro">impl_ulid!</span>(std::time::Duration, <span class="number">2021656695577227212934222356752834404</span>);
 <span class="macro">impl_ulid!</span>((), <span class="number">2021656729314635244986430849253282093</span>);
+
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>test {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>type_ulid_dyanmic_is_object_safe() {
+        <span class="kw">let _</span>: Box&lt;<span class="kw">dyn </span>TypeUlidDynamic&gt; = Box::new(());
+    }
+}
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="type_ulid" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>
