@@ -1,10 +1,9 @@
-//! UUID-related utilities such as UUID map and type UUIDs.
+//! ULID-related utilities such as ULID map and type ULIDs.
 //!
-//! - [`TypeUlid`] comes from the [`type_uuid`] crate
-//! - [`Ulid`] comes from the [`uuid`] crate.
+//! - [`TypeUlid`] comes from the [`type_ulid`] crate
+//! - [`Ulid`] comes from the [`ulid`] crate.
 //!
-//! [`type_uuid`]: https://docs.rs/type_uuid
-//! [`uuid`]: https://docs.rs/uuid
+//! [`ulid`]: https://docs.rs/ulid
 
 use fxhash::FxHashMap;
 
