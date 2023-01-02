@@ -17,7 +17,7 @@ pub use untyped::*;
 fn validate_type_uuid_match<T: TypeUlid + 'static>(
     type_ids: &UlidMap<TypeId>,
 ) -> Result<(), EcsError> {
-    if type_ids.get(&T::ulid()).ok_or(EcsError::NotInitialized)? != &TypeId::of::<T>() {
+    if type_ids.get(&T::ULID).ok_or(EcsError::NotInitialized)? != &TypeId::of::<T>() {
         Err(EcsError::TypeUlidCollision)
     } else {
         Ok(())
@@ -59,7 +59,7 @@ impl ComponentStores {
     pub fn try_init<T: Clone + TypeUlid + Send + Sync + 'static>(
         &mut self,
     ) -> Result<(), EcsError> {
-        match self.components.entry(T::ulid()) {
+        match self.components.entry(T::ULID) {
             std::collections::hash_map::Entry::Occupied(_) => {
                 validate_type_uuid_match::<T>(&self.type_ids)
             }
@@ -67,7 +67,7 @@ impl ComponentStores {
                 entry.insert(Arc::new(AtomicRefCell::new(
                     UntypedComponentStore::for_type::<T>(),
                 )));
-                self.type_ids.insert(T::ulid(), TypeId::of::<T>());
+                self.type_ids.insert(T::ULID, TypeId::of::<T>());
 
                 Ok(())
             }
@@ -88,7 +88,7 @@ impl ComponentStores {
         &self,
     ) -> Result<AtomicComponentStore<T>, EcsError> {
         validate_type_uuid_match::<T>(&self.type_ids)?;
-        let untyped = self.try_get_by_uuid(T::ulid())?;
+        let untyped = self.try_get_by_uuid(T::ULID)?;
 
         // Safe: We've made sure that the data initialized in the untyped components matches T
         unsafe { Ok(AtomicComponentStore::from_components_unsafe(untyped)) }

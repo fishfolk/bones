@@ -63,9 +63,7 @@ fn impl_type_ulid(input: &syn::DeriveInput) -> TokenStream2 {
     let id = ulid.0;
     quote! {
         impl ::type_ulid::TypeUlid for #item_ident {
-            fn ulid() -> ::type_ulid::Ulid {
-                ::type_ulid::Ulid(#id)
-            }
+            const ULID: ::type_ulid::Ulid = ::type_ulid::Ulid(#id);
         }
     }
 }

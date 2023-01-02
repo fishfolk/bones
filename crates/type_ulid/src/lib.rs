@@ -19,8 +19,8 @@ pub use ulid::Ulid;
 /// > **⚠️ Warning:** there is nothing enforcing that the [`Ulid`]s returned by different types will
 /// > be different.
 pub trait TypeUlid {
-    /// Get the type's [`Ulid`].
-    fn ulid() -> Ulid;
+    /// The type's [`Ulid`].
+    const ULID: Ulid;
 }
 
 /// Allows reading a type's [`Ulid`] from the context of a trait object when the concrete Rust type
@@ -34,7 +34,7 @@ pub trait TypeUlidDynamic: private::Sealed {
 
 impl<T: TypeUlid> TypeUlidDynamic for T {
     fn ulid(&self) -> Ulid {
-        Self::ulid()
+        Self::ULID
     }
 }
 
@@ -47,9 +47,7 @@ mod private {
 macro_rules! impl_ulid {
     ($t:ty, $ulid:expr) => {
         impl TypeUlid for $t {
-            fn ulid() -> Ulid {
-                Ulid($ulid)
-            }
+            const ULID: Ulid = Ulid($ulid);
         }
     };
 }
