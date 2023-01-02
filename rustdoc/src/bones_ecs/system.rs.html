@@ -373,23 +373,14 @@
 <span id="373">373</span>
 <span id="374">374</span>
 <span id="375">375</span>
-<span id="376">376</span>
-<span id="377">377</span>
-<span id="378">378</span>
-<span id="379">379</span>
-<span id="380">380</span>
-<span id="381">381</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Implements the system API for the ECS.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// Struct used to run a system function using the world.
-///
-/// This struct is also used internally by the [`Dispatcher`] to create a coherent execution
-/// sequence.
 </span><span class="kw">pub struct </span>System {
-    <span class="doccomment">/// This will be called once by [`Dispatcher`] to initialize the system, allowing it to
-    /// intialize any resources or components in the world.
+    <span class="doccomment">/// This should be called once to initialize the system, allowing it to intialize any resources
+    /// or components in the world.
     ///
     /// Usually only called once, but this is not guaranteed so the implementation should be
     /// idempotent.
@@ -403,9 +394,6 @@
 <span class="kw">impl </span>System {
     <span class="doccomment">/// Initializes the resources required to run this system inside of the provided [`World`], if
     /// those resources don&#39;t already exist.
-    ///
-    /// This is called automatically if you use a [`Dispatcher`], so in most cases it is not
-    /// required to call it manually.
     ///
     /// This is usually only called once, but this is not guaranteed so the implementation should be
     /// idempotent.

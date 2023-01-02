@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["CoreStage","A [`StageLabel`] for the 5 core stages."]],"struct":[["SystemStage","A collection of systems that will be run in order."],["SystemStages","An ordered collection of [`SystemStage`]s."]],"trait":[["StageLabel","Trait for things that may be used to identify a system stage."]]};
