@@ -1,0 +1,19 @@
+[package]
+name = "bones_bevy_renderer"
+version = "0.1.0"
+edition = "2021"
+authors = ["The Fish Folk & Spicy Lobster Developers"]
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+bones_lib = { path = "../../" }
+type_ulid = { path = "../type_ulid" }
+
+[dependencies.bevy]
+version = "0.9.1"
+default-features = false
+features = [
+    "bevy_render",
+    "bevy_core_pipeline",
+    "bevy_sprite",
+]

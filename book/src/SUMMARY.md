@@ -5,4 +5,4 @@
 
 ---
 
-[API Documentation](./rustdoc/bones/index.html)
+[API Documentation](./rustdoc/bones_lib/index.html)

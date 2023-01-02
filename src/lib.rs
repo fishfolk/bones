@@ -1,8 +1,11 @@
 //! Opinionated game meta-engine built on Bevy.
 
-/// Entity component system for the bones library.
-pub mod ecs {
-    pub use bones_ecs::*;
+#[doc(inline)]
+pub use {bones_asset as asset, bones_ecs as ecs, bones_input as input, bones_render as render};
+
+/// Bones lib prelude
+pub mod prelude {
+    pub use crate::{asset::prelude::*, ecs::prelude::*, input::prelude::*, render::prelude::*};
 }
 
 /// This crate provides 2D camera shake using the methodology described in this excellent [GDC

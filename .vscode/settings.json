@@ -1,6 +1,11 @@
 {
     "conventionalCommits.scopes": [
+        "bones_lib",
         "bones_ecs",
+        "bones_asset",
+        "bones_render",
+        "bones_input",
+        "bones_bevy_renderer",
         "bones_has_load_progress",
         "bones_matchmaker",
         "bones_matchmaker_proto",
