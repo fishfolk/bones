@@ -13,9 +13,9 @@ pub mod atomic {
 }
 pub mod bitset;
 pub mod components;
-pub mod dispatcher;
 pub mod entities;
 pub mod resources;
+pub mod stage;
 pub mod system;
 pub mod ulid;
 
@@ -37,11 +37,11 @@ pub mod prelude {
 
     pub use crate::bitset::*;
     pub use crate::components::*;
-    pub use crate::dispatcher::*;
     pub use crate::entities::*;
     pub use crate::error::*;
     pub use crate::join;
     pub use crate::resources::*;
+    pub use crate::stage::*;
     pub use crate::system::*;
     pub use crate::ulid::*;
     pub use crate::{EcsData, RawFns, TypedEcsData, World};

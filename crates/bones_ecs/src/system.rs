@@ -3,12 +3,9 @@
 use crate::prelude::*;
 
 /// Struct used to run a system function using the world.
-///
-/// This struct is also used internally by the [`Dispatcher`] to create a coherent execution
-/// sequence.
 pub struct System {
-    /// This will be called once by [`Dispatcher`] to initialize the system, allowing it to
-    /// intialize any resources or components in the world.
+    /// This should be called once to initialize the system, allowing it to intialize any resources
+    /// or components in the world.
     ///
     /// Usually only called once, but this is not guaranteed so the implementation should be
     /// idempotent.
@@ -22,9 +19,6 @@ pub struct System {
 impl System {
     /// Initializes the resources required to run this system inside of the provided [`World`], if
     /// those resources don't already exist.
-    ///
-    /// This is called automatically if you use a [`Dispatcher`], so in most cases it is not
-    /// required to call it manually.
     ///
     /// This is usually only called once, but this is not guaranteed so the implementation should be
     /// idempotent.

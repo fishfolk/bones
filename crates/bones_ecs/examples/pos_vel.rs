@@ -21,15 +21,18 @@ fn main() {
     world.run_system(setup_system).ok();
 
     // Create a dispatcher to run our systems in our game loop
-    let mut dispatcher = Dispatcher::builder()
-        // Add our systems to the dispatcher
-        .add(pos_vel_system)
-        .add(print_system)
-        .build(&mut world);
+    let mut dispatcher = SystemStages::with_core_stages();
+
+    // Add our systems to the dispatcher
+    dispatcher
+        .add_system_to_stage(CoreStage::Update, pos_vel_system)
+        .add_system_to_stage(CoreStage::PostUpdate, print_system)
+        // This must be called once, after adding our systems
+        .initialize_systems(&mut world);
 
     // Run our game loop for 10 frames
     for _ in 0..10 {
-        dispatcher.run_seq(&world).unwrap();
+        dispatcher.run(&world).unwrap();
     }
 }
 
