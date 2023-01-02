@@ -1,6 +1,6 @@
 [package]
-name = "bones"
-version = "2.0.0"
+name = "bones_lib"
+version = "0.1.0"
 description = "Opinionated game meta-engine built on Bevy"
 authors = ["The Fish Folks & Spicy Lobster Developers"]
 license = "MIT OR Apache-2.0"
@@ -17,4 +17,7 @@ camera_shake = ["dep:bones_camera_shake"]
 
 [dependencies]
 bones_ecs = { path = "./crates/bones_ecs" }
+bones_render = { path = "./crates/bones_render" }
+bones_input = { path = "./crates/bones_input" }
+bones_asset = { path = "./crates/bones_asset" }
 bones_camera_shake = { path = "./crates/bones_camera_shake", optional = true }

@@ -1,0 +1,10 @@
+[package]
+name = "bones_asset"
+version = "0.1.0"
+edition = "2021"
+authors = ["The Fish Folk & Spicy Lobster Developers"]
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+bones_ecs = { path = "../bones_ecs" }
+ulid = "1.0.0"
