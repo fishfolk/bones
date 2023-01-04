@@ -8,6 +8,11 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 bones_lib = { path = "../../", features = ["bevy"] }
 type_ulid = { path = "../type_ulid" }
+serde = { version = "1.0.0", features = ["derive"] }
+glam = "0.22.0"
+serde_yaml = "0.9.16"
+serde_json = "1.0.91"
+bones_bevy_asset = { path = "../bones_bevy_asset" }
 
 [dependencies.bevy]
 version = "0.9.1"
