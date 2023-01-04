@@ -805,7 +805,12 @@ name = "bones_bevy_renderer"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bones_bevy_asset",
  "bones_lib",
+ "glam",
+ "serde",
+ "serde_json",
+ "serde_yaml",
  "type_ulid",
 ]
 
