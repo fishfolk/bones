@@ -8,3 +8,11 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 bones_ecs = { path = "../bones_ecs" }
 ulid = "1.0.0"
+serde = "1.0.0"
+bones_bevy_utils = { path = "../bones_bevy_utils", optional = true }
+type_ulid = { path = "../type_ulid" }
+bevy_asset = { version = "0.9.1", optional = true }
+
+[features]
+default = []
+bevy = ["dep:bones_bevy_utils", "dep:bevy_asset"]

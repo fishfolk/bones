@@ -9,7 +9,7 @@ use crate::prelude::*;
 pub struct Image;
 
 /// A 2D sprite component
-#[derive(Copy, Clone, TypeUlid, Debug)]
+#[derive(Clone, TypeUlid, Debug)]
 #[ulid = "01GNJXPWZKS6BHJEG1SX5B93DA"]
 pub struct Sprite {
     /// The sprite image handle.

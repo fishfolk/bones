@@ -6,7 +6,7 @@ authors = ["The Fish Folk & Spicy Lobster Developers"]
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-bones_lib = { path = "../../" }
+bones_lib = { path = "../../", features = ["bevy"] }
 type_ulid = { path = "../type_ulid" }
 
 [dependencies.bevy]

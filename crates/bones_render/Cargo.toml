@@ -10,3 +10,9 @@ bones_ecs = { path = "../bones_ecs" }
 bones_asset = { path = "../bones_asset" }
 type_ulid = { path = "../type_ulid" }
 glam = "0.22.0"
+bones_bevy_utils = { path = "../bones_bevy_utils", optional = true }
+bevy_transform = { version = "0.9.1", optional = true }
+
+[features]
+default = []
+bevy = ["dep:bones_bevy_utils", "dep:bevy_transform"]
