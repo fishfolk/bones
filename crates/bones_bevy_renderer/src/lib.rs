@@ -5,7 +5,7 @@
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
 
-use std::{marker::PhantomData, rc::Rc};
+use std::marker::PhantomData;
 
 use bevy::{prelude::*, render::camera::ScalingMode};
 use bones_lib::prelude::{self as bones, BitSet, IntoBevy};
@@ -91,10 +91,9 @@ fn render_world<W: HasBonesWorld>(
     let cameras = cameras.borrow();
 
     // Sync sprites
-    let mut sprites_bitset = entities.bitset().clone();
-    sprites_bitset.bit_and(sprites.bitset());
+    let mut sprites_bitset = sprites.bitset().clone();
     sprites_bitset.bit_and(transforms.bitset());
-    let mut bones_sprite_entity_iter = entities.iter_with_bitset(Rc::new(sprites_bitset)).flatten();
+    let mut bones_sprite_entity_iter = entities.iter_with_bitset(&sprites_bitset);
     for (bevy_ent, mut image, mut transform) in &mut bevy_bones_sprites {
         if let Some(bones_ent) = bones_sprite_entity_iter.next() {
             let bones_sprite = sprites.get(bones_ent).unwrap();
@@ -121,9 +120,9 @@ fn render_world<W: HasBonesWorld>(
     }
 
     // Sync cameras
-    let mut cameras_bitset = entities.bitset().clone();
-    cameras_bitset.bit_and(cameras.bitset());
-    let mut bones_camera_entity_iter = entities.iter_with_bitset(Rc::new(cameras_bitset)).flatten();
+    let mut cameras_bitset = cameras.bitset().clone();
+    cameras_bitset.bit_and(transforms.bitset());
+    let mut bones_camera_entity_iter = entities.iter_with_bitset(&cameras_bitset);
     for (bevy_ent, mut camera, mut projection, mut transform) in &mut bevy_bones_cameras {
         if let Some(bones_ent) = bones_camera_entity_iter.next() {
             let bones_camera = cameras.get(bones_ent).unwrap();

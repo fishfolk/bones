@@ -119,7 +119,7 @@ impl<T: Clone + 'static> TypedComponentOps<T> {
     pub fn iter_with_bitset<'a>(
         &'a self,
         components: &'a UntypedComponentStore,
-        bitset: std::rc::Rc<BitSetVec>,
+        bitset: &'a BitSetVec,
     ) -> ComponentBitsetIterator<'a, T> {
         // SAFE: Constructing `TypedComponentOps` is unsafe and user affirms the type T is valid for
         // the underlying, untyped data.
@@ -131,7 +131,7 @@ impl<T: Clone + 'static> TypedComponentOps<T> {
     pub fn iter_mut_with_bitset<'a>(
         &'a self,
         components: &'a mut UntypedComponentStore,
-        bitset: std::rc::Rc<BitSetVec>,
+        bitset: &'a BitSetVec,
     ) -> ComponentBitsetIteratorMut<T> {
         // SAFE: Constructing `TypedComponentOps` is unsafe and user affirms the type T is valid for
         // the underlying, untyped data.

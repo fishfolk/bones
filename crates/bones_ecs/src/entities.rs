@@ -137,7 +137,7 @@ impl Entities {
     }
 
     /// Iterates over entities using the provided bitset.
-    pub fn iter_with_bitset(&self, bitset: std::rc::Rc<BitSetVec>) -> EntityIterator {
+    pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> EntityIterator {
         EntityIterator {
             current_id: 0,
             next_id: self.next_id,
@@ -155,24 +155,22 @@ pub struct EntityIterator<'a> {
     pub(crate) entities: &'a BitSetVec,
     pub(crate) generations: &'a Vec<u32>,
     //pub(crate) bitset: &'a BitSetVec,
-    pub(crate) bitset: std::rc::Rc<BitSetVec>,
+    pub(crate) bitset: &'a BitSetVec,
 }
 
 impl<'a> Iterator for EntityIterator<'a> {
-    type Item = Option<Entity>;
+    type Item = Entity;
     fn next(&mut self) -> Option<Self::Item> {
-        while !self.bitset.bit_test(self.current_id) && self.current_id < self.next_id {
+        while !(self.bitset.bit_test(self.current_id) && self.entities.bit_test(self.current_id))
+            && self.current_id < self.next_id
+        {
             self.current_id += 1;
         }
         let ret = if self.current_id < self.next_id {
-            if self.entities.bit_test(self.current_id) {
-                Some(Some(Entity::new(
-                    self.current_id as u32,
-                    self.generations[self.current_id],
-                )))
-            } else {
-                Some(None)
-            }
+            Some(Entity::new(
+                self.current_id as u32,
+                self.generations[self.current_id],
+            ))
         } else {
             None
         };
@@ -292,5 +290,18 @@ mod tests {
         entities.kill(e);
         entities.create();
         entities.create();
+    }
+
+    #[test]
+    fn iter_with_empty_bitset() {
+        let mut entities = Entities::default();
+
+        // Create a couple entities
+        entities.create();
+        entities.create();
+
+        // Join with an empty bitset
+        let bitset = BitSetVec::default();
+        assert_eq!(entities.iter_with_bitset(&bitset).count(), 0);
     }
 }

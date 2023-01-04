@@ -314,10 +314,7 @@ impl UntypedComponentStore {
     /// entities.
     ///
     /// Slower than `iter()` but allows joining between multiple component types.
-    pub fn iter_with_bitset(
-        &self,
-        bitset: std::rc::Rc<BitSetVec>,
-    ) -> UntypedComponentBitsetIterator {
+    pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> UntypedComponentBitsetIterator {
         UntypedComponentBitsetIterator {
             current_id: 0,
             components: self,
@@ -329,9 +326,9 @@ impl UntypedComponentStore {
     /// entities.
     ///
     /// Slower than `iter()` but allows joining between multiple component types.
-    pub fn iter_mut_with_bitset(
-        &mut self,
-        bitset: std::rc::Rc<BitSetVec>,
+    pub fn iter_mut_with_bitset<'a>(
+        &'a mut self,
+        bitset: &'a BitSetVec,
     ) -> UntypedComponentBitsetIteratorMut {
         UntypedComponentBitsetIteratorMut {
             current_id: 0,
