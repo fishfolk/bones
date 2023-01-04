@@ -15,6 +15,36 @@
 <span id="15">15</span>
 <span id="16">16</span>
 <span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Sprite rendering components.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -25,12 +55,42 @@
 #[ulid = <span class="string">&quot;01GNJGPQ8TKA234G1EA510BD96&quot;</span>]
 </span><span class="kw">pub struct </span>Image;
 
+<span class="doccomment">/// An atlas image asset type, contains no data, but [`Handle&lt;Atlas&gt;`] is still useful becaause it
+/// uniquely represents an atlas asset that may be rendered outside of the core.
+</span><span class="attribute">#[derive(Copy, Clone, TypeUlid, Debug)]
+#[ulid = <span class="string">&quot;01GNYXD7FVC46C7A3273HMEBRA&quot;</span>]
+</span><span class="kw">pub struct </span>Atlas;
+
 <span class="doccomment">/// A 2D sprite component
 </span><span class="attribute">#[derive(Clone, TypeUlid, Debug)]
 #[ulid = <span class="string">&quot;01GNJXPWZKS6BHJEG1SX5B93DA&quot;</span>]
 </span><span class="kw">pub struct </span>Sprite {
     <span class="doccomment">/// The sprite image handle.
     </span><span class="kw">pub </span>image: Handle&lt;Image&gt;,
+    <span class="doccomment">/// Whether or not the flip the sprite horizontally.
+    </span><span class="kw">pub </span>flip_x: bool,
+    <span class="doccomment">/// Whether or not the flip the sprite vertically.
+    </span><span class="kw">pub </span>flip_y: bool,
+}
+
+<span class="doccomment">/// An animated sprite component.
+///
+/// Represents one or more [`Atlas`]s stacked on top of each other, and possibly animated through a
+/// range of frames out of the atlas.
+</span><span class="attribute">#[derive(Debug, Default, Clone, TypeUlid)]
+#[ulid = <span class="string">&quot;01GNYXFHC6T3NS061GMVFBXFYE&quot;</span>]
+</span><span class="kw">pub struct </span>AtlasSprite {
+    <span class="doccomment">/// This is the current index in the animation, with an `idx` of `0` meaning that the index in
+    /// the sprite sheet will be `start`.
+    ///
+    /// If the idx is greater than `end - start`, then the animation will loop around.
+    </span><span class="kw">pub </span>index: usize,
+    <span class="doccomment">/// The atlas handle.
+    </span><span class="kw">pub </span>atlas: Handle&lt;Atlas&gt;,
+    <span class="doccomment">/// Whether or not the flip the sprite horizontally.
+    </span><span class="kw">pub </span>flip_x: bool,
+    <span class="doccomment">/// Whether or not the flip the sprite vertically.
+    </span><span class="kw">pub </span>flip_y: bool,
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="bones_render" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

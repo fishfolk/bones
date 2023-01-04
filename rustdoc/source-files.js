@@ -2,7 +2,7 @@ var sourcesIndex = JSON.parse('{\
 "bones_asset":["",[],["lib.rs"]],\
 "bones_bevy_asset":["",[],["lib.rs"]],\
 "bones_bevy_asset_macros":["",[],["lib.rs"]],\
-"bones_bevy_renderer":["",[],["lib.rs"]],\
+"bones_bevy_renderer":["",[],["asset.rs","lib.rs"]],\
 "bones_bevy_utils":["",[],["lib.rs"]],\
 "bones_camera_shake":["",[],["lib.rs"]],\
 "bones_ecs":["",[["components",[["typed",[],["ops.rs"]]],["iterator.rs","typed.rs","untyped.rs"]]],["bitset.rs","components.rs","entities.rs","error.rs","lib.rs","resources.rs","stage.rs","system.rs","ulid.rs","world.rs"]],\
