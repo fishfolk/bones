@@ -7,35 +7,13 @@
 
 use std::{marker::PhantomData, rc::Rc};
 
-use bevy::{prelude::*, render::camera::ScalingMode, utils::HashMap};
-use bones_lib::prelude::{self as bones, BitSet};
+use bevy::{prelude::*, render::camera::ScalingMode};
+use bones_lib::prelude::{self as bones, BitSet, IntoBevy};
 
 /// The prelude
 pub mod prelude {
     pub use crate::*;
 }
-
-/// Helper trait for converting bones types to Bevy types.
-pub trait IntoBevy<To> {
-    /// Convert the type to a Bevy type.
-    fn into_bevy(self) -> To;
-}
-
-/// Convert bones transforms to bevy transforms
-impl IntoBevy<Transform> for bones::Transform {
-    #[inline]
-    fn into_bevy(self) -> Transform {
-        Transform {
-            translation: self.translation,
-            rotation: self.rotation,
-            scale: self.scale,
-        }
-    }
-}
-
-/// Mapping of bones asset handles to corresponding Bevy asset handles.
-#[derive(Default, Deref, DerefMut, Resource)]
-pub struct BonesAssetMap(HashMap<bones::UntypedHandle, HandleUntyped>);
 
 /// This is a trait that must be implemented for your Bevy resource containing the bones
 /// [`World`][bones::World].
@@ -75,8 +53,7 @@ pub struct BevyBonesEntity;
 
 impl<W: HasBonesWorld> Plugin for BonesRendererPlugin<W> {
     fn build(&self, app: &mut App) {
-        app.init_resource::<BonesAssetMap>()
-            .add_system_to_stage(CoreStage::Last, render_world::<W>);
+        app.add_system_to_stage(CoreStage::Last, render_world::<W>);
     }
 }
 
@@ -97,7 +74,6 @@ fn render_world<W: HasBonesWorld>(
         ),
         With<BevyBonesEntity>,
     >,
-    handle_map: Res<BonesAssetMap>,
 ) {
     let Some(mut world_resource) = world_resource else {
         return;
@@ -124,11 +100,7 @@ fn render_world<W: HasBonesWorld>(
             let bones_sprite = sprites.get(bones_ent).unwrap();
             let bones_transform = transforms.get(bones_ent).unwrap();
 
-            *image = handle_map
-                .get(&bones_sprite.image.untyped())
-                .unwrap()
-                .clone()
-                .typed();
+            *image = bones_sprite.image.get_bevy_handle_untyped().typed();
             *transform = bones_transform.into_bevy();
         } else {
             commands.entity(bevy_ent).despawn();
@@ -138,15 +110,9 @@ fn render_world<W: HasBonesWorld>(
         let bones_sprite = sprites.get(bones_ent).unwrap();
         let bones_transform = transforms.get(bones_ent).unwrap();
 
-        let texture = handle_map
-            .get(&bones_sprite.image.untyped())
-            .expect("Unkonwn image handle in Bones ECS sprite component")
-            .clone_weak()
-            .typed();
-
         commands.spawn((
             SpriteBundle {
-                texture,
+                texture: bones_sprite.image.get_bevy_handle_untyped().typed(),
                 transform: bones_transform.into_bevy(),
                 ..default()
             },

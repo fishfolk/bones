@@ -16,3 +16,18 @@ pub mod prelude {
 
     pub use crate::{camera::*, sprite::*, tilemap::*, transform::*};
 }
+
+#[cfg(feature = "bevy")]
+mod bevy {
+    use bones_bevy_utils::IntoBevy;
+
+    impl IntoBevy<bevy_transform::components::Transform> for super::transform::Transform {
+        fn into_bevy(self) -> bevy_transform::components::Transform {
+            bevy_transform::components::Transform {
+                translation: self.translation,
+                rotation: self.rotation,
+                scale: self.scale,
+            }
+        }
+    }
+}

@@ -1,0 +1,9 @@
+title: My Game
+info:
+  description: Some awesome game.
+  authors:
+    - John
+    - Jane
+players:
+  - players/player1.player.yaml
+  - players/player2.player.json
