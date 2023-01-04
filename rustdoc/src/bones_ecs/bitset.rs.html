@@ -44,6 +44,12 @@
 <span id="44">44</span>
 <span id="45">45</span>
 <span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Bitset implementation.
 //!
 //! Bitsets are powered by the [`bitset_core`] crate.
@@ -74,8 +80,14 @@
 
 <span class="doccomment">/// The type of bitsets used to track entities in component storages.
 /// Mostly used to create caches.
-</span><span class="attribute">#[derive(bevy_derive::Deref, bevy_derive::DerefMut, Clone, Debug, Default)]
+</span><span class="attribute">#[derive(bevy_derive::Deref, bevy_derive::DerefMut, Clone, Debug)]
 </span><span class="kw">pub struct </span>BitSetVec(<span class="kw">pub </span>Vec&lt;[u32; <span class="number">8</span>]&gt;);
+
+<span class="kw">impl </span>Default <span class="kw">for </span>BitSetVec {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        create_bitset()
+    }
+}
 
 <span class="kw">impl </span>BitSetVec {
     <span class="doccomment">/// Check whether or not the bitset contains the given entity.

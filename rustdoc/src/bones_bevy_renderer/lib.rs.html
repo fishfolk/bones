@@ -162,7 +162,6 @@
 <span id="162">162</span>
 <span id="163">163</span>
 <span id="164">164</span>
-<span id="165">165</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -170,7 +169,7 @@
 </span><span class="attribute">#![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
 
-</span><span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
+</span><span class="kw">use </span>std::marker::PhantomData;
 
 <span class="kw">use </span>bevy::{prelude::<span class="kw-2">*</span>, render::camera::ScalingMode};
 <span class="kw">use </span>bones_lib::prelude::{<span class="self">self </span><span class="kw">as </span>bones, BitSet, IntoBevy};
@@ -256,10 +255,9 @@
     <span class="kw">let </span>cameras = cameras.borrow();
 
     <span class="comment">// Sync sprites
-    </span><span class="kw">let </span><span class="kw-2">mut </span>sprites_bitset = entities.bitset().clone();
-    sprites_bitset.bit_and(sprites.bitset());
+    </span><span class="kw">let </span><span class="kw-2">mut </span>sprites_bitset = sprites.bitset().clone();
     sprites_bitset.bit_and(transforms.bitset());
-    <span class="kw">let </span><span class="kw-2">mut </span>bones_sprite_entity_iter = entities.iter_with_bitset(Rc::new(sprites_bitset)).flatten();
+    <span class="kw">let </span><span class="kw-2">mut </span>bones_sprite_entity_iter = entities.iter_with_bitset(<span class="kw-2">&amp;</span>sprites_bitset);
     <span class="kw">for </span>(bevy_ent, <span class="kw-2">mut </span>image, <span class="kw-2">mut </span>transform) <span class="kw">in </span><span class="kw-2">&amp;mut </span>bevy_bones_sprites {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(bones_ent) = bones_sprite_entity_iter.next() {
             <span class="kw">let </span>bones_sprite = sprites.get(bones_ent).unwrap();
@@ -286,9 +284,9 @@
     }
 
     <span class="comment">// Sync cameras
-    </span><span class="kw">let </span><span class="kw-2">mut </span>cameras_bitset = entities.bitset().clone();
-    cameras_bitset.bit_and(cameras.bitset());
-    <span class="kw">let </span><span class="kw-2">mut </span>bones_camera_entity_iter = entities.iter_with_bitset(Rc::new(cameras_bitset)).flatten();
+    </span><span class="kw">let </span><span class="kw-2">mut </span>cameras_bitset = cameras.bitset().clone();
+    cameras_bitset.bit_and(transforms.bitset());
+    <span class="kw">let </span><span class="kw-2">mut </span>bones_camera_entity_iter = entities.iter_with_bitset(<span class="kw-2">&amp;</span>cameras_bitset);
     <span class="kw">for </span>(bevy_ent, <span class="kw-2">mut </span>camera, <span class="kw-2">mut </span>projection, <span class="kw-2">mut </span>transform) <span class="kw">in </span><span class="kw-2">&amp;mut </span>bevy_bones_cameras {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(bones_ent) = bones_camera_entity_iter.next() {
             <span class="kw">let </span>bones_camera = cameras.get(bones_ent).unwrap();

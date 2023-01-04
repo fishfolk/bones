@@ -139,6 +139,25 @@
 <span id="139">139</span>
 <span id="140">140</span>
 <span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{alloc::Layout, marker::PhantomData, slice::ChunksExactMut};
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -161,14 +180,14 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: <span class="lifetime">&#39;static</span>&gt; Iterator <span class="kw">for </span>ComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    <span class="kw">type </span>Item = <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T&gt;;
+    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="self">self</span>.iter
             .next()
             <span class="comment">// SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
             // is valid for type T.
-            </span>.map(|x| x.map(|x| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(x.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span>T) }))
+            </span>.map(|x| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(x.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span>T) })
     }
 }
 
@@ -190,14 +209,14 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: <span class="lifetime">&#39;static</span>&gt; Iterator <span class="kw">for </span>ComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    <span class="kw">type </span>Item = <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>T&gt;;
+    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>T;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="self">self</span>.iter
             .next()
             <span class="comment">// SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
             // is valid for type T.
-            </span>.map(|x| x.map(|x| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(x.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>T) }))
+            </span>.map(|x| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(x.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>T) })
     }
 }
 
@@ -207,25 +226,24 @@
 </span><span class="kw">pub struct </span>UntypedComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub</span>(<span class="kw">crate</span>) current_id: usize,
     <span class="kw">pub</span>(<span class="kw">crate</span>) components: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>UntypedComponentStore,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) bitset: std::rc::Rc&lt;BitSetVec&gt;,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>UntypedComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]&gt;;
+    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8];
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>max_id = <span class="self">self</span>.components.max_id;
         <span class="kw">let </span>size = <span class="self">self</span>.components.layout.size();
-        <span class="kw">while </span>!<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id) &amp;&amp; <span class="self">self</span>.current_id &lt;= max_id {
+        <span class="kw">while </span>!(<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id)
+            &amp;&amp; <span class="self">self</span>.components.bitset.bit_test(<span class="self">self</span>.current_id))
+            &amp;&amp; <span class="self">self</span>.current_id &lt;= max_id
+        {
             <span class="self">self</span>.current_id += <span class="number">1</span>;
         }
-        <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt; max_id {
-            <span class="kw">if </span><span class="self">self</span>.components.bitset.bit_test(<span class="self">self</span>.current_id) {
-                <span class="kw">let </span>start = <span class="self">self</span>.current_id * size;
-                <span class="kw">let </span>end = start + size;
-                <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.components.storage[start..end]))
-            } <span class="kw">else </span>{
-                <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>)
-            }
+        <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt;= max_id {
+            <span class="kw">let </span>start = <span class="self">self</span>.current_id * size;
+            <span class="kw">let </span>end = start + size;
+            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.components.storage[start..end])
         } <span class="kw">else </span>{
             <span class="prelude-val">None
         </span>};
@@ -241,13 +259,13 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) current_id: usize,
     <span class="kw">pub</span>(<span class="kw">crate</span>) components: <span class="prelude-ty">Option</span>&lt;ChunksExactMut&lt;<span class="lifetime">&#39;a</span>, u8&gt;&gt;,
     <span class="kw">pub</span>(<span class="kw">crate</span>) components_bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) bitset: std::rc::Rc&lt;BitSetVec&gt;,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec,
     <span class="kw">pub</span>(<span class="kw">crate</span>) layout: Layout,
     <span class="kw">pub</span>(<span class="kw">crate</span>) max_id: usize,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>UntypedComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>[u8]&gt;;
+    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>[u8];
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span><span class="self">Self </span>{
             current_id,
@@ -259,25 +277,45 @@
         } = <span class="self">self</span>;
         <span class="kw">let </span>chunk = components.as_mut().and_then(|x| x.next());
         <span class="kw">let </span>max_id = max_id;
-        <span class="kw">while </span>!bitset.bit_test(<span class="kw-2">*</span>current_id) &amp;&amp; <span class="kw-2">*</span>current_id &lt;= <span class="kw-2">*</span>max_id {
+        <span class="kw">while </span>!(bitset.bit_test(<span class="kw-2">*</span>current_id) &amp;&amp; components_bitset.bit_test(<span class="kw-2">*</span>current_id))
+            &amp;&amp; <span class="kw-2">*</span>current_id &lt;= <span class="kw-2">*</span>max_id
+        {
             <span class="kw-2">*</span>current_id += <span class="number">1</span>;
         }
-        <span class="kw">let </span>ret = <span class="kw">if </span><span class="kw-2">*</span>current_id &lt; <span class="kw-2">*</span>max_id {
-            <span class="kw">if </span>components_bitset.bit_test(<span class="kw-2">*</span>current_id) {
-                <span class="kw">if </span>layout.size() != <span class="number">0 </span>{
-                    <span class="kw">let </span>bytes = chunk.unwrap();
-                    <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(bytes))
-                } <span class="kw">else </span>{
-                    <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>[] <span class="kw">as </span><span class="kw-2">&amp;mut </span>[u8]))
-                }
+        <span class="kw">let </span>ret = <span class="kw">if </span><span class="kw-2">*</span>current_id &lt;= <span class="kw-2">*</span>max_id {
+            <span class="kw">if </span>layout.size() != <span class="number">0 </span>{
+                <span class="kw">let </span>bytes = chunk.unwrap();
+                <span class="prelude-val">Some</span>(bytes)
             } <span class="kw">else </span>{
-                <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>)
+                <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>[] <span class="kw">as </span><span class="kw-2">&amp;mut </span>[u8])
             }
         } <span class="kw">else </span>{
             <span class="prelude-val">None
         </span>};
         <span class="self">self</span>.current_id += <span class="number">1</span>;
         ret
+    }
+}
+
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>test {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+    <span class="attribute">#[derive(Clone, TypeUlid)]
+    #[ulid = <span class="string">&quot;01GNZ7A42K6KTPTFEQ3T445DNZ&quot;</span>]
+    </span><span class="kw">struct </span>A;
+
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>iter_with_empty_bitset() {
+        <span class="kw">let </span><span class="kw-2">mut </span>entities = Entities::default();
+        <span class="kw">let </span>e = entities.create();
+        <span class="kw">let </span><span class="kw-2">mut </span>components = ComponentStore::&lt;A&gt;::default();
+
+        components.insert(e, A);
+
+        <span class="kw">let </span>bitset = BitSetVec::default();
+        <span class="macro">assert_eq!</span>(components.iter_with_bitset(<span class="kw-2">&amp;</span>bitset).count(), <span class="number">0</span>);
+        <span class="macro">assert_eq!</span>(components.iter_mut_with_bitset(<span class="kw-2">&amp;</span>bitset).count(), <span class="number">0</span>);
     }
 }
 </code></pre></div>

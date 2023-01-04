@@ -5,7 +5,7 @@ var sourcesIndex = JSON.parse('{\
 "bones_bevy_renderer":["",[],["lib.rs"]],\
 "bones_bevy_utils":["",[],["lib.rs"]],\
 "bones_camera_shake":["",[],["lib.rs"]],\
-"bones_ecs":["",[["components",[["typed",[],["ops.rs"]]],["iterator.rs","typed.rs","untyped.rs"]]],["bitset.rs","components.rs","entities.rs","error.rs","join.rs","lib.rs","resources.rs","stage.rs","system.rs","ulid.rs","world.rs"]],\
+"bones_ecs":["",[["components",[["typed",[],["ops.rs"]]],["iterator.rs","typed.rs","untyped.rs"]]],["bitset.rs","components.rs","entities.rs","error.rs","lib.rs","resources.rs","stage.rs","system.rs","ulid.rs","world.rs"]],\
 "bones_has_load_progress":["",[],["lib.rs"]],\
 "bones_has_load_progress_macros":["",[],["lib.rs"]],\
 "bones_input":["",[],["lib.rs"]],\

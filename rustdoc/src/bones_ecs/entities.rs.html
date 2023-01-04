@@ -294,6 +294,17 @@
 <span id="294">294</span>
 <span id="295">295</span>
 <span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
 </pre><pre class="rust"><code><span class="doccomment">//! [`Entity`] implementation, storage, and interation.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -433,7 +444,7 @@
     }
 
     <span class="doccomment">/// Iterates over entities using the provided bitset.
-    </span><span class="kw">pub fn </span>iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: std::rc::Rc&lt;BitSetVec&gt;) -&gt; EntityIterator {
+    </span><span class="kw">pub fn </span>iter_with_bitset&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec) -&gt; EntityIterator {
         EntityIterator {
             current_id: <span class="number">0</span>,
             next_id: <span class="self">self</span>.next_id,
@@ -451,24 +462,22 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) entities: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec,
     <span class="kw">pub</span>(<span class="kw">crate</span>) generations: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vec&lt;u32&gt;,
     <span class="comment">//pub(crate) bitset: &amp;&#39;a BitSetVec,
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) bitset: std::rc::Rc&lt;BitSetVec&gt;,
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>EntityIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = <span class="prelude-ty">Option</span>&lt;Entity&gt;;
+    <span class="kw">type </span>Item = Entity;
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
-        <span class="kw">while </span>!<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id) &amp;&amp; <span class="self">self</span>.current_id &lt; <span class="self">self</span>.next_id {
+        <span class="kw">while </span>!(<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id) &amp;&amp; <span class="self">self</span>.entities.bit_test(<span class="self">self</span>.current_id))
+            &amp;&amp; <span class="self">self</span>.current_id &lt; <span class="self">self</span>.next_id
+        {
             <span class="self">self</span>.current_id += <span class="number">1</span>;
         }
         <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt; <span class="self">self</span>.next_id {
-            <span class="kw">if </span><span class="self">self</span>.entities.bit_test(<span class="self">self</span>.current_id) {
-                <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(Entity::new(
-                    <span class="self">self</span>.current_id <span class="kw">as </span>u32,
-                    <span class="self">self</span>.generations[<span class="self">self</span>.current_id],
-                )))
-            } <span class="kw">else </span>{
-                <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>)
-            }
+            <span class="prelude-val">Some</span>(Entity::new(
+                <span class="self">self</span>.current_id <span class="kw">as </span>u32,
+                <span class="self">self</span>.generations[<span class="self">self</span>.current_id],
+            ))
         } <span class="kw">else </span>{
             <span class="prelude-val">None
         </span>};
@@ -588,6 +597,19 @@
         entities.kill(e);
         entities.create();
         entities.create();
+    }
+
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>iter_with_empty_bitset() {
+        <span class="kw">let </span><span class="kw-2">mut </span>entities = Entities::default();
+
+        <span class="comment">// Create a couple entities
+        </span>entities.create();
+        entities.create();
+
+        <span class="comment">// Join with an empty bitset
+        </span><span class="kw">let </span>bitset = BitSetVec::default();
+        <span class="macro">assert_eq!</span>(entities.iter_with_bitset(<span class="kw-2">&amp;</span>bitset).count(), <span class="number">0</span>);
     }
 }
 </code></pre></div>

@@ -142,10 +142,6 @@
 <span id="142">142</span>
 <span id="143">143</span>
 <span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
 </pre><pre class="rust"><code><span class="attribute">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
@@ -167,10 +163,6 @@
 <span class="kw">pub mod </span>system;
 <span class="kw">pub mod </span>ulid;
 
-<span class="attribute">#[doc(hidden)]
-#[macro_use]
-</span><span class="kw">pub mod </span>join;
-
 <span class="kw">mod </span>error;
 <span class="kw">pub use </span>error::EcsError;
 
@@ -187,7 +179,7 @@
     };
 
     <span class="kw">pub use crate</span>::{
-        bitset::<span class="kw-2">*</span>, components::<span class="kw-2">*</span>, default, entities::<span class="kw-2">*</span>, error::<span class="kw-2">*</span>, join, resources::<span class="kw-2">*</span>, stage::<span class="kw-2">*</span>,
+        bitset::<span class="kw-2">*</span>, components::<span class="kw-2">*</span>, default, entities::<span class="kw-2">*</span>, error::<span class="kw-2">*</span>, resources::<span class="kw-2">*</span>, stage::<span class="kw-2">*</span>,
         system::<span class="kw-2">*</span>, ulid::<span class="kw-2">*</span>, EcsData, RawFns, TypedEcsData, World,
     };
 }
