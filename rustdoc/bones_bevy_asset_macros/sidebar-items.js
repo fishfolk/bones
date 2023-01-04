@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"derive":[["BonesBevyAsset","Derive macro for the `BonesBevyAsset` trait."]]};

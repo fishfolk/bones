@@ -163,40 +163,6 @@
 <span id="163">163</span>
 <span id="164">164</span>
 <span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
-<span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -206,35 +172,13 @@
 
 </span><span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
 
-<span class="kw">use </span>bevy::{prelude::<span class="kw-2">*</span>, render::camera::ScalingMode, utils::HashMap};
-<span class="kw">use </span>bones_lib::prelude::{<span class="self">self </span><span class="kw">as </span>bones, BitSet};
+<span class="kw">use </span>bevy::{prelude::<span class="kw-2">*</span>, render::camera::ScalingMode};
+<span class="kw">use </span>bones_lib::prelude::{<span class="self">self </span><span class="kw">as </span>bones, BitSet, IntoBevy};
 
 <span class="doccomment">/// The prelude
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use crate</span>::<span class="kw-2">*</span>;
 }
-
-<span class="doccomment">/// Helper trait for converting bones types to Bevy types.
-</span><span class="kw">pub trait </span>IntoBevy&lt;To&gt; {
-    <span class="doccomment">/// Convert the type to a Bevy type.
-    </span><span class="kw">fn </span>into_bevy(<span class="self">self</span>) -&gt; To;
-}
-
-<span class="doccomment">/// Convert bones transforms to bevy transforms
-</span><span class="kw">impl </span>IntoBevy&lt;Transform&gt; <span class="kw">for </span>bones::Transform {
-    <span class="attribute">#[inline]
-    </span><span class="kw">fn </span>into_bevy(<span class="self">self</span>) -&gt; Transform {
-        Transform {
-            translation: <span class="self">self</span>.translation,
-            rotation: <span class="self">self</span>.rotation,
-            scale: <span class="self">self</span>.scale,
-        }
-    }
-}
-
-<span class="doccomment">/// Mapping of bones asset handles to corresponding Bevy asset handles.
-</span><span class="attribute">#[derive(Default, Deref, DerefMut, Resource)]
-</span><span class="kw">pub struct </span>BonesAssetMap(HashMap&lt;bones::UntypedHandle, HandleUntyped&gt;);
 
 <span class="doccomment">/// This is a trait that must be implemented for your Bevy resource containing the bones
 /// [`World`][bones::World].
@@ -274,8 +218,7 @@
 
 <span class="kw">impl</span>&lt;W: HasBonesWorld&gt; Plugin <span class="kw">for </span>BonesRendererPlugin&lt;W&gt; {
     <span class="kw">fn </span>build(<span class="kw-2">&amp;</span><span class="self">self</span>, app: <span class="kw-2">&amp;mut </span>App) {
-        app.init_resource::&lt;BonesAssetMap&gt;()
-            .add_system_to_stage(CoreStage::Last, render_world::&lt;W&gt;);
+        app.add_system_to_stage(CoreStage::Last, render_world::&lt;W&gt;);
     }
 }
 
@@ -296,7 +239,6 @@
         ),
         With&lt;BevyBonesEntity&gt;,
     &gt;,
-    handle_map: Res&lt;BonesAssetMap&gt;,
 ) {
     <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
         <span class="kw">return</span>;
@@ -323,11 +265,7 @@
             <span class="kw">let </span>bones_sprite = sprites.get(bones_ent).unwrap();
             <span class="kw">let </span>bones_transform = transforms.get(bones_ent).unwrap();
 
-            <span class="kw-2">*</span>image = handle_map
-                .get(<span class="kw-2">&amp;</span>bones_sprite.image.untyped())
-                .unwrap()
-                .clone()
-                .typed();
+            <span class="kw-2">*</span>image = bones_sprite.image.get_bevy_handle_untyped().typed();
             <span class="kw-2">*</span>transform = bones_transform.into_bevy();
         } <span class="kw">else </span>{
             commands.entity(bevy_ent).despawn();
@@ -337,15 +275,9 @@
         <span class="kw">let </span>bones_sprite = sprites.get(bones_ent).unwrap();
         <span class="kw">let </span>bones_transform = transforms.get(bones_ent).unwrap();
 
-        <span class="kw">let </span>texture = handle_map
-            .get(<span class="kw-2">&amp;</span>bones_sprite.image.untyped())
-            .expect(<span class="string">&quot;Unkonwn image handle in Bones ECS sprite component&quot;</span>)
-            .clone_weak()
-            .typed();
-
         commands.spawn((
             SpriteBundle {
-                texture,
+                texture: bones_sprite.image.get_bevy_handle_untyped().typed(),
                 transform: bones_transform.into_bevy(),
                 ..default()
             },

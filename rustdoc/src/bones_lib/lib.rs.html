@@ -14,14 +14,26 @@
 <span id="14">14</span>
 <span id="15">15</span>
 <span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Opinionated game meta-engine built on Bevy.
 
 </span><span class="attribute">#[doc(inline)]
-</span><span class="kw">pub use </span>{bones_asset <span class="kw">as </span>asset, bones_ecs <span class="kw">as </span>ecs, bones_input <span class="kw">as </span>input, bones_render <span class="kw">as </span>render};
+</span><span class="kw">pub use </span>{
+    bones_asset <span class="kw">as </span>asset, bones_bevy_utils <span class="kw">as </span>bevy_utils, bones_ecs <span class="kw">as </span>ecs, bones_input <span class="kw">as </span>input,
+    bones_render <span class="kw">as </span>render,
+};
 
 <span class="doccomment">/// Bones lib prelude
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use crate</span>::{asset::prelude::<span class="kw-2">*</span>, ecs::prelude::<span class="kw-2">*</span>, input::prelude::<span class="kw-2">*</span>, render::prelude::<span class="kw-2">*</span>};
+
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;bevy&quot;</span>)]
+    </span><span class="kw">pub use </span><span class="kw">crate</span>::bevy_utils::<span class="kw-2">*</span>;
 }
 
 <span class="doccomment">/// This crate provides 2D camera shake using the methodology described in this excellent [GDC

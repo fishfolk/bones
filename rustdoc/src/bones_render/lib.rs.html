@@ -16,6 +16,21 @@
 <span id="16">16</span>
 <span id="17">17</span>
 <span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Standardized rendering components for Bones.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -33,6 +48,21 @@
     <span class="kw">pub use </span>{bones_asset::prelude::<span class="kw-2">*</span>, bones_ecs::prelude::<span class="kw-2">*</span>, glam::<span class="kw-2">*</span>, type_ulid::TypeUlid};
 
     <span class="kw">pub use crate</span>::{camera::<span class="kw-2">*</span>, sprite::<span class="kw-2">*</span>, tilemap::<span class="kw-2">*</span>, transform::<span class="kw-2">*</span>};
+}
+
+<span class="attribute">#[cfg(feature = <span class="string">&quot;bevy&quot;</span>)]
+</span><span class="kw">mod </span>bevy {
+    <span class="kw">use </span>bones_bevy_utils::IntoBevy;
+
+    <span class="kw">impl </span>IntoBevy&lt;bevy_transform::components::Transform&gt; <span class="kw">for </span><span class="kw">super</span>::transform::Transform {
+        <span class="kw">fn </span>into_bevy(<span class="self">self</span>) -&gt; bevy_transform::components::Transform {
+            bevy_transform::components::Transform {
+                translation: <span class="self">self</span>.translation,
+                rotation: <span class="self">self</span>.rotation,
+                scale: <span class="self">self</span>.scale,
+            }
+        }
+    }
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="bones_render" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>
