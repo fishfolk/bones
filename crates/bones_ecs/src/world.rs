@@ -106,40 +106,59 @@ mod tests {
     }
 
     /// Mutates the positions based on the velocities.
-    fn pos_vel_system(mut pos: CompMut<Pos>, vel: Comp<Vel>) {
-        for (pos, vel) in join!(&mut pos && &vel) {
-            let pos = pos.unwrap();
-            let vel = vel.unwrap();
+    fn pos_vel_system(entities: Res<Entities>, mut pos: CompMut<Pos>, vel: Comp<Vel>) {
+        let mut bitset = pos.bitset().clone();
+        bitset.bit_and(vel.bitset());
+        for entity in entities.iter_with_bitset(&bitset) {
+            let pos = pos.get_mut(entity).unwrap();
+            let vel = vel.get(entity).unwrap();
+
             pos.0 += vel.0;
             pos.1 += vel.1;
         }
     }
 
     /// Tests that the world's components matches the state it should after running `setup_world`.
-    fn test_after_setup_state(pos: Comp<Pos>, vel: Comp<Vel>, marker: Comp<Marker>) {
+    fn test_after_setup_state(
+        entities: Res<Entities>,
+        pos: Comp<Pos>,
+        vel: Comp<Vel>,
+        marker: Comp<Marker>,
+    ) {
         let mut i = 0;
-        for item in join!(&pos && &vel || &marker).enumerate() {
-            i += 1;
-            match item {
-                (0, (Some(Pos(0, 100)), Some(Vel(0, -1)), None))
-                | (1, (Some(Pos(0, 0)), Some(Vel(1, 1)), Some(Marker))) => (),
+        let mut bitset = pos.bitset().clone();
+        bitset.bit_and(vel.bitset());
+        bitset.bit_or(marker.bitset());
+        for entity in entities.iter_with_bitset(&bitset) {
+            match (i, pos.get(entity), vel.get(entity), marker.get(entity)) {
+                (0, Some(Pos(0, 100)), Some(Vel(0, -1)), None)
+                | (1, Some(Pos(0, 0)), Some(Vel(1, 1)), Some(Marker)) => (),
                 x => unreachable!("{:?}", x),
             }
+            i += 1;
         }
         assert_eq!(i, 2);
     }
 
     /// Tests that the worlds components matches the state it should after running the
     /// pos_vel_system one time.
-    fn test_pos_vel_1_run(pos: Comp<Pos>, vel: Comp<Vel>, marker: Comp<Marker>) {
+    fn test_pos_vel_1_run(
+        entities: Res<Entities>,
+        pos: Comp<Pos>,
+        vel: Comp<Vel>,
+        marker: Comp<Marker>,
+    ) {
         let mut i = 0;
-        for item in join!(&pos && &vel || &marker).enumerate() {
-            i += 1;
-            match item {
-                (0, (Some(Pos(0, 99)), Some(Vel(0, -1)), None))
-                | (1, (Some(Pos(1, 1)), Some(Vel(1, 1)), Some(Marker))) => (),
+        let mut bitset = pos.bitset().clone();
+        bitset.bit_and(vel.bitset());
+        bitset.bit_or(marker.bitset());
+        for entity in entities.iter_with_bitset(&bitset) {
+            match (i, pos.get(entity), vel.get(entity), marker.get(entity)) {
+                (0, Some(Pos(0, 99)), Some(Vel(0, -1)), None)
+                | (1, Some(Pos(1, 1)), Some(Vel(1, 1)), Some(Marker)) => (),
                 x => unreachable!("{:?}", x),
             }
+            i += 1;
         }
         assert_eq!(i, 2);
     }

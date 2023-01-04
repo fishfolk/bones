@@ -19,10 +19,6 @@ pub mod stage;
 pub mod system;
 pub mod ulid;
 
-#[doc(hidden)]
-#[macro_use]
-pub mod join;
-
 mod error;
 pub use error::EcsError;
 
@@ -39,7 +35,7 @@ pub mod prelude {
     };
 
     pub use crate::{
-        bitset::*, components::*, default, entities::*, error::*, join, resources::*, stage::*,
+        bitset::*, components::*, default, entities::*, error::*, resources::*, stage::*,
         system::*, ulid::*, EcsData, RawFns, TypedEcsData, World,
     };
 }

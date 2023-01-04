@@ -28,8 +28,14 @@ pub(crate) const BITSET_SLICE_COUNT: usize = BITSET_SIZE / (32 * 8 / 8);
 
 /// The type of bitsets used to track entities in component storages.
 /// Mostly used to create caches.
-#[derive(bevy_derive::Deref, bevy_derive::DerefMut, Clone, Debug, Default)]
+#[derive(bevy_derive::Deref, bevy_derive::DerefMut, Clone, Debug)]
 pub struct BitSetVec(pub Vec<[u32; 8]>);
+
+impl Default for BitSetVec {
+    fn default() -> Self {
+        create_bitset()
+    }
+}
 
 impl BitSetVec {
     /// Check whether or not the bitset contains the given entity.

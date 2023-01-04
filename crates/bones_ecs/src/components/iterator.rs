@@ -20,14 +20,14 @@ impl<'a, T> ComponentBitsetIterator<'a, T> {
 }
 
 impl<'a, T: 'static> Iterator for ComponentBitsetIterator<'a, T> {
-    type Item = Option<&'a T>;
+    type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter
             .next()
             // SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
             // is valid for type T.
-            .map(|x| x.map(|x| unsafe { &*(x.as_ptr() as *const T) }))
+            .map(|x| unsafe { &*(x.as_ptr() as *const T) })
     }
 }
 
@@ -49,14 +49,14 @@ impl<'a, T> ComponentBitsetIteratorMut<'a, T> {
 }
 
 impl<'a, T: 'static> Iterator for ComponentBitsetIteratorMut<'a, T> {
-    type Item = Option<&'a mut T>;
+    type Item = &'a mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter
             .next()
             // SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
             // is valid for type T.
-            .map(|x| x.map(|x| unsafe { &mut *(x.as_mut_ptr() as *mut T) }))
+            .map(|x| unsafe { &mut *(x.as_mut_ptr() as *mut T) })
     }
 }
 
@@ -66,25 +66,24 @@ impl<'a, T: 'static> Iterator for ComponentBitsetIteratorMut<'a, T> {
 pub struct UntypedComponentBitsetIterator<'a> {
     pub(crate) current_id: usize,
     pub(crate) components: &'a UntypedComponentStore,
-    pub(crate) bitset: std::rc::Rc<BitSetVec>,
+    pub(crate) bitset: &'a BitSetVec,
 }
 
 impl<'a> Iterator for UntypedComponentBitsetIterator<'a> {
-    type Item = Option<&'a [u8]>;
+    type Item = &'a [u8];
     fn next(&mut self) -> Option<Self::Item> {
         let max_id = self.components.max_id;
         let size = self.components.layout.size();
-        while !self.bitset.bit_test(self.current_id) && self.current_id <= max_id {
+        while !(self.bitset.bit_test(self.current_id)
+            && self.components.bitset.bit_test(self.current_id))
+            && self.current_id <= max_id
+        {
             self.current_id += 1;
         }
-        let ret = if self.current_id < max_id {
-            if self.components.bitset.bit_test(self.current_id) {
-                let start = self.current_id * size;
-                let end = start + size;
-                Some(Some(&self.components.storage[start..end]))
-            } else {
-                Some(None)
-            }
+        let ret = if self.current_id <= max_id {
+            let start = self.current_id * size;
+            let end = start + size;
+            Some(&self.components.storage[start..end])
         } else {
             None
         };
@@ -100,13 +99,13 @@ pub struct UntypedComponentBitsetIteratorMut<'a> {
     pub(crate) current_id: usize,
     pub(crate) components: Option<ChunksExactMut<'a, u8>>,
     pub(crate) components_bitset: &'a BitSetVec,
-    pub(crate) bitset: std::rc::Rc<BitSetVec>,
+    pub(crate) bitset: &'a BitSetVec,
     pub(crate) layout: Layout,
     pub(crate) max_id: usize,
 }
 
 impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
-    type Item = Option<&'a mut [u8]>;
+    type Item = &'a mut [u8];
     fn next(&mut self) -> Option<Self::Item> {
         let Self {
             current_id,
@@ -118,24 +117,44 @@ impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
         } = self;
         let chunk = components.as_mut().and_then(|x| x.next());
         let max_id = max_id;
-        while !bitset.bit_test(*current_id) && *current_id <= *max_id {
+        while !(bitset.bit_test(*current_id) && components_bitset.bit_test(*current_id))
+            && *current_id <= *max_id
+        {
             *current_id += 1;
         }
-        let ret = if *current_id < *max_id {
-            if components_bitset.bit_test(*current_id) {
-                if layout.size() != 0 {
-                    let bytes = chunk.unwrap();
-                    Some(Some(bytes))
-                } else {
-                    Some(Some(&mut [] as &mut [u8]))
-                }
+        let ret = if *current_id <= *max_id {
+            if layout.size() != 0 {
+                let bytes = chunk.unwrap();
+                Some(bytes)
             } else {
-                Some(None)
+                Some(&mut [] as &mut [u8])
             }
         } else {
             None
         };
         self.current_id += 1;
         ret
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[derive(Clone, TypeUlid)]
+    #[ulid = "01GNZ7A42K6KTPTFEQ3T445DNZ"]
+    struct A;
+
+    #[test]
+    fn iter_with_empty_bitset() {
+        let mut entities = Entities::default();
+        let e = entities.create();
+        let mut components = ComponentStore::<A>::default();
+
+        components.insert(e, A);
+
+        let bitset = BitSetVec::default();
+        assert_eq!(components.iter_with_bitset(&bitset).count(), 0);
+        assert_eq!(components.iter_mut_with_bitset(&bitset).count(), 0);
     }
 }
