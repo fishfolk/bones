@@ -8,6 +8,7 @@
 use std::marker::PhantomData;
 
 use bevy::{prelude::*, render::camera::ScalingMode};
+use bevy_simple_tilemap::{prelude::TileMapBundle, Tile, TileFlags, TileMap};
 use bones_lib::prelude::{self as bones, BitSet, IntoBevy};
 
 /// The prelude
@@ -55,13 +56,14 @@ pub struct BevyBonesEntity;
 
 impl<W: HasBonesWorld> Plugin for BonesRendererPlugin<W> {
     fn build(&self, app: &mut App) {
-        app
+        app.add_plugin(bevy_simple_tilemap::plugin::SimpleTileMapPlugin)
             // Install the asset loader for .atlas.yaml files.
             .add_asset_loader(asset::TextureAtlasLoader)
             // Add the world sync systems
             .add_system_to_stage(CoreStage::Last, sync_sprites::<W>)
             .add_system_to_stage(CoreStage::Last, sync_atlas_sprites::<W>)
-            .add_system_to_stage(CoreStage::Last, sync_cameras::<W>);
+            .add_system_to_stage(CoreStage::Last, sync_cameras::<W>)
+            .add_system_to_stage(CoreStage::Last, sync_tilemaps::<W>);
     }
 }
 
@@ -264,6 +266,136 @@ fn sync_cameras<W: HasBonesWorld>(
                     scaling_mode: ScalingMode::FixedVertical(bones_camera.height),
                     ..default()
                 },
+                transform: bones_transform.into_bevy(),
+                ..default()
+            },
+            BevyBonesEntity,
+        ));
+    }
+}
+
+fn sync_tilemaps<W: HasBonesWorld>(
+    mut has_init: Local<bool>,
+    mut commands: Commands,
+    world_resource: Option<ResMut<W>>,
+    mut bevy_bones_tile_layers: Query<
+        (
+            Entity,
+            &mut TileMap,
+            &mut Handle<TextureAtlas>,
+            &mut Transform,
+        ),
+        With<BevyBonesEntity>,
+    >,
+) {
+    let Some(mut world_resource) = world_resource else {
+        return;
+    };
+
+    let world = world_resource.world();
+
+    if !*has_init {
+        world.components.init::<bones::Tile>();
+        world.components.init::<bones::TileLayer>();
+        *has_init = true;
+    }
+
+    let entities = world.resources.get::<bones::Entities>();
+    let entities = entities.borrow();
+    let tiles = world.components.get::<bones::Tile>();
+    let tiles = tiles.borrow();
+    let tile_layers = world.components.get::<bones::TileLayer>();
+    let tile_layers = tile_layers.borrow();
+    let transforms = world.components.get::<bones::Transform>();
+    let transforms = transforms.borrow();
+
+    // Sync tile layers
+    let mut tile_layers_bitset = tile_layers.bitset().clone();
+    tile_layers_bitset.bit_and(transforms.bitset());
+
+    let mut bones_tile_layer_entity_iter = entities.iter_with_bitset(&tile_layers_bitset);
+    for (bevy_ent, mut tile_map, mut atlas, mut transform) in &mut bevy_bones_tile_layers {
+        if let Some(bones_ent) = bones_tile_layer_entity_iter.next() {
+            let bones_tile_layer = tile_layers.get(bones_ent).unwrap();
+            let bones_transform = transforms.get(bones_ent).unwrap();
+
+            *atlas = bones_tile_layer.atlas.get_bevy_handle_untyped().typed();
+            *transform = bones_transform.into_bevy();
+
+            let grid_size = bones_tile_layer.grid_size;
+            let tile_iter = bones_tile_layer
+                .tiles
+                .iter()
+                .enumerate()
+                .map(|(idx, entity)| {
+                    let y = idx as u32 / grid_size.x;
+                    let x = idx as u32 - y;
+                    let tile = entity
+                        .map(|e| {
+                            let tile = tiles.get(e)?;
+                            Some(Tile {
+                                sprite_index: tile.idx as _,
+                                color: default(),
+                                flags: if tile.flip_x {
+                                    TileFlags::FLIP_X
+                                } else {
+                                    TileFlags::empty()
+                                } | if tile.flip_y {
+                                    TileFlags::FLIP_Y
+                                } else {
+                                    TileFlags::empty()
+                                },
+                            })
+                        })
+                        .flatten();
+                    (IVec3::new(x as i32, y as i32, 0), tile)
+                });
+
+            tile_map.set_tiles(tile_iter);
+        } else {
+            commands.entity(bevy_ent).despawn();
+        }
+    }
+    for bones_ent in bones_tile_layer_entity_iter {
+        let bones_tile_layer = tile_layers.get(bones_ent).unwrap();
+        let bones_transform = transforms.get(bones_ent).unwrap();
+
+        let mut tile_map = TileMap::default();
+
+        let grid_size = bones_tile_layer.grid_size;
+        let tile_iter = bones_tile_layer
+            .tiles
+            .iter()
+            .enumerate()
+            .map(|(idx, entity)| {
+                let y = idx as u32 / grid_size.x;
+                let x = idx as u32 - (y * grid_size.x);
+                let tile = entity
+                    .map(|e| {
+                        let tile = tiles.get(e)?;
+                        Some(Tile {
+                            sprite_index: tile.idx as _,
+                            color: default(),
+                            flags: if tile.flip_x {
+                                TileFlags::FLIP_X
+                            } else {
+                                TileFlags::empty()
+                            } | if tile.flip_y {
+                                TileFlags::FLIP_Y
+                            } else {
+                                TileFlags::empty()
+                            },
+                        })
+                    })
+                    .flatten();
+                (IVec3::new(x as i32, y as i32, 0), tile)
+            });
+
+        tile_map.set_tiles(tile_iter);
+
+        commands.spawn((
+            TileMapBundle {
+                tilemap: tile_map,
                 transform: bones_transform.into_bevy(),
                 ..default()
             },
