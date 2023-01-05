@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, rc::Rc};
 
 use crate::prelude::*;
 
@@ -65,7 +65,7 @@ impl<'a, T: 'static> Iterator for ComponentBitsetIteratorMut<'a, T> {
 pub struct UntypedComponentBitsetIterator<'a> {
     pub(crate) current_id: usize,
     pub(crate) components: &'a UntypedComponentStore,
-    pub(crate) bitset: &'a BitSetVec,
+    pub(crate) bitset: Rc<BitSetVec>,
 }
 
 impl<'a> Iterator for UntypedComponentBitsetIterator<'a> {
@@ -96,7 +96,7 @@ impl<'a> Iterator for UntypedComponentBitsetIterator<'a> {
 pub struct UntypedComponentBitsetIteratorMut<'a> {
     pub(crate) current_id: usize,
     pub(crate) components: &'a mut UntypedComponentStore,
-    pub(crate) bitset: &'a BitSetVec,
+    pub(crate) bitset: Rc<BitSetVec>,
 }
 
 impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
@@ -138,8 +138,8 @@ mod test {
 
         components.insert(e, A);
 
-        let bitset = BitSetVec::default();
-        assert_eq!(components.iter_with_bitset(&bitset).count(), 0);
-        assert_eq!(components.iter_mut_with_bitset(&bitset).count(), 0);
+        let bitset = Rc::new(BitSetVec::default());
+        assert_eq!(components.iter_with_bitset(bitset.clone()).count(), 0);
+        assert_eq!(components.iter_mut_with_bitset(bitset).count(), 0);
     }
 }

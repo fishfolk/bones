@@ -53,24 +53,16 @@ fn setup_system(
 
 /// Update the Pos of all entities with both a Pos and a Vel
 fn pos_vel_system(entities: Res<Entities>, mut pos: CompMut<Pos>, vel: Comp<Vel>) {
-    let mut bitset = pos.bitset().clone();
-    bitset.bit_and(vel.bitset());
-    for entity in entities.iter_with_bitset(&bitset) {
-        let pos = pos.get_mut(entity).unwrap();
-        let vel = vel.get(entity).unwrap();
+    for (_, (pos, vel)) in entities.iter_with((&mut pos, &vel)) {
         **pos += **vel;
     }
 }
 
 /// Print the Pos and Vel of every entity
-fn print_system(entities: Res<Entities>, pos: Comp<Pos>, vel: Comp<Vel>) {
+fn print_system(pos: Comp<Pos>, vel: Comp<Vel>, entities: Res<Entities>) {
     println!("=====");
-    let mut bitset = pos.bitset().clone();
-    bitset.bit_and(vel.bitset());
-    for entity in entities.iter_with_bitset(&bitset) {
-        let pos = pos.get(entity).unwrap();
-        let vel = vel.get(entity).unwrap();
 
+    for (_, (pos, vel)) in entities.iter_with((&pos, &vel)) {
         println!("{pos:?} \t- {vel:?}");
     }
 }

@@ -4,6 +4,7 @@ use aligned_vec::AVec;
 use std::{
     alloc::Layout,
     ptr::{self},
+    rc::Rc,
 };
 
 /// Holds components of a given type indexed by `Entity`.
@@ -314,7 +315,7 @@ impl UntypedComponentStore {
     /// entities.
     ///
     /// Slower than `iter()` but allows joining between multiple component types.
-    pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> UntypedComponentBitsetIterator {
+    pub fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> UntypedComponentBitsetIterator {
         UntypedComponentBitsetIterator {
             current_id: 0,
             components: self,
@@ -326,9 +327,9 @@ impl UntypedComponentStore {
     /// entities.
     ///
     /// Slower than `iter()` but allows joining between multiple component types.
-    pub fn iter_mut_with_bitset<'a>(
-        &'a mut self,
-        bitset: &'a BitSetVec,
+    pub fn iter_mut_with_bitset(
+        &mut self,
+        bitset: Rc<BitSetVec>,
     ) -> UntypedComponentBitsetIteratorMut {
         UntypedComponentBitsetIteratorMut {
             current_id: 0,

@@ -2,6 +2,7 @@ use std::{
     marker::PhantomData,
     mem::{ManuallyDrop, MaybeUninit},
     ops::DerefMut,
+    rc::Rc,
 };
 
 use crate::prelude::*;
@@ -119,7 +120,7 @@ impl<T: Clone + 'static> TypedComponentOps<T> {
     pub fn iter_with_bitset<'a>(
         &'a self,
         components: &'a UntypedComponentStore,
-        bitset: &'a BitSetVec,
+        bitset: Rc<BitSetVec>,
     ) -> ComponentBitsetIterator<'a, T> {
         // SAFE: Constructing `TypedComponentOps` is unsafe and user affirms the type T is valid for
         // the underlying, untyped data.
@@ -131,7 +132,7 @@ impl<T: Clone + 'static> TypedComponentOps<T> {
     pub fn iter_mut_with_bitset<'a>(
         &'a self,
         components: &'a mut UntypedComponentStore,
-        bitset: &'a BitSetVec,
+        bitset: Rc<BitSetVec>,
     ) -> ComponentBitsetIteratorMut<T> {
         // SAFE: Constructing `TypedComponentOps` is unsafe and user affirms the type T is valid for
         // the underlying, untyped data.
