@@ -22,7 +22,7 @@ pub mod prelude {
 use bones_bevy_utils::BevyWorld;
 use prelude::*;
 
-pub use bones_bevy_asset_macros::BonesBevyAsset;
+pub use bones_bevy_asset_macros::{BonesBevyAsset, BonesBevyAssetLoad};
 
 #[doc(hidden)]
 pub mod _private {

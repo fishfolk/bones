@@ -143,3 +143,63 @@ fn impl_bones_bevy_asset(input: &syn::DeriveInput) -> TokenStream2 {
         }
     }
 }
+
+/// Derive macro for the `BonesBevyAssetLoad` trait.
+#[proc_macro_derive(BonesBevyAssetLoad, attributes(asset))]
+pub fn bones_bevy_asset_load(input: TokenStream) -> TokenStream {
+    let input = syn::parse(input).unwrap();
+
+    impl_bones_bevy_asset_load(&input).into()
+}
+
+fn impl_bones_bevy_asset_load(input: &syn::DeriveInput) -> TokenStream2 {
+    let deserialize_only: syn::Attribute = parse_quote! {
+        #[asset(deserialize_only)]
+    };
+    let item_ident = &input.ident;
+
+    // Parse the struct
+    let in_struct = match &input.data {
+        syn::Data::Struct(s) => s,
+        syn::Data::Enum(_) | syn::Data::Union(_) => {
+            return quote_spanned! { input.ident.span() =>
+                compile_error!("You may only derive HasLoadProgress on structs");
+            };
+        }
+    };
+
+    let mut field_loads = Vec::new();
+    'field: for field in &in_struct.fields {
+        // Skip this field if it has `#[has_load_progress(none)]`
+        for attr in &field.attrs {
+            if attr.path == parse_quote!(asset) {
+                if attr != &deserialize_only {
+                    field_loads.push(quote_spanned! { attr.span() =>
+                        compile_error!("Attribute must be `#[asset(deserialize_only)]` if specified");
+                    });
+                }
+                continue 'field;
+            }
+        }
+        let field_ident = field.ident.as_ref().expect("Field identifier missing");
+        field_loads.push(quote_spanned! { field_ident.span() =>
+            ::bones_bevy_asset::BonesBevyAssetLoad::load(
+                &mut self.#field_ident,
+                load_context,
+                dependencies
+            );
+        });
+    }
+
+    quote! {
+        impl ::bones_bevy_asset::BonesBevyAssetLoad for #item_ident {
+            fn load(
+                &mut self,
+                load_context: &mut bevy::asset::LoadContext,
+                dependencies: &mut Vec<bevy::asset::AssetPath<'static>>,
+            ) {
+                #(#field_loads)*
+            }
+        }
+    }
+}
