@@ -349,12 +349,14 @@
 <span id="349">349</span>
 <span id="350">350</span>
 <span id="351">351</span>
+<span id="352">352</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>aligned_vec::AVec;
 <span class="kw">use </span>std::{
     alloc::Layout,
     ptr::{<span class="self">self</span>},
+    rc::Rc,
 };
 
 <span class="doccomment">/// Holds components of a given type indexed by `Entity`.
@@ -665,7 +667,7 @@
     /// entities.
     ///
     /// Slower than `iter()` but allows joining between multiple component types.
-    </span><span class="kw">pub fn </span>iter_with_bitset&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec) -&gt; UntypedComponentBitsetIterator {
+    </span><span class="kw">pub fn </span>iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; UntypedComponentBitsetIterator {
         UntypedComponentBitsetIterator {
             current_id: <span class="number">0</span>,
             components: <span class="self">self</span>,
@@ -677,9 +679,9 @@
     /// entities.
     ///
     /// Slower than `iter()` but allows joining between multiple component types.
-    </span><span class="kw">pub fn </span>iter_mut_with_bitset&lt;<span class="lifetime">&#39;a</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>,
-        bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec,
+    </span><span class="kw">pub fn </span>iter_mut_with_bitset(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        bitset: Rc&lt;BitSetVec&gt;,
     ) -&gt; UntypedComponentBitsetIteratorMut {
         UntypedComponentBitsetIteratorMut {
             current_id: <span class="number">0</span>,

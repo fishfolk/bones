@@ -330,13 +330,7 @@
 <span id="330">330</span>
 <span id="331">331</span>
 <span id="332">332</span>
-<span id="333">333</span>
-<span id="334">334</span>
-<span id="335">335</span>
-<span id="336">336</span>
-<span id="337">337</span>
-<span id="338">338</span>
-</pre><pre class="rust"><code><span class="kw">use </span>std::{alloc::Layout, marker::PhantomData, sync::Arc};
+</pre><pre class="rust"><code><span class="kw">use </span>std::{alloc::Layout, marker::PhantomData, rc::Rc, sync::Arc};
 
 <span class="kw">use </span>bytemuck::Pod;
 
@@ -459,17 +453,14 @@
     <span class="doccomment">/// Iterates immutably over the components of this type where `bitset`
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
-    </span><span class="kw">pub fn </span>iter_with_bitset&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec) -&gt; ComponentBitsetIterator&lt;T&gt; {
+    </span><span class="kw">pub fn </span>iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; ComponentBitsetIterator&lt;T&gt; {
         <span class="self">self</span>.ops.iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>.components, bitset)
     }
 
     <span class="doccomment">/// Iterates mutable over the components of this type where `bitset`
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
-    </span><span class="kw">pub fn </span>iter_mut_with_bitset&lt;<span class="lifetime">&#39;a</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>,
-        bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec,
-    ) -&gt; ComponentBitsetIteratorMut&lt;T&gt; {
+    </span><span class="kw">pub fn </span>iter_mut_with_bitset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; ComponentBitsetIteratorMut&lt;T&gt; {
         <span class="self">self</span>.ops.iter_mut_with_bitset(<span class="kw-2">&amp;mut </span><span class="self">self</span>.components, bitset)
     }
 
@@ -556,7 +547,7 @@
     <span class="doccomment">/// Iterates immutably over the components of this type where `bitset`
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
-    </span><span class="kw">pub fn </span>iter_with_bitset&lt;<span class="lifetime">&#39;b</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="self">self</span>, bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>BitSetVec) -&gt; ComponentBitsetIterator&lt;T&gt; {
+    </span><span class="kw">pub fn </span>iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; ComponentBitsetIterator&lt;T&gt; {
         <span class="self">self</span>.ops.iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>.components, bitset)
     }
 
@@ -621,7 +612,7 @@
     /// entities.
     ///
     /// Slower than `iter()` but allows joining between multiple component types.
-    </span><span class="kw">pub fn </span>iter_with_bitset&lt;<span class="lifetime">&#39;b</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="self">self</span>, bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>BitSetVec) -&gt; ComponentBitsetIterator&lt;T&gt; {
+    </span><span class="kw">pub fn </span>iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; ComponentBitsetIterator&lt;T&gt; {
         <span class="self">self</span>.ops.iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>.components, bitset)
     }
 
@@ -629,10 +620,7 @@
     /// entities.
     ///
     /// Slower than `iter()` but allows joining between multiple component types.
-    </span><span class="kw">pub fn </span>iter_mut_with_bitset&lt;<span class="lifetime">&#39;b</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">self</span>,
-        bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>BitSetVec,
-    ) -&gt; ComponentBitsetIteratorMut&lt;T&gt; {
+    </span><span class="kw">pub fn </span>iter_mut_with_bitset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; ComponentBitsetIteratorMut&lt;T&gt; {
         <span class="self">self</span>.ops.iter_mut_with_bitset(<span class="kw-2">&amp;mut </span><span class="self">self</span>.components, bitset)
     }
 

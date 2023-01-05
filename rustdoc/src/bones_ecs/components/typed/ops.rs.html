@@ -138,10 +138,12 @@
 <span id="138">138</span>
 <span id="139">139</span>
 <span id="140">140</span>
+<span id="141">141</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{
     marker::PhantomData,
     mem::{ManuallyDrop, MaybeUninit},
     ops::DerefMut,
+    rc::Rc,
 };
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -259,7 +261,7 @@
     </span><span class="kw">pub fn </span>iter_with_bitset&lt;<span class="lifetime">&#39;a</span>&gt;(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>,
         components: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>UntypedComponentStore,
-        bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec,
+        bitset: Rc&lt;BitSetVec&gt;,
     ) -&gt; ComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>, T&gt; {
         <span class="comment">// SAFE: Constructing `TypedComponentOps` is unsafe and user affirms the type T is valid for
         // the underlying, untyped data.
@@ -271,7 +273,7 @@
     </span><span class="kw">pub fn </span>iter_mut_with_bitset&lt;<span class="lifetime">&#39;a</span>&gt;(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>,
         components: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>UntypedComponentStore,
-        bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec,
+        bitset: Rc&lt;BitSetVec&gt;,
     ) -&gt; ComponentBitsetIteratorMut&lt;T&gt; {
         <span class="comment">// SAFE: Constructing `TypedComponentOps` is unsafe and user affirms the type T is valid for
         // the underlying, untyped data.
