@@ -26,3 +26,26 @@ impl Default for Transform {
         }
     }
 }
+
+impl Transform {
+    /// Create a transform from a translation.
+    pub fn from_translation(translation: Vec3) -> Self {
+        Self {
+            translation,
+            ..default()
+        }
+    }
+
+    /// Create a transform from a rotation.
+    pub fn from_rotation(rotation: Quat) -> Self {
+        Self {
+            rotation,
+            ..default()
+        }
+    }
+
+    /// Create a transform from a scale.
+    pub fn from_scale(scale: Vec3) -> Self {
+        Self { scale, ..default() }
+    }
+}
