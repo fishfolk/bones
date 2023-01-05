@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["TileLayer","A tilemap layer."]]};
+window.SIDEBAR_ITEMS = {"struct":[["Tile","A tilemap tile component."],["TileLayer","A tilemap layer component."]]};
