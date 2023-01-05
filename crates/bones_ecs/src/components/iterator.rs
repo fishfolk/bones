@@ -1,4 +1,4 @@
-use std::{alloc::Layout, marker::PhantomData, slice::ChunksExactMut};
+use std::marker::PhantomData;
 
 use crate::prelude::*;
 
@@ -27,7 +27,7 @@ impl<'a, T: 'static> Iterator for ComponentBitsetIterator<'a, T> {
             .next()
             // SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
             // is valid for type T.
-            .map(|x| unsafe { &*(x.as_ptr() as *const T) })
+            .map(|x| unsafe { &*(x as *const T) })
     }
 }
 
@@ -56,13 +56,12 @@ impl<'a, T: 'static> Iterator for ComponentBitsetIteratorMut<'a, T> {
             .next()
             // SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
             // is valid for type T.
-            .map(|x| unsafe { &mut *(x.as_mut_ptr() as *mut T) })
+            .map(|x| unsafe { &mut *(x as *mut T) })
     }
 }
 
-/// Iterates over components using a provided bitset.
-/// Each time the bitset has a 1 in index i, the iterator will fetch data
-/// from the storage at index i and return it as an `Option`.
+/// Iterates over components using a provided bitset. Each time the bitset has a 1 in index i, the
+/// iterator will fetch data from the storage at index i and return it.
 pub struct UntypedComponentBitsetIterator<'a> {
     pub(crate) current_id: usize,
     pub(crate) components: &'a UntypedComponentStore,
@@ -70,7 +69,7 @@ pub struct UntypedComponentBitsetIterator<'a> {
 }
 
 impl<'a> Iterator for UntypedComponentBitsetIterator<'a> {
-    type Item = &'a [u8];
+    type Item = *const u8;
     fn next(&mut self) -> Option<Self::Item> {
         let max_id = self.components.max_id;
         let size = self.components.layout.size();
@@ -81,9 +80,9 @@ impl<'a> Iterator for UntypedComponentBitsetIterator<'a> {
             self.current_id += 1;
         }
         let ret = if self.current_id <= max_id {
-            let start = self.current_id * size;
-            let end = start + size;
-            Some(&self.components.storage[start..end])
+            let offset = self.current_id * size;
+            // SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
+            Some(unsafe { self.components.storage.as_ptr().add(offset) })
         } else {
             None
         };
@@ -92,43 +91,29 @@ impl<'a> Iterator for UntypedComponentBitsetIterator<'a> {
     }
 }
 
-/// Iterates over components using a provided bitset.
-/// Each time the bitset has a 1 in index i, the iterator will fetch data
-/// from the storage at index i and return it as an `Option`.
+/// Iterates over components using a provided bitset. Each time the bitset has a 1 in index i, the
+/// iterator will fetch data from the storage at index i.
 pub struct UntypedComponentBitsetIteratorMut<'a> {
     pub(crate) current_id: usize,
-    pub(crate) components: Option<ChunksExactMut<'a, u8>>,
-    pub(crate) components_bitset: &'a BitSetVec,
+    pub(crate) components: &'a mut UntypedComponentStore,
     pub(crate) bitset: &'a BitSetVec,
-    pub(crate) layout: Layout,
-    pub(crate) max_id: usize,
 }
 
 impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
-    type Item = &'a mut [u8];
+    type Item = *mut u8;
     fn next(&mut self) -> Option<Self::Item> {
-        let Self {
-            current_id,
-            bitset,
-            components,
-            components_bitset,
-            layout,
-            max_id,
-        } = self;
-        let chunk = components.as_mut().and_then(|x| x.next());
-        let max_id = max_id;
-        while !(bitset.bit_test(*current_id) && components_bitset.bit_test(*current_id))
-            && *current_id <= *max_id
+        let max_id = self.components.max_id;
+        let size = self.components.layout.size();
+        while !(self.bitset.bit_test(self.current_id)
+            && self.components.bitset.bit_test(self.current_id))
+            && self.current_id <= max_id
         {
-            *current_id += 1;
+            self.current_id += 1;
         }
-        let ret = if *current_id <= *max_id {
-            if layout.size() != 0 {
-                let bytes = chunk.unwrap();
-                Some(bytes)
-            } else {
-                Some(&mut [] as &mut [u8])
-            }
+        let ret = if self.current_id <= max_id {
+            let offset = self.current_id * size;
+            // SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
+            Some(unsafe { self.components.storage.as_mut_ptr().add(offset) })
         } else {
             None
         };

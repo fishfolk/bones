@@ -332,15 +332,8 @@ impl UntypedComponentStore {
     ) -> UntypedComponentBitsetIteratorMut {
         UntypedComponentBitsetIteratorMut {
             current_id: 0,
-            components: if self.layout.size() > 0 {
-                Some(self.storage.chunks_exact_mut(self.layout.size()))
-            } else {
-                None
-            },
-            components_bitset: &self.bitset,
+            components: self,
             bitset,
-            layout: self.layout,
-            max_id: self.max_id,
         }
     }
 
