@@ -349,13 +349,6 @@
 <span id="349">349</span>
 <span id="350">350</span>
 <span id="351">351</span>
-<span id="352">352</span>
-<span id="353">353</span>
-<span id="354">354</span>
-<span id="355">355</span>
-<span id="356">356</span>
-<span id="357">357</span>
-<span id="358">358</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>aligned_vec::AVec;
@@ -690,15 +683,8 @@
     ) -&gt; UntypedComponentBitsetIteratorMut {
         UntypedComponentBitsetIteratorMut {
             current_id: <span class="number">0</span>,
-            components: <span class="kw">if </span><span class="self">self</span>.layout.size() &gt; <span class="number">0 </span>{
-                <span class="prelude-val">Some</span>(<span class="self">self</span>.storage.chunks_exact_mut(<span class="self">self</span>.layout.size()))
-            } <span class="kw">else </span>{
-                <span class="prelude-val">None
-            </span>},
-            components_bitset: <span class="kw-2">&amp;</span><span class="self">self</span>.bitset,
+            components: <span class="self">self</span>,
             bitset,
-            layout: <span class="self">self</span>.layout,
-            max_id: <span class="self">self</span>.max_id,
         }
     }
 

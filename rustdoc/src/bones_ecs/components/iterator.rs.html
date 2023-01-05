@@ -143,22 +143,7 @@
 <span id="143">143</span>
 <span id="144">144</span>
 <span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-</pre><pre class="rust"><code><span class="kw">use </span>std::{alloc::Layout, marker::PhantomData, slice::ChunksExactMut};
+</pre><pre class="rust"><code><span class="kw">use </span>std::marker::PhantomData;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
@@ -187,7 +172,7 @@
             .next()
             <span class="comment">// SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
             // is valid for type T.
-            </span>.map(|x| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(x.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span>T) })
+            </span>.map(|x| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(x <span class="kw">as </span><span class="kw-2">*const </span>T) })
     }
 }
 
@@ -216,13 +201,12 @@
             .next()
             <span class="comment">// SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
             // is valid for type T.
-            </span>.map(|x| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(x.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>T) })
+            </span>.map(|x| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(x <span class="kw">as </span><span class="kw-2">*mut </span>T) })
     }
 }
 
-<span class="doccomment">/// Iterates over components using a provided bitset.
-/// Each time the bitset has a 1 in index i, the iterator will fetch data
-/// from the storage at index i and return it as an `Option`.
+<span class="doccomment">/// Iterates over components using a provided bitset. Each time the bitset has a 1 in index i, the
+/// iterator will fetch data from the storage at index i and return it.
 </span><span class="kw">pub struct </span>UntypedComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub</span>(<span class="kw">crate</span>) current_id: usize,
     <span class="kw">pub</span>(<span class="kw">crate</span>) components: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>UntypedComponentStore,
@@ -230,7 +214,7 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>UntypedComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8];
+    <span class="kw">type </span>Item = <span class="kw-2">*const </span>u8;
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>max_id = <span class="self">self</span>.components.max_id;
         <span class="kw">let </span>size = <span class="self">self</span>.components.layout.size();
@@ -241,9 +225,9 @@
             <span class="self">self</span>.current_id += <span class="number">1</span>;
         }
         <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt;= max_id {
-            <span class="kw">let </span>start = <span class="self">self</span>.current_id * size;
-            <span class="kw">let </span>end = start + size;
-            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.components.storage[start..end])
+            <span class="kw">let </span>offset = <span class="self">self</span>.current_id * size;
+            <span class="comment">// SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
+            </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.components.storage.as_ptr().add(offset) })
         } <span class="kw">else </span>{
             <span class="prelude-val">None
         </span>};
@@ -252,43 +236,29 @@
     }
 }
 
-<span class="doccomment">/// Iterates over components using a provided bitset.
-/// Each time the bitset has a 1 in index i, the iterator will fetch data
-/// from the storage at index i and return it as an `Option`.
+<span class="doccomment">/// Iterates over components using a provided bitset. Each time the bitset has a 1 in index i, the
+/// iterator will fetch data from the storage at index i.
 </span><span class="kw">pub struct </span>UntypedComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub</span>(<span class="kw">crate</span>) current_id: usize,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) components: <span class="prelude-ty">Option</span>&lt;ChunksExactMut&lt;<span class="lifetime">&#39;a</span>, u8&gt;&gt;,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) components_bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) components: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>UntypedComponentStore,
     <span class="kw">pub</span>(<span class="kw">crate</span>) bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) layout: Layout,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) max_id: usize,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>UntypedComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>[u8];
+    <span class="kw">type </span>Item = <span class="kw-2">*mut </span>u8;
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
-        <span class="kw">let </span><span class="self">Self </span>{
-            current_id,
-            bitset,
-            components,
-            components_bitset,
-            layout,
-            max_id,
-        } = <span class="self">self</span>;
-        <span class="kw">let </span>chunk = components.as_mut().and_then(|x| x.next());
-        <span class="kw">let </span>max_id = max_id;
-        <span class="kw">while </span>!(bitset.bit_test(<span class="kw-2">*</span>current_id) &amp;&amp; components_bitset.bit_test(<span class="kw-2">*</span>current_id))
-            &amp;&amp; <span class="kw-2">*</span>current_id &lt;= <span class="kw-2">*</span>max_id
+        <span class="kw">let </span>max_id = <span class="self">self</span>.components.max_id;
+        <span class="kw">let </span>size = <span class="self">self</span>.components.layout.size();
+        <span class="kw">while </span>!(<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id)
+            &amp;&amp; <span class="self">self</span>.components.bitset.bit_test(<span class="self">self</span>.current_id))
+            &amp;&amp; <span class="self">self</span>.current_id &lt;= max_id
         {
-            <span class="kw-2">*</span>current_id += <span class="number">1</span>;
+            <span class="self">self</span>.current_id += <span class="number">1</span>;
         }
-        <span class="kw">let </span>ret = <span class="kw">if </span><span class="kw-2">*</span>current_id &lt;= <span class="kw-2">*</span>max_id {
-            <span class="kw">if </span>layout.size() != <span class="number">0 </span>{
-                <span class="kw">let </span>bytes = chunk.unwrap();
-                <span class="prelude-val">Some</span>(bytes)
-            } <span class="kw">else </span>{
-                <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>[] <span class="kw">as </span><span class="kw-2">&amp;mut </span>[u8])
-            }
+        <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt;= max_id {
+            <span class="kw">let </span>offset = <span class="self">self</span>.current_id * size;
+            <span class="comment">// SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
+            </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.components.storage.as_mut_ptr().add(offset) })
         } <span class="kw">else </span>{
             <span class="prelude-val">None
         </span>};
