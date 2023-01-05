@@ -1,4 +1,4 @@
-use std::{alloc::Layout, marker::PhantomData, sync::Arc};
+use std::{alloc::Layout, marker::PhantomData, rc::Rc, sync::Arc};
 
 use bytemuck::Pod;
 
@@ -121,17 +121,14 @@ impl<T: TypedEcsData> ComponentStore<T> {
     /// Iterates immutably over the components of this type where `bitset`
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
-    pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> ComponentBitsetIterator<T> {
+    pub fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> ComponentBitsetIterator<T> {
         self.ops.iter_with_bitset(&self.components, bitset)
     }
 
     /// Iterates mutable over the components of this type where `bitset`
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
-    pub fn iter_mut_with_bitset<'a>(
-        &'a mut self,
-        bitset: &'a BitSetVec,
-    ) -> ComponentBitsetIteratorMut<T> {
+    pub fn iter_mut_with_bitset(&mut self, bitset: Rc<BitSetVec>) -> ComponentBitsetIteratorMut<T> {
         self.ops.iter_mut_with_bitset(&mut self.components, bitset)
     }
 
@@ -218,7 +215,7 @@ impl<'a, T: TypedEcsData> AtomicComponentStoreRef<'a, T> {
     /// Iterates immutably over the components of this type where `bitset`
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
-    pub fn iter_with_bitset<'b>(&'b self, bitset: &'b BitSetVec) -> ComponentBitsetIterator<T> {
+    pub fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> ComponentBitsetIterator<T> {
         self.ops.iter_with_bitset(&self.components, bitset)
     }
 
@@ -283,7 +280,7 @@ impl<'a, T: TypedEcsData> AtomicComponentStoreRefMut<'a, T> {
     /// entities.
     ///
     /// Slower than `iter()` but allows joining between multiple component types.
-    pub fn iter_with_bitset<'b>(&'b self, bitset: &'b BitSetVec) -> ComponentBitsetIterator<T> {
+    pub fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> ComponentBitsetIterator<T> {
         self.ops.iter_with_bitset(&self.components, bitset)
     }
 
@@ -291,10 +288,7 @@ impl<'a, T: TypedEcsData> AtomicComponentStoreRefMut<'a, T> {
     /// entities.
     ///
     /// Slower than `iter()` but allows joining between multiple component types.
-    pub fn iter_mut_with_bitset<'b>(
-        &'b mut self,
-        bitset: &'b BitSetVec,
-    ) -> ComponentBitsetIteratorMut<T> {
+    pub fn iter_mut_with_bitset(&mut self, bitset: Rc<BitSetVec>) -> ComponentBitsetIteratorMut<T> {
         self.ops.iter_mut_with_bitset(&mut self.components, bitset)
     }
 

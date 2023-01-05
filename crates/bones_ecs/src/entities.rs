@@ -1,5 +1,7 @@
 //! [`Entity`] implementation, storage, and interation.
 
+use std::rc::Rc;
+
 use crate::prelude::*;
 
 /// An entity index.
@@ -65,7 +67,229 @@ impl Default for Entities {
     }
 }
 
+/// A type representing a component-joining entity query.
+pub trait QueryItem {
+    /// The type of iterator this query item creates
+    type Iter: Iterator;
+    /// Modify the iteration bitset
+    fn apply_bitset(&self, bitset: &mut BitSetVec);
+    /// Return an iterator over the provided bitset.
+    fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter;
+}
+
+// TODO: Implement optional component query iterators.
+
+impl<'a, 'q, T: TypedEcsData> QueryItem for &'a Comp<'q, T> {
+    type Iter = ComponentBitsetIterator<'a, T>;
+    fn apply_bitset(&self, bitset: &mut BitSetVec) {
+        bitset.bit_and(self.bitset());
+    }
+
+    fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
+        Comp::iter_with_bitset(self, bitset)
+    }
+}
+impl<'a, 'q, T: TypedEcsData> QueryItem for &'a CompMut<'q, T> {
+    type Iter = ComponentBitsetIterator<'a, T>;
+    fn apply_bitset(&self, bitset: &mut BitSetVec) {
+        bitset.bit_and(self.bitset());
+    }
+
+    fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
+        CompMut::iter_with_bitset(self, bitset)
+    }
+}
+impl<'a, 'q, T: TypedEcsData> QueryItem for &'a mut CompMut<'q, T> {
+    type Iter = ComponentBitsetIteratorMut<'a, T>;
+    fn apply_bitset(&self, bitset: &mut BitSetVec) {
+        bitset.bit_and(self.bitset());
+    }
+
+    fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
+        CompMut::iter_mut_with_bitset(self, bitset)
+    }
+}
+
+#[doc(hidden)]
+pub struct MultiQueryIter<T> {
+    data: T,
+}
+
+macro_rules! impl_query {
+    ( $( $args:ident, )* ) => {
+        impl<
+            'q,
+            $(
+                $args: Iterator,
+            )*
+        >
+        Iterator for MultiQueryIter<($($args,)*)> {
+            type Item = (
+                $(
+                    $args::Item,
+                )*
+            );
+
+            #[allow(non_snake_case)]
+            fn next(&mut self) -> Option<Self::Item> {
+                let (
+                    $(
+                        $args,
+                    )*
+                ) = &mut self.data;
+
+                match (
+                    $(
+                        $args.next(),
+                    )*
+                ) {
+                    (
+                        $(
+                            Some($args),
+                        )*
+                    ) => Some((
+                        $(
+                            $args,
+                        )*
+                    )),
+                    _ => None
+                }
+            }
+        }
+
+        impl<
+            $(
+                $args: QueryItem,
+            )*
+        > QueryItem for (
+            $(
+                $args,
+            )*
+        ) {
+            type Iter = MultiQueryIter< (
+                $(
+                    <$args as QueryItem>::Iter,
+                )*
+            )>;
+
+            #[allow(non_snake_case)]
+            fn apply_bitset(&self, bitset: &mut BitSetVec) {
+                let (
+                    $(
+                        $args,
+                    )*
+                ) = self;
+                $(
+                    $args.apply_bitset(bitset);
+                )*
+            }
+
+            #[allow(non_snake_case)]
+            fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
+                let (
+                    $(
+                        $args,
+                    )*
+                ) = self;
+                MultiQueryIter {
+                    data: (
+                        $(
+                            $args.iter_with_bitset(bitset.clone()),
+                        )*
+                    ),
+                }
+            }
+        }
+    };
+}
+
+macro_rules! impl_queries {
+    // base case
+    () => {};
+    (
+        $head:ident,
+        $(
+            $tail:ident,
+        )*
+    ) => {
+        // recursive call
+        impl_query!($head, $( $tail, )* );
+        impl_queries!($( $tail, )* );
+    }
+}
+
+impl_queries!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,);
+
+/// Iterator over entities returned by [`Entities::iter_with`].
+pub struct EntitiesIterWith<'e, I> {
+    current_id: usize,
+    next_id: usize,
+    bitset: Rc<BitSetVec>,
+    generations: &'e Vec<u32>,
+    query: I,
+}
+
+impl<'a, I: Iterator> Iterator for EntitiesIterWith<'a, I> {
+    type Item = (Entity, I::Item);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while !self.bitset.bit_test(self.current_id) && self.current_id < self.next_id {
+            self.current_id += 1;
+        }
+
+        if self.current_id >= self.next_id {
+            return None;
+        }
+
+        let entity = Entity::new(self.current_id as u32, self.generations[self.current_id]);
+
+        self.current_id += 1;
+        self.query.next().map(|item| (entity, item))
+    }
+}
+
 impl Entities {
+    /// Iterate over the entities and components in the given query.
+    ///
+    /// The [`QueryItem`] trait is automatically implemented for references to [`Comp`] and
+    /// [`CompMut`] and for tuples of up to 26 items, so you can join over your mutable or immutable
+    /// component borrows in your systems.
+    ///
+    /// You can also pass a single component, to iterate only over the components that have alive
+    /// entities.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use bones_ecs::prelude::*;
+    /// # #[derive(Clone, TypeUlid)]
+    /// # #[ulid = "01GP1SVTTSR91P40B2W0XPQ1SN"]
+    /// # struct Pos { x: f32, y: f32 };
+    /// # #[derive(Clone, TypeUlid)]
+    /// # #[ulid = "01GP1SW3HYWEB2TY4S40ARMB1R"]
+    /// # struct Vel { x: f32, y: f32 };
+    ///
+    /// fn my_system(entities: Res<Entities>, mut pos: CompMut<Pos>, vel: Comp<Vel>) {
+    ///     for (entity, (pos, vel)) in entities.iter_with((&mut pos, &vel)) {
+    ///         pos.x += vel.x;
+    ///         pos.y += vel.y;
+    ///     }
+    /// }
+    /// ```
+    pub fn iter_with<Q: QueryItem>(&self, query: Q) -> EntitiesIterWith<<Q as QueryItem>::Iter> {
+        let mut bitset = self.bitset().clone();
+        query.apply_bitset(&mut bitset);
+        let bitset = Rc::new(bitset);
+
+        EntitiesIterWith {
+            current_id: 0,
+            next_id: self.next_id,
+            bitset: bitset.clone(),
+            generations: &self.generation,
+            query: query.iter_with_bitset(bitset),
+        }
+    }
+
     /// Creates a new `Entity` and returns it.
     ///
     /// This function will not reuse the index of an entity that is still in the killed entities.

@@ -107,12 +107,7 @@ mod tests {
 
     /// Mutates the positions based on the velocities.
     fn pos_vel_system(entities: Res<Entities>, mut pos: CompMut<Pos>, vel: Comp<Vel>) {
-        let mut bitset = pos.bitset().clone();
-        bitset.bit_and(vel.bitset());
-        for entity in entities.iter_with_bitset(&bitset) {
-            let pos = pos.get_mut(entity).unwrap();
-            let vel = vel.get(entity).unwrap();
-
+        for (_, (pos, vel)) in entities.iter_with((&mut pos, &vel)) {
             pos.0 += vel.0;
             pos.1 += vel.1;
         }
@@ -126,13 +121,10 @@ mod tests {
         marker: Comp<Marker>,
     ) {
         let mut i = 0;
-        let mut bitset = pos.bitset().clone();
-        bitset.bit_and(vel.bitset());
-        bitset.bit_or(marker.bitset());
-        for entity in entities.iter_with_bitset(&bitset) {
-            match (i, pos.get(entity), vel.get(entity), marker.get(entity)) {
-                (0, Some(Pos(0, 100)), Some(Vel(0, -1)), None)
-                | (1, Some(Pos(0, 0)), Some(Vel(1, 1)), Some(Marker)) => (),
+        for (entity, (pos, vel)) in entities.iter_with((&pos, &vel)) {
+            let marker = marker.get(entity);
+            match (i, pos, vel, marker) {
+                (0, Pos(0, 100), Vel(0, -1), None) | (1, Pos(0, 0), Vel(1, 1), Some(Marker)) => (),
                 x => unreachable!("{:?}", x),
             }
             i += 1;
@@ -149,13 +141,11 @@ mod tests {
         marker: Comp<Marker>,
     ) {
         let mut i = 0;
-        let mut bitset = pos.bitset().clone();
-        bitset.bit_and(vel.bitset());
-        bitset.bit_or(marker.bitset());
-        for entity in entities.iter_with_bitset(&bitset) {
-            match (i, pos.get(entity), vel.get(entity), marker.get(entity)) {
-                (0, Some(Pos(0, 99)), Some(Vel(0, -1)), None)
-                | (1, Some(Pos(1, 1)), Some(Vel(1, 1)), Some(Marker)) => (),
+        for (entity, (pos, vel)) in entities.iter_with((&pos, &vel)) {
+            let marker = marker.get(entity);
+            dbg!(i, entity);
+            match (i, pos, vel, marker) {
+                (0, Pos(0, 99), Vel(0, -1), None) | (1, Pos(1, 1), Vel(1, 1), Some(Marker)) => (),
                 x => unreachable!("{:?}", x),
             }
             i += 1;
