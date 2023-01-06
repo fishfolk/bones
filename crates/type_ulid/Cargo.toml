@@ -2,6 +2,7 @@
 name = "type_ulid"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/fishfolk/bones"
 
 [features]
 default = ["std"]
