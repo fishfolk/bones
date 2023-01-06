@@ -7,7 +7,7 @@ description = "A tiny but very powerful ECS framework."
 keywords = ["game", "ecs"]
 categories = ["game-engines"]
 license = "Apache-2.0"
-repository = "https://github.com/fishfolk/jumpy"
+repository = "https://github.com/fishfolk/bones"
 
 [features]
 default = ["keysize16"]

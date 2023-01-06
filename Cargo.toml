@@ -5,6 +5,7 @@ description = "Opinionated game meta-engine built on Bevy"
 authors = ["The Fish Folks & Spicy Lobster Developers"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
+repository = "https://github.com/fishfolk/bones"
 
 [workspace]
 members = [
