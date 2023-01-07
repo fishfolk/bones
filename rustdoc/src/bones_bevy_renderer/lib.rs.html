@@ -403,6 +403,10 @@
 <span id="403">403</span>
 <span id="404">404</span>
 <span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -726,6 +730,7 @@
 
             <span class="kw-2">*</span>atlas = bones_tile_layer.atlas.get_bevy_handle_untyped().typed();
             <span class="kw-2">*</span>transform = bones_transform.into_bevy();
+            transform.translation += bones_tile_layer.grid_size.extend(<span class="number">0</span>).as_vec3() / <span class="number">2.0</span>;
 
             <span class="kw">let </span>grid_size = bones_tile_layer.grid_size;
             <span class="kw">let </span>tile_iter = bones_tile_layer
@@ -734,7 +739,7 @@
                 .enumerate()
                 .map(|(idx, entity)| {
                     <span class="kw">let </span>y = idx <span class="kw">as </span>u32 / grid_size.x;
-                    <span class="kw">let </span>x = idx <span class="kw">as </span>u32 - y;
+                    <span class="kw">let </span>x = idx <span class="kw">as </span>u32 - (y * grid_size.x);
                     <span class="kw">let </span>tile = entity
                         .map(|e| {
                             <span class="kw">let </span>tile = tiles.get(e)<span class="question-mark">?</span>;
@@ -756,6 +761,7 @@
                     (IVec3::new(x <span class="kw">as </span>i32, y <span class="kw">as </span>i32, <span class="number">0</span>), tile)
                 });
 
+            tile_map.clear();
             tile_map.set_tiles(tile_iter);
         } <span class="kw">else </span>{
             commands.entity(bevy_ent).despawn();
@@ -798,10 +804,12 @@
 
         tile_map.set_tiles(tile_iter);
 
+        <span class="kw">let </span><span class="kw-2">mut </span>transform = bones_transform.into_bevy();
+        transform.translation += bones_tile_layer.grid_size.extend(<span class="number">0</span>).as_vec3() / <span class="number">2.0</span>;
         commands.spawn((
             TileMapBundle {
                 tilemap: tile_map,
-                transform: bones_transform.into_bevy(),
+                transform,
                 ..default()
             },
             BevyBonesEntity,
