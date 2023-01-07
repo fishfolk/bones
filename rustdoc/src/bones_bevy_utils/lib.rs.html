@@ -44,6 +44,14 @@
 <span id="44">44</span>
 <span id="45">45</span>
 <span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -51,9 +59,7 @@
 </span><span class="attribute">#![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
 
-</span><span class="kw">use </span>std::sync::Arc;
-
-<span class="kw">use </span>type_ulid::TypeUlid;
+</span><span class="kw">use </span>type_ulid::TypeUlid;
 
 <span class="doccomment">/// The prelude.
 </span><span class="kw">pub mod </span>prelude {
@@ -73,12 +79,22 @@
 /// One way to do this is to [`std::mem::swap`] an empty world in the [`BevyWorld`]` resource, with
 /// the actual Bevy world, immediatley before running the bones ECS systems. Then you can swap it
 /// back once the bones systems finish.
-</span><span class="attribute">#[derive(TypeUlid, Clone, Default)]
+</span><span class="attribute">#[derive(TypeUlid, Default)]
 #[ulid = <span class="string">&quot;01GNX5CJAAHS31DA9HXZ2CF74B&quot;</span>]
-</span><span class="kw">pub struct </span>BevyWorld(Arc&lt;bevy_ecs::world::World&gt;);
+</span><span class="kw">pub struct </span>BevyWorld(<span class="kw">pub </span><span class="prelude-ty">Option</span>&lt;bevy_ecs::world::World&gt;);
+
+<span class="kw">impl </span>Clone <span class="kw">for </span>BevyWorld {
+    <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+        <span class="kw">if </span><span class="self">self</span>.<span class="number">0</span>.is_some() {
+            <span class="macro">panic!</span>(<span class="string">&quot;BevyWorld may not be cloned.&quot;</span>);
+        } <span class="kw">else </span>{
+            <span class="self">Self</span>(<span class="prelude-val">None</span>)
+        }
+    }
+}
 
 <span class="kw">impl </span>std::ops::Deref <span class="kw">for </span>BevyWorld {
-    <span class="kw">type </span>Target = Arc&lt;bevy_ecs::world::World&gt;;
+    <span class="kw">type </span>Target = <span class="prelude-ty">Option</span>&lt;bevy_ecs::world::World&gt;;
 
     <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
