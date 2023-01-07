@@ -140,7 +140,8 @@ fn apply_shake(
         ($offset:expr) => {
             noise
                 .0
-                .get([((time.seconds_since_startup() as f32 + $offset) * SHAKE_SPEED).into()]) as f32
+                .get([((time.seconds_since_startup() as f32 + $offset) * SHAKE_SPEED).into()])
+                as f32
         };
     }
 
