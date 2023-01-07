@@ -464,6 +464,47 @@
 <span id="464">464</span>
 <span id="465">465</span>
 <span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
 </pre><pre class="rust"><code><span class="doccomment">//! An asset interface for Bones.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -883,6 +924,47 @@
         <span class="prelude-val">Ok</span>(UntypedHandle {
             path: AssetPath::new(path, label.map(String::from)),
         })
+    }
+}
+
+<span class="attribute">#[cfg(feature = <span class="string">&quot;has_load_progress&quot;</span>)]
+</span><span class="kw">mod </span>has_load_progress {
+    <span class="kw">use </span>bevy_asset::LoadState;
+    <span class="kw">use </span>bones_has_load_progress::{HasLoadProgress, LoadProgress};
+    <span class="kw">use </span>type_ulid::TypeUlid;
+
+    <span class="kw">impl</span>&lt;T: TypeUlid&gt; HasLoadProgress <span class="kw">for </span><span class="kw">super</span>::Handle&lt;T&gt; {
+        <span class="kw">fn </span>load_progress(
+            <span class="kw-2">&amp;</span><span class="self">self</span>,
+            loading_resources: <span class="kw-2">&amp;</span>bones_has_load_progress::LoadingResources,
+        ) -&gt; bones_has_load_progress::LoadProgress {
+            <span class="kw">let </span>bevy_handle = <span class="self">self</span>.get_bevy_handle_untyped();
+            <span class="kw">let </span>state = loading_resources.asset_server.get_load_state(<span class="kw-2">&amp;</span>bevy_handle);
+            <span class="kw">let </span>loaded = state == LoadState::Loaded;
+
+            LoadProgress {
+                <span class="attribute">#[allow(clippy::bool_to_int_with_if)]
+                </span>loaded: <span class="kw">if </span>loaded { <span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">0 </span>},
+                total: <span class="number">1</span>,
+            }
+        }
+    }
+
+    <span class="kw">impl </span>HasLoadProgress <span class="kw">for </span><span class="kw">super</span>::UntypedHandle {
+        <span class="kw">fn </span>load_progress(
+            <span class="kw-2">&amp;</span><span class="self">self</span>,
+            loading_resources: <span class="kw-2">&amp;</span>bones_has_load_progress::LoadingResources,
+        ) -&gt; LoadProgress {
+            <span class="kw">let </span>bevy_handle = <span class="self">self</span>.get_bevy_handle();
+            <span class="kw">let </span>state = loading_resources.asset_server.get_load_state(<span class="kw-2">&amp;</span>bevy_handle);
+            <span class="kw">let </span>loaded = state == LoadState::Loaded;
+
+            LoadProgress {
+                <span class="attribute">#[allow(clippy::bool_to_int_with_if)]
+                </span>loaded: <span class="kw">if </span>loaded { <span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">0 </span>},
+                total: <span class="number">1</span>,
+            }
+        }
     }
 }
 
