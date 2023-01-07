@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["camera","Camera components."],["prelude","The prelude"],["sprite","Sprite rendering components."],["tilemap","Tile map rendering components."],["transform","Transform component."]]};
+window.SIDEBAR_ITEMS = {"mod":[["camera","Camera components."],["datatypes","Useful data types such as [`Key`]."],["prelude","The prelude"],["sprite","Sprite rendering components."],["tilemap","Tile map rendering components."],["transform","Transform component."]]};

@@ -12,7 +12,7 @@ var sourcesIndex = JSON.parse('{\
 "bones_lib":["",[],["lib.rs"]],\
 "bones_matchmaker":["",[],["certs.rs","cli.rs","lib.rs","matchmaker.rs","proxy.rs"]],\
 "bones_matchmaker_proto":["",[],["lib.rs"]],\
-"bones_render":["",[],["camera.rs","lib.rs","sprite.rs","tilemap.rs","transform.rs"]],\
+"bones_render":["",[],["camera.rs","datatypes.rs","lib.rs","sprite.rs","tilemap.rs","transform.rs"]],\
 "quinn_runtime_bevy":["",[],["lib.rs"]],\
 "type_ulid":["",[],["lib.rs"]],\
 "type_ulid_macros":["",[],["lib.rs"]]\
