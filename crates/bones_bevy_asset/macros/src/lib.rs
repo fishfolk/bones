@@ -159,37 +159,91 @@ fn impl_bones_bevy_asset_load(input: &syn::DeriveInput) -> TokenStream2 {
     let item_ident = &input.ident;
 
     // Parse the struct
-    let in_struct = match &input.data {
-        syn::Data::Struct(s) => s,
-        syn::Data::Enum(_) | syn::Data::Union(_) => {
+    let mut field_loads = Vec::new();
+    match &input.data {
+        syn::Data::Struct(s) => {
+            'field: for field in &s.fields {
+                // Skip this field if it has `#[has_load_progress(none)]`
+                for attr in &field.attrs {
+                    if attr.path == parse_quote!(asset) {
+                        if attr != &deserialize_only {
+                            field_loads.push(quote_spanned! { attr.span() =>
+                        compile_error!("Attribute must be `#[asset(deserialize_only)]` if specified");
+                    });
+                        }
+                        continue 'field;
+                    }
+                }
+                let field_ident = field.ident.as_ref().expect("Field identifier missing");
+                field_loads.push(quote_spanned! { field_ident.span() =>
+                    ::bones_bevy_asset::BonesBevyAssetLoad::load(
+                        &mut self.#field_ident,
+                        load_context,
+                        dependencies
+                    );
+                });
+            }
+        }
+        syn::Data::Enum(e) => {
+            let mut patterns = Vec::new();
+            for variant in &e.variants {
+                let variant_ident = &variant.ident;
+                match &variant.fields {
+                    syn::Fields::Named(fields) => {
+                        let ids = fields
+                            .named
+                            .iter()
+                            .map(|x| x.ident.as_ref().expect("Field without ident"))
+                            .collect::<Vec<_>>();
+                        let loads = ids.iter().map(|id| {
+                            quote! {
+                                ::bones_bevy_asset::BonesBevyAssetLoad::load(#id, load_context, dependencies);
+                            }
+                        });
+
+                        patterns.push(quote! {
+                            Self::#variant_ident { #(#ids,)* } => {
+                                #(#loads)*
+                            }
+                        });
+                    }
+                    syn::Fields::Unnamed(fields) => {
+                        let ids = fields
+                            .unnamed
+                            .iter()
+                            .enumerate()
+                            .map(|(i, _)| format_ident!("field_{}", i))
+                            .collect::<Vec<_>>();
+                        let loads = ids.iter().map(|id| {
+                            quote! {
+                                ::bones_bevy_asset::BonesBevyAssetLoad::load(#id, load_context, dependencies);
+                            }
+                        });
+
+                        patterns.push(quote! {
+                            Self::#variant_ident(#(#ids)*) => {
+                                #(#loads)*
+                            }
+                        });
+                    }
+                    syn::Fields::Unit => patterns.push(quote! {
+                        Self::#variant_ident => (),
+                    }),
+                }
+            }
+
+            field_loads.push(quote! {
+                match self {
+                    #(#patterns)*
+                }
+            });
+        }
+        syn::Data::Union(_) => {
             return quote_spanned! { input.ident.span() =>
-                compile_error!("You may only derive HasLoadProgress on structs");
+                compile_error!("Deriving not supported on unions");
             };
         }
     };
-
-    let mut field_loads = Vec::new();
-    'field: for field in &in_struct.fields {
-        // Skip this field if it has `#[has_load_progress(none)]`
-        for attr in &field.attrs {
-            if attr.path == parse_quote!(asset) {
-                if attr != &deserialize_only {
-                    field_loads.push(quote_spanned! { attr.span() =>
-                        compile_error!("Attribute must be `#[asset(deserialize_only)]` if specified");
-                    });
-                }
-                continue 'field;
-            }
-        }
-        let field_ident = field.ident.as_ref().expect("Field identifier missing");
-        field_loads.push(quote_spanned! { field_ident.span() =>
-            ::bones_bevy_asset::BonesBevyAssetLoad::load(
-                &mut self.#field_ident,
-                load_context,
-                dependencies
-            );
-        });
-    }
 
     quote! {
         impl ::bones_bevy_asset::BonesBevyAssetLoad for #item_ident {
