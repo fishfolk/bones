@@ -321,6 +321,7 @@ fn sync_tilemaps<W: HasBonesWorld>(
 
             *atlas = bones_tile_layer.atlas.get_bevy_handle_untyped().typed();
             *transform = bones_transform.into_bevy();
+            transform.translation += bones_tile_layer.grid_size.extend(0).as_vec3() / 2.0;
 
             let grid_size = bones_tile_layer.grid_size;
             let tile_iter = bones_tile_layer
@@ -329,7 +330,7 @@ fn sync_tilemaps<W: HasBonesWorld>(
                 .enumerate()
                 .map(|(idx, entity)| {
                     let y = idx as u32 / grid_size.x;
-                    let x = idx as u32 - y;
+                    let x = idx as u32 - (y * grid_size.x);
                     let tile = entity
                         .map(|e| {
                             let tile = tiles.get(e)?;
@@ -351,6 +352,7 @@ fn sync_tilemaps<W: HasBonesWorld>(
                     (IVec3::new(x as i32, y as i32, 0), tile)
                 });
 
+            tile_map.clear();
             tile_map.set_tiles(tile_iter);
         } else {
             commands.entity(bevy_ent).despawn();
@@ -393,10 +395,12 @@ fn sync_tilemaps<W: HasBonesWorld>(
 
         tile_map.set_tiles(tile_iter);
 
+        let mut transform = bones_transform.into_bevy();
+        transform.translation += bones_tile_layer.grid_size.extend(0).as_vec3() / 2.0;
         commands.spawn((
             TileMapBundle {
                 tilemap: tile_map,
-                transform: bones_transform.into_bevy(),
+                transform,
                 ..default()
             },
             BevyBonesEntity,
