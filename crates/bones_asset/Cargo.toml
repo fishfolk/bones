@@ -13,7 +13,9 @@ serde = "1.0.0"
 bones_bevy_utils = { path = "../bones_bevy_utils", optional = true }
 type_ulid = { path = "../type_ulid" }
 bevy_asset = { version = "0.9.1", optional = true }
+bones_has_load_progress = { path = "../bones_has_load_progress", optional = true }
 
 [features]
 default = []
 bevy = ["dep:bones_bevy_utils", "dep:bevy_asset"]
+has_load_progress = ["dep:bones_has_load_progress", "bevy"]
