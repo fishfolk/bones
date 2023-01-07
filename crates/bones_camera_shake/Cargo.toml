@@ -9,7 +9,7 @@ description = "Small crate providing 2D camera shake for bevy_ecs."
 repository = "https://github.com/fishfolk/bones"
 
 [dependencies]
-bevy = { version = "0.9", default_features = false }
+bevy = { version = "0.8", default_features = false }
 # For now we are pointing at a git rev but this should be rectified when a new release is made.
 # See https://github.com/Razaekel/noise-rs/pull/281.
 noise = { git = "https://github.com/bsurmanski/noise-rs", rev = "5abdde1b819eccc47e74969c15e1b56ae5a055d6" }

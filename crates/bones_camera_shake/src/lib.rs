@@ -16,9 +16,10 @@
 //!
 //! fn spawn_camera(mut commands: Commands) {
 //!     commands.spawn((
+//!     commands.spawn_bundle(
 //!         Camera2dBundle::default(),
-//!         CameraShake::new(90.0, Vec2::splat(100.0), 0.5),
-//!     ));
+//!     )
+//!     .insert(CameraShake::new(90.0, Vec2::splat(100.0), 0.5));
 //! }
 //!
 //! fn add_camera_shake(mut ev_trauma: EventWriter<CameraTrauma>) {
@@ -126,7 +127,6 @@ fn decay_trauma(mut q: Query<&mut CameraShake>, time: Res<Time>) {
 }
 
 /// Resource that provides a source of noise for [`CameraShake`] entities to use.
-#[derive(Resource)]
 struct ShakeNoise(Perlin);
 
 /// System to apply camera shake based on the current trauma.
@@ -140,7 +140,7 @@ fn apply_shake(
         ($offset:expr) => {
             noise
                 .0
-                .get([((time.elapsed_seconds() + $offset) * SHAKE_SPEED).into()]) as f32
+                .get([((time.seconds_since_startup() as f32 + $offset) * SHAKE_SPEED).into()]) as f32
         };
     }
 
