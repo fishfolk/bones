@@ -772,7 +772,7 @@
 
             <span class="kw-2">*</span>atlas = bones_tile_layer.atlas.get_bevy_handle_untyped().typed();
             <span class="kw-2">*</span>transform = bones_transform.into_bevy();
-            transform.translation += bones_tile_layer.grid_size.extend(<span class="number">0</span>).as_vec3() / <span class="number">2.0</span>;
+            transform.translation += bones_tile_layer.tile_size.extend(<span class="number">0.0</span>) / <span class="number">2.0</span>;
 
             <span class="kw">let </span>grid_size = bones_tile_layer.grid_size;
             <span class="kw">let </span>tile_iter = bones_tile_layer
@@ -847,7 +847,7 @@
         tile_map.set_tiles(tile_iter);
 
         <span class="kw">let </span><span class="kw-2">mut </span>transform = bones_transform.into_bevy();
-        transform.translation += bones_tile_layer.grid_size.extend(<span class="number">0</span>).as_vec3() / <span class="number">2.0</span>;
+        transform.translation += bones_tile_layer.tile_size.extend(<span class="number">0.0</span>) / <span class="number">2.0</span>;
         commands.spawn((
             TileMapBundle {
                 tilemap: tile_map,
