@@ -6,6 +6,7 @@
 #![deny(rustdoc::all)]
 
 pub mod camera;
+pub mod datatypes;
 pub mod sprite;
 pub mod tilemap;
 pub mod transform;
@@ -14,7 +15,7 @@ pub mod transform;
 pub mod prelude {
     pub use {bones_asset::prelude::*, bones_ecs::prelude::*, glam::*, type_ulid::TypeUlid};
 
-    pub use crate::{camera::*, sprite::*, tilemap::*, transform::*};
+    pub use crate::{camera::*, datatypes::*, sprite::*, tilemap::*, transform::*};
 }
 
 #[cfg(feature = "bevy")]
