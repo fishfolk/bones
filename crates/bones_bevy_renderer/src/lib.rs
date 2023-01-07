@@ -63,8 +63,29 @@ impl<W: HasBonesWorld> Plugin for BonesRendererPlugin<W> {
             .add_system_to_stage(CoreStage::Last, sync_sprites::<W>)
             .add_system_to_stage(CoreStage::Last, sync_atlas_sprites::<W>)
             .add_system_to_stage(CoreStage::Last, sync_cameras::<W>)
+            .add_system_to_stage(CoreStage::Last, sync_clear_color::<W>)
             .add_system_to_stage(CoreStage::Last, sync_tilemaps::<W>);
     }
+}
+
+fn sync_clear_color<W: HasBonesWorld>(
+    mut has_init: Local<bool>,
+    mut clear_color: ResMut<ClearColor>,
+    world_resource: Option<ResMut<W>>,
+) {
+    let Some(mut world_resource) = world_resource else {
+        return;
+    };
+    let world = world_resource.world();
+    if !*has_init {
+        world.resources.init::<bones::ClearColor>();
+        *has_init = true;
+    }
+
+    let bones_clear_color = world.resources.get::<bones::ClearColor>();
+    let bones_clear_color = bones_clear_color.borrow();
+
+    clear_color.0 = Color::from(bones_clear_color.0);
 }
 
 /// The system that renders the bones world.
