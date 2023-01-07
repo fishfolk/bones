@@ -25,6 +25,11 @@
 <span id="25">25</span>
 <span id="26">26</span>
 <span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Camera components.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -52,5 +57,10 @@
         }
     }
 }
+
+<span class="doccomment">/// Resource for controlling the clear color.
+</span><span class="attribute">#[derive(Deref, DerefMut, Clone, Copy, TypeUlid, Default)]
+#[ulid = <span class="string">&quot;01GP4XRQYRPQNX4J22E513975M&quot;</span>]
+</span><span class="kw">pub struct </span>ClearColor(<span class="kw">pub </span>[f32; <span class="number">4</span>]);
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="bones_render" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>
