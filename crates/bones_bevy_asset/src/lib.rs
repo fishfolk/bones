@@ -141,7 +141,10 @@ pub struct BevyAssets<'a, T: bevy_asset::Asset> {
 impl<'a, T: bevy_asset::Asset> std::ops::Deref for BevyAssets<'a, T> {
     type Target = bevy_asset::Assets<T>;
     fn deref(&self) -> &Self::Target {
-        self.cell.resource::<Assets<T>>()
+        self.cell
+            .as_ref()
+            .expect("Bevy world not present in `BevyWorld` resource.")
+            .resource::<Assets<T>>()
     }
 }
 
