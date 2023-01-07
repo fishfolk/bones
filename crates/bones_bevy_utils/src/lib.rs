@@ -5,8 +5,6 @@
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
 
-use std::sync::Arc;
-
 use type_ulid::TypeUlid;
 
 /// The prelude.
@@ -27,12 +25,22 @@ pub trait IntoBevy<To> {
 /// One way to do this is to [`std::mem::swap`] an empty world in the [`BevyWorld`]` resource, with
 /// the actual Bevy world, immediatley before running the bones ECS systems. Then you can swap it
 /// back once the bones systems finish.
-#[derive(TypeUlid, Clone, Default)]
+#[derive(TypeUlid, Default)]
 #[ulid = "01GNX5CJAAHS31DA9HXZ2CF74B"]
-pub struct BevyWorld(Arc<bevy_ecs::world::World>);
+pub struct BevyWorld(pub Option<bevy_ecs::world::World>);
+
+impl Clone for BevyWorld {
+    fn clone(&self) -> Self {
+        if self.0.is_some() {
+            panic!("BevyWorld may not be cloned.");
+        } else {
+            Self(None)
+        }
+    }
+}
 
 impl std::ops::Deref for BevyWorld {
-    type Target = Arc<bevy_ecs::world::World>;
+    type Target = Option<bevy_ecs::world::World>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
