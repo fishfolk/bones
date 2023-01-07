@@ -13,7 +13,9 @@ type_ulid = { path = "../type_ulid" }
 glam = "0.22.0"
 bones_bevy_utils = { path = "../bones_bevy_utils", optional = true }
 bevy_transform = { version = "0.9.1", optional = true }
+serde = { version = "1.0.0", optional = true }
 
 [features]
 default = []
 bevy = ["dep:bones_bevy_utils", "dep:bevy_transform"]
+serde = ["dep:serde"]
