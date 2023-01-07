@@ -5,7 +5,7 @@ use crate::prelude::*;
 /// An ordered collection of [`SystemStage`]s.
 pub struct SystemStages {
     /// The stages in the collection, in the order that they will be run.
-    pub stages: Vec<SystemStage>,
+    pub stages: Vec<Box<dyn SystemStage>>,
 }
 
 impl SystemStages {
@@ -14,9 +14,7 @@ impl SystemStages {
     /// This must be called once before calling [`run()`][Self::run].
     pub fn initialize_systems(&mut self, world: &mut World) {
         for stage in &mut self.stages {
-            for system in &mut stage.systems {
-                system.initialize(world);
-            }
+            stage.initialize(world);
         }
     }
 
@@ -36,18 +34,16 @@ impl SystemStages {
     pub fn with_core_stages() -> Self {
         Self {
             stages: vec![
-                SystemStage::new(CoreStage::First),
-                SystemStage::new(CoreStage::PreUpdate),
-                SystemStage::new(CoreStage::Update),
-                SystemStage::new(CoreStage::PostUpdate),
-                SystemStage::new(CoreStage::Last),
+                Box::new(SimpleSystemStage::new(CoreStage::First)),
+                Box::new(SimpleSystemStage::new(CoreStage::PreUpdate)),
+                Box::new(SimpleSystemStage::new(CoreStage::Update)),
+                Box::new(SimpleSystemStage::new(CoreStage::PostUpdate)),
+                Box::new(SimpleSystemStage::new(CoreStage::Last)),
             ],
         }
     }
 
     /// Add a [`System`] to the stage with the given label.
-    ///
-    /// The system will be added after any systems already in stage.
     pub fn add_system_to_stage<Args, S: IntoSystem<Args>, L: StageLabel>(
         &mut self,
         label: L,
@@ -58,7 +54,7 @@ impl SystemStages {
         let mut stage = None;
 
         for st in &mut self.stages {
-            if st.id == id {
+            if st.id() == id {
                 stage = Some(st);
             }
         }
@@ -67,14 +63,34 @@ impl SystemStages {
             panic!("Stage with label `{}` ( {} ) doesn't exist.", name, id);
         };
 
-        stage.systems.push(system.system());
+        stage.add_system(system.system());
 
         self
     }
 }
 
+/// Trait for system stages. A stage is a
+pub trait SystemStage: Sync + Send {
+    /// The unique identifier for the stage.
+    fn id(&self) -> Ulid;
+    /// The human-readable name for the stage, used for error messages when something goes wrong.
+    fn name(&self) -> String;
+    /// Execute the systems on the given `world`.
+    ///
+    /// > **Note:** You must call [`initialize()`][Self::initialize] once before calling `run()` one
+    /// > or more times.
+    fn run(&mut self, world: &World) -> SystemResult;
+    /// Initialize the contained systems for the given `world`.
+    ///
+    /// Must be called once before calling [`run()`][Self::run].
+    fn initialize(&mut self, world: &mut World);
+
+    /// Add a system to this stage.
+    fn add_system(&mut self, system: System);
+}
+
 /// A collection of systems that will be run in order.
-pub struct SystemStage {
+pub struct SimpleSystemStage {
     /// The unique identifier for the stage.
     pub id: Ulid,
     /// The human-readable name for the stage, used for error messages when something goes wrong.
@@ -85,7 +101,7 @@ pub struct SystemStage {
     pub systems: Vec<System>,
 }
 
-impl SystemStage {
+impl SimpleSystemStage {
     /// Create a new, empty stage, for the given label.
     pub fn new<L: StageLabel>(label: L) -> Self {
         Self {
@@ -94,26 +110,33 @@ impl SystemStage {
             systems: Default::default(),
         }
     }
+}
 
-    /// Initialize the contained systems for the given `world`.
-    ///
-    /// Must be called once before calling [`run()`][Self::run].
-    pub fn initialize_systems(&mut self, world: &mut World) {
-        for system in &mut self.systems {
-            system.initialize(world);
-        }
+impl SystemStage for SimpleSystemStage {
+    fn id(&self) -> Ulid {
+        self.id
     }
 
-    /// Execute the systems on the given `world`.
-    ///
-    /// > **Note:** You must call [`initialize_systems()`][Self::initialize_systems] once before
-    /// > calling `run()` one or more times.
-    pub fn run(&mut self, world: &World) -> SystemResult {
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    fn run(&mut self, world: &World) -> SystemResult {
         for system in &mut self.systems {
             system.run(world)?;
         }
 
         Ok(())
+    }
+
+    fn initialize(&mut self, world: &mut World) {
+        for system in &mut self.systems {
+            system.initialize(world);
+        }
+    }
+
+    fn add_system(&mut self, system: System) {
+        self.systems.push(system);
     }
 }
 
