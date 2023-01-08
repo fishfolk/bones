@@ -8,3 +8,4 @@ repository = "https://github.com/fishfolk/bones"
 
 [dependencies]
 type_ulid = { path = "../type_ulid" }
+glam = "0.22.0"
