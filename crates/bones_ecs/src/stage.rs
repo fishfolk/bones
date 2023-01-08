@@ -67,6 +67,36 @@ impl SystemStages {
 
         self
     }
+
+    /// Insert a new stage, before another existing stage
+    #[track_caller]
+    pub fn insert_stage_before<L: StageLabel, S: SystemStage + 'static>(
+        &mut self,
+        label: L,
+        stage: S,
+    ) {
+        let stage_idx = self
+            .stages
+            .iter()
+            .position(|x| x.id() == CoreStage::PreUpdate.id())
+            .unwrap_or_else(|| panic!("Could not find stage with label `{}`", label.name()));
+        self.stages.insert(stage_idx, Box::new(stage));
+    }
+
+    /// Insert a new stage, after another existing stage
+    #[track_caller]
+    pub fn insert_stage_after<L: StageLabel, S: SystemStage + 'static>(
+        &mut self,
+        label: L,
+        stage: S,
+    ) {
+        let stage_idx = self
+            .stages
+            .iter()
+            .position(|x| x.id() == CoreStage::PreUpdate.id())
+            .unwrap_or_else(|| panic!("Could not find stage with label `{}`", label.name()));
+        self.stages.insert(stage_idx + 1, Box::new(stage));
+    }
 }
 
 /// Trait for system stages. A stage is a
