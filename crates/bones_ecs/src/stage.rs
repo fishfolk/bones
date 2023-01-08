@@ -165,14 +165,7 @@ pub enum CoreStage {
 
 impl StageLabel for CoreStage {
     fn name(&self) -> String {
-        match self {
-            CoreStage::First => "First",
-            CoreStage::PreUpdate => "PreUpdate",
-            CoreStage::Update => "Update",
-            CoreStage::PostUpdate => "PostUpdate",
-            CoreStage::Last => "Last",
-        }
-        .into()
+        format!("{:?}", self)
     }
 
     fn id(&self) -> Ulid {
