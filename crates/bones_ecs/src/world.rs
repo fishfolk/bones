@@ -70,6 +70,27 @@ impl World {
         s.initialize(self);
         s.run(self)
     }
+
+    /// Run a system once, assuming any necessary initialization has already been performed for that
+    /// system.
+    ///
+    /// This **will not** intialize the system, like [`run_system()`][Self::run_system] will, but it
+    /// only requires an immutable reference to the world.
+    ///
+    /// # Panics
+    ///
+    /// Panics may occur if you pass in a system, for example, that takes a component type argument
+    /// and that component has not been initialized yet.
+    ///
+    /// If all the system parameters have already been initialized, by calling
+    /// [`initialize()`][System::initialize] on the system, then this will work fine.
+    pub fn run_initialized_system<R, Out, S: IntoSystem<R, Out>>(
+        &self,
+        system: S,
+    ) -> SystemResult<Out> {
+        let mut s = system.system();
+        s.run(self)
+    }
 }
 
 #[cfg(test)]
