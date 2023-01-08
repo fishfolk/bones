@@ -3,7 +3,7 @@
 use crate::prelude::*;
 
 /// Struct used to run a system function using the world.
-pub struct System {
+pub struct System<Out = ()> {
     /// This should be called once to initialize the system, allowing it to intialize any resources
     /// or components in the world.
     ///
@@ -11,12 +11,12 @@ pub struct System {
     /// idempotent.
     pub initialize: Box<dyn Send + Sync + Fn(&mut World)>,
     /// This is run every time the system is executed
-    pub run: Box<dyn Send + Sync + FnMut(&World) -> SystemResult>,
+    pub run: Box<dyn Send + Sync + FnMut(&World) -> SystemResult<Out>>,
     /// A best-effort name for the system, for diagnostic purposes.
     pub name: &'static str,
 }
 
-impl System {
+impl<Out> System<Out> {
     /// Initializes the resources required to run this system inside of the provided [`World`], if
     /// those resources don't already exist.
     ///
@@ -27,7 +27,7 @@ impl System {
     }
 
     /// Runs the system's function using the provided [`World`]
-    pub fn run(&mut self, world: &World) -> anyhow::Result<()> {
+    pub fn run(&mut self, world: &World) -> SystemResult<Out> {
         (self.run)(world)
     }
 
@@ -53,37 +53,34 @@ impl System {
 /// The most common [`SystemParam`] types that you will use as arguments to a system will be:
 ///  - [`Res`] and [`ResMut`] parameters to access resources
 /// - [`Comp`] and [`CompMut`] parameters to access components
-pub trait IntoSystem<Args> {
+pub trait IntoSystem<Args, Out> {
     /// Convert into a [`System`].
-    fn system(self) -> System;
+    fn system(self) -> System<Out>;
 }
 
-impl IntoSystem<System> for System {
-    fn system(self) -> System {
+impl<Out> IntoSystem<System<Out>, Out> for System<Out> {
+    fn system(self) -> System<Out> {
         self
     }
 }
 
-impl<F> IntoSystem<(World, F)> for F
+impl<F, Out> IntoSystem<(World, F), Out> for F
 where
-    F: FnMut(&World) + Send + Sync + 'static,
+    F: FnMut(&World) -> Out + Send + Sync + 'static,
 {
-    fn system(mut self) -> System {
+    fn system(mut self) -> System<Out> {
         System {
             initialize: Box::new(|_| ()),
-            run: Box::new(move |world| {
-                self(world);
-                Ok(())
-            }),
+            run: Box::new(move |world| Ok(self(world))),
             name: std::any::type_name::<F>(),
         }
     }
 }
-impl<F> IntoSystem<(World, F, SystemResult)> for F
+impl<F, Out> IntoSystem<(World, F, SystemResult<Out>), Out> for F
 where
-    F: FnMut(&World) -> SystemResult + Send + Sync + 'static,
+    F: FnMut(&World) -> SystemResult<Out> + Send + Sync + 'static,
 {
-    fn system(self) -> System {
+    fn system(self) -> System<Out> {
         System {
             initialize: Box::new(|_| ()),
             run: Box::new(self),
@@ -215,27 +212,28 @@ impl<'a, T: TypedEcsData> SystemParam for CompMut<'a, T> {
 }
 
 macro_rules! impl_system {
-    ($($args:ident,)* $(-> $ret:ty)?) => {
+    ($($args:ident,)*) => {
         #[allow(unused_parens)]
         impl<
             F,
+            Out,
             $(
                 $args: SystemParam,
             )*
-        > IntoSystem<(F, $($args,)* $($ret)?)> for F
+        > IntoSystem<(F, $($args,)*), Out> for F
         where for<'a> F: 'static + Send + Sync +
             FnMut(
                 $(
                     <$args as SystemParam>::Param<'a>,
                 )*
-            ) $(-> $ret)? +
+            ) -> SystemResult<Out> +
             FnMut(
                 $(
                     $args,
                 )*
-            ) $(-> $ret)?
+            ) -> SystemResult<Out>
         {
-            fn system(mut self) -> System {
+            fn system(mut self) -> System<Out> {
                 System {
                     name: std::any::type_name::<F>(),
                     initialize: Box::new(|_world| {
@@ -249,7 +247,54 @@ macro_rules! impl_system {
                             let mut $args = $args::get_state(_world);
                         )*
 
-                        let _ = self(
+                        self(
+                            $(
+                                $args::borrow(&mut $args),
+                            )*
+                        )
+                    })
+                }
+            }
+        }
+    };
+}
+
+macro_rules! impl_system_with_empty_return {
+    ($($args:ident,)*) => {
+        #[allow(unused_parens)]
+        impl<
+            F,
+            $(
+                $args: SystemParam,
+            )*
+        > IntoSystem<(F, $($args,)* ()), ()> for F
+        where for<'a> F: 'static + Send + Sync +
+            FnMut(
+                $(
+                    <$args as SystemParam>::Param<'a>,
+                )*
+            ) +
+            FnMut(
+                $(
+                    $args,
+                )*
+            )
+        {
+            fn system(mut self) -> System<()> {
+                System {
+                    name: std::any::type_name::<F>(),
+                    initialize: Box::new(|_world| {
+                        $(
+                            $args::initialize(_world);
+                        )*
+                    }),
+                    run: Box::new(move |_world| {
+                        $(
+                            #[allow(non_snake_case)]
+                            let mut $args = $args::get_state(_world);
+                        )*
+
+                        self(
                             $(
                                 $args::borrow(&mut $args),
                             )*
@@ -269,13 +314,13 @@ macro_rules! impl_systems {
     ($head:ident, $($idents:ident,)*) => {
         // recursive call
         impl_system!($head, $($idents,)*);
-        impl_system!($head, $($idents,)* -> SystemResult);
+        impl_system_with_empty_return!($head, $($idents,)*);
         impl_systems!($($idents,)*);
     }
 }
 
 impl_system!();
-impl_system!(-> SystemResult);
+impl_system_with_empty_return!();
 impl_systems!(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,);
 
 #[cfg(test)]

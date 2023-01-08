@@ -35,4 +35,4 @@ pub enum EcsError {
 }
 
 /// The result of a `System`'s execution.
-pub type SystemResult = anyhow::Result<()>;
+pub type SystemResult<Out = ()> = anyhow::Result<Out>;
