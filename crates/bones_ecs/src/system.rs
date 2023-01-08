@@ -16,6 +16,14 @@ pub struct System<Out = ()> {
     pub name: &'static str,
 }
 
+impl<Out> std::fmt::Debug for System<Out> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("System")
+            .field("name", &self.name)
+            .finish_non_exhaustive()
+    }
+}
+
 impl<Out> System<Out> {
     /// Initializes the resources required to run this system inside of the provided [`World`], if
     /// those resources don't already exist.
