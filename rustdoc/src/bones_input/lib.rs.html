@@ -19,6 +19,14 @@
 <span id="19">19</span>
 <span id="20">20</span>
 <span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Standardized types meant to be provided to Bones games from the outside environment.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -39,6 +47,14 @@
 </span><span class="kw">pub struct </span>Time {
     <span class="doccomment">/// The time elapsed since the start of the game session.
     </span><span class="kw">pub </span>elapsed: f32,
+}
+
+<span class="doccomment">/// Information about the window the game is running in.
+</span><span class="attribute">#[derive(Clone, Copy, Debug, Default, TypeUlid)]
+#[ulid = <span class="string">&quot;01GP70WMVH4HV4YHZ240E0YC7X&quot;</span>]
+</span><span class="kw">pub struct </span>Window {
+    <span class="doccomment">/// The logical size of the window&#39;s client area.
+    </span><span class="kw">pub </span>size: glam::Vec2,
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="bones_input" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>
