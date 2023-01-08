@@ -64,7 +64,7 @@ impl World {
     /// Run a system once.
     ///
     /// This is good for initializing the world with setup systems.
-    pub fn run_system<R, S: IntoSystem<R>>(&mut self, system: S) -> SystemResult {
+    pub fn run_system<R, Out, S: IntoSystem<R, Out>>(&mut self, system: S) -> SystemResult<Out> {
         let mut s = system.system();
 
         s.initialize(self);

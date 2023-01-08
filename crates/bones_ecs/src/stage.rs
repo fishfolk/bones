@@ -44,7 +44,7 @@ impl SystemStages {
     }
 
     /// Add a [`System`] to the stage with the given label.
-    pub fn add_system_to_stage<Args, S: IntoSystem<Args>, L: StageLabel>(
+    pub fn add_system_to_stage<Args, S: IntoSystem<Args, ()>, L: StageLabel>(
         &mut self,
         label: L,
         system: S,
@@ -86,7 +86,7 @@ pub trait SystemStage: Sync + Send {
     fn initialize(&mut self, world: &mut World);
 
     /// Add a system to this stage.
-    fn add_system(&mut self, system: System);
+    fn add_system(&mut self, system: System<()>);
 }
 
 /// A collection of systems that will be run in order.
@@ -98,7 +98,7 @@ pub struct SimpleSystemStage {
     /// The list of systems in the stage.
     ///
     /// Each system will be run in the order that they are in in this list.
-    pub systems: Vec<System>,
+    pub systems: Vec<System<()>>,
 }
 
 impl SimpleSystemStage {
@@ -135,7 +135,7 @@ impl SystemStage for SimpleSystemStage {
         }
     }
 
-    fn add_system(&mut self, system: System) {
+    fn add_system(&mut self, system: System<()>) {
         self.systems.push(system);
     }
 }
