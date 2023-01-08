@@ -221,6 +221,27 @@
 <span id="221">221</span>
 <span id="222">222</span>
 <span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains the ECS [`World`].
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -287,10 +308,31 @@
     <span class="doccomment">/// Run a system once.
     ///
     /// This is good for initializing the world with setup systems.
-    </span><span class="kw">pub fn </span>run_system&lt;R, S: IntoSystem&lt;R&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: S) -&gt; SystemResult {
+    </span><span class="kw">pub fn </span>run_system&lt;R, Out, S: IntoSystem&lt;R, Out&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: S) -&gt; SystemResult&lt;Out&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>s = system.system();
 
         s.initialize(<span class="self">self</span>);
+        s.run(<span class="self">self</span>)
+    }
+
+    <span class="doccomment">/// Run a system once, assuming any necessary initialization has already been performed for that
+    /// system.
+    ///
+    /// This **will not** intialize the system, like [`run_system()`][Self::run_system] will, but it
+    /// only requires an immutable reference to the world.
+    ///
+    /// # Panics
+    ///
+    /// Panics may occur if you pass in a system, for example, that takes a component type argument
+    /// and that component has not been initialized yet.
+    ///
+    /// If all the system parameters have already been initialized, by calling
+    /// [`initialize()`][System::initialize] on the system, then this will work fine.
+    </span><span class="kw">pub fn </span>run_initialized_system&lt;R, Out, S: IntoSystem&lt;R, Out&gt;&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        system: S,
+    ) -&gt; SystemResult&lt;Out&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>s = system.system();
         s.run(<span class="self">self</span>)
     }
 }

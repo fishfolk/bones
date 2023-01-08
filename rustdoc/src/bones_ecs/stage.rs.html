@@ -185,6 +185,29 @@
 <span id="185">185</span>
 <span id="186">186</span>
 <span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Implementation of stage abstraction for running collections of systems over a [`World`].
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -231,7 +254,7 @@
     }
 
     <span class="doccomment">/// Add a [`System`] to the stage with the given label.
-    </span><span class="kw">pub fn </span>add_system_to_stage&lt;Args, S: IntoSystem&lt;Args&gt;, L: StageLabel&gt;(
+    </span><span class="kw">pub fn </span>add_system_to_stage&lt;Args, S: IntoSystem&lt;Args, ()&gt;, L: StageLabel&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         label: L,
         system: S,
@@ -254,6 +277,36 @@
 
         <span class="self">self
     </span>}
+
+    <span class="doccomment">/// Insert a new stage, before another existing stage
+    </span><span class="attribute">#[track_caller]
+    </span><span class="kw">pub fn </span>insert_stage_before&lt;L: StageLabel, S: SystemStage + <span class="lifetime">&#39;static</span>&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        label: L,
+        stage: S,
+    ) {
+        <span class="kw">let </span>stage_idx = <span class="self">self
+            </span>.stages
+            .iter()
+            .position(|x| x.id() == CoreStage::PreUpdate.id())
+            .unwrap_or_else(|| <span class="macro">panic!</span>(<span class="string">&quot;Could not find stage with label `{}`&quot;</span>, label.name()));
+        <span class="self">self</span>.stages.insert(stage_idx, Box::new(stage));
+    }
+
+    <span class="doccomment">/// Insert a new stage, after another existing stage
+    </span><span class="attribute">#[track_caller]
+    </span><span class="kw">pub fn </span>insert_stage_after&lt;L: StageLabel, S: SystemStage + <span class="lifetime">&#39;static</span>&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        label: L,
+        stage: S,
+    ) {
+        <span class="kw">let </span>stage_idx = <span class="self">self
+            </span>.stages
+            .iter()
+            .position(|x| x.id() == CoreStage::PreUpdate.id())
+            .unwrap_or_else(|| <span class="macro">panic!</span>(<span class="string">&quot;Could not find stage with label `{}`&quot;</span>, label.name()));
+        <span class="self">self</span>.stages.insert(stage_idx + <span class="number">1</span>, Box::new(stage));
+    }
 }
 
 <span class="doccomment">/// Trait for system stages. A stage is a
@@ -273,7 +326,7 @@
     </span><span class="kw">fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World);
 
     <span class="doccomment">/// Add a system to this stage.
-    </span><span class="kw">fn </span>add_system(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: System);
+    </span><span class="kw">fn </span>add_system(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: System&lt;()&gt;);
 }
 
 <span class="doccomment">/// A collection of systems that will be run in order.
@@ -285,7 +338,7 @@
     <span class="doccomment">/// The list of systems in the stage.
     ///
     /// Each system will be run in the order that they are in in this list.
-    </span><span class="kw">pub </span>systems: Vec&lt;System&gt;,
+    </span><span class="kw">pub </span>systems: Vec&lt;System&lt;()&gt;&gt;,
 }
 
 <span class="kw">impl </span>SimpleSystemStage {
@@ -322,7 +375,7 @@
         }
     }
 
-    <span class="kw">fn </span>add_system(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: System) {
+    <span class="kw">fn </span>add_system(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: System&lt;()&gt;) {
         <span class="self">self</span>.systems.push(system);
     }
 }
@@ -352,14 +405,7 @@
 
 <span class="kw">impl </span>StageLabel <span class="kw">for </span>CoreStage {
     <span class="kw">fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="kw">match </span><span class="self">self </span>{
-            CoreStage::First =&gt; <span class="string">&quot;First&quot;</span>,
-            CoreStage::PreUpdate =&gt; <span class="string">&quot;PreUpdate&quot;</span>,
-            CoreStage::Update =&gt; <span class="string">&quot;Update&quot;</span>,
-            CoreStage::PostUpdate =&gt; <span class="string">&quot;PostUpdate&quot;</span>,
-            CoreStage::Last =&gt; <span class="string">&quot;Last&quot;</span>,
-        }
-        .into()
+        <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>)
     }
 
     <span class="kw">fn </span>id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ulid {

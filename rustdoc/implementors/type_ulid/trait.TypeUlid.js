@@ -1,7 +1,7 @@
 (function() {var implementors = {
 "bones_asset":[["impl TypeUlid for <a class=\"struct\" href=\"bones_asset/struct.AssetProvidersResource.html\" title=\"struct bones_asset::AssetProvidersResource\">AssetProvidersResource</a>"]],
 "bones_bevy_asset":[],
-"bones_bevy_utils":[["impl TypeUlid for <a class=\"struct\" href=\"bones_bevy_utils/struct.BevyWorld.html\" title=\"struct bones_bevy_utils::BevyWorld\">BevyWorld</a>"]],
+"bones_bevy_utils":[["impl <a class=\"trait\" href=\"type_ulid/trait.TypeUlid.html\" title=\"trait type_ulid::TypeUlid\">TypeUlid</a> for <a class=\"struct\" href=\"bones_bevy_utils/struct.BevyWorld.html\" title=\"struct bones_bevy_utils::BevyWorld\">BevyWorld</a>"]],
 "bones_ecs":[["impl <a class=\"trait\" href=\"bones_ecs/prelude/trait.TypeUlid.html\" title=\"trait bones_ecs::prelude::TypeUlid\">TypeUlid</a> for <a class=\"struct\" href=\"bones_ecs/entities/struct.Entities.html\" title=\"struct bones_ecs::entities::Entities\">Entities</a>"]],
 "bones_input":[["impl TypeUlid for <a class=\"struct\" href=\"bones_input/struct.Time.html\" title=\"struct bones_input::Time\">Time</a>"]],
 "bones_lib":[],
