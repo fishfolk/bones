@@ -5,6 +5,7 @@
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
 
+pub mod audio;
 pub mod camera;
 pub mod datatypes;
 pub mod sprite;
