@@ -54,17 +54,30 @@ impl<W: HasBonesWorld> BonesRendererPlugin<W> {
 #[derive(Component)]
 pub struct BevyBonesEntity;
 
+/// [`StageLabel`] for stages added by bones to the Bevy world.
+#[derive(StageLabel)]
+pub enum BonesStage {
+    /// This is the stage where the plugin reads the bones world adds bevy sprites, tiles, etc. to
+    /// be rendered.
+    Sync,
+}
+
 impl<W: HasBonesWorld> Plugin for BonesRendererPlugin<W> {
     fn build(&self, app: &mut App) {
         app.add_plugin(bevy_simple_tilemap::plugin::SimpleTileMapPlugin)
             // Install the asset loader for .atlas.yaml files.
             .add_asset_loader(asset::TextureAtlasLoader)
             // Add the world sync systems
-            .add_system_to_stage(CoreStage::Last, sync_sprites::<W>)
-            .add_system_to_stage(CoreStage::Last, sync_atlas_sprites::<W>)
-            .add_system_to_stage(CoreStage::Last, sync_cameras::<W>)
-            .add_system_to_stage(CoreStage::Last, sync_clear_color::<W>)
-            .add_system_to_stage(CoreStage::Last, sync_tilemaps::<W>);
+            .add_stage_before(
+                CoreStage::PostUpdate,
+                BonesStage::Sync,
+                SystemStage::parallel(),
+            )
+            .add_system_to_stage(BonesStage::Sync, sync_sprites::<W>)
+            .add_system_to_stage(BonesStage::Sync, sync_atlas_sprites::<W>)
+            .add_system_to_stage(BonesStage::Sync, sync_cameras::<W>)
+            .add_system_to_stage(BonesStage::Sync, sync_clear_color::<W>)
+            .add_system_to_stage(BonesStage::Sync, sync_tilemaps::<W>);
     }
 }
 
