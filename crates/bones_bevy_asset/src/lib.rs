@@ -101,6 +101,38 @@ impl<T: BonesBevyAssetLoad> BonesBevyAssetLoad for Vec<T> {
     }
 }
 
+impl<T: BonesBevyAssetLoad> BonesBevyAssetLoad for Option<T> {
+    fn load(
+        &mut self,
+        load_context: &mut bevy_asset::LoadContext,
+        dependencies: &mut Vec<bevy_asset::AssetPath<'static>>,
+    ) {
+        self.as_mut().map(|x| x.load(load_context, dependencies));
+    }
+}
+
+impl<K, H, T: BonesBevyAssetLoad> BonesBevyAssetLoad for std::collections::HashMap<K, T, H> {
+    fn load(
+        &mut self,
+        load_context: &mut bevy_asset::LoadContext,
+        dependencies: &mut Vec<bevy_asset::AssetPath<'static>>,
+    ) {
+        self.iter_mut()
+            .for_each(|(_k, v)| v.load(load_context, dependencies))
+    }
+}
+
+impl<K, V: BonesBevyAssetLoad> BonesBevyAssetLoad for bevy_utils::HashMap<K, V> {
+    fn load(
+        &mut self,
+        load_context: &mut bevy_asset::LoadContext,
+        dependencies: &mut Vec<bevy_asset::AssetPath<'static>>,
+    ) {
+        self.iter_mut()
+            .for_each(|(_k, v)| v.load(load_context, dependencies))
+    }
+}
+
 /// Helper make empty load implementations for a list of types.
 macro_rules! impl_default_traits {
     ( $($type:ty),* $(,)? ) => {
