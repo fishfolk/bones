@@ -171,6 +171,38 @@
 <span id="171">171</span>
 <span id="172">172</span>
 <span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
 </pre><pre class="rust"><code><span class="doccomment">//! An asset integration between Bevy and bones.
 //!
 //! Provides an easy way to load metadata for bones games using Bevy assets.
@@ -271,6 +303,38 @@
     ) {
         <span class="self">self</span>.iter_mut()
             .for_each(|x| x.load(load_context, dependencies))
+    }
+}
+
+<span class="kw">impl</span>&lt;T: BonesBevyAssetLoad&gt; BonesBevyAssetLoad <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;T&gt; {
+    <span class="kw">fn </span>load(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        load_context: <span class="kw-2">&amp;mut </span>bevy_asset::LoadContext,
+        dependencies: <span class="kw-2">&amp;mut </span>Vec&lt;bevy_asset::AssetPath&lt;<span class="lifetime">&#39;static</span>&gt;&gt;,
+    ) {
+        <span class="self">self</span>.as_mut().map(|x| x.load(load_context, dependencies));
+    }
+}
+
+<span class="kw">impl</span>&lt;K, H, T: BonesBevyAssetLoad&gt; BonesBevyAssetLoad <span class="kw">for </span>std::collections::HashMap&lt;K, T, H&gt; {
+    <span class="kw">fn </span>load(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        load_context: <span class="kw-2">&amp;mut </span>bevy_asset::LoadContext,
+        dependencies: <span class="kw-2">&amp;mut </span>Vec&lt;bevy_asset::AssetPath&lt;<span class="lifetime">&#39;static</span>&gt;&gt;,
+    ) {
+        <span class="self">self</span>.iter_mut()
+            .for_each(|(_k, v)| v.load(load_context, dependencies))
+    }
+}
+
+<span class="kw">impl</span>&lt;K, V: BonesBevyAssetLoad&gt; BonesBevyAssetLoad <span class="kw">for </span>bevy_utils::HashMap&lt;K, V&gt; {
+    <span class="kw">fn </span>load(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        load_context: <span class="kw-2">&amp;mut </span>bevy_asset::LoadContext,
+        dependencies: <span class="kw-2">&amp;mut </span>Vec&lt;bevy_asset::AssetPath&lt;<span class="lifetime">&#39;static</span>&gt;&gt;,
+    ) {
+        <span class="self">self</span>.iter_mut()
+            .for_each(|(_k, v)| v.load(load_context, dependencies))
     }
 }
 

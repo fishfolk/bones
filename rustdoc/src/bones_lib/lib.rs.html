@@ -20,6 +20,27 @@
 <span id="20">20</span>
 <span id="21">21</span>
 <span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Opinionated game meta-engine built on Bevy.
 
 </span><span class="attribute">#[doc(inline)]
@@ -30,17 +51,38 @@
 
 <span class="doccomment">/// Bones lib prelude
 </span><span class="kw">pub mod </span>prelude {
-    <span class="kw">pub use crate</span>::{asset::prelude::<span class="kw-2">*</span>, ecs::prelude::<span class="kw-2">*</span>, input::prelude::<span class="kw-2">*</span>, render::prelude::<span class="kw-2">*</span>};
+    <span class="kw">pub use crate</span>::{
+        animation::prelude::<span class="kw-2">*</span>, asset::prelude::<span class="kw-2">*</span>, ecs::prelude::<span class="kw-2">*</span>, input::prelude::<span class="kw-2">*</span>,
+        render::prelude::<span class="kw-2">*</span>, FrameTime,
+    };
 
     <span class="attribute">#[cfg(feature = <span class="string">&quot;bevy&quot;</span>)]
     </span><span class="kw">pub use </span><span class="kw">crate</span>::bevy_utils::<span class="kw-2">*</span>;
 }
+<span class="kw">use </span>prelude::<span class="kw-2">*</span>;
 
-<span class="doccomment">/// This crate provides 2D camera shake using the methodology described in this excellent [GDC
-/// talk](https://www.youtube.com/watch?v=tu-Qe66AvtY) by Squirrel Eiserloh.
-</span><span class="attribute">#[cfg(feature = <span class="string">&quot;camera_shake&quot;</span>)]
-</span><span class="kw">pub mod </span>camera_shake {
-    <span class="kw">pub use </span>bones_camera_shake::<span class="kw-2">*</span>;
+<span class="kw">pub mod </span>animation;
+
+<span class="doccomment">/// This is a resource that stores the game&#39;s fixed frame time.
+///
+/// For instance, if the game logic is meant to run at a fixed frame rate of 60 fps, then this
+/// should be `1.0 / 60.0`.
+///
+/// This resource is used by animation or other timing-sensitive code when running code that should
+/// run the same, regardless of the games fixed updates-per-second.
+</span><span class="attribute">#[derive(Clone, TypeUlid, Deref, DerefMut)]
+#[ulid = <span class="string">&quot;01GP1VWPKF2H7CKDCD987PHBWV&quot;</span>]
+</span><span class="kw">pub struct </span>FrameTime(<span class="kw">pub </span>f32);
+
+<span class="kw">impl </span>Default <span class="kw">for </span>FrameTime {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(<span class="number">1.0 </span>/ <span class="number">60.0</span>)
+    }
+}
+
+<span class="doccomment">/// Install the `bones_lib` systems for things such as animation etc. into a [`SystemStages`].
+</span><span class="kw">pub fn </span>install(stages: <span class="kw-2">&amp;mut </span>SystemStages) {
+    animation::install(stages);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="bones_lib" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

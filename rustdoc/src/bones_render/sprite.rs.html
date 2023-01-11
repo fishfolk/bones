@@ -45,6 +45,13 @@
 <span id="45">45</span>
 <span id="46">46</span>
 <span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Sprite rendering components.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -91,6 +98,13 @@
     </span><span class="kw">pub </span>flip_x: bool,
     <span class="doccomment">/// Whether or not the flip the sprite vertically.
     </span><span class="kw">pub </span>flip_y: bool,
+}
+
+<span class="kw">impl </span>AtlasSprite {
+    <span class="doccomment">/// Create a new [`AtlasSprite`] from the given atlas handle.
+    </span><span class="kw">pub fn </span>new(atlas: Handle&lt;Atlas&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ atlas, ..default() }
+    }
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="bones_render" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

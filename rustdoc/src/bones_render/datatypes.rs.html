@@ -107,13 +107,33 @@
 <span id="107">107</span>
 <span id="108">108</span>
 <span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Useful data types such as [`Key`].
 
 /// A small ascii byte array stored on the stack and used similarly to a string to represent things
 /// like animation keys, etc, without requring a heap allocation.
-</span><span class="attribute">#[derive(Eq, PartialEq, Copy, Clone, Hash, Debug)]
+</span><span class="attribute">#[derive(Eq, PartialEq, Copy, Clone, Hash)]
 #[repr(transparent)]
-</span><span class="kw">pub struct </span>Key&lt;<span class="kw">const </span>N: usize = <span class="number">24</span>&gt;([u8; N]);
+</span><span class="kw">pub struct </span>Key&lt;<span class="kw">const </span>N: usize = <span class="number">24</span>&gt;(<span class="kw">pub </span>[u8; N]);
+
+<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>Key {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_tuple(<span class="string">&quot;Key&quot;</span>).field(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="self">self</span>)).finish()
+    }
+}
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; Default <span class="kw">for </span>Key&lt;N&gt; {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
@@ -150,7 +170,9 @@
 <span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>Key {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
         <span class="kw">for </span>byte <span class="kw">in </span><span class="self">self</span>.<span class="number">0 </span>{
-            <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, byte <span class="kw">as </span>char)<span class="question-mark">?</span>;
+            <span class="kw">if </span>byte != <span class="number">0 </span>{
+                <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, byte <span class="kw">as </span>char)<span class="question-mark">?</span>;
+            }
         }
         <span class="prelude-val">Ok</span>(())
     }
@@ -162,15 +184,21 @@
     /// # Errors
     ///
     /// Returns an error if the input is too long, or if it is non-ascii.
-    </span><span class="kw">pub fn </span>new(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, KeyError&gt; {
-        <span class="kw">if </span>!s.is_ascii() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(KeyError::NotAscii);
-        }
+    </span><span class="kw">pub const fn </span>new(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, KeyError&gt; {
         <span class="kw">if </span>s.len() &gt; N {
             <span class="kw">return </span><span class="prelude-val">Err</span>(KeyError::TooLong);
         }
-        <span class="kw">let </span><span class="kw-2">mut </span>data = [<span class="number">0</span>; N];
-        data[<span class="number">0</span>..s.len()].clone_from_slice(<span class="kw-2">&amp;</span>s.as_bytes()[<span class="number">0</span>..s.len()]);
+        <span class="kw">let </span>s_bytes = s.as_bytes();
+        <span class="kw">let </span><span class="kw-2">mut </span>data = [<span class="number">0u8</span>; N];
+        <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+        <span class="kw">while </span>i &lt; s.len() {
+            <span class="kw">let </span>byte = s_bytes[i];
+            <span class="kw">if </span>!byte.is_ascii() {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(KeyError::NotAscii);
+            }
+            data[i] = byte;
+            i += <span class="number">1</span>;
+        }
 
         <span class="prelude-val">Ok</span>(<span class="self">Self</span>(data))
     }

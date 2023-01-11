@@ -67,6 +67,7 @@
 <span id="67">67</span>
 <span id="68">68</span>
 <span id="69">69</span>
+<span id="70">70</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Tile map rendering components.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -114,20 +115,21 @@
     }
 
     <span class="attribute">#[inline]
-    </span><span class="kw">fn </span>idx(<span class="kw-2">&amp;</span><span class="self">self</span>, pos: UVec2) -&gt; usize {
-        (<span class="self">self</span>.grid_size.x * pos.y + pos.x) <span class="kw">as </span>usize
+    </span><span class="kw">fn </span>idx(<span class="kw-2">&amp;</span><span class="self">self</span>, pos: UVec2) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+        <span class="kw">let </span>idx = <span class="self">self</span>.grid_size.x <span class="kw">as </span>i32 * pos.y <span class="kw">as </span>i32 + pos.x <span class="kw">as </span>i32;
+        idx.try_into().ok()
     }
 
     <span class="doccomment">/// Get&#39;s the tile at the given position in the layer, indexed with the top-left of the layer
     /// being (0, 0).
     </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, pos: UVec2) -&gt; <span class="prelude-ty">Option</span>&lt;Entity&gt; {
-        <span class="kw">let </span>idx = <span class="self">self</span>.idx(pos);
-        <span class="self">self</span>.tiles.get(idx).cloned().flatten()
+        <span class="self">self</span>.idx(pos)
+            .and_then(|idx| <span class="self">self</span>.tiles.get(idx).cloned().flatten())
     }
 
     <span class="doccomment">/// Set the tile at the given position, to a certain entity.
     </span><span class="kw">pub fn </span>set(<span class="kw-2">&amp;mut </span><span class="self">self</span>, pos: UVec2, entity: <span class="prelude-ty">Option</span>&lt;Entity&gt;) {
-        <span class="kw">let </span>idx = <span class="self">self</span>.idx(pos);
+        <span class="kw">let </span>idx = <span class="self">self</span>.idx(pos).expect(<span class="string">&quot;Tile pos out of bounds&quot;</span>);
         <span class="kw-2">*</span><span class="self">self</span>.tiles.get_mut(idx).unwrap_or_else(|| {
             <span class="macro">panic!</span>(
                 <span class="string">&quot;Tile pos out of range of tile size: pos {:?} size {:?}&quot;</span>,

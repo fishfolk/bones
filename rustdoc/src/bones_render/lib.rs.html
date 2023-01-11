@@ -32,6 +32,20 @@
 <span id="32">32</span>
 <span id="33">33</span>
 <span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Standardized rendering components for Bones.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -39,7 +53,8 @@
 </span><span class="attribute">#![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
 
-</span><span class="kw">pub mod </span>camera;
+</span><span class="kw">pub mod </span>audio;
+<span class="kw">pub mod </span>camera;
 <span class="kw">pub mod </span>datatypes;
 <span class="kw">pub mod </span>sprite;
 <span class="kw">pub mod </span>tilemap;
@@ -49,7 +64,20 @@
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use </span>{bones_asset::prelude::<span class="kw-2">*</span>, bones_ecs::prelude::<span class="kw-2">*</span>, glam::<span class="kw-2">*</span>, type_ulid::TypeUlid};
 
-    <span class="kw">pub use crate</span>::{camera::<span class="kw-2">*</span>, datatypes::<span class="kw-2">*</span>, sprite::<span class="kw-2">*</span>, tilemap::<span class="kw-2">*</span>, transform::<span class="kw-2">*</span>};
+    <span class="kw">pub use crate</span>::{audio::<span class="kw-2">*</span>, camera::<span class="kw-2">*</span>, datatypes::<span class="kw-2">*</span>, key, sprite::<span class="kw-2">*</span>, tilemap::<span class="kw-2">*</span>, transform::<span class="kw-2">*</span>};
+}
+
+<span class="doccomment">/// Create a new const [`Key`][datatypes] parsed at compile time.
+</span><span class="attribute">#[macro_export]
+</span><span class="macro">macro_rules! </span>key {
+    (<span class="macro-nonterminal">$s</span>:literal) =&gt; {{
+        <span class="kw">const </span>KEY: Key = <span class="kw">match </span>Key::new(<span class="macro-nonterminal">$s</span>) {
+            <span class="prelude-val">Ok</span>(key) =&gt; key,
+            <span class="prelude-val">Err</span>(KeyError::TooLong) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Key too long&quot;</span>),
+            <span class="prelude-val">Err</span>(KeyError::NotAscii) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Key not ascii&quot;</span>),
+        };
+        KEY
+    }};
 }
 
 <span class="attribute">#[cfg(feature = <span class="string">&quot;bevy&quot;</span>)]

@@ -428,6 +428,19 @@
 <span id="428">428</span>
 <span id="429">429</span>
 <span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -484,17 +497,30 @@
 </span><span class="attribute">#[derive(Component)]
 </span><span class="kw">pub struct </span>BevyBonesEntity;
 
+<span class="doccomment">/// [`StageLabel`] for stages added by bones to the Bevy world.
+</span><span class="attribute">#[derive(StageLabel)]
+</span><span class="kw">pub enum </span>BonesStage {
+    <span class="doccomment">/// This is the stage where the plugin reads the bones world adds bevy sprites, tiles, etc. to
+    /// be rendered.
+    </span>Sync,
+}
+
 <span class="kw">impl</span>&lt;W: HasBonesWorld&gt; Plugin <span class="kw">for </span>BonesRendererPlugin&lt;W&gt; {
     <span class="kw">fn </span>build(<span class="kw-2">&amp;</span><span class="self">self</span>, app: <span class="kw-2">&amp;mut </span>App) {
         app.add_plugin(bevy_simple_tilemap::plugin::SimpleTileMapPlugin)
             <span class="comment">// Install the asset loader for .atlas.yaml files.
             </span>.add_asset_loader(asset::TextureAtlasLoader)
             <span class="comment">// Add the world sync systems
-            </span>.add_system_to_stage(CoreStage::Last, sync_sprites::&lt;W&gt;)
-            .add_system_to_stage(CoreStage::Last, sync_atlas_sprites::&lt;W&gt;)
-            .add_system_to_stage(CoreStage::Last, sync_cameras::&lt;W&gt;)
-            .add_system_to_stage(CoreStage::Last, sync_clear_color::&lt;W&gt;)
-            .add_system_to_stage(CoreStage::Last, sync_tilemaps::&lt;W&gt;);
+            </span>.add_stage_before(
+                CoreStage::PostUpdate,
+                BonesStage::Sync,
+                SystemStage::parallel(),
+            )
+            .add_system_to_stage(BonesStage::Sync, sync_sprites::&lt;W&gt;)
+            .add_system_to_stage(BonesStage::Sync, sync_atlas_sprites::&lt;W&gt;)
+            .add_system_to_stage(BonesStage::Sync, sync_cameras::&lt;W&gt;)
+            .add_system_to_stage(BonesStage::Sync, sync_clear_color::&lt;W&gt;)
+            .add_system_to_stage(BonesStage::Sync, sync_tilemaps::&lt;W&gt;);
     }
 }
 
