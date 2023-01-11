@@ -45,3 +45,10 @@ pub struct AtlasSprite {
     /// Whether or not the flip the sprite vertically.
     pub flip_y: bool,
 }
+
+impl AtlasSprite {
+    /// Create a new [`AtlasSprite`] from the given atlas handle.
+    pub fn new(atlas: Handle<Atlas>) -> Self {
+        Self { atlas, ..default() }
+    }
+}
