@@ -2,9 +2,15 @@
 
 /// A small ascii byte array stored on the stack and used similarly to a string to represent things
 /// like animation keys, etc, without requring a heap allocation.
-#[derive(Eq, PartialEq, Copy, Clone, Hash, Debug)]
+#[derive(Eq, PartialEq, Copy, Clone, Hash)]
 #[repr(transparent)]
-pub struct Key<const N: usize = 24>([u8; N]);
+pub struct Key<const N: usize = 24>(pub [u8; N]);
+
+impl std::fmt::Debug for Key {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Key").field(&format!("{}", self)).finish()
+    }
+}
 
 impl<const N: usize> Default for Key<N> {
     fn default() -> Self {
@@ -41,7 +47,9 @@ impl std::error::Error for KeyError {}
 impl std::fmt::Display for Key {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for byte in self.0 {
-            write!(f, "{}", byte as char)?;
+            if byte != 0 {
+                write!(f, "{}", byte as char)?;
+            }
         }
         Ok(())
     }
@@ -53,15 +61,21 @@ impl<const N: usize> Key<N> {
     /// # Errors
     ///
     /// Returns an error if the input is too long, or if it is non-ascii.
-    pub fn new(s: &str) -> Result<Self, KeyError> {
-        if !s.is_ascii() {
-            return Err(KeyError::NotAscii);
-        }
+    pub const fn new(s: &str) -> Result<Self, KeyError> {
         if s.len() > N {
             return Err(KeyError::TooLong);
         }
-        let mut data = [0; N];
-        data[0..s.len()].clone_from_slice(&s.as_bytes()[0..s.len()]);
+        let s_bytes = s.as_bytes();
+        let mut data = [0u8; N];
+        let mut i = 0;
+        while i < s.len() {
+            let byte = s_bytes[i];
+            if !byte.is_ascii() {
+                return Err(KeyError::NotAscii);
+            }
+            data[i] = byte;
+            i += 1;
+        }
 
         Ok(Self(data))
     }
