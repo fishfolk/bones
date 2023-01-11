@@ -776,6 +776,7 @@ dependencies = [
  "bevy_asset",
  "bones_bevy_utils",
  "bones_ecs",
+ "bones_has_load_progress",
  "serde",
  "type_ulid",
  "ulid",
@@ -789,6 +790,7 @@ dependencies = [
  "bevy_app",
  "bevy_asset",
  "bevy_reflect",
+ "bevy_utils",
  "bones_bevy_asset_macros",
  "bones_bevy_utils",
  "bones_lib",
@@ -884,6 +886,7 @@ dependencies = [
 name = "bones_input"
 version = "0.1.0"
 dependencies = [
+ "glam",
  "type_ulid",
 ]
 
@@ -893,10 +896,11 @@ version = "0.1.0"
 dependencies = [
  "bones_asset",
  "bones_bevy_utils",
- "bones_camera_shake",
  "bones_ecs",
  "bones_input",
  "bones_render",
+ "serde",
+ "type_ulid",
 ]
 
 [[package]]
@@ -941,6 +945,7 @@ dependencies = [
  "bones_bevy_utils",
  "bones_ecs",
  "glam",
+ "serde",
  "type_ulid",
 ]
 
