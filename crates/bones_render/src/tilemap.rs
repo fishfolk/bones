@@ -45,20 +45,21 @@ impl TileLayer {
     }
 
     #[inline]
-    fn idx(&self, pos: UVec2) -> usize {
-        (self.grid_size.x * pos.y + pos.x) as usize
+    fn idx(&self, pos: UVec2) -> Option<usize> {
+        let idx = self.grid_size.x as i32 * pos.y as i32 + pos.x as i32;
+        idx.try_into().ok()
     }
 
     /// Get's the tile at the given position in the layer, indexed with the top-left of the layer
     /// being (0, 0).
     pub fn get(&self, pos: UVec2) -> Option<Entity> {
-        let idx = self.idx(pos);
-        self.tiles.get(idx).cloned().flatten()
+        self.idx(pos)
+            .and_then(|idx| self.tiles.get(idx).cloned().flatten())
     }
 
     /// Set the tile at the given position, to a certain entity.
     pub fn set(&mut self, pos: UVec2, entity: Option<Entity>) {
-        let idx = self.idx(pos);
+        let idx = self.idx(pos).expect("Tile pos out of bounds");
         *self.tiles.get_mut(idx).unwrap_or_else(|| {
             panic!(
                 "Tile pos out of range of tile size: pos {:?} size {:?}",
