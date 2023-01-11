@@ -15,7 +15,18 @@ pub mod transform;
 pub mod prelude {
     pub use {bones_asset::prelude::*, bones_ecs::prelude::*, glam::*, type_ulid::TypeUlid};
 
-    pub use crate::{camera::*, datatypes::*, sprite::*, tilemap::*, transform::*};
+
+/// Create a new const [`Key`][datatypes] parsed at compile time.
+#[macro_export]
+macro_rules! key {
+    ($s:literal) => {{
+        const KEY: Key = match Key::new($s) {
+            Ok(key) => key,
+            Err(KeyError::TooLong) => panic!("Key too long"),
+            Err(KeyError::NotAscii) => panic!("Key not ascii"),
+        };
+        KEY
+    }};
 }
 
 #[cfg(feature = "bevy")]
