@@ -16,6 +16,8 @@ pub mod transform;
 pub mod prelude {
     pub use {bones_asset::prelude::*, bones_ecs::prelude::*, glam::*, type_ulid::TypeUlid};
 
+    pub use crate::{audio::*, camera::*, datatypes::*, key, sprite::*, tilemap::*, transform::*};
+}
 
 /// Create a new const [`Key`][datatypes] parsed at compile time.
 #[macro_export]
