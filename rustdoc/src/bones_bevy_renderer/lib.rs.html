@@ -426,21 +426,6 @@
 <span id="426">426</span>
 <span id="427">427</span>
 <span id="428">428</span>
-<span id="429">429</span>
-<span id="430">430</span>
-<span id="431">431</span>
-<span id="432">432</span>
-<span id="433">433</span>
-<span id="434">434</span>
-<span id="435">435</span>
-<span id="436">436</span>
-<span id="437">437</span>
-<span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
-<span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -525,7 +510,6 @@
 }
 
 <span class="kw">fn </span>sync_clear_color&lt;W: HasBonesWorld&gt;(
-    <span class="kw-2">mut </span>has_init: Local&lt;bool&gt;,
     <span class="kw-2">mut </span>clear_color: ResMut&lt;ClearColor&gt;,
     world_resource: <span class="prelude-ty">Option</span>&lt;ResMut&lt;W&gt;&gt;,
 ) {
@@ -533,10 +517,7 @@
         <span class="kw">return</span>;
     };
     <span class="kw">let </span>world = world_resource.world();
-    <span class="kw">if </span>!<span class="kw-2">*</span>has_init {
-        world.resources.init::&lt;bones::ClearColor&gt;();
-        <span class="kw-2">*</span>has_init = <span class="bool-val">true</span>;
-    }
+    world.resources.init::&lt;bones::ClearColor&gt;();
 
     <span class="kw">let </span>bones_clear_color = world.resources.get::&lt;bones::ClearColor&gt;();
     <span class="kw">let </span>bones_clear_color = bones_clear_color.borrow();
@@ -546,7 +527,6 @@
 
 <span class="doccomment">/// The system that renders the bones world.
 </span><span class="kw">fn </span>sync_sprites&lt;W: HasBonesWorld&gt;(
-    <span class="kw-2">mut </span>has_init: Local&lt;bool&gt;,
     <span class="kw-2">mut </span>commands: Commands,
     world_resource: <span class="prelude-ty">Option</span>&lt;ResMut&lt;W&gt;&gt;,
     <span class="kw-2">mut </span>bevy_bones_sprites: Query&lt;
@@ -555,16 +535,15 @@
     &gt;,
 ) {
     <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
+        bevy_bones_sprites.for_each(|(e, ..)| commands.entity(e).despawn());
         <span class="kw">return</span>;
     };
 
     <span class="kw">let </span>world = world_resource.world();
 
-    <span class="kw">if </span>!<span class="kw-2">*</span>has_init {
-        world.components.init::&lt;bones::Sprite&gt;();
-        world.components.init::&lt;bones::Transform&gt;();
-        <span class="kw-2">*</span>has_init = <span class="bool-val">true</span>;
-    }
+    <span class="comment">// TODO: Evaluate cost of calling this every frame
+    </span>world.components.init::&lt;bones::Sprite&gt;();
+    world.components.init::&lt;bones::Transform&gt;();
 
     <span class="kw">let </span>entities = world.resources.get::&lt;bones::Entities&gt;();
     <span class="kw">let </span>entities = entities.borrow();
@@ -607,7 +586,6 @@
 
 <span class="doccomment">/// The system that renders the bones world.
 </span><span class="kw">fn </span>sync_atlas_sprites&lt;W: HasBonesWorld&gt;(
-    <span class="kw-2">mut </span>has_init: Local&lt;bool&gt;,
     <span class="kw-2">mut </span>commands: Commands,
     world_resource: <span class="prelude-ty">Option</span>&lt;ResMut&lt;W&gt;&gt;,
     <span class="kw-2">mut </span>bevy_bones_atlases: Query&lt;
@@ -621,16 +599,14 @@
     &gt;,
 ) {
     <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
+        bevy_bones_atlases.for_each(|(e, ..)| commands.entity(e).despawn());
         <span class="kw">return</span>;
     };
 
     <span class="kw">let </span>world = world_resource.world();
 
-    <span class="kw">if </span>!<span class="kw-2">*</span>has_init {
-        world.components.init::&lt;bones::AtlasSprite&gt;();
-        world.components.init::&lt;bones::Transform&gt;();
-        <span class="kw-2">*</span>has_init = <span class="bool-val">true</span>;
-    }
+    world.components.init::&lt;bones::AtlasSprite&gt;();
+    world.components.init::&lt;bones::Transform&gt;();
 
     <span class="kw">let </span>entities = world.resources.get::&lt;bones::Entities&gt;();
     <span class="kw">let </span>entities = entities.borrow();
@@ -675,7 +651,6 @@
 
 <span class="doccomment">/// The system that renders the bones world.
 </span><span class="kw">fn </span>sync_cameras&lt;W: HasBonesWorld&gt;(
-    <span class="kw-2">mut </span>has_init: Local&lt;bool&gt;,
     <span class="kw-2">mut </span>commands: Commands,
     world_resource: <span class="prelude-ty">Option</span>&lt;ResMut&lt;W&gt;&gt;,
     <span class="kw-2">mut </span>bevy_bones_cameras: Query&lt;
@@ -689,16 +664,14 @@
     &gt;,
 ) {
     <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
+        bevy_bones_cameras.for_each(|(e, ..)| commands.entity(e).despawn());
         <span class="kw">return</span>;
     };
 
     <span class="kw">let </span>world = world_resource.world();
 
-    <span class="kw">if </span>!<span class="kw-2">*</span>has_init {
-        world.components.init::&lt;bones::Transform&gt;();
-        world.components.init::&lt;bones::Camera&gt;();
-        <span class="kw-2">*</span>has_init = <span class="bool-val">true</span>;
-    }
+    world.components.init::&lt;bones::Transform&gt;();
+    world.components.init::&lt;bones::Camera&gt;();
 
     <span class="kw">let </span>entities = world.resources.get::&lt;bones::Entities&gt;();
     <span class="kw">let </span>entities = entities.borrow();
@@ -752,7 +725,6 @@
 }
 
 <span class="kw">fn </span>sync_tilemaps&lt;W: HasBonesWorld&gt;(
-    <span class="kw-2">mut </span>has_init: Local&lt;bool&gt;,
     <span class="kw-2">mut </span>commands: Commands,
     world_resource: <span class="prelude-ty">Option</span>&lt;ResMut&lt;W&gt;&gt;,
     <span class="kw-2">mut </span>bevy_bones_tile_layers: Query&lt;
@@ -766,16 +738,14 @@
     &gt;,
 ) {
     <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
+        bevy_bones_tile_layers.for_each(|(e, ..)| commands.entity(e).despawn());
         <span class="kw">return</span>;
     };
 
     <span class="kw">let </span>world = world_resource.world();
 
-    <span class="kw">if </span>!<span class="kw-2">*</span>has_init {
-        world.components.init::&lt;bones::Tile&gt;();
-        world.components.init::&lt;bones::TileLayer&gt;();
-        <span class="kw-2">*</span>has_init = <span class="bool-val">true</span>;
-    }
+    world.components.init::&lt;bones::Tile&gt;();
+    world.components.init::&lt;bones::TileLayer&gt;();
 
     <span class="kw">let </span>entities = world.resources.get::&lt;bones::Entities&gt;();
     <span class="kw">let </span>entities = entities.borrow();
