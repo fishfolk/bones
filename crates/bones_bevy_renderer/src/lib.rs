@@ -82,7 +82,6 @@ impl<W: HasBonesWorld> Plugin for BonesRendererPlugin<W> {
 }
 
 fn sync_clear_color<W: HasBonesWorld>(
-    mut has_init: Local<bool>,
     mut clear_color: ResMut<ClearColor>,
     world_resource: Option<ResMut<W>>,
 ) {
@@ -90,10 +89,7 @@ fn sync_clear_color<W: HasBonesWorld>(
         return;
     };
     let world = world_resource.world();
-    if !*has_init {
-        world.resources.init::<bones::ClearColor>();
-        *has_init = true;
-    }
+    world.resources.init::<bones::ClearColor>();
 
     let bones_clear_color = world.resources.get::<bones::ClearColor>();
     let bones_clear_color = bones_clear_color.borrow();
@@ -103,7 +99,6 @@ fn sync_clear_color<W: HasBonesWorld>(
 
 /// The system that renders the bones world.
 fn sync_sprites<W: HasBonesWorld>(
-    mut has_init: Local<bool>,
     mut commands: Commands,
     world_resource: Option<ResMut<W>>,
     mut bevy_bones_sprites: Query<
@@ -112,16 +107,15 @@ fn sync_sprites<W: HasBonesWorld>(
     >,
 ) {
     let Some(mut world_resource) = world_resource else {
+        bevy_bones_sprites.for_each(|(e, ..)| commands.entity(e).despawn());
         return;
     };
 
     let world = world_resource.world();
 
-    if !*has_init {
-        world.components.init::<bones::Sprite>();
-        world.components.init::<bones::Transform>();
-        *has_init = true;
-    }
+    // TODO: Evaluate cost of calling this every frame
+    world.components.init::<bones::Sprite>();
+    world.components.init::<bones::Transform>();
 
     let entities = world.resources.get::<bones::Entities>();
     let entities = entities.borrow();
@@ -164,7 +158,6 @@ fn sync_sprites<W: HasBonesWorld>(
 
 /// The system that renders the bones world.
 fn sync_atlas_sprites<W: HasBonesWorld>(
-    mut has_init: Local<bool>,
     mut commands: Commands,
     world_resource: Option<ResMut<W>>,
     mut bevy_bones_atlases: Query<
@@ -178,16 +171,14 @@ fn sync_atlas_sprites<W: HasBonesWorld>(
     >,
 ) {
     let Some(mut world_resource) = world_resource else {
+        bevy_bones_atlases.for_each(|(e, ..)| commands.entity(e).despawn());
         return;
     };
 
     let world = world_resource.world();
 
-    if !*has_init {
-        world.components.init::<bones::AtlasSprite>();
-        world.components.init::<bones::Transform>();
-        *has_init = true;
-    }
+    world.components.init::<bones::AtlasSprite>();
+    world.components.init::<bones::Transform>();
 
     let entities = world.resources.get::<bones::Entities>();
     let entities = entities.borrow();
@@ -232,7 +223,6 @@ fn sync_atlas_sprites<W: HasBonesWorld>(
 
 /// The system that renders the bones world.
 fn sync_cameras<W: HasBonesWorld>(
-    mut has_init: Local<bool>,
     mut commands: Commands,
     world_resource: Option<ResMut<W>>,
     mut bevy_bones_cameras: Query<
@@ -246,16 +236,14 @@ fn sync_cameras<W: HasBonesWorld>(
     >,
 ) {
     let Some(mut world_resource) = world_resource else {
+        bevy_bones_cameras.for_each(|(e, ..)| commands.entity(e).despawn());
         return;
     };
 
     let world = world_resource.world();
 
-    if !*has_init {
-        world.components.init::<bones::Transform>();
-        world.components.init::<bones::Camera>();
-        *has_init = true;
-    }
+    world.components.init::<bones::Transform>();
+    world.components.init::<bones::Camera>();
 
     let entities = world.resources.get::<bones::Entities>();
     let entities = entities.borrow();
@@ -309,7 +297,6 @@ fn sync_cameras<W: HasBonesWorld>(
 }
 
 fn sync_tilemaps<W: HasBonesWorld>(
-    mut has_init: Local<bool>,
     mut commands: Commands,
     world_resource: Option<ResMut<W>>,
     mut bevy_bones_tile_layers: Query<
@@ -323,16 +310,14 @@ fn sync_tilemaps<W: HasBonesWorld>(
     >,
 ) {
     let Some(mut world_resource) = world_resource else {
+        bevy_bones_tile_layers.for_each(|(e, ..)| commands.entity(e).despawn());
         return;
     };
 
     let world = world_resource.world();
 
-    if !*has_init {
-        world.components.init::<bones::Tile>();
-        world.components.init::<bones::TileLayer>();
-        *has_init = true;
-    }
+    world.components.init::<bones::Tile>();
+    world.components.init::<bones::TileLayer>();
 
     let entities = world.resources.get::<bones::Entities>();
     let entities = entities.borrow();
