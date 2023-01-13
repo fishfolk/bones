@@ -14,7 +14,7 @@ members = [
 ]
 
 [features]
-bevy = ["bones_asset/bevy", "bones_asset/has_load_progress", "bones_render/bevy"]
+bevy = ["bones_asset/bevy", "bones_asset/has_load_progress", "bones_render/bevy", "dep:bones_bevy_utils"]
 serde = ["dep:serde", "bones_render/serde"]
 
 [dependencies]
@@ -22,6 +22,6 @@ bones_ecs = { path = "./crates/bones_ecs" }
 bones_render = { path = "./crates/bones_render" }
 bones_input = { path = "./crates/bones_input" }
 bones_asset = { path = "./crates/bones_asset" }
-bones_bevy_utils = { path = "./crates/bones_bevy_utils" }
+bones_bevy_utils = { path = "./crates/bones_bevy_utils", optional = true }
 type_ulid = { path = "./crates/type_ulid" }
 serde = { version = "1.0.0", features = ["derive"], optional = true }
