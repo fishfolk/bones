@@ -4,18 +4,18 @@ use crate::prelude::*;
 
 /// Image asset type, contains no data, but [`Handle<Image>`] is still useful because it uniquely
 /// represents an image that may be rendered outside of the core.
-#[derive(Copy, Clone, TypeUlid, Debug)]
+#[derive(Copy, Clone, TypeUlid, Debug, Default)]
 #[ulid = "01GNJGPQ8TKA234G1EA510BD96"]
 pub struct Image;
 
 /// An atlas image asset type, contains no data, but [`Handle<Atlas>`] is still useful becaause it
 /// uniquely represents an atlas asset that may be rendered outside of the core.
-#[derive(Copy, Clone, TypeUlid, Debug)]
+#[derive(Copy, Clone, TypeUlid, Debug, Default)]
 #[ulid = "01GNYXD7FVC46C7A3273HMEBRA"]
 pub struct Atlas;
 
 /// A 2D sprite component
-#[derive(Clone, TypeUlid, Debug)]
+#[derive(Clone, TypeUlid, Debug, Default)]
 #[ulid = "01GNJXPWZKS6BHJEG1SX5B93DA"]
 pub struct Sprite {
     /// The sprite image handle.
