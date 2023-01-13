@@ -58,18 +58,18 @@
 
 <span class="doccomment">/// Image asset type, contains no data, but [`Handle&lt;Image&gt;`] is still useful because it uniquely
 /// represents an image that may be rendered outside of the core.
-</span><span class="attribute">#[derive(Copy, Clone, TypeUlid, Debug)]
+</span><span class="attribute">#[derive(Copy, Clone, TypeUlid, Debug, Default)]
 #[ulid = <span class="string">&quot;01GNJGPQ8TKA234G1EA510BD96&quot;</span>]
 </span><span class="kw">pub struct </span>Image;
 
 <span class="doccomment">/// An atlas image asset type, contains no data, but [`Handle&lt;Atlas&gt;`] is still useful becaause it
 /// uniquely represents an atlas asset that may be rendered outside of the core.
-</span><span class="attribute">#[derive(Copy, Clone, TypeUlid, Debug)]
+</span><span class="attribute">#[derive(Copy, Clone, TypeUlid, Debug, Default)]
 #[ulid = <span class="string">&quot;01GNYXD7FVC46C7A3273HMEBRA&quot;</span>]
 </span><span class="kw">pub struct </span>Atlas;
 
 <span class="doccomment">/// A 2D sprite component
-</span><span class="attribute">#[derive(Clone, TypeUlid, Debug)]
+</span><span class="attribute">#[derive(Clone, TypeUlid, Debug, Default)]
 #[ulid = <span class="string">&quot;01GNJXPWZKS6BHJEG1SX5B93DA&quot;</span>]
 </span><span class="kw">pub struct </span>Sprite {
     <span class="doccomment">/// The sprite image handle.
