@@ -44,10 +44,10 @@
 </pre><pre class="rust"><code><span class="doccomment">//! Opinionated game meta-engine built on Bevy.
 
 </span><span class="attribute">#[doc(inline)]
-</span><span class="kw">pub use </span>{
-    bones_asset <span class="kw">as </span>asset, bones_bevy_utils <span class="kw">as </span>bevy_utils, bones_ecs <span class="kw">as </span>ecs, bones_input <span class="kw">as </span>input,
-    bones_render <span class="kw">as </span>render,
-};
+</span><span class="kw">pub use </span>{bones_asset <span class="kw">as </span>asset, bones_ecs <span class="kw">as </span>ecs, bones_input <span class="kw">as </span>input, bones_render <span class="kw">as </span>render};
+
+<span class="attribute">#[cfg(feature = <span class="string">&quot;bevy&quot;</span>)]
+</span><span class="kw">pub use </span>bones_bevy_utils <span class="kw">as </span>bevy_utils;
 
 <span class="doccomment">/// Bones lib prelude
 </span><span class="kw">pub mod </span>prelude {
