@@ -107,7 +107,9 @@ impl<T: BonesBevyAssetLoad> BonesBevyAssetLoad for Option<T> {
         load_context: &mut bevy_asset::LoadContext,
         dependencies: &mut Vec<bevy_asset::AssetPath<'static>>,
     ) {
-        self.as_mut().map(|x| x.load(load_context, dependencies));
+        if let Some(x) = self.as_mut() {
+            x.load(load_context, dependencies)
+        }
     }
 }
 
