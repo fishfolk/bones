@@ -203,6 +203,8 @@
 <span id="203">203</span>
 <span id="204">204</span>
 <span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
 </pre><pre class="rust"><code><span class="doccomment">//! An asset integration between Bevy and bones.
 //!
 //! Provides an easy way to load metadata for bones games using Bevy assets.
@@ -312,7 +314,9 @@
         load_context: <span class="kw-2">&amp;mut </span>bevy_asset::LoadContext,
         dependencies: <span class="kw-2">&amp;mut </span>Vec&lt;bevy_asset::AssetPath&lt;<span class="lifetime">&#39;static</span>&gt;&gt;,
     ) {
-        <span class="self">self</span>.as_mut().map(|x| x.load(load_context, dependencies));
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = <span class="self">self</span>.as_mut() {
+            x.load(load_context, dependencies)
+        }
     }
 }
 
