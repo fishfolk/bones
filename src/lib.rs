@@ -1,5 +1,10 @@
 //! Opinionated game meta-engine built on Bevy.
 
+#![warn(missing_docs)]
+// This cfg_attr is needed because `rustdoc::all` includes lints not supported on stable
+#![cfg_attr(doc, allow(unknown_lints))]
+#![deny(rustdoc::all)]
+
 #[doc(inline)]
 pub use {bones_asset as asset, bones_ecs as ecs, bones_input as input, bones_render as render};
 

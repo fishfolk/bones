@@ -1,3 +1,5 @@
+//! Animation utilities and systems.
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -9,6 +11,7 @@ pub(crate) mod prelude {
     pub use super::AnimatedSprite;
 }
 
+/// Install animation utilities into the given [`SystemStages`].
 pub fn install(stages: &mut SystemStages) {
     stages
         .add_system_to_stage(CoreStage::Last, update_animation_banks)
@@ -20,11 +23,16 @@ pub fn install(stages: &mut SystemStages) {
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[ulid = "01GNZRPWKAHKP33V1KKRVAMVS7"]
 pub struct AnimatedSprite {
+    /// The starting frame of the animation.
     pub start: usize,
+    /// The ending frame of the animation.
     pub end: usize,
+    /// The frames per second to play the animation at.
     pub fps: f32,
+    /// The amount of time the current frame has been playing
     #[cfg_attr(feature = "serde", serde(default))]
     pub timer: f32,
+    /// Whether or not to repeat the animation
     #[cfg_attr(feature = "serde", serde(default = "default_true"))]
     pub repeat: bool,
 }
@@ -34,6 +42,11 @@ fn default_true() -> bool {
     true
 }
 
+/// Component that may be added to an [`AtlasSprite`] to control which animation, out of a set of
+/// animations, is playing.
+///
+/// This is great for players or other sprites that will change through different, named animations
+/// at different times.
 #[derive(Clone, TypeUlid, Debug)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[ulid = "01GP4EM4BGJPX22HYAMGYKKSAV"]
