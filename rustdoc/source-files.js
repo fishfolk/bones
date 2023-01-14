@@ -9,7 +9,7 @@ var sourcesIndex = JSON.parse('{\
 "bones_has_load_progress":["",[],["lib.rs"]],\
 "bones_has_load_progress_macros":["",[],["lib.rs"]],\
 "bones_input":["",[],["lib.rs"]],\
-"bones_lib":["",[],["animation.rs","lib.rs"]],\
+"bones_lib":["",[],["animation.rs","camera.rs","lib.rs"]],\
 "bones_matchmaker":["",[],["certs.rs","cli.rs","lib.rs","matchmaker.rs","proxy.rs"]],\
 "bones_matchmaker_proto":["",[],["lib.rs"]],\
 "bones_render":["",[],["audio.rs","camera.rs","datatypes.rs","lib.rs","sprite.rs","tilemap.rs","transform.rs"]],\

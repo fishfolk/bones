@@ -46,6 +46,8 @@
 <span id="46">46</span>
 <span id="47">47</span>
 <span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Opinionated game meta-engine built on Bevy.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -62,7 +64,7 @@
 <span class="doccomment">/// Bones lib prelude
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use crate</span>::{
-        animation::prelude::<span class="kw-2">*</span>, asset::prelude::<span class="kw-2">*</span>, ecs::prelude::<span class="kw-2">*</span>, input::prelude::<span class="kw-2">*</span>,
+        animation::prelude::<span class="kw-2">*</span>, asset::prelude::<span class="kw-2">*</span>, camera::<span class="kw-2">*</span>, ecs::prelude::<span class="kw-2">*</span>, input::prelude::<span class="kw-2">*</span>,
         render::prelude::<span class="kw-2">*</span>, FrameTime,
     };
 
@@ -72,6 +74,7 @@
 <span class="kw">use </span>prelude::<span class="kw-2">*</span>;
 
 <span class="kw">pub mod </span>animation;
+<span class="kw">pub mod </span>camera;
 
 <span class="doccomment">/// This is a resource that stores the game&#39;s fixed frame time.
 ///
@@ -93,6 +96,7 @@
 <span class="doccomment">/// Install the `bones_lib` systems for things such as animation etc. into a [`SystemStages`].
 </span><span class="kw">pub fn </span>install(stages: <span class="kw-2">&amp;mut </span>SystemStages) {
     animation::install(stages);
+    camera::install(stages);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="bones_lib" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>
