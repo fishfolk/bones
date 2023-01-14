@@ -25,3 +25,6 @@ bones_asset = { path = "./crates/bones_asset" }
 bones_bevy_utils = { path = "./crates/bones_bevy_utils", optional = true }
 type_ulid = { path = "./crates/type_ulid" }
 serde = { version = "1.0.0", features = ["derive"], optional = true }
+# For now we are pointing at a git rev but this should be rectified when a new release is made.
+# See https://github.com/Razaekel/noise-rs/pull/281.
+noise = { git = "https://github.com/Razaekel/noise-rs", rev = "1a2b5e0880656e8d2ae1025df576d70180d7592a" }
