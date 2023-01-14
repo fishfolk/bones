@@ -133,7 +133,22 @@
 <span id="133">133</span>
 <span id="134">134</span>
 <span id="135">135</span>
-</pre><pre class="rust"><code><span class="attribute">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Animation utilities and systems.
+
+</span><span class="attribute">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span>serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -144,7 +159,8 @@
     <span class="kw">pub use </span><span class="kw">super</span>::AnimatedSprite;
 }
 
-<span class="kw">pub fn </span>install(stages: <span class="kw-2">&amp;mut </span>SystemStages) {
+<span class="doccomment">/// Install animation utilities into the given [`SystemStages`].
+</span><span class="kw">pub fn </span>install(stages: <span class="kw-2">&amp;mut </span>SystemStages) {
     stages
         .add_system_to_stage(CoreStage::Last, update_animation_banks)
         .add_system_to_stage(CoreStage::Last, animate_sprites);
@@ -155,12 +171,17 @@
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Deserialize, Serialize))]
 #[ulid = <span class="string">&quot;01GNZRPWKAHKP33V1KKRVAMVS7&quot;</span>]
 </span><span class="kw">pub struct </span>AnimatedSprite {
-    <span class="kw">pub </span>start: usize,
-    <span class="kw">pub </span>end: usize,
-    <span class="kw">pub </span>fps: f32,
-    <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(default))]
+    <span class="doccomment">/// The starting frame of the animation.
+    </span><span class="kw">pub </span>start: usize,
+    <span class="doccomment">/// The ending frame of the animation.
+    </span><span class="kw">pub </span>end: usize,
+    <span class="doccomment">/// The frames per second to play the animation at.
+    </span><span class="kw">pub </span>fps: f32,
+    <span class="doccomment">/// The amount of time the current frame has been playing
+    </span><span class="attribute">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(default))]
     </span><span class="kw">pub </span>timer: f32,
-    <span class="attribute">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(default = <span class="string">&quot;default_true&quot;</span>))]
+    <span class="doccomment">/// Whether or not to repeat the animation
+    </span><span class="attribute">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(default = <span class="string">&quot;default_true&quot;</span>))]
     </span><span class="kw">pub </span>repeat: bool,
 }
 
@@ -169,7 +190,12 @@
     <span class="bool-val">true
 </span>}
 
-<span class="attribute">#[derive(Clone, TypeUlid, Debug)]
+<span class="doccomment">/// Component that may be added to an [`AtlasSprite`] to control which animation, out of a set of
+/// animations, is playing.
+///
+/// This is great for players or other sprites that will change through different, named animations
+/// at different times.
+</span><span class="attribute">#[derive(Clone, TypeUlid, Debug)]
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Deserialize, Serialize))]
 #[ulid = <span class="string">&quot;01GP4EM4BGJPX22HYAMGYKKSAV&quot;</span>]
 </span><span class="kw">pub struct </span>AnimationBankSprite {
