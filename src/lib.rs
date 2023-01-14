@@ -14,7 +14,7 @@ pub use bones_bevy_utils as bevy_utils;
 /// Bones lib prelude
 pub mod prelude {
     pub use crate::{
-        animation::prelude::*, asset::prelude::*, ecs::prelude::*, input::prelude::*,
+        animation::prelude::*, asset::prelude::*, camera::*, ecs::prelude::*, input::prelude::*,
         render::prelude::*, FrameTime,
     };
 
@@ -24,6 +24,7 @@ pub mod prelude {
 use prelude::*;
 
 pub mod animation;
+pub mod camera;
 
 /// This is a resource that stores the game's fixed frame time.
 ///
@@ -45,4 +46,5 @@ impl Default for FrameTime {
 /// Install the `bones_lib` systems for things such as animation etc. into a [`SystemStages`].
 pub fn install(stages: &mut SystemStages) {
     animation::install(stages);
+    camera::install(stages);
 }
