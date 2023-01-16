@@ -1,5 +1,7 @@
 //! Implementation of stage abstraction for running collections of systems over a [`World`].
 
+use std::collections::VecDeque;
+
 use crate::prelude::*;
 
 /// An ordered collection of [`SystemStage`]s.
@@ -22,7 +24,7 @@ impl SystemStages {
     ///
     /// > **Note:** You must call [`initialize_systems()`][Self::initialize_systems] once before
     /// > calling `run()` one or more times.
-    pub fn run(&mut self, world: &World) -> SystemResult {
+    pub fn run(&mut self, world: &mut World) -> SystemResult {
         for stage in &mut self.stages {
             stage.run(world)?;
         }
@@ -109,7 +111,7 @@ pub trait SystemStage: Sync + Send {
     ///
     /// > **Note:** You must call [`initialize()`][Self::initialize] once before calling `run()` one
     /// > or more times.
-    fn run(&mut self, world: &World) -> SystemResult;
+    fn run(&mut self, world: &mut World) -> SystemResult;
     /// Initialize the contained systems for the given `world`.
     ///
     /// Must be called once before calling [`run()`][Self::run].
@@ -151,15 +153,28 @@ impl SystemStage for SimpleSystemStage {
         self.name.clone()
     }
 
-    fn run(&mut self, world: &World) -> SystemResult {
+    fn run(&mut self, world: &mut World) -> SystemResult {
+        // Run the systems
         for system in &mut self.systems {
             system.run(world)?;
+        }
+
+        // Drain the command queue
+        {
+            let command_queue = world.resources.get::<CommandQueue>();
+            let mut command_queue = command_queue.borrow_mut();
+
+            for mut system in command_queue.queue.drain(..) {
+                system.initialize(world);
+                system.run(world).unwrap();
+            }
         }
 
         Ok(())
     }
 
     fn initialize(&mut self, world: &mut World) {
+        world.resources.init::<CommandQueue>();
         for system in &mut self.systems {
             system.initialize(world);
         }
@@ -206,5 +221,59 @@ impl StageLabel for CoreStage {
             CoreStage::PostUpdate => Ulid(2021715423103233646561968734173322317),
             CoreStage::Last => Ulid(2021715433398666914977687392909851554),
         }
+    }
+}
+
+/// A resource containing the [`Commands`] command queue.
+///
+/// You can use [`Commands`] as a [`SystemParam`] as a shortcut to [`ResMut<CommandQueue>`].
+#[derive(Debug, TypeUlid, Default)]
+#[ulid = "01GPY3KPT0CDNCM23HTKAKN0NJ"]
+pub struct CommandQueue {
+    /// The system queue that will be run at the end of the stage
+    pub queue: VecDeque<System>,
+}
+
+impl Clone for CommandQueue {
+    fn clone(&self) -> Self {
+        if self.queue.is_empty() {
+            Self {
+                queue: VecDeque::with_capacity(self.queue.capacity()),
+            }
+        } else {
+            panic!(
+                "Cannot clone CommandQueue. This probably happened because you are \
+                trying to clone a World while a system stage is still executing."
+            )
+        }
+    }
+}
+
+impl CommandQueue {
+    /// Add a system to be run at the end of the stage.
+    pub fn add<Args, S: IntoSystem<Args, ()>>(&mut self, system: S) {
+        self.queue.push_back(system.system());
+    }
+}
+
+/// A [`SystemParam`] that can be used to schedule systems that will be run at the end of the
+/// current [`SystemStage`].
+///
+/// This is a shortcut for [`ResMut<CommandQueue>`].
+#[derive(Deref, DerefMut)]
+pub struct Commands<'a>(AtomicRefMut<'a, CommandQueue>);
+
+impl<'a> SystemParam for Commands<'a> {
+    type State = AtomicResource<CommandQueue>;
+    type Param<'s> = Commands<'s>;
+
+    fn initialize(_world: &mut World) {}
+
+    fn get_state(world: &World) -> Self::State {
+        world.resources.get::<CommandQueue>()
+    }
+
+    fn borrow(state: &mut Self::State) -> Self::Param<'_> {
+        Commands(state.borrow_mut())
     }
 }
