@@ -146,6 +146,9 @@
 <span id="146">146</span>
 <span id="147">147</span>
 <span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Animation utilities and systems.
 
 </span><span class="attribute">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
@@ -254,7 +257,10 @@
 
         <span class="kw">if </span>animated_sprite.timer &gt; <span class="number">1.0 </span>/ animated_sprite.fps.max(f32::MIN_POSITIVE) {
             animated_sprite.timer = <span class="number">0.0</span>;
-            <span class="kw">if </span>atlas_sprite.index &gt;= animated_sprite.end {
+
+            <span class="kw">if </span>atlas_sprite.index &lt; animated_sprite.start {
+                atlas_sprite.index = animated_sprite.start;
+            } <span class="kw">else if </span>atlas_sprite.index &gt;= animated_sprite.end {
                 <span class="kw">if </span>animated_sprite.repeat {
                     atlas_sprite.index = animated_sprite.start;
                 } <span class="kw">else </span>{
