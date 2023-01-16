@@ -106,7 +106,10 @@ pub fn animate_sprites(
 
         if animated_sprite.timer > 1.0 / animated_sprite.fps.max(f32::MIN_POSITIVE) {
             animated_sprite.timer = 0.0;
-            if atlas_sprite.index >= animated_sprite.end {
+
+            if atlas_sprite.index < animated_sprite.start {
+                atlas_sprite.index = animated_sprite.start;
+            } else if atlas_sprite.index >= animated_sprite.end {
                 if animated_sprite.repeat {
                     atlas_sprite.index = animated_sprite.start;
                 } else {
