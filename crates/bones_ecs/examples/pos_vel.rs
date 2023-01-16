@@ -32,7 +32,7 @@ fn main() {
 
     // Run our game loop for 10 frames
     for _ in 0..10 {
-        dispatcher.run(&world).unwrap();
+        dispatcher.run(&mut world).unwrap();
     }
 }
 
