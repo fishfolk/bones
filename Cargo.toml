@@ -18,13 +18,11 @@ bevy = ["bones_asset/bevy", "bones_asset/has_load_progress", "bones_render/bevy"
 serde = ["dep:serde", "bones_render/serde"]
 
 [dependencies]
-bones_ecs = { path = "./crates/bones_ecs" }
-bones_render = { path = "./crates/bones_render" }
-bones_input = { path = "./crates/bones_input" }
-bones_asset = { path = "./crates/bones_asset" }
-bones_bevy_utils = { path = "./crates/bones_bevy_utils", optional = true }
-type_ulid = { path = "./crates/type_ulid" }
+bones_ecs = { version = "0.1.0", path = "./crates/bones_ecs" }
+bones_render = { version = "0.1.0", path = "./crates/bones_render" }
+bones_input = { version = "0.1.0", path = "./crates/bones_input" }
+bones_asset = { version = "0.1.0", path = "./crates/bones_asset" }
+bones_bevy_utils = { version = "0.1.0", path = "./crates/bones_bevy_utils", optional = true }
+type_ulid = { version = "0.1.0", path = "./crates/type_ulid" }
 serde = { version = "1.0.0", features = ["derive"], optional = true }
-# For now we are pointing at a git rev but this should be rectified when a new release is made.
-# See https://github.com/Razaekel/noise-rs/pull/281.
-noise = { git = "https://github.com/Razaekel/noise-rs", rev = "1a2b5e0880656e8d2ae1025df576d70180d7592a" }
+noise = "0.8.2"
