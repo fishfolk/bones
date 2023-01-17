@@ -7,11 +7,11 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/fishfolk/bones"
 
 [dependencies]
-bones_ecs = { path = "../bones_ecs" }
-bones_asset = { path = "../bones_asset" }
-type_ulid = { path = "../type_ulid" }
+bones_ecs = { version = "0.1.0", path = "../bones_ecs" }
+bones_asset = { version = "0.1.0", path = "../bones_asset" }
+type_ulid = { version = "0.1.0", path = "../type_ulid" }
 glam = "0.22.0"
-bones_bevy_utils = { path = "../bones_bevy_utils", optional = true }
+bones_bevy_utils = { version = "0.1.0", path = "../bones_bevy_utils", optional = true }
 bevy_transform = { version = "0.9.1", optional = true }
 serde = { version = "1.0.0", optional = true }
 
