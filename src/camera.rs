@@ -13,9 +13,15 @@ pub fn install(stages: &mut SystemStages) {
 }
 
 /// Resource providing a noise source for [`CameraShake`] entities to use.
-#[derive(Clone, TypeUlid, Default)]
+#[derive(Clone, TypeUlid)]
 #[ulid = "01GPPYCY6132940HAQ38J1QM70"]
-pub struct ShakeNoise(noise::Perlin);
+pub struct ShakeNoise(pub noise::permutationtable::PermutationTable);
+
+impl Default for ShakeNoise {
+    fn default() -> Self {
+        Self(noise::permutationtable::PermutationTable::new(0))
+    }
+}
 
 /// Component for an entity with camera shake.
 #[derive(Clone, TypeUlid, Debug, Copy)]
@@ -121,13 +127,11 @@ fn apply_shake(
     time: Res<Time>,
     noise: Res<ShakeNoise>,
 ) {
-    use noise::NoiseFn;
     const SHAKE_SPEED: f32 = 3.0;
     macro_rules! offset_noise {
         ($offset:expr) => {
-            noise
-                .0
-                .get([((time.elapsed + $offset) * SHAKE_SPEED).into()]) as f32
+            perlin_noise::perlin_1d(((time.elapsed + $offset) * SHAKE_SPEED).into(), &noise.0)
+                as f32
         };
     }
 
@@ -149,5 +153,85 @@ fn apply_shake(
             // rotate the camera in another context.
             (Quat::IDENTITY, shake.center)
         }
+    }
+}
+
+/// This module is copied from code from this commit:
+/// <https://github.com/Razaekel/noise-rs/commit/1a2b5e0880656e8d2ae1025df576d70180d7592a>.
+///
+/// We temporarily vendor the code here because the 1D perlin noise hasn't been released yet:
+/// <https://github.com/Razaekel/noise-rs/issues/306>
+///
+/// From the repo:
+///
+/// > Licensed under either of
+/// >
+/// > Apache License, Version 2.0 (LICENSE-APACHE or <http://www.apache.org/licenses/LICENSE-2.0>)
+/// > MIT license (LICENSE-MIT or <http://opensource.org/licenses/MIT>)
+/// > at your option.
+mod perlin_noise {
+    #[inline(always)]
+    pub fn perlin_1d<NH>(point: f64, hasher: &NH) -> f64
+    where
+        NH: noise::permutationtable::NoiseHasher + ?Sized,
+    {
+        // Unscaled range of linearly interpolated perlin noise should be (-sqrt(N)/2, sqrt(N)/2).
+        // Need to invert this value and multiply the unscaled result by the value to get a scaled
+        // range of (-1, 1).
+        //
+        // 1/(sqrt(N)/2), N=1 -> 1/2
+        const SCALE_FACTOR: f64 = 0.5;
+
+        #[inline(always)]
+    #[rustfmt::skip]
+    fn gradient_dot_v(perm: usize, point: f64) -> f64 {
+        let x = point;
+
+        match perm & 0b1 {
+            0 =>  x, // ( 1 )
+            1 => -x, // (-1 )
+            _ => unreachable!(),
+        }
+    }
+
+        let floored = point.floor();
+        let corner = floored as isize;
+        let distance = point - floored;
+
+        macro_rules! call_gradient(
+        ($x_offset:expr) => {
+            {
+                gradient_dot_v(
+                    hasher.hash(&[corner + $x_offset]),
+                    distance - $x_offset as f64
+                )
+            }
+        }
+    );
+
+        let g0 = call_gradient!(0);
+        let g1 = call_gradient!(1);
+
+        let u = map_quintic(distance);
+
+        let unscaled_result = linear_interpolation(u, g0, g1);
+
+        let scaled_result = unscaled_result * SCALE_FACTOR;
+
+        // At this point, we should be really damn close to the (-1, 1) range, but some float errors
+        // could have accumulated, so let's just clamp the results to (-1, 1) to cut off any
+        // outliers and return it.
+        scaled_result.clamp(-1.0, 1.0)
+    }
+    #[inline(always)]
+    fn linear_interpolation(u: f64, g0: f64, g1: f64) -> f64 {
+        let k0 = g0;
+        let k1 = g1 - g0;
+        k0 + k1 * u
+    }
+    fn map_quintic(n: f64) -> f64 {
+        let x = n.clamp(0.0, 1.0);
+
+        x * x * x * (x * (x * 6.0 - 15.0) + 10.0)
     }
 }
