@@ -1,17 +1,22 @@
 use bones_ecs::prelude::*;
-use glam::Vec2;
 
 // Define our component types.
 //
 // Each component must be Clone + Sync + Send + TypeUlid.
 
-#[derive(Clone, Debug, Deref, DerefMut, TypeUlid)]
+#[derive(Clone, Debug, TypeUlid)]
 #[ulid = "01GNDP2WAAN8C6C8XA5ZBXGHFR"]
-pub struct Vel(pub Vec2);
+pub struct Vel {
+    x: f32,
+    y: f32,
+}
 
-#[derive(Clone, Debug, Deref, DerefMut, TypeUlid)]
+#[derive(Clone, Debug, TypeUlid)]
 #[ulid = "01GNDP34A7TMS8PFZAGSQJ5DDX"]
-pub struct Pos(pub Vec2);
+pub struct Pos {
+    x: f32,
+    y: f32,
+}
 
 fn main() {
     // Initialize an empty world
@@ -20,41 +25,43 @@ fn main() {
     // Run our setup system once to spawn our entities
     world.run_system(setup_system).ok();
 
-    // Create a dispatcher to run our systems in our game loop
-    let mut dispatcher = SystemStages::with_core_stages();
+    // Create a SystemStages to store the systems that we will run more than once.
+    let mut stages = SystemStages::with_core_stages();
 
     // Add our systems to the dispatcher
-    dispatcher
+    stages
         .add_system_to_stage(CoreStage::Update, pos_vel_system)
-        .add_system_to_stage(CoreStage::PostUpdate, print_system)
-        // This must be called once, after adding our systems
-        .initialize_systems(&mut world);
+        .add_system_to_stage(CoreStage::PostUpdate, print_system);
+
+    // Initialize our systems ( must be called once before calling stages.run() )
+    stages.initialize_systems(&mut world);
 
     // Run our game loop for 10 frames
     for _ in 0..10 {
-        dispatcher.run(&mut world).unwrap();
+        stages.run(&mut world).unwrap();
     }
 }
 
 /// Setup system that spawns two entities with a Pos and a Vel component.
 fn setup_system(
     mut entities: ResMut<Entities>,
-    mut pos_comps: CompMut<Pos>,
-    mut vel_comps: CompMut<Vel>,
+    mut positions: CompMut<Pos>,
+    mut velocities: CompMut<Vel>,
 ) {
     let ent1 = entities.create();
-    pos_comps.insert(ent1, Pos(Vec2::new(0., 0.)));
-    vel_comps.insert(ent1, Vel(Vec2::new(3.0, 1.0)));
+    positions.insert(ent1, Pos { x: 0., y: 0. });
+    velocities.insert(ent1, Vel { x: 3.0, y: 1.0 });
 
     let ent2 = entities.create();
-    pos_comps.insert(ent2, Pos(Vec2::new(0., 100.)));
-    vel_comps.insert(ent2, Vel(Vec2::new(0.0, -1.0)));
+    positions.insert(ent2, Pos { x: 0., y: 100. });
+    velocities.insert(ent2, Vel { x: 0.0, y: -1.0 });
 }
 
 /// Update the Pos of all entities with both a Pos and a Vel
 fn pos_vel_system(entities: Res<Entities>, mut pos: CompMut<Pos>, vel: Comp<Vel>) {
     for (_, (pos, vel)) in entities.iter_with((&mut pos, &vel)) {
-        **pos += **vel;
+        pos.x += vel.x;
+        pos.y += vel.y;
     }
 }
 
@@ -62,7 +69,7 @@ fn pos_vel_system(entities: Res<Entities>, mut pos: CompMut<Pos>, vel: Comp<Vel>
 fn print_system(pos: Comp<Pos>, vel: Comp<Vel>, entities: Res<Entities>) {
     println!("=====");
 
-    for (_, (pos, vel)) in entities.iter_with((&pos, &vel)) {
-        println!("{pos:?} \t- {vel:?}");
+    for (entity, (pos, vel)) in entities.iter_with((&pos, &vel)) {
+        println!("{entity:?}: {pos:?} - {vel:?}");
     }
 }
