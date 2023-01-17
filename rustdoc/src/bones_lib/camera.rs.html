@@ -151,6 +151,90 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Camera utilities.
 
 </span><span class="kw">use </span>std::collections::VecDeque;
@@ -166,9 +250,15 @@
 }
 
 <span class="doccomment">/// Resource providing a noise source for [`CameraShake`] entities to use.
-</span><span class="attribute">#[derive(Clone, TypeUlid, Default)]
+</span><span class="attribute">#[derive(Clone, TypeUlid)]
 #[ulid = <span class="string">&quot;01GPPYCY6132940HAQ38J1QM70&quot;</span>]
-</span><span class="kw">pub struct </span>ShakeNoise(noise::Perlin);
+</span><span class="kw">pub struct </span>ShakeNoise(<span class="kw">pub </span>noise::permutationtable::PermutationTable);
+
+<span class="kw">impl </span>Default <span class="kw">for </span>ShakeNoise {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(noise::permutationtable::PermutationTable::new(<span class="number">0</span>))
+    }
+}
 
 <span class="doccomment">/// Component for an entity with camera shake.
 </span><span class="attribute">#[derive(Clone, TypeUlid, Debug, Copy)]
@@ -274,13 +364,11 @@
     time: Res&lt;Time&gt;,
     noise: Res&lt;ShakeNoise&gt;,
 ) {
-    <span class="kw">use </span>noise::NoiseFn;
     <span class="kw">const </span>SHAKE_SPEED: f32 = <span class="number">3.0</span>;
     <span class="macro">macro_rules! </span>offset_noise {
         (<span class="macro-nonterminal">$offset</span>:expr) =&gt; {
-            noise
-                .<span class="number">0
-                </span>.get([((time.elapsed + <span class="macro-nonterminal">$offset</span>) * SHAKE_SPEED).into()]) <span class="kw">as </span>f32
+            perlin_noise::perlin_1d(((time.elapsed + <span class="macro-nonterminal">$offset</span>) * SHAKE_SPEED).into(), <span class="kw-2">&amp;</span>noise.<span class="number">0</span>)
+                <span class="kw">as </span>f32
         };
     }
 
@@ -302,6 +390,86 @@
             // rotate the camera in another context.
             </span>(Quat::IDENTITY, shake.center)
         }
+    }
+}
+
+<span class="doccomment">/// This module is copied from code from this commit:
+/// &lt;https://github.com/Razaekel/noise-rs/commit/1a2b5e0880656e8d2ae1025df576d70180d7592a&gt;.
+///
+/// We temporarily vendor the code here because the 1D perlin noise hasn&#39;t been released yet:
+/// &lt;https://github.com/Razaekel/noise-rs/issues/306&gt;
+///
+/// From the repo:
+///
+/// &gt; Licensed under either of
+/// &gt;
+/// &gt; Apache License, Version 2.0 (LICENSE-APACHE or &lt;http://www.apache.org/licenses/LICENSE-2.0&gt;)
+/// &gt; MIT license (LICENSE-MIT or &lt;http://opensource.org/licenses/MIT&gt;)
+/// &gt; at your option.
+</span><span class="kw">mod </span>perlin_noise {
+    <span class="attribute">#[inline(always)]
+    </span><span class="kw">pub fn </span>perlin_1d&lt;NH&gt;(point: f64, hasher: <span class="kw-2">&amp;</span>NH) -&gt; f64
+    <span class="kw">where
+        </span>NH: noise::permutationtable::NoiseHasher + <span class="question-mark">?</span>Sized,
+    {
+        <span class="comment">// Unscaled range of linearly interpolated perlin noise should be (-sqrt(N)/2, sqrt(N)/2).
+        // Need to invert this value and multiply the unscaled result by the value to get a scaled
+        // range of (-1, 1).
+        //
+        // 1/(sqrt(N)/2), N=1 -&gt; 1/2
+        </span><span class="kw">const </span>SCALE_FACTOR: f64 = <span class="number">0.5</span>;
+
+        <span class="attribute">#[inline(always)]
+    #[rustfmt::skip]
+    </span><span class="kw">fn </span>gradient_dot_v(perm: usize, point: f64) -&gt; f64 {
+        <span class="kw">let </span>x = point;
+
+        <span class="kw">match </span>perm &amp; <span class="number">0b1 </span>{
+            <span class="number">0 </span>=&gt;  x, <span class="comment">// ( 1 )
+            </span><span class="number">1 </span>=&gt; -x, <span class="comment">// (-1 )
+            </span><span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
+        }
+    }
+
+        <span class="kw">let </span>floored = point.floor();
+        <span class="kw">let </span>corner = floored <span class="kw">as </span>isize;
+        <span class="kw">let </span>distance = point - floored;
+
+        <span class="macro">macro_rules! </span>call_gradient(
+        (<span class="macro-nonterminal">$x_offset</span>:expr) =&gt; {
+            {
+                gradient_dot_v(
+                    hasher.hash(<span class="kw-2">&amp;</span>[corner + <span class="macro-nonterminal">$x_offset</span>]),
+                    distance - <span class="macro-nonterminal">$x_offset </span><span class="kw">as </span>f64
+                )
+            }
+        }
+    );
+
+        <span class="kw">let </span>g0 = <span class="macro">call_gradient!</span>(<span class="number">0</span>);
+        <span class="kw">let </span>g1 = <span class="macro">call_gradient!</span>(<span class="number">1</span>);
+
+        <span class="kw">let </span>u = map_quintic(distance);
+
+        <span class="kw">let </span>unscaled_result = linear_interpolation(u, g0, g1);
+
+        <span class="kw">let </span>scaled_result = unscaled_result * SCALE_FACTOR;
+
+        <span class="comment">// At this point, we should be really damn close to the (-1, 1) range, but some float errors
+        // could have accumulated, so let&#39;s just clamp the results to (-1, 1) to cut off any
+        // outliers and return it.
+        </span>scaled_result.clamp(-<span class="number">1.0</span>, <span class="number">1.0</span>)
+    }
+    <span class="attribute">#[inline(always)]
+    </span><span class="kw">fn </span>linear_interpolation(u: f64, g0: f64, g1: f64) -&gt; f64 {
+        <span class="kw">let </span>k0 = g0;
+        <span class="kw">let </span>k1 = g1 - g0;
+        k0 + k1 * u
+    }
+    <span class="kw">fn </span>map_quintic(n: f64) -&gt; f64 {
+        <span class="kw">let </span>x = n.clamp(<span class="number">0.0</span>, <span class="number">1.0</span>);
+
+        x * x * x * (x * (x * <span class="number">6.0 </span>- <span class="number">15.0</span>) + <span class="number">10.0</span>)
     }
 }
 </code></pre></div>
