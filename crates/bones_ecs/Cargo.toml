@@ -2,7 +2,7 @@
 name = "bones_ecs"
 version = "0.1.0"
 authors = ["Joël Lupien (Jojolepro) <jojolepro@jojolepro.com>", "Fish Folk & Spicy Lobster Developers"]
-edition = "2018"
+edition = "2021"
 description = "A tiny but very powerful ECS framework."
 keywords = ["game", "ecs"]
 categories = ["game-engines"]
