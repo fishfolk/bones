@@ -11,7 +11,7 @@ use crate::prelude::*;
 ///
 /// Entities are conceptual "things" which possess attributes (Components). As an exemple, a Car
 /// (Entity) has a Color (Component), a Position (Component) and a Speed (Component).
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Entity(u32, u32);
 impl Entity {

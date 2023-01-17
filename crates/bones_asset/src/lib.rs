@@ -420,47 +420,6 @@ impl<'de> serde::de::Visitor<'de> for UntypedHandleVisitor {
     }
 }
 
-#[cfg(feature = "has_load_progress")]
-mod has_load_progress {
-    use bevy_asset::LoadState;
-    use bones_has_load_progress::{HasLoadProgress, LoadProgress};
-    use type_ulid::TypeUlid;
-
-    impl<T: TypeUlid> HasLoadProgress for super::Handle<T> {
-        fn load_progress(
-            &self,
-            loading_resources: &bones_has_load_progress::LoadingResources,
-        ) -> bones_has_load_progress::LoadProgress {
-            let bevy_handle = self.get_bevy_handle_untyped();
-            let state = loading_resources.asset_server.get_load_state(&bevy_handle);
-            let loaded = state == LoadState::Loaded;
-
-            LoadProgress {
-                #[allow(clippy::bool_to_int_with_if)]
-                loaded: if loaded { 1 } else { 0 },
-                total: 1,
-            }
-        }
-    }
-
-    impl HasLoadProgress for super::UntypedHandle {
-        fn load_progress(
-            &self,
-            loading_resources: &bones_has_load_progress::LoadingResources,
-        ) -> LoadProgress {
-            let bevy_handle = self.get_bevy_handle();
-            let state = loading_resources.asset_server.get_load_state(&bevy_handle);
-            let loaded = state == LoadState::Loaded;
-
-            LoadProgress {
-                #[allow(clippy::bool_to_int_with_if)]
-                loaded: if loaded { 1 } else { 0 },
-                total: 1,
-            }
-        }
-    }
-}
-
 /// Implement bevy conversions when bevy feature is enabled
 #[cfg(feature = "bevy")]
 mod bevy {

@@ -14,8 +14,8 @@ members = [
 ]
 
 [features]
-bevy = ["bones_asset/bevy", "bones_asset/has_load_progress", "bones_render/bevy", "dep:bones_bevy_utils"]
-serde = ["dep:serde", "bones_render/serde"]
+bevy = ["bones_asset/bevy", "bones_render/bevy", "dep:bones_bevy_utils"]
+serde = ["dep:serde", "bones_render/serde", "bones_ecs/serde"]
 
 [dependencies]
 bones_ecs = { version = "0.1.0", path = "./crates/bones_ecs" }
