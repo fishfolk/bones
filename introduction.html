@@ -74,7 +74,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html" class="active">Introduction</a></li><li class="chapter-item expanded affix "><a href="code_of_conduct.html">Code of Conduct</a></li><li class="spacer"></li><li class="chapter-item expanded affix "><a href="rustdoc/bones_lib/index.html">API Documentation</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html" class="active">Introduction</a></li><li class="chapter-item expanded affix "><a href="code_of_conduct.html">Code of Conduct</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="ecs_tutorial/index.html"><strong aria-hidden="true">1.</strong> ECS Tutorial</a></li><li class="spacer"></li><li class="chapter-item expanded affix "><a href="api_documentation.html">API Documentation</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -137,11 +137,31 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="bones"><a class="header" href="#bones">Bones</a></h1>
-<p>Bones is a work-in-progress, opinionated game framework built on <a href="https://bevyengine.org">Bevy</a>.</p>
-<p>Bone is under development for use in the <a href="https://github.com/fishfolk/jumpy">Jumpy</a> game, and possibly other <a href="https://github.com/fishfolk">Fish Folk</a> games.</p>
-<p>The book and libraries are brand new and under development, so there's not much to see yet.</p>
-<p>The Bones framework will continue to develop out of the needs of Jumpy and any other games we try to
-use it with, with the hope of making it easier to develop 2D pixel games for 2-4 players.</p>
+<p>A work-in-progress, opinionated game meta-engine built on <a href="https://bevyengine.org">Bevy</a>.</p>
+<p>Under development for future use in the <a href="https://github.com/fishfolk/jumpy">Jumpy</a> game, and possibly other FishFolk games.</p>
+<p>Check out the <a href="https://fishfolk.github.io/bones/">Bones Book</a> for more in-depth explanations and tutorials.</p>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<h3 id="bones-ecs"><a class="header" href="#bones-ecs">Bones ECS</a></h3>
+<p>Bones is designed around a simple, custom Entity Component System ( ECS ), designed to make it easier to get a few features that are important to us:</p>
+<ul>
+<li><strong>Determinism:</strong> Bones ECS is deterministic by default, making it easier to get a re-producible and predictable gameplay.</li>
+<li><strong>Snapshot/Restore:</strong> The Bones ECS world can be trivially snapshot and restored.</li>
+<li><strong>Modding/Scripting ( future ):</strong> Bones ECS is simple enough that we can feasibly provide a C API for integration with other languages and scripting.</li>
+</ul>
+<p>Determinism and Snapshot/Restore are also key features for getting excellent <strong>network play</strong> with the rollback networking model, while requiring no changes to the core game loop implementation.</p>
+<h3 id="game-core"><a class="header" href="#game-core">Game Core</a></h3>
+<p>Using <code>bones_lib</code>, which includes <code>bones_ecs</code> and other useful utilities, you write your &quot;game core&quot;.</p>
+<p>This game core is mostly isolated from anything outside of the ECS world. This is important so that the entire game core can be snapshot/restored.</p>
+<p>This means that to collect input, you must read those inputs from an ECS resource, and to render sprites, map tiles, etc., you must create entities with specific components that tell Bones how to render them.</p>
+<h3 id="bevy-renderer"><a class="header" href="#bevy-renderer">Bevy Renderer</a></h3>
+<p>Once you have your game core, you can render the core in a Bevy game using the <code>bones_bevy_renderer</code> crate.</p>
+<p>This lets you utilize the power and plugin ecosystem of Bevy to interact with rendering, input, etc. while keeping your core game deterministic, snapshot-able, and moddable.</p>
+<p>You are also free to create your own rendering components that you synchronize with Bevy to support any custom rendering/audio use-cases, etc.</p>
+<blockquote>
+<p><strong>Note:</strong> Bones ECS as well as <code>bones_lib</code> can technically be used without Bevy. Right now we are focusing on Bevy, and support for alternative uses may not be well polished/complete yet, but it's still within the realm of possibility to render Bones cores with any framework you want.</p>
+</blockquote>
+<h3 id="bones-app--future-"><a class="header" href="#bones-app--future-">Bones App ( Future )</a></h3>
+<p>As we get a feel for how things fit together with the use of Bones in <a href="https://github.com/fishfolk/jumpy">Jumpy</a>, we hope to be able to create a standardized game runner around Bones game cores. This would allow the Bones app to handle common things like localization, asset loading, input mapping, settings menu, networking, etc., allowing you to focus on writing what makes your game unique.</p>
 
                     </main>
 
