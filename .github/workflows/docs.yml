@@ -47,10 +47,16 @@ jobs:
             web-target/
           key: Linux-cargo-target-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Test Book Rust Examples
+        run: |
+          cargo b -p bones_ecs
+          mdbook test book -L target/debug/deps
+
       - name: Build Rustdoc
         run: |
           cargo doc --workspace --no-deps
           mv target/doc book/src/rustdoc
+
 
       - name: Build MDBook
         run: |
