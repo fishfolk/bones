@@ -8,5 +8,5 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/fishfolk/bones"
 
 [dependencies]
-type_ulid = { version = "0.1.0", path = "../type_ulid" }
+type_ulid = { version = "^0.1.0", path = "../type_ulid" }
 glam = "0.22.0"

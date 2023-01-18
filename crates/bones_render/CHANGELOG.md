@@ -5,11 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.1.0 (2023-01-18)
+
+<csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/>
+<csr-id-ae0a761fc9b82ba2fc639c2b6f7af09fb650cd31/>
 
 ### Chore
 
  - <csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/> add missing crate descriptions.
+
+### Chore
+
+ - <csr-id-a68cb79e6b7d3774c53c0236edf3a12175f297b5/> generate changelogs for all crates.
 
 ### Documentation
 
@@ -73,9 +80,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 16 commits contributed to the release over the course of 16 calendar days.
- - 16 commits were understood as [conventional](https://www.conventionalcommits.org).
- - 11 unique issues were worked on: [#26](https://github.com/fishfolk/bones/issues/26), [#29](https://github.com/fishfolk/bones/issues/29), [#31](https://github.com/fishfolk/bones/issues/31), [#34](https://github.com/fishfolk/bones/issues/34), [#35](https://github.com/fishfolk/bones/issues/35), [#37](https://github.com/fishfolk/bones/issues/37), [#43](https://github.com/fishfolk/bones/issues/43), [#44](https://github.com/fishfolk/bones/issues/44), [#54](https://github.com/fishfolk/bones/issues/54), [#63](https://github.com/fishfolk/bones/issues/63), [#65](https://github.com/fishfolk/bones/issues/65)
+ - 17 commits contributed to the release over the course of 16 calendar days.
+ - 17 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 12 unique issues were worked on: [#26](https://github.com/fishfolk/bones/issues/26), [#29](https://github.com/fishfolk/bones/issues/29), [#31](https://github.com/fishfolk/bones/issues/31), [#34](https://github.com/fishfolk/bones/issues/34), [#35](https://github.com/fishfolk/bones/issues/35), [#37](https://github.com/fishfolk/bones/issues/37), [#43](https://github.com/fishfolk/bones/issues/43), [#44](https://github.com/fishfolk/bones/issues/44), [#54](https://github.com/fishfolk/bones/issues/54), [#63](https://github.com/fishfolk/bones/issues/63), [#65](https://github.com/fishfolk/bones/issues/65), [#67](https://github.com/fishfolk/bones/issues/67)
 
 ### Commit Details
 
@@ -105,6 +112,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - prepare for release. ([`ae0a761`](https://github.com/fishfolk/bones/commit/ae0a761fc9b82ba2fc639c2b6f7af09fb650cd31))
  * **[#65](https://github.com/fishfolk/bones/issues/65)**
     - add missing crate descriptions. ([`2725246`](https://github.com/fishfolk/bones/commit/27252465ad0506ff2f8c377531fa079ec64d1750))
+ * **[#67](https://github.com/fishfolk/bones/issues/67)**
+    - generate changelogs for all crates. ([`a68cb79`](https://github.com/fishfolk/bones/commit/a68cb79e6b7d3774c53c0236edf3a12175f297b5))
  * **Uncategorized**
     - add modules to the prelude. ([`a16443a`](https://github.com/fishfolk/bones/commit/a16443a0860e46bf44fed534648af85d540f975a))
     - add audio module. ([`c61b845`](https://github.com/fishfolk/bones/commit/c61b84553b8e4322a96de377b1b8f132894166db))
