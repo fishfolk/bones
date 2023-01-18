@@ -1,5 +1,6 @@
 [package]
 name = "bones_matchmaker"
+description = "Matchmaking server for Bones games."
 version = "0.1.0"
 edition = "2021"
 authors = ["The Fish Folk & Spicy Lobster Developers"]

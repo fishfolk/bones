@@ -2,6 +2,9 @@
 name = "type_ulid"
 version = "0.1.0"
 edition = "2021"
+description = "Trait for associating ULIDs with Rust types."
+authors = ["The Fish Folk & Spicy Lobster Developers"]
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/fishfolk/bones"
 
 [features]
