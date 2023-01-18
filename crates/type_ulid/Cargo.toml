@@ -13,5 +13,5 @@ default = ["std"]
 std = []
 
 [dependencies]
-type_ulid_macros = { version = "0.1.0", path = "./macros" }
+type_ulid_macros = { version = "^0.1.0", path = "./macros" }
 ulid = { version = "1.0.0", default-features = false }

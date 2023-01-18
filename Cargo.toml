@@ -18,11 +18,11 @@ bevy = ["bones_asset/bevy", "bones_render/bevy", "dep:bones_bevy_utils"]
 serde = ["dep:serde", "bones_render/serde", "bones_ecs/serde"]
 
 [dependencies]
-bones_ecs = { version = "0.1.0", path = "./crates/bones_ecs" }
-bones_render = { version = "0.1.0", path = "./crates/bones_render" }
-bones_input = { version = "0.1.0", path = "./crates/bones_input" }
-bones_asset = { version = "0.1.0", path = "./crates/bones_asset" }
-bones_bevy_utils = { version = "0.1.0", path = "./crates/bones_bevy_utils", optional = true }
-type_ulid = { version = "0.1.0", path = "./crates/type_ulid" }
+bones_ecs = { version = "^0.1.0", path = "./crates/bones_ecs" }
+bones_render = { version = "^0.1.0", path = "./crates/bones_render" }
+bones_input = { version = "^0.1.0", path = "./crates/bones_input" }
+bones_asset = { version = "^0.1.0", path = "./crates/bones_asset" }
+bones_bevy_utils = { version = "^0.1.0", path = "./crates/bones_bevy_utils", optional = true }
+type_ulid = { version = "^0.1.0", path = "./crates/type_ulid" }
 serde = { version = "1.0.0", features = ["derive"], optional = true }
 noise = "0.8.2"

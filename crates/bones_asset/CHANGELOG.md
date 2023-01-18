@@ -5,11 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.1.0 (2023-01-18)
+
+<csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/>
+<csr-id-ae0a761fc9b82ba2fc639c2b6f7af09fb650cd31/>
 
 ### Chore
 
  - <csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/> add missing crate descriptions.
+
+### Chore
+
+ - <csr-id-a68cb79e6b7d3774c53c0236edf3a12175f297b5/> generate changelogs for all crates.
 
 ### Documentation
 
@@ -50,9 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 7 commits contributed to the release over the course of 16 calendar days.
- - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
- - 7 unique issues were worked on: [#26](https://github.com/fishfolk/bones/issues/26), [#28](https://github.com/fishfolk/bones/issues/28), [#29](https://github.com/fishfolk/bones/issues/29), [#37](https://github.com/fishfolk/bones/issues/37), [#38](https://github.com/fishfolk/bones/issues/38), [#63](https://github.com/fishfolk/bones/issues/63), [#65](https://github.com/fishfolk/bones/issues/65)
+ - 8 commits contributed to the release over the course of 16 calendar days.
+ - 8 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 8 unique issues were worked on: [#26](https://github.com/fishfolk/bones/issues/26), [#28](https://github.com/fishfolk/bones/issues/28), [#29](https://github.com/fishfolk/bones/issues/29), [#37](https://github.com/fishfolk/bones/issues/37), [#38](https://github.com/fishfolk/bones/issues/38), [#63](https://github.com/fishfolk/bones/issues/63), [#65](https://github.com/fishfolk/bones/issues/65), [#67](https://github.com/fishfolk/bones/issues/67)
 
 ### Commit Details
 
@@ -74,5 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - prepare for release. ([`ae0a761`](https://github.com/fishfolk/bones/commit/ae0a761fc9b82ba2fc639c2b6f7af09fb650cd31))
  * **[#65](https://github.com/fishfolk/bones/issues/65)**
     - add missing crate descriptions. ([`2725246`](https://github.com/fishfolk/bones/commit/27252465ad0506ff2f8c377531fa079ec64d1750))
+ * **[#67](https://github.com/fishfolk/bones/issues/67)**
+    - generate changelogs for all crates. ([`a68cb79`](https://github.com/fishfolk/bones/commit/a68cb79e6b7d3774c53c0236edf3a12175f297b5))
 </details>
 
