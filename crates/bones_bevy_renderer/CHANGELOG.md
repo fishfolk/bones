@@ -9,10 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/>
 <csr-id-ae0a761fc9b82ba2fc639c2b6f7af09fb650cd31/>
+<csr-id-a68cb79e6b7d3774c53c0236edf3a12175f297b5/>
 
 ### Chore
 
  - <csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/> add missing crate descriptions.
+
+### Other
+
+ - <csr-id-248f80ae2aeea109b1ab14426319af194a64c3d1/> switch to released version of `bevy_simple_tilemap`.
+   This temporarily increases our list of Bevy feature dependencies as we wait for the
+   [PR](https://github.com/forbjok/bevy_simple_tilemap/pull/9) to reduce the required
+   bevy features, but it allows us to publish the crate to crates.io.
 
 ### Chore
 
@@ -50,8 +58,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - <csr-id-f8f41ede20fa921f10404be22c24062fafef5eae/> fix bugs in tilemap renderer.
    - Fix issue where tiles were being rendered off into the far right side
    of the map.
-- Fix issue where tiles were not being cleared from the previous frame
-     before updating them for the current frame.
 
 ### New Features (BREAKING)
 
@@ -93,9 +99,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 15 commits contributed to the release over the course of 16 calendar days.
- - 14 commits were understood as [conventional](https://www.conventionalcommits.org).
- - 13 unique issues were worked on: [#26](https://github.com/fishfolk/bones/issues/26), [#29](https://github.com/fishfolk/bones/issues/29), [#30](https://github.com/fishfolk/bones/issues/30), [#31](https://github.com/fishfolk/bones/issues/31), [#35](https://github.com/fishfolk/bones/issues/35), [#37](https://github.com/fishfolk/bones/issues/37), [#40](https://github.com/fishfolk/bones/issues/40), [#43](https://github.com/fishfolk/bones/issues/43), [#45](https://github.com/fishfolk/bones/issues/45), [#51](https://github.com/fishfolk/bones/issues/51), [#63](https://github.com/fishfolk/bones/issues/63), [#65](https://github.com/fishfolk/bones/issues/65), [#67](https://github.com/fishfolk/bones/issues/67)
+ - 17 commits contributed to the release over the course of 16 calendar days.
+ - 15 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 14 unique issues were worked on: [#26](https://github.com/fishfolk/bones/issues/26), [#29](https://github.com/fishfolk/bones/issues/29), [#30](https://github.com/fishfolk/bones/issues/30), [#31](https://github.com/fishfolk/bones/issues/31), [#35](https://github.com/fishfolk/bones/issues/35), [#37](https://github.com/fishfolk/bones/issues/37), [#40](https://github.com/fishfolk/bones/issues/40), [#43](https://github.com/fishfolk/bones/issues/43), [#45](https://github.com/fishfolk/bones/issues/45), [#51](https://github.com/fishfolk/bones/issues/51), [#63](https://github.com/fishfolk/bones/issues/63), [#65](https://github.com/fishfolk/bones/issues/65), [#67](https://github.com/fishfolk/bones/issues/67), [#71](https://github.com/fishfolk/bones/issues/71)
 
 ### Commit Details
 
@@ -129,8 +135,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - add missing crate descriptions. ([`2725246`](https://github.com/fishfolk/bones/commit/27252465ad0506ff2f8c377531fa079ec64d1750))
  * **[#67](https://github.com/fishfolk/bones/issues/67)**
     - generate changelogs for all crates. ([`a68cb79`](https://github.com/fishfolk/bones/commit/a68cb79e6b7d3774c53c0236edf3a12175f297b5))
+ * **[#71](https://github.com/fishfolk/bones/issues/71)**
+    - switch to released version of `bevy_simple_tilemap`. ([`248f80a`](https://github.com/fishfolk/bones/commit/248f80ae2aeea109b1ab14426319af194a64c3d1))
  * **Uncategorized**
+    - Release bones_bevy_asset_macros v0.2.0, bones_bevy_asset v0.1.0, bones_bevy_renderer v0.1.0, safety bump 2 crates ([`7f7bb38`](https://github.com/fishfolk/bones/commit/7f7bb38fca7b54fd1ad408bd63f63515d07ef2ab))
     - Release type_ulid_macros v0.1.0, type_ulid v0.1.0, bones_bevy_utils v0.1.0, bones_ecs v0.1.0, bones_asset v0.1.0, bones_input v0.1.0, bones_render v0.1.0, bones_lib v0.1.0 ([`db0333d`](https://github.com/fishfolk/bones/commit/db0333ddacb6f29aed8664db67973e72ea586dce))
     - move entity sync to stage before `CoreStage::PostUpdate`. ([`5116014`](https://github.com/fishfolk/bones/commit/5116014e0fd7f886ba208dd161f567ce021f3f8e))
 </details>
+
+<csr-unknown>
+Fix issue where tiles were not being cleared from the previous framebefore updating them for the current frame.<csr-unknown/>
 
