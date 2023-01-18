@@ -1,5 +1,6 @@
 [package]
 name = "bones_bevy_asset_macros"
+description = "Macros for the bones_bevy_asset crate."
 version = "0.1.0"
 edition = "2021"
 authors = ["The Fish Folk & Spicy Lobster Developers"]

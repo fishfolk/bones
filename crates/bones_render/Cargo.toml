@@ -1,5 +1,6 @@
 [package]
 name = "bones_render"
+description = "Core rendering types for bones_lib."
 version = "0.1.0"
 edition = "2021"
 authors = ["The Fish Folk & Spicy Lobster Developers"]

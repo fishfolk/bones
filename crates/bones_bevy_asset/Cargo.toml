@@ -1,5 +1,6 @@
 [package]
 name = "bones_bevy_asset"
+description = "Asset integration between bones_lib and Bevy."
 version = "0.1.0"
 edition = "2021"
 authors = ["The Fish Folk & Spicy Lobster Developers"]
