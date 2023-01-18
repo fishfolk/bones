@@ -14,7 +14,7 @@ serde = { version = "1.0.0", features = ["derive"] }
 glam = "0.22.0"
 serde_yaml = "0.9.16"
 serde_json = "1.0.91"
-bones_bevy_asset = { version = "0.1.0", path = "../bones_bevy_asset" }
+bones_bevy_asset = { version = "^0.1.0", path = "../bones_bevy_asset" }
 # TODO: Update when PR merged: https://github.com/forbjok/bevy_simple_tilemap/pull/9
 bevy_simple_tilemap = { git = "https://github.com/zicklag/bevy_simple_tilemap.git", branch = "build/slim-down-bevy-dependencies" }
 

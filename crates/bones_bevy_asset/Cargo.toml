@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/fishfolk/bones"
 
 [dependencies]
-bones_bevy_asset_macros = { version = "0.1.0", path = "./macros" }
+bones_bevy_asset_macros = { version = "^0.1.0", path = "./macros" }
 type_ulid = { version = "^0.1.0", path = "../type_ulid" }
 uuid = "1.0.0"
 serde = { version = "1.0.0", features = ["derive"] }

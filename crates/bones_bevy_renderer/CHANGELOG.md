@@ -5,11 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.1.0 (2023-01-18)
+
+<csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/>
+<csr-id-ae0a761fc9b82ba2fc639c2b6f7af09fb650cd31/>
 
 ### Chore
 
  - <csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/> add missing crate descriptions.
+
+### Chore
+
+ - <csr-id-a68cb79e6b7d3774c53c0236edf3a12175f297b5/> generate changelogs for all crates.
 
 ### Documentation
 
@@ -42,8 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    placement so that the tiles render from their bottom-left corner.
  - <csr-id-f8f41ede20fa921f10404be22c24062fafef5eae/> fix bugs in tilemap renderer.
    - Fix issue where tiles were being rendered off into the far right side
-     of the map.
-   - Fix issue where tiles were not being cleared from the previous frame
+   of the map.
+- Fix issue where tiles were not being cleared from the previous frame
      before updating them for the current frame.
 
 ### New Features (BREAKING)
@@ -86,9 +93,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 13 commits contributed to the release over the course of 16 calendar days.
- - 13 commits were understood as [conventional](https://www.conventionalcommits.org).
- - 12 unique issues were worked on: [#26](https://github.com/fishfolk/bones/issues/26), [#29](https://github.com/fishfolk/bones/issues/29), [#30](https://github.com/fishfolk/bones/issues/30), [#31](https://github.com/fishfolk/bones/issues/31), [#35](https://github.com/fishfolk/bones/issues/35), [#37](https://github.com/fishfolk/bones/issues/37), [#40](https://github.com/fishfolk/bones/issues/40), [#43](https://github.com/fishfolk/bones/issues/43), [#45](https://github.com/fishfolk/bones/issues/45), [#51](https://github.com/fishfolk/bones/issues/51), [#63](https://github.com/fishfolk/bones/issues/63), [#65](https://github.com/fishfolk/bones/issues/65)
+ - 15 commits contributed to the release over the course of 16 calendar days.
+ - 14 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 13 unique issues were worked on: [#26](https://github.com/fishfolk/bones/issues/26), [#29](https://github.com/fishfolk/bones/issues/29), [#30](https://github.com/fishfolk/bones/issues/30), [#31](https://github.com/fishfolk/bones/issues/31), [#35](https://github.com/fishfolk/bones/issues/35), [#37](https://github.com/fishfolk/bones/issues/37), [#40](https://github.com/fishfolk/bones/issues/40), [#43](https://github.com/fishfolk/bones/issues/43), [#45](https://github.com/fishfolk/bones/issues/45), [#51](https://github.com/fishfolk/bones/issues/51), [#63](https://github.com/fishfolk/bones/issues/63), [#65](https://github.com/fishfolk/bones/issues/65), [#67](https://github.com/fishfolk/bones/issues/67)
 
 ### Commit Details
 
@@ -120,7 +127,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - prepare for release. ([`ae0a761`](https://github.com/fishfolk/bones/commit/ae0a761fc9b82ba2fc639c2b6f7af09fb650cd31))
  * **[#65](https://github.com/fishfolk/bones/issues/65)**
     - add missing crate descriptions. ([`2725246`](https://github.com/fishfolk/bones/commit/27252465ad0506ff2f8c377531fa079ec64d1750))
+ * **[#67](https://github.com/fishfolk/bones/issues/67)**
+    - generate changelogs for all crates. ([`a68cb79`](https://github.com/fishfolk/bones/commit/a68cb79e6b7d3774c53c0236edf3a12175f297b5))
  * **Uncategorized**
+    - Release type_ulid_macros v0.1.0, type_ulid v0.1.0, bones_bevy_utils v0.1.0, bones_ecs v0.1.0, bones_asset v0.1.0, bones_input v0.1.0, bones_render v0.1.0, bones_lib v0.1.0 ([`db0333d`](https://github.com/fishfolk/bones/commit/db0333ddacb6f29aed8664db67973e72ea586dce))
     - move entity sync to stage before `CoreStage::PostUpdate`. ([`5116014`](https://github.com/fishfolk/bones/commit/5116014e0fd7f886ba208dd161f567ce021f3f8e))
 </details>
 
