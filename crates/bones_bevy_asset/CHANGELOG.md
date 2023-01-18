@@ -5,11 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.1.0 (2023-01-18)
+
+<csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/>
+<csr-id-de43e3cf45b9108bebecd4196aa7524c87758e35/>
+<csr-id-ae0a761fc9b82ba2fc639c2b6f7af09fb650cd31/>
+<csr-id-ef12c3fb681cc826199b1564e1a033a56a5ce2d4/>
 
 ### Chore
 
  - <csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/> add missing crate descriptions.
+
+### Chore
+
+ - <csr-id-a68cb79e6b7d3774c53c0236edf3a12175f297b5/> generate changelogs for all crates.
 
 ### Documentation
 
@@ -21,15 +30,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New Features
 
+<csr-id-3206a4d9559df5e9aafdc22e7c464308e3a9eac7/>
+
  - <csr-id-c0a14c5681a82d8e2db725a678b3dbccfa8a80b4/> implement `BonesBevyAssetLoad` for more types.
    Added implementations for `Option`, `HashMap`,
    and `bevy_utils::HashMap` when the values implement
    `BonesBevyAssetLoad`.
  - <csr-id-7fd1c592c61e3032d803b8f70364b826b4a9ebaf/> add extra derive support & type implementations.
    - The derive macro for `BonesBevyAssetLoad` can now be used on enums.
-   - Added more implementations of `BonesBevyAssetLoad` for primitive types.
- - <csr-id-3206a4d9559df5e9aafdc22e7c464308e3a9eac7/> add derive macro for `BonesBevyAssetLoad`.
-   This makes it easier to nest asset structs that have handles that need loading.
+- Added more implementations of `BonesBevyAssetLoad` for primitive types.
 
 ### Style
 
@@ -59,9 +68,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 9 commits contributed to the release over the course of 14 calendar days.
- - 9 commits were understood as [conventional](https://www.conventionalcommits.org).
- - 8 unique issues were worked on: [#29](https://github.com/fishfolk/bones/issues/29), [#33](https://github.com/fishfolk/bones/issues/33), [#37](https://github.com/fishfolk/bones/issues/37), [#39](https://github.com/fishfolk/bones/issues/39), [#41](https://github.com/fishfolk/bones/issues/41), [#52](https://github.com/fishfolk/bones/issues/52), [#63](https://github.com/fishfolk/bones/issues/63), [#65](https://github.com/fishfolk/bones/issues/65)
+ - 11 commits contributed to the release over the course of 14 calendar days.
+ - 10 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 9 unique issues were worked on: [#29](https://github.com/fishfolk/bones/issues/29), [#33](https://github.com/fishfolk/bones/issues/33), [#37](https://github.com/fishfolk/bones/issues/37), [#39](https://github.com/fishfolk/bones/issues/39), [#41](https://github.com/fishfolk/bones/issues/41), [#52](https://github.com/fishfolk/bones/issues/52), [#63](https://github.com/fishfolk/bones/issues/63), [#65](https://github.com/fishfolk/bones/issues/65), [#67](https://github.com/fishfolk/bones/issues/67)
 
 ### Commit Details
 
@@ -85,7 +94,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - prepare for release. ([`ae0a761`](https://github.com/fishfolk/bones/commit/ae0a761fc9b82ba2fc639c2b6f7af09fb650cd31))
  * **[#65](https://github.com/fishfolk/bones/issues/65)**
     - add missing crate descriptions. ([`2725246`](https://github.com/fishfolk/bones/commit/27252465ad0506ff2f8c377531fa079ec64d1750))
+ * **[#67](https://github.com/fishfolk/bones/issues/67)**
+    - generate changelogs for all crates. ([`a68cb79`](https://github.com/fishfolk/bones/commit/a68cb79e6b7d3774c53c0236edf3a12175f297b5))
  * **Uncategorized**
+    - Release type_ulid_macros v0.1.0, type_ulid v0.1.0, bones_bevy_utils v0.1.0, bones_ecs v0.1.0, bones_asset v0.1.0, bones_input v0.1.0, bones_render v0.1.0, bones_lib v0.1.0 ([`db0333d`](https://github.com/fishfolk/bones/commit/db0333ddacb6f29aed8664db67973e72ea586dce))
     - implement `BonesBevyAssetLoad` for more types. ([`c0a14c5`](https://github.com/fishfolk/bones/commit/c0a14c5681a82d8e2db725a678b3dbccfa8a80b4))
 </details>
+
+<csr-unknown>
+ add derive macro for BonesBevyAssetLoad.This makes it easier to nest asset structs that have handles that need loading.<csr-unknown/>
 
