@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-id-0b424b93d127618b7ecf6b831cc71d317e28af97/>
 <csr-id-a516a68902ebcd4c3e24b6a47b3ff79b92ff5f60/>
 <csr-id-ae0a761fc9b82ba2fc639c2b6f7af09fb650cd31/>
+<csr-id-a68cb79e6b7d3774c53c0236edf3a12175f297b5/>
 
 ### Chore
 
@@ -46,7 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-efe8744f44b5090a2eaebfc9e27cce56a84a73a6/> fix soundness issues revealed in code-review
    - Fixes safety documentation for some public, unsafe functions.
-- Fixes some soundness issues when cloning or creating `UntypedResource`s when allocation fails.
 
 ### Other
 
@@ -125,7 +125,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 25 commits contributed to the release over the course of 26 calendar days.
+ - 26 commits contributed to the release over the course of 26 calendar days.
  - 25 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 19 unique issues were worked on: [#13](https://github.com/fishfolk/bones/issues/13), [#17](https://github.com/fishfolk/bones/issues/17), [#19](https://github.com/fishfolk/bones/issues/19), [#20](https://github.com/fishfolk/bones/issues/20), [#21](https://github.com/fishfolk/bones/issues/21), [#23](https://github.com/fishfolk/bones/issues/23), [#24](https://github.com/fishfolk/bones/issues/24), [#28](https://github.com/fishfolk/bones/issues/28), [#30](https://github.com/fishfolk/bones/issues/30), [#32](https://github.com/fishfolk/bones/issues/32), [#36](https://github.com/fishfolk/bones/issues/36), [#37](https://github.com/fishfolk/bones/issues/37), [#42](https://github.com/fishfolk/bones/issues/42), [#5](https://github.com/fishfolk/bones/issues/5), [#57](https://github.com/fishfolk/bones/issues/57), [#59](https://github.com/fishfolk/bones/issues/59), [#6](https://github.com/fishfolk/bones/issues/6), [#63](https://github.com/fishfolk/bones/issues/63), [#67](https://github.com/fishfolk/bones/issues/67)
 
@@ -174,6 +174,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#67](https://github.com/fishfolk/bones/issues/67)**
     - generate changelogs for all crates. ([`a68cb79`](https://github.com/fishfolk/bones/commit/a68cb79e6b7d3774c53c0236edf3a12175f297b5))
  * **Uncategorized**
+    - Release type_ulid_macros v0.1.0, type_ulid v0.1.0, bones_bevy_utils v0.1.0, bones_ecs v0.1.0, bones_asset v0.1.0, bones_input v0.1.0, bones_render v0.1.0, bones_lib v0.1.0 ([`ca37c81`](https://github.com/fishfolk/bones/commit/ca37c8150478b1c1afb687096214b1d8a0c95478))
     - add utility function for running already initialized systems. ([`2f5ff59`](https://github.com/fishfolk/bones/commit/2f5ff59d2ac0a924362846d1d78c827a98deacde))
     - add utility functions for adding stages to `SystemStages`. ([`a11fd1b`](https://github.com/fishfolk/bones/commit/a11fd1b610b79b5e9bc0d0d477bd56342da66d30))
     - add debug implementation for `System`. ([`7a99206`](https://github.com/fishfolk/bones/commit/7a9920687cb0e05a0e237ed882c3ab8ebe7624b8))
@@ -183,5 +184,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <csr-unknown>
-Thanks again to @LegionMammal978 for finding these issues!<csr-unknown/>
+Fixes some soundness issues when cloning or creating UntypedResources when allocation fails.<csr-unknown/>
 

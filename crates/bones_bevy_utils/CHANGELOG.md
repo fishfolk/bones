@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/>
 <csr-id-ae0a761fc9b82ba2fc639c2b6f7af09fb650cd31/>
 <csr-id-ef12c3fb681cc826199b1564e1a033a56a5ce2d4/>
+<csr-id-a68cb79e6b7d3774c53c0236edf3a12175f297b5/>
 
 ### Chore
 
@@ -51,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 6 commits contributed to the release over the course of 14 calendar days.
+ - 7 commits contributed to the release over the course of 14 calendar days.
  - 6 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 6 unique issues were worked on: [#29](https://github.com/fishfolk/bones/issues/29), [#37](https://github.com/fishfolk/bones/issues/37), [#41](https://github.com/fishfolk/bones/issues/41), [#63](https://github.com/fishfolk/bones/issues/63), [#65](https://github.com/fishfolk/bones/issues/65), [#67](https://github.com/fishfolk/bones/issues/67)
 
@@ -73,5 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - add missing crate descriptions. ([`2725246`](https://github.com/fishfolk/bones/commit/27252465ad0506ff2f8c377531fa079ec64d1750))
  * **[#67](https://github.com/fishfolk/bones/issues/67)**
     - generate changelogs for all crates. ([`a68cb79`](https://github.com/fishfolk/bones/commit/a68cb79e6b7d3774c53c0236edf3a12175f297b5))
+ * **Uncategorized**
+    - Release type_ulid_macros v0.1.0, type_ulid v0.1.0, bones_bevy_utils v0.1.0, bones_ecs v0.1.0, bones_asset v0.1.0, bones_input v0.1.0, bones_render v0.1.0, bones_lib v0.1.0 ([`ca37c81`](https://github.com/fishfolk/bones/commit/ca37c8150478b1c1afb687096214b1d8a0c95478))
 </details>
 
