@@ -8,6 +8,7 @@
 pub mod audio;
 pub mod camera;
 pub mod datatypes;
+pub mod line;
 pub mod sprite;
 pub mod tilemap;
 pub mod transform;
@@ -16,7 +17,9 @@ pub mod transform;
 pub mod prelude {
     pub use {bones_asset::prelude::*, bones_ecs::prelude::*, glam::*, type_ulid::TypeUlid};
 
-    pub use crate::{audio::*, camera::*, datatypes::*, key, sprite::*, tilemap::*, transform::*};
+    pub use crate::{
+        audio::*, camera::*, datatypes::*, key, line::*, sprite::*, tilemap::*, transform::*,
+    };
 }
 
 /// Create a new const [`Key`][datatypes] parsed at compile time.
