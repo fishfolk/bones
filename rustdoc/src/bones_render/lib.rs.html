@@ -46,6 +46,9 @@
 <span id="46">46</span>
 <span id="47">47</span>
 <span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Standardized rendering components for Bones.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -56,6 +59,7 @@
 </span><span class="kw">pub mod </span>audio;
 <span class="kw">pub mod </span>camera;
 <span class="kw">pub mod </span>datatypes;
+<span class="kw">pub mod </span>line;
 <span class="kw">pub mod </span>sprite;
 <span class="kw">pub mod </span>tilemap;
 <span class="kw">pub mod </span>transform;
@@ -64,7 +68,9 @@
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use </span>{bones_asset::prelude::<span class="kw-2">*</span>, bones_ecs::prelude::<span class="kw-2">*</span>, glam::<span class="kw-2">*</span>, type_ulid::TypeUlid};
 
-    <span class="kw">pub use crate</span>::{audio::<span class="kw-2">*</span>, camera::<span class="kw-2">*</span>, datatypes::<span class="kw-2">*</span>, key, sprite::<span class="kw-2">*</span>, tilemap::<span class="kw-2">*</span>, transform::<span class="kw-2">*</span>};
+    <span class="kw">pub use crate</span>::{
+        audio::<span class="kw-2">*</span>, camera::<span class="kw-2">*</span>, datatypes::<span class="kw-2">*</span>, key, line::<span class="kw-2">*</span>, sprite::<span class="kw-2">*</span>, tilemap::<span class="kw-2">*</span>, transform::<span class="kw-2">*</span>,
+    };
 }
 
 <span class="doccomment">/// Create a new const [`Key`][datatypes] parsed at compile time.
