@@ -8,6 +8,7 @@
 use std::marker::PhantomData;
 
 use bevy::{prelude::*, render::camera::ScalingMode};
+use bevy_prototype_lyon::prelude as lyon;
 use bevy_simple_tilemap::{prelude::TileMapBundle, Tile, TileFlags, TileMap};
 use bones_lib::prelude::{self as bones, BitSet, IntoBevy};
 
@@ -65,6 +66,7 @@ pub enum BonesStage {
 impl<W: HasBonesWorld> Plugin for BonesRendererPlugin<W> {
     fn build(&self, app: &mut App) {
         app.add_plugin(bevy_simple_tilemap::plugin::SimpleTileMapPlugin)
+            .add_plugin(lyon::ShapePlugin)
             // Install the asset loader for .atlas.yaml files.
             .add_asset_loader(asset::TextureAtlasLoader)
             // Add the world sync systems
@@ -74,6 +76,7 @@ impl<W: HasBonesWorld> Plugin for BonesRendererPlugin<W> {
                 SystemStage::parallel(),
             )
             .add_system_to_stage(BonesStage::Sync, sync_sprites::<W>)
+            .add_system_to_stage(BonesStage::Sync, sync_path2ds::<W>)
             .add_system_to_stage(BonesStage::Sync, sync_atlas_sprites::<W>)
             .add_system_to_stage(BonesStage::Sync, sync_cameras::<W>)
             .add_system_to_stage(BonesStage::Sync, sync_clear_color::<W>)
@@ -422,6 +425,94 @@ fn sync_tilemaps<W: HasBonesWorld>(
                 transform,
                 ..default()
             },
+            BevyBonesEntity,
+        ));
+    }
+}
+
+/// The system that renders the bones world.
+fn sync_path2ds<W: HasBonesWorld>(
+    mut commands: Commands,
+    world_resource: Option<ResMut<W>>,
+    mut bevy_bones_path2ds: Query<
+        (Entity, &mut lyon::Path, &mut lyon::DrawMode, &mut Transform),
+        With<BevyBonesEntity>,
+    >,
+) {
+    let Some(mut world_resource) = world_resource else {
+        bevy_bones_path2ds.for_each(|(e, ..)| commands.entity(e).despawn());
+        return;
+    };
+
+    let world = world_resource.world();
+
+    world.components.init::<bones::Path2d>();
+    world.components.init::<bones::Transform>();
+
+    let entities = world.resources.get::<bones::Entities>();
+    let entities = entities.borrow();
+    let path2ds = world.components.get::<bones::Path2d>();
+    let path2ds = path2ds.borrow();
+    let transforms = world.components.get::<bones::Transform>();
+    let transforms = transforms.borrow();
+
+    fn get_bevy_components(
+        bones_path2d: &bones::Path2d,
+        bones_transform: &bones::Transform,
+    ) -> (lyon::DrawMode, lyon::Path, Transform) {
+        let draw_mode = lyon::DrawMode::Stroke(lyon::StrokeMode::new(
+            Color::RgbaLinear {
+                red: bones_path2d.color[0],
+                green: bones_path2d.color[1],
+                blue: bones_path2d.color[2],
+                alpha: bones_path2d.color[3],
+            },
+            bones_path2d.thickness,
+        ));
+        let new_path = bones_path2d
+            .points
+            .iter()
+            .copied()
+            .enumerate()
+            .fold(lyon::PathBuilder::new(), |mut builder, (i, point)| {
+                if i > 0 && !bones_path2d.line_breaks.contains(&i) {
+                    builder.line_to(point);
+                }
+                builder.move_to(point);
+
+                builder
+            })
+            .build();
+
+        let mut transform = bones_transform.into_bevy();
+        // Offset the path towards the camera slightly to make sure it renders on top of a
+        // sprite/etc. if it is applied to an entity with both a sprite and a path.
+        transform.translation.z += 0.0001;
+        (draw_mode, new_path, transform)
+    }
+
+    // Sync paths
+    let mut path2ds_bitset = path2ds.bitset().clone();
+    path2ds_bitset.bit_and(transforms.bitset());
+    let mut bones_sprite_entity_iter = entities.iter_with_bitset(&path2ds_bitset);
+    for (bevy_ent, mut path, mut draw_mode, mut transform) in &mut bevy_bones_path2ds {
+        if let Some(bones_ent) = bones_sprite_entity_iter.next() {
+            let bones_path2d = path2ds.get(bones_ent).unwrap();
+            let bones_transform = transforms.get(bones_ent).unwrap();
+
+            (*draw_mode, *path, *transform) = get_bevy_components(bones_path2d, bones_transform);
+        } else {
+            commands.entity(bevy_ent).despawn();
+        }
+    }
+    for bones_ent in bones_sprite_entity_iter {
+        let bones_path2d = path2ds.get(bones_ent).unwrap();
+        let bones_transform = transforms.get(bones_ent).unwrap();
+
+        let (draw_mode, path, transform) = get_bevy_components(bones_path2d, bones_transform);
+
+        commands.spawn((
+            lyon::GeometryBuilder::build_as(&path, draw_mode, transform),
             BevyBonesEntity,
         ));
     }
