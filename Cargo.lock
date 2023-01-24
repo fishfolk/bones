@@ -989,7 +989,7 @@ dependencies = [
 
 [[package]]
 name = "bones_bevy_renderer"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bevy",
  "bevy_prototype_lyon",
@@ -1087,7 +1087,7 @@ dependencies = [
 
 [[package]]
 name = "bones_render"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bevy_transform",
  "bones_asset",
