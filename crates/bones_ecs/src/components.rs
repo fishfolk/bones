@@ -135,7 +135,7 @@ mod test {
                     my_datas.insert(ent2, MyData(8));
 
                     {
-                        let [data1, data2] = my_datas.get_many_mut([ent1, ent2]).unwrap_many();
+                        let [data2, data1] = my_datas.get_many_mut([ent2, ent1]).unwrap_many();
 
                         data1.0 = 0;
                         data2.0 = 1;

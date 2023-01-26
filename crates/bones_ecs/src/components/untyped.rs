@@ -203,19 +203,17 @@ impl UntypedComponentStore {
     /// This will panic if the same entity is specified multiple times. This is invalid because it
     /// would mean you would have two mutable references to the same component data at the same
     /// time.
-    pub fn get_many_mut<const N: usize>(
-        &mut self,
-        mut entities: [Entity; N],
-    ) -> [Option<*mut u8>; N] {
-        // Sort the slice
-        entities.sort_unstable();
+    pub fn get_many_mut<const N: usize>(&mut self, entities: [Entity; N]) -> [Option<*mut u8>; N] {
+        // Sort a copy of the passed in entities list.
+        let mut sorted = entities;
+        sorted.sort_unstable();
         // Detect duplicates.
         //
-        // Since we have sorted the slice, any duplicates be adjacent to each-other, and we only
-        // have to make sure that for every item in the slice, the one after it is not the same as
-        // it.
+        // Since we have sorted the slice, any duplicates will be adjacent to each-other, and we
+        // only have to make sure that for every item in the slice, the one after it is not the same
+        // as it.
         for i in 0..(N - 1) {
-            if entities[i] == entities[i + 1] {
+            if sorted[i] == sorted[i + 1] {
                 panic!("All entities passed to `get_multiple_mut()` must be unique.");
             }
         }
