@@ -73,6 +73,28 @@ impl<T: Clone + 'static> TypedComponentOps<T> {
             .map(|x| unsafe { &mut *(x as *mut T) })
     }
 
+    /// Get mutable pointers to the component data for multiple entities at the same time.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the same entity is specified multiple times. This is invalid because it
+    /// would mean you would have two mutable references to the same component data at the same
+    /// time.
+    pub fn get_many_mut<const N: usize>(
+        &self,
+        components: &mut UntypedComponentStore,
+        entities: [Entity; N],
+    ) -> [Option<&mut T>; N] {
+        let pointers = components.get_many_mut(entities);
+        std::array::from_fn(|i| {
+            pointers[i]
+                // SAFE: constructing TypedComponentOps is unsafe, and user asserts that component
+                // storage is valid for type T. Additionally, `components.get_many_mut()` verifies
+                // that the pointers don't overlap.
+                .map(|x| unsafe { &mut *(x as *mut T) })
+        })
+    }
+
     /// Remove a component from an entity, returning the previous component if one existed.
     pub fn remove(&self, components: &mut UntypedComponentStore, entity: Entity) -> Option<T> {
         let mut r = MaybeUninit::<T>::zeroed();
