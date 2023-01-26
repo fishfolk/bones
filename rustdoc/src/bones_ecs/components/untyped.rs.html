@@ -390,8 +390,6 @@
 <span id="390">390</span>
 <span id="391">391</span>
 <span id="392">392</span>
-<span id="393">393</span>
-<span id="394">394</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>aligned_vec::AVec;
@@ -597,19 +595,17 @@
     /// This will panic if the same entity is specified multiple times. This is invalid because it
     /// would mean you would have two mutable references to the same component data at the same
     /// time.
-    </span><span class="kw">pub fn </span>get_many_mut&lt;<span class="kw">const </span>N: usize&gt;(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        <span class="kw-2">mut </span>entities: [Entity; N],
-    ) -&gt; [<span class="prelude-ty">Option</span>&lt;<span class="kw-2">*mut </span>u8&gt;; N] {
-        <span class="comment">// Sort the slice
-        </span>entities.sort_unstable();
+    </span><span class="kw">pub fn </span>get_many_mut&lt;<span class="kw">const </span>N: usize&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entities: [Entity; N]) -&gt; [<span class="prelude-ty">Option</span>&lt;<span class="kw-2">*mut </span>u8&gt;; N] {
+        <span class="comment">// Sort a copy of the passed in entities list.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>sorted = entities;
+        sorted.sort_unstable();
         <span class="comment">// Detect duplicates.
         //
-        // Since we have sorted the slice, any duplicates be adjacent to each-other, and we only
-        // have to make sure that for every item in the slice, the one after it is not the same as
-        // it.
+        // Since we have sorted the slice, any duplicates will be adjacent to each-other, and we
+        // only have to make sure that for every item in the slice, the one after it is not the same
+        // as it.
         </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..(N - <span class="number">1</span>) {
-            <span class="kw">if </span>entities[i] == entities[i + <span class="number">1</span>] {
+            <span class="kw">if </span>sorted[i] == sorted[i + <span class="number">1</span>] {
                 <span class="macro">panic!</span>(<span class="string">&quot;All entities passed to `get_multiple_mut()` must be unique.&quot;</span>);
             }
         }

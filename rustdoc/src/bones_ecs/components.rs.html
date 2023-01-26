@@ -303,7 +303,7 @@
                     my_datas.insert(ent2, MyData(<span class="number">8</span>));
 
                     {
-                        <span class="kw">let </span>[data1, data2] = my_datas.get_many_mut([ent1, ent2]).unwrap_many();
+                        <span class="kw">let </span>[data2, data1] = my_datas.get_many_mut([ent2, ent1]).unwrap_many();
 
                         data1.<span class="number">0 </span>= <span class="number">0</span>;
                         data2.<span class="number">0 </span>= <span class="number">1</span>;
