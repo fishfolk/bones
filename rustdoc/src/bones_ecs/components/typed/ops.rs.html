@@ -139,6 +139,28 @@
 <span id="139">139</span>
 <span id="140">140</span>
 <span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{
     marker::PhantomData,
     mem::{ManuallyDrop, MaybeUninit},
@@ -212,6 +234,28 @@
             <span class="comment">// SAFE: constructing TypedComponentOps is unsafe, and user asserts that component storage
             // is valid for type T.
             </span>.map(|x| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(x <span class="kw">as </span><span class="kw-2">*mut </span>T) })
+    }
+
+    <span class="doccomment">/// Get mutable pointers to the component data for multiple entities at the same time.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the same entity is specified multiple times. This is invalid because it
+    /// would mean you would have two mutable references to the same component data at the same
+    /// time.
+    </span><span class="kw">pub fn </span>get_many_mut&lt;<span class="kw">const </span>N: usize&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        components: <span class="kw-2">&amp;mut </span>UntypedComponentStore,
+        entities: [Entity; N],
+    ) -&gt; [<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt;; N] {
+        <span class="kw">let </span>pointers = components.get_many_mut(entities);
+        std::array::from_fn(|i| {
+            pointers[i]
+                <span class="comment">// SAFE: constructing TypedComponentOps is unsafe, and user asserts that component
+                // storage is valid for type T. Additionally, `components.get_many_mut()` verifies
+                // that the pointers don&#39;t overlap.
+                </span>.map(|x| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(x <span class="kw">as </span><span class="kw-2">*mut </span>T) })
+        })
     }
 
     <span class="doccomment">/// Remove a component from an entity, returning the previous component if one existed.

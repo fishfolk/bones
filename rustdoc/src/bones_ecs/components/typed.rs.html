@@ -330,6 +330,17 @@
 <span id="330">330</span>
 <span id="331">331</span>
 <span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{alloc::Layout, marker::PhantomData, rc::Rc, sync::Arc};
 
 <span class="kw">use </span>bytemuck::Pod;
@@ -585,6 +596,17 @@
     <span class="doccomment">/// Gets a mutable reference to the component of [`Entity`].
     </span><span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt; {
         <span class="self">self</span>.ops.get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>.components, entity)
+    }
+
+    <span class="doccomment">/// Get mutable pointers to the component data for multiple entities at the same time.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the same entity is specified multiple times. This is invalid because it
+    /// would mean you would have two mutable references to the same component data at the same
+    /// time.
+    </span><span class="kw">pub fn </span>get_many_mut&lt;<span class="kw">const </span>N: usize&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entities: [Entity; N]) -&gt; [<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt;; N] {
+        <span class="self">self</span>.ops.get_many_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>.components, entities)
     }
 
     <span class="doccomment">/// Removes the component of [`Entity`].

@@ -543,7 +543,7 @@
 /// Entities are conceptual &quot;things&quot; which possess attributes (Components). As an exemple, a Car
 /// (Entity) has a Color (Component), a Position (Component) and a Speed (Component).
 </span><span class="attribute">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Serialize, serde::Deserialize))]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 </span><span class="kw">pub struct </span>Entity(u32, u32);
 <span class="kw">impl </span>Entity {
     <span class="doccomment">/// Creates a new `Entity` from the provided index and generation.

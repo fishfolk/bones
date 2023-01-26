@@ -142,6 +142,33 @@
 <span id="142">142</span>
 <span id="143">143</span>
 <span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
 </pre><pre class="rust"><code><span class="attribute">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
@@ -180,7 +207,7 @@
 
     <span class="kw">pub use crate</span>::{
         bitset::<span class="kw-2">*</span>, components::<span class="kw-2">*</span>, default, entities::<span class="kw-2">*</span>, error::<span class="kw-2">*</span>, resources::<span class="kw-2">*</span>, stage::<span class="kw-2">*</span>,
-        system::<span class="kw-2">*</span>, ulid::<span class="kw-2">*</span>, EcsData, RawFns, TypedEcsData, World,
+        system::<span class="kw-2">*</span>, ulid::<span class="kw-2">*</span>, EcsData, RawFns, TypedEcsData, UnwrapMany, World,
     };
 }
 
@@ -199,6 +226,33 @@
 /// [`ComponentStore&lt;T&gt;`][crate::components::ComponentStore].
 </span><span class="kw">pub trait </span>TypedEcsData: type_ulid::TypeUlid + EcsData {}
 <span class="kw">impl</span>&lt;T: type_ulid::TypeUlid + EcsData&gt; TypedEcsData <span class="kw">for </span>T {}
+
+<span class="doccomment">/// Helper trait for unwraping each item in an array.
+///
+/// # Example
+///
+/// ```
+/// # use bones_ecs::UnwrapMany;
+/// let data = [Some(1), Some(2)];
+/// let [data1, data2] = data.unwrap_many();
+/// ```
+</span><span class="kw">pub trait </span>UnwrapMany&lt;<span class="kw">const </span>N: usize, T&gt; {
+    <span class="doccomment">/// Unwrap all the items in an array.
+    </span><span class="kw">fn </span>unwrap_many(<span class="self">self</span>) -&gt; [T; N];
+}
+
+<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize, T&gt; UnwrapMany&lt;N, T&gt; <span class="kw">for </span>[<span class="prelude-ty">Option</span>&lt;T&gt;; N] {
+    <span class="kw">fn </span>unwrap_many(<span class="self">self</span>) -&gt; [T; N] {
+        <span class="kw">let </span><span class="kw-2">mut </span>iter = <span class="self">self</span>.into_iter();
+        std::array::from_fn(|<span class="kw">_</span>| iter.next().unwrap().unwrap())
+    }
+}
+<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize, T, E: std::fmt::Debug&gt; UnwrapMany&lt;N, T&gt; <span class="kw">for </span>[<span class="prelude-ty">Result</span>&lt;T, E&gt;; N] {
+    <span class="kw">fn </span>unwrap_many(<span class="self">self</span>) -&gt; [T; N] {
+        <span class="kw">let </span><span class="kw-2">mut </span>iter = <span class="self">self</span>.into_iter();
+        std::array::from_fn(|<span class="kw">_</span>| iter.next().unwrap().unwrap())
+    }
+}
 
 <span class="doccomment">/// Helper trait that is auto-implemented for all `Clone`-able types. Provides easy access to drop
 /// and clone funcitons for raw pointers.

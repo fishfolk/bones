@@ -114,6 +114,58 @@
 <span id="114">114</span>
 <span id="115">115</span>
 <span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
 </pre><pre class="rust"><code><span class="doccomment">//! ECS component storage.
 
 </span><span class="kw">use </span>std::{any::TypeId, sync::Arc};
@@ -228,6 +280,58 @@
             .get(<span class="kw-2">&amp;</span>uuid)
             .cloned()
             .ok_or(EcsError::NotInitialized)
+    }
+}
+
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>test {
+    <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+
+    <span class="attribute">#[derive(Clone, Copy, TypeUlid)]
+    #[ulid = <span class="string">&quot;01GQNWZKBT0SN37QKJQNKPF5RR&quot;</span>]
+    </span><span class="kw">struct </span>MyData(<span class="kw">pub </span>i32);
+
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>borrow_many_mut() {
+        World::new()
+            .run_system(
+                |<span class="kw-2">mut </span>entities: ResMut&lt;Entities&gt;, <span class="kw-2">mut </span>my_datas: CompMut&lt;MyData&gt;| {
+                    <span class="kw">let </span>ent1 = entities.create();
+                    <span class="kw">let </span>ent2 = entities.create();
+
+                    my_datas.insert(ent1, MyData(<span class="number">7</span>));
+                    my_datas.insert(ent2, MyData(<span class="number">8</span>));
+
+                    {
+                        <span class="kw">let </span>[data1, data2] = my_datas.get_many_mut([ent1, ent2]).unwrap_many();
+
+                        data1.<span class="number">0 </span>= <span class="number">0</span>;
+                        data2.<span class="number">0 </span>= <span class="number">1</span>;
+                    }
+
+                    <span class="macro">assert_eq!</span>(my_datas.get(ent1).unwrap().<span class="number">0</span>, <span class="number">0</span>);
+                    <span class="macro">assert_eq!</span>(my_datas.get(ent2).unwrap().<span class="number">0</span>, <span class="number">1</span>);
+                },
+            )
+            .unwrap();
+    }
+
+    <span class="attribute">#[test]
+    #[should_panic = <span class="string">&quot;must be unique&quot;</span>]
+    </span><span class="kw">fn </span>borrow_many_overlapping_mut() {
+        World::new()
+            .run_system(
+                |<span class="kw-2">mut </span>entities: ResMut&lt;Entities&gt;, <span class="kw-2">mut </span>my_datas: CompMut&lt;MyData&gt;| {
+                    <span class="kw">let </span>ent1 = entities.create();
+                    <span class="kw">let </span>ent2 = entities.create();
+
+                    my_datas.insert(ent1, MyData(<span class="number">1</span>));
+                    my_datas.insert(ent2, MyData(<span class="number">2</span>));
+
+                    my_datas.get_many_mut([ent1, ent2, ent1]).unwrap_many();
+                },
+            )
+            .unwrap();
     }
 }
 </code></pre></div>
