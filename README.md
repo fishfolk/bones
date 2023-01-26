@@ -1,5 +1,11 @@
 # Bones
 
+[![Documentation](https://img.shields.io/badge/documentation-fishfolk.org-green.svg?labelColor=1e1c24&color=f3ee7a)](https://fishfolk.org/bones/overview/introduction/)
+[![Crates.io](https://img.shields.io/crates/v/bones_lib?labelColor=1e1c24)](https://crates.io/crates/bones_lib)
+[![docs.rs](https://img.shields.io/docsrs/bones_lib?label=API%20Docs&labelColor=1e1c24)](https://docs.rs/bones_lib)
+[![License](https://img.shields.io/badge/License-MIT%20or%20Apache%202-green.svg?label=license&labelColor=1e1c24&color=34925e)](./LICENSE)
+[![Discord](https://img.shields.io/badge/chat-on%20discord-green.svg?logo=discord&logoColor=fff&labelColor=1e1c24&color=8d5b3f)](https://discord.gg/4smxjcheE5) 
+
 A work-in-progress, opinionated game meta-engine built on [Bevy].
 
 Under development for future use in the [Jumpy] game, and possibly other FishFolk games.
