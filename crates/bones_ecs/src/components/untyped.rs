@@ -196,6 +196,48 @@ impl UntypedComponentStore {
         }
     }
 
+    /// Get mutable pointers to the component data for multiple entities at the same time.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the same entity is specified multiple times. This is invalid because it
+    /// would mean you would have two mutable references to the same component data at the same
+    /// time.
+    pub fn get_many_mut<const N: usize>(
+        &mut self,
+        mut entities: [Entity; N],
+    ) -> [Option<*mut u8>; N] {
+        // Sort the slice
+        entities.sort_unstable();
+        // Detect duplicates.
+        //
+        // Since we have sorted the slice, any duplicates be adjacent to each-other, and we only
+        // have to make sure that for every item in the slice, the one after it is not the same as
+        // it.
+        for i in 0..(N - 1) {
+            if entities[i] == entities[i + 1] {
+                panic!("All entities passed to `get_multiple_mut()` must be unique.");
+            }
+        }
+
+        std::array::from_fn(|i| {
+            let index = entities[i].index() as usize;
+
+            if self.bitset.bit_test(index) {
+                let size = self.layout.size();
+                // SAFE: we've already validated that the contents of storage is valid for type T.
+                // And we have verified that this entity is unique among the other entities we are
+                // borrowing at the same time.
+                unsafe {
+                    let ptr = self.storage.as_mut_ptr().add(index * size);
+                    Some(ptr)
+                }
+            } else {
+                None
+            }
+        })
+    }
+
     /// If there is a previous value, `true` will be returned.
     ///
     /// If `out` is set, the previous value will be written to it.

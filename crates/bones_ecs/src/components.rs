@@ -114,3 +114,55 @@ impl ComponentStores {
             .ok_or(EcsError::NotInitialized)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::prelude::*;
+
+    #[derive(Clone, Copy, TypeUlid)]
+    #[ulid = "01GQNWZKBT0SN37QKJQNKPF5RR"]
+    struct MyData(pub i32);
+
+    #[test]
+    fn borrow_many_mut() {
+        World::new()
+            .run_system(
+                |mut entities: ResMut<Entities>, mut my_datas: CompMut<MyData>| {
+                    let ent1 = entities.create();
+                    let ent2 = entities.create();
+
+                    my_datas.insert(ent1, MyData(7));
+                    my_datas.insert(ent2, MyData(8));
+
+                    {
+                        let [data1, data2] = my_datas.get_many_mut([ent1, ent2]).unwrap_many();
+
+                        data1.0 = 0;
+                        data2.0 = 1;
+                    }
+
+                    assert_eq!(my_datas.get(ent1).unwrap().0, 0);
+                    assert_eq!(my_datas.get(ent2).unwrap().0, 1);
+                },
+            )
+            .unwrap();
+    }
+
+    #[test]
+    #[should_panic = "must be unique"]
+    fn borrow_many_overlapping_mut() {
+        World::new()
+            .run_system(
+                |mut entities: ResMut<Entities>, mut my_datas: CompMut<MyData>| {
+                    let ent1 = entities.create();
+                    let ent2 = entities.create();
+
+                    my_datas.insert(ent1, MyData(1));
+                    my_datas.insert(ent2, MyData(2));
+
+                    my_datas.get_many_mut([ent1, ent2, ent1]).unwrap_many();
+                },
+            )
+            .unwrap();
+    }
+}

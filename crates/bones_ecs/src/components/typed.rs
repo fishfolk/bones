@@ -255,6 +255,17 @@ impl<'a, T: TypedEcsData> AtomicComponentStoreRefMut<'a, T> {
         self.ops.get_mut(&mut self.components, entity)
     }
 
+    /// Get mutable pointers to the component data for multiple entities at the same time.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the same entity is specified multiple times. This is invalid because it
+    /// would mean you would have two mutable references to the same component data at the same
+    /// time.
+    pub fn get_many_mut<const N: usize>(&mut self, entities: [Entity; N]) -> [Option<&mut T>; N] {
+        self.ops.get_many_mut(&mut self.components, entities)
+    }
+
     /// Removes the component of [`Entity`].
     ///
     /// Returns the component that was on the entity, if any.

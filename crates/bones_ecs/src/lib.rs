@@ -36,7 +36,7 @@ pub mod prelude {
 
     pub use crate::{
         bitset::*, components::*, default, entities::*, error::*, resources::*, stage::*,
-        system::*, ulid::*, EcsData, RawFns, TypedEcsData, World,
+        system::*, ulid::*, EcsData, RawFns, TypedEcsData, UnwrapMany, World,
     };
 }
 
@@ -55,6 +55,33 @@ impl<T: Clone + Sync + Send + 'static> EcsData for T {}
 /// [`ComponentStore<T>`][crate::components::ComponentStore].
 pub trait TypedEcsData: type_ulid::TypeUlid + EcsData {}
 impl<T: type_ulid::TypeUlid + EcsData> TypedEcsData for T {}
+
+/// Helper trait for unwraping each item in an array.
+///
+/// # Example
+///
+/// ```
+/// # use bones_ecs::UnwrapMany;
+/// let data = [Some(1), Some(2)];
+/// let [data1, data2] = data.unwrap_many();
+/// ```
+pub trait UnwrapMany<const N: usize, T> {
+    /// Unwrap all the items in an array.
+    fn unwrap_many(self) -> [T; N];
+}
+
+impl<const N: usize, T> UnwrapMany<N, T> for [Option<T>; N] {
+    fn unwrap_many(self) -> [T; N] {
+        let mut iter = self.into_iter();
+        std::array::from_fn(|_| iter.next().unwrap().unwrap())
+    }
+}
+impl<const N: usize, T, E: std::fmt::Debug> UnwrapMany<N, T> for [Result<T, E>; N] {
+    fn unwrap_many(self) -> [T; N] {
+        let mut iter = self.into_iter();
+        std::array::from_fn(|_| iter.next().unwrap().unwrap())
+    }
+}
 
 /// Helper trait that is auto-implemented for all `Clone`-able types. Provides easy access to drop
 /// and clone funcitons for raw pointers.
