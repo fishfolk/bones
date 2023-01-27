@@ -10,9 +10,9 @@ A work-in-progress, opinionated game meta-engine built on [Bevy].
 
 Under development for future use in the [Jumpy] game, and possibly other FishFolk games.
 
-Check out the [Bones Book][book] for more in-depth explanations and tutorials.
+Check out [Fishfolk.org] for more documentation and tutorials.
 
-[book]: https://fishfolk.github.io/bones/
+[fishfolk.org]: https://fishfolk.org
 [bevy]: https://bevyengine.org
 [jumpy]: https://github.com/fishfolk/jumpy
 
