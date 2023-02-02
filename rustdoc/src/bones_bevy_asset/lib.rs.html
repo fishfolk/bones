@@ -205,6 +205,7 @@
 <span id="205">205</span>
 <span id="206">206</span>
 <span id="207">207</span>
+<span id="208">208</span>
 </pre><pre class="rust"><code><span class="doccomment">//! An asset integration between Bevy and bones.
 //!
 //! Provides an easy way to load metadata for bones games using Bevy assets.
@@ -370,7 +371,8 @@
     glam::Vec2,
     glam::Vec3,
     glam::UVec2,
-    bool
+    bool,
+    bones_lib::prelude::Key
 );
 
 <span class="doccomment">/// Bones [`SystemParam`][bones_lib::ecs::system::SystemParam] for borrowing bevy
