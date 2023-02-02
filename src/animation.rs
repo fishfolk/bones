@@ -8,7 +8,7 @@ use crate::prelude::*;
 use std::{collections::HashMap, sync::Arc};
 
 pub(crate) mod prelude {
-    pub use super::AnimatedSprite;
+    pub use super::{AnimatedSprite, AnimationBankSprite};
 }
 
 /// Install animation utilities into the given [`SystemStages`].
@@ -19,14 +19,19 @@ pub fn install(stages: &mut SystemStages) {
 }
 
 /// Component that may be added to entities with an [`AtlasSprite`] to animate them.
-#[derive(Clone, TypeUlid, Copy, Debug)]
+#[derive(Clone, TypeUlid, Debug)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[ulid = "01GNZRPWKAHKP33V1KKRVAMVS7"]
 pub struct AnimatedSprite {
-    /// The starting frame of the animation.
-    pub start: usize,
-    /// The ending frame of the animation.
-    pub end: usize,
+    /// The current frame in the animation.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub index: usize,
+    /// The frames in the animation.
+    ///
+    /// These are the indexes into the atlas, specified in the order they will be played.
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_arc_slice"))]
+    #[cfg_attr(feature = "serde", serde(serialize_with = "serialize_arc_slice"))]
+    pub frames: Arc<[usize]>,
     /// The frames per second to play the animation at.
     pub fps: f32,
     /// The amount of time the current frame has been playing
@@ -76,15 +81,31 @@ fn serialize_arc<T: Serialize + Clone, S: Serializer>(
     serializer: S,
 ) -> Result<S::Ok, S::Error> {
     use std::ops::Deref;
-    let data = data.deref().clone();
+    let data = data.deref();
+    data.serialize(serializer)
+}
+#[cfg(feature = "serde")]
+fn deserialize_arc_slice<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Arc<[T]>, D::Error> {
+    let item = <Vec<T>>::deserialize(deserializer)?;
+    Ok(Arc::from(item))
+}
+#[cfg(feature = "serde")]
+fn serialize_arc_slice<T: Serialize + Clone, S: Serializer>(
+    data: &Arc<[T]>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    use std::ops::Deref;
+    let data = data.deref();
     data.serialize(serializer)
 }
 
 impl Default for AnimatedSprite {
     fn default() -> Self {
         Self {
-            start: 0,
-            end: 0,
+            index: 0,
+            frames: Arc::from([]),
             fps: 0.0,
             timer: 0.0,
             repeat: true,
@@ -102,23 +123,25 @@ pub fn animate_sprites(
     for (_ent, (atlas_sprite, animated_sprite)) in
         entities.iter_with((&mut atlas_sprites, &mut animated_sprites))
     {
+        if animated_sprite.frames.is_empty() {
+            continue;
+        }
+
         animated_sprite.timer += **frame_time;
 
-        if animated_sprite.timer > 1.0 / animated_sprite.fps.max(f32::MIN_POSITIVE) {
+        // If we are ready to go to the next frame
+        if (animated_sprite.index != animated_sprite.frames.len() - 1 || animated_sprite.repeat)
+            && animated_sprite.timer > 1.0 / animated_sprite.fps.max(f32::MIN_POSITIVE)
+        {
+            // Restart the timer
             animated_sprite.timer = 0.0;
 
-            if atlas_sprite.index < animated_sprite.start {
-                atlas_sprite.index = animated_sprite.start;
-            } else if atlas_sprite.index >= animated_sprite.end {
-                if animated_sprite.repeat {
-                    atlas_sprite.index = animated_sprite.start;
-                } else {
-                    atlas_sprite.index = animated_sprite.end;
-                }
-            } else {
-                atlas_sprite.index += 1;
-            }
+            // Increment and loop around the current index
+            animated_sprite.index = (animated_sprite.index + 1) % animated_sprite.frames.len();
         }
+
+        // Set the atlas sprite to match the current frame of the animated sprite
+        atlas_sprite.index = animated_sprite.frames[animated_sprite.index];
     }
 }
 
@@ -127,24 +150,23 @@ pub fn update_animation_banks(
     entities: Res<Entities>,
     mut animation_bank_sprites: CompMut<AnimationBankSprite>,
     mut animated_sprites: CompMut<AnimatedSprite>,
-    mut atlas_sprites: CompMut<AtlasSprite>,
 ) {
-    for (ent, (animation_bank, atlas_sprite)) in
-        entities.iter_with((&mut animation_bank_sprites, &mut atlas_sprites))
-    {
+    for (ent, animation_bank) in entities.iter_with(&mut animation_bank_sprites) {
+        // If the animation has chagned
         if animation_bank.current != animation_bank.last_animation {
+            // Update the last animation
             animation_bank.last_animation = animation_bank.current;
-            let mut animated_sprite = *animation_bank
+
+            // Get the selected animation from the bank
+            let animated_sprite = animation_bank
                 .animations
                 .get(&animation_bank.current)
+                .cloned()
                 .unwrap_or_else(|| {
                     panic!("Animation `{}` does not exist.", animation_bank.current)
                 });
 
-            // Force the animation to restart
-            animated_sprite.timer = f32::MAX;
-            atlas_sprite.index = animated_sprite.start;
-
+            // Update the animated sprite with the selected animation
             animated_sprites.insert(ent, animated_sprite);
         }
     }
