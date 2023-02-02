@@ -149,6 +149,28 @@
 <span id="149">149</span>
 <span id="150">150</span>
 <span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Animation utilities and systems.
 
 </span><span class="attribute">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
@@ -159,7 +181,7 @@
 <span class="kw">use </span>std::{collections::HashMap, sync::Arc};
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>prelude {
-    <span class="kw">pub use </span><span class="kw">super</span>::AnimatedSprite;
+    <span class="kw">pub use super</span>::{AnimatedSprite, AnimationBankSprite};
 }
 
 <span class="doccomment">/// Install animation utilities into the given [`SystemStages`].
@@ -170,14 +192,19 @@
 }
 
 <span class="doccomment">/// Component that may be added to entities with an [`AtlasSprite`] to animate them.
-</span><span class="attribute">#[derive(Clone, TypeUlid, Copy, Debug)]
+</span><span class="attribute">#[derive(Clone, TypeUlid, Debug)]
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Deserialize, Serialize))]
 #[ulid = <span class="string">&quot;01GNZRPWKAHKP33V1KKRVAMVS7&quot;</span>]
 </span><span class="kw">pub struct </span>AnimatedSprite {
-    <span class="doccomment">/// The starting frame of the animation.
-    </span><span class="kw">pub </span>start: usize,
-    <span class="doccomment">/// The ending frame of the animation.
-    </span><span class="kw">pub </span>end: usize,
+    <span class="doccomment">/// The current frame in the animation.
+    </span><span class="attribute">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(default))]
+    </span><span class="kw">pub </span>index: usize,
+    <span class="doccomment">/// The frames in the animation.
+    ///
+    /// These are the indexes into the atlas, specified in the order they will be played.
+    </span><span class="attribute">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(deserialize_with = <span class="string">&quot;deserialize_arc_slice&quot;</span>))]
+    #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(serialize_with = <span class="string">&quot;serialize_arc_slice&quot;</span>))]
+    </span><span class="kw">pub </span>frames: Arc&lt;[usize]&gt;,
     <span class="doccomment">/// The frames per second to play the animation at.
     </span><span class="kw">pub </span>fps: f32,
     <span class="doccomment">/// The amount of time the current frame has been playing
@@ -227,15 +254,31 @@
     serializer: S,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt; {
     <span class="kw">use </span>std::ops::Deref;
-    <span class="kw">let </span>data = data.deref().clone();
+    <span class="kw">let </span>data = data.deref();
+    data.serialize(serializer)
+}
+<span class="attribute">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
+</span><span class="kw">fn </span>deserialize_arc_slice&lt;<span class="lifetime">&#39;de</span>, T: Deserialize&lt;<span class="lifetime">&#39;de</span>&gt;, D: Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;&gt;(
+    deserializer: D,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;[T]&gt;, D::Error&gt; {
+    <span class="kw">let </span>item = &lt;Vec&lt;T&gt;&gt;::deserialize(deserializer)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(Arc::from(item))
+}
+<span class="attribute">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
+</span><span class="kw">fn </span>serialize_arc_slice&lt;T: Serialize + Clone, S: Serializer&gt;(
+    data: <span class="kw-2">&amp;</span>Arc&lt;[T]&gt;,
+    serializer: S,
+) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt; {
+    <span class="kw">use </span>std::ops::Deref;
+    <span class="kw">let </span>data = data.deref();
     data.serialize(serializer)
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>AnimatedSprite {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            start: <span class="number">0</span>,
-            end: <span class="number">0</span>,
+            index: <span class="number">0</span>,
+            frames: Arc::from([]),
             fps: <span class="number">0.0</span>,
             timer: <span class="number">0.0</span>,
             repeat: <span class="bool-val">true</span>,
@@ -253,23 +296,25 @@
     <span class="kw">for </span>(_ent, (atlas_sprite, animated_sprite)) <span class="kw">in
         </span>entities.iter_with((<span class="kw-2">&amp;mut </span>atlas_sprites, <span class="kw-2">&amp;mut </span>animated_sprites))
     {
+        <span class="kw">if </span>animated_sprite.frames.is_empty() {
+            <span class="kw">continue</span>;
+        }
+
         animated_sprite.timer += <span class="kw-2">**</span>frame_time;
 
-        <span class="kw">if </span>animated_sprite.timer &gt; <span class="number">1.0 </span>/ animated_sprite.fps.max(f32::MIN_POSITIVE) {
-            animated_sprite.timer = <span class="number">0.0</span>;
+        <span class="comment">// If we are ready to go to the next frame
+        </span><span class="kw">if </span>(animated_sprite.index != animated_sprite.frames.len() - <span class="number">1 </span>|| animated_sprite.repeat)
+            &amp;&amp; animated_sprite.timer &gt; <span class="number">1.0 </span>/ animated_sprite.fps.max(f32::MIN_POSITIVE)
+        {
+            <span class="comment">// Restart the timer
+            </span>animated_sprite.timer = <span class="number">0.0</span>;
 
-            <span class="kw">if </span>atlas_sprite.index &lt; animated_sprite.start {
-                atlas_sprite.index = animated_sprite.start;
-            } <span class="kw">else if </span>atlas_sprite.index &gt;= animated_sprite.end {
-                <span class="kw">if </span>animated_sprite.repeat {
-                    atlas_sprite.index = animated_sprite.start;
-                } <span class="kw">else </span>{
-                    atlas_sprite.index = animated_sprite.end;
-                }
-            } <span class="kw">else </span>{
-                atlas_sprite.index += <span class="number">1</span>;
-            }
+            <span class="comment">// Increment and loop around the current index
+            </span>animated_sprite.index = (animated_sprite.index + <span class="number">1</span>) % animated_sprite.frames.len();
         }
+
+        <span class="comment">// Set the atlas sprite to match the current frame of the animated sprite
+        </span>atlas_sprite.index = animated_sprite.frames[animated_sprite.index];
     }
 }
 
@@ -278,25 +323,24 @@
     entities: Res&lt;Entities&gt;,
     <span class="kw-2">mut </span>animation_bank_sprites: CompMut&lt;AnimationBankSprite&gt;,
     <span class="kw-2">mut </span>animated_sprites: CompMut&lt;AnimatedSprite&gt;,
-    <span class="kw-2">mut </span>atlas_sprites: CompMut&lt;AtlasSprite&gt;,
 ) {
-    <span class="kw">for </span>(ent, (animation_bank, atlas_sprite)) <span class="kw">in
-        </span>entities.iter_with((<span class="kw-2">&amp;mut </span>animation_bank_sprites, <span class="kw-2">&amp;mut </span>atlas_sprites))
-    {
-        <span class="kw">if </span>animation_bank.current != animation_bank.last_animation {
-            animation_bank.last_animation = animation_bank.current;
-            <span class="kw">let </span><span class="kw-2">mut </span>animated_sprite = <span class="kw-2">*</span>animation_bank
+    <span class="kw">for </span>(ent, animation_bank) <span class="kw">in </span>entities.iter_with(<span class="kw-2">&amp;mut </span>animation_bank_sprites) {
+        <span class="comment">// If the animation has chagned
+        </span><span class="kw">if </span>animation_bank.current != animation_bank.last_animation {
+            <span class="comment">// Update the last animation
+            </span>animation_bank.last_animation = animation_bank.current;
+
+            <span class="comment">// Get the selected animation from the bank
+            </span><span class="kw">let </span>animated_sprite = animation_bank
                 .animations
                 .get(<span class="kw-2">&amp;</span>animation_bank.current)
+                .cloned()
                 .unwrap_or_else(|| {
                     <span class="macro">panic!</span>(<span class="string">&quot;Animation `{}` does not exist.&quot;</span>, animation_bank.current)
                 });
 
-            <span class="comment">// Force the animation to restart
-            </span>animated_sprite.timer = f32::MAX;
-            atlas_sprite.index = animated_sprite.start;
-
-            animated_sprites.insert(ent, animated_sprite);
+            <span class="comment">// Update the animated sprite with the selected animation
+            </span>animated_sprites.insert(ent, animated_sprite);
         }
     }
 }
