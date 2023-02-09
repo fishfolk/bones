@@ -50,7 +50,7 @@ impl TileLayer {
         idx.try_into().ok()
     }
 
-    /// Get's the tile at the given position in the layer, indexed with the top-left of the layer
+    /// Get's the tile at the given position in the layer, indexed with the bottom-left of the layer
     /// being (0, 0).
     pub fn get(&self, pos: UVec2) -> Option<Entity> {
         self.idx(pos)
