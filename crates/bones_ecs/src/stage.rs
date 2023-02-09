@@ -80,7 +80,7 @@ impl SystemStages {
         let stage_idx = self
             .stages
             .iter()
-            .position(|x| x.id() == CoreStage::PreUpdate.id())
+            .position(|x| x.id() == label.id())
             .unwrap_or_else(|| panic!("Could not find stage with label `{}`", label.name()));
         self.stages.insert(stage_idx, Box::new(stage));
     }
@@ -95,7 +95,7 @@ impl SystemStages {
         let stage_idx = self
             .stages
             .iter()
-            .position(|x| x.id() == CoreStage::PreUpdate.id())
+            .position(|x| x.id() == label.id())
             .unwrap_or_else(|| panic!("Could not find stage with label `{}`", label.name()));
         self.stages.insert(stage_idx + 1, Box::new(stage));
     }
