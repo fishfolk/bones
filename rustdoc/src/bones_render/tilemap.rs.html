@@ -120,7 +120,7 @@
         idx.try_into().ok()
     }
 
-    <span class="doccomment">/// Get&#39;s the tile at the given position in the layer, indexed with the top-left of the layer
+    <span class="doccomment">/// Get&#39;s the tile at the given position in the layer, indexed with the bottom-left of the layer
     /// being (0, 0).
     </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, pos: UVec2) -&gt; <span class="prelude-ty">Option</span>&lt;Entity&gt; {
         <span class="self">self</span>.idx(pos)
