@@ -76,13 +76,15 @@ impl SystemStages {
         &mut self,
         label: L,
         stage: S,
-    ) {
+    ) -> &mut Self {
         let stage_idx = self
             .stages
             .iter()
             .position(|x| x.id() == label.id())
             .unwrap_or_else(|| panic!("Could not find stage with label `{}`", label.name()));
         self.stages.insert(stage_idx, Box::new(stage));
+
+        self
     }
 
     /// Insert a new stage, after another existing stage
@@ -91,13 +93,15 @@ impl SystemStages {
         &mut self,
         label: L,
         stage: S,
-    ) {
+    ) -> &mut Self {
         let stage_idx = self
             .stages
             .iter()
             .position(|x| x.id() == label.id())
             .unwrap_or_else(|| panic!("Could not find stage with label `{}`", label.name()));
         self.stages.insert(stage_idx + 1, Box::new(stage));
+
+        self
     }
 }
 
