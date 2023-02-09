@@ -359,7 +359,7 @@
         <span class="kw">let </span>stage_idx = <span class="self">self
             </span>.stages
             .iter()
-            .position(|x| x.id() == CoreStage::PreUpdate.id())
+            .position(|x| x.id() == label.id())
             .unwrap_or_else(|| <span class="macro">panic!</span>(<span class="string">&quot;Could not find stage with label `{}`&quot;</span>, label.name()));
         <span class="self">self</span>.stages.insert(stage_idx, Box::new(stage));
     }
@@ -374,7 +374,7 @@
         <span class="kw">let </span>stage_idx = <span class="self">self
             </span>.stages
             .iter()
-            .position(|x| x.id() == CoreStage::PreUpdate.id())
+            .position(|x| x.id() == label.id())
             .unwrap_or_else(|| <span class="macro">panic!</span>(<span class="string">&quot;Could not find stage with label `{}`&quot;</span>, label.name()));
         <span class="self">self</span>.stages.insert(stage_idx + <span class="number">1</span>, Box::new(stage));
     }
