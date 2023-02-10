@@ -163,7 +163,8 @@ impl_default_traits!(
     glam::Vec2,
     glam::Vec3,
     glam::UVec2,
-    bool
+    bool,
+    bones_lib::prelude::Key
 );
 
 /// Bones [`SystemParam`][bones_lib::ecs::system::SystemParam] for borrowing bevy
@@ -189,7 +190,7 @@ impl<'a, T: bevy_asset::Asset> bones_lib::ecs::system::SystemParam for BevyAsset
     fn initialize(_world: &mut bones::World) {}
 
     fn get_state(world: &bones::World) -> Self::State {
-        world.resources.get::<BevyWorld>()
+        world.resource::<BevyWorld>()
     }
 
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {

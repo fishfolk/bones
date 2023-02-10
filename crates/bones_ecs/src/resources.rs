@@ -1,11 +1,13 @@
 //! World resource storage.
 
+use std::ops::DerefMut;
 use std::{
     alloc::{self, Layout},
     any::TypeId,
     io::Write,
     marker::PhantomData,
     mem,
+    ops::Deref,
     ptr::NonNull,
     sync::Arc,
 };
@@ -183,13 +185,6 @@ impl Resources {
         Self::default()
     }
 
-    /// Initialize a resource of type `T` by inserting it's default value.
-    pub fn init<T: TypedEcsData + Default>(&mut self) {
-        if !self.contains::<T>() {
-            self.insert(T::default())
-        }
-    }
-
     /// Insert a resource.
     ///
     /// # Panics
@@ -302,6 +297,21 @@ impl<T: TypedEcsData> AtomicResource<T> {
         let borrow = self.untyped.borrow_mut();
         // SAFE: We know that the data pointer is valid for type T.
         AtomicRefMut::map(borrow, |data| unsafe { &mut *data.cast::<T>() })
+    }
+}
+impl<R: TypedEcsData> Deref for AtomicResource<R> {
+    type Target = R;
+
+    fn deref(&self) -> &Self::Target {
+        // SAFE: We know that the data pointer is valid for type UntypedResource.
+        unsafe { &*self.untyped.borrow().cast::<R>() }
+    }
+}
+
+impl<R: TypedEcsData> DerefMut for AtomicResource<R> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        // SAFE: We know that the data pointer is valid for type UntypedResource.
+        unsafe { &mut *self.untyped.borrow_mut().cast::<R>() }
     }
 }
 
