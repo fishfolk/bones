@@ -12,7 +12,7 @@ use crate::prelude::*;
 #[derive(Clone)]
 pub struct World {
     /// Stores the world resources.
-    pub resources: Resources,
+    pub(crate) resources: Resources,
     /// Stores the world components.
     pub components: ComponentStores,
 }
@@ -22,7 +22,7 @@ impl Default for World {
         let mut resources = Resources::new();
 
         // Always initialize an Entities resource
-        resources.init::<Entities>();
+        resources.insert(Entities::default());
 
         Self {
             resources,
@@ -91,11 +91,65 @@ impl World {
         let mut s = system.system();
         s.run(self)
     }
+
+    /// Initialize a resource of type `T` by inserting it's default value.
+    pub fn init_resource<R: TypedEcsData + FromWorld>(&mut self) {
+        if !self.resources.contains::<R>() {
+            let value = R::from_world(self);
+            self.resources.insert(value)
+        }
+    }
+
+    /// Insert a resource.
+    ///
+    /// # Panics
+    ///
+    /// Panics if you try to insert a Rust type with a different [`TypeId`], but the same
+    /// [`TypeUlid`] as another resource in the store.
+    pub fn insert_resource<R: TypedEcsData>(&mut self, resource: R) {
+        self.resources.insert(resource)
+    }
+
+    /// Get a resource handle from the store.
+    ///
+    /// This is not the resource itself, but a handle, may be cloned cheaply.
+    ///
+    /// In order to access the resource you must call [`borrow()`][AtomicResource::borrow] or
+    /// [`borrow_mut()`][AtomicResource::borrow_mut] on the returned value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the resource does not exist in the store.
+    pub fn resource<R: TypedEcsData>(&self) -> AtomicResource<R> {
+        self.resources.get::<R>()
+    }
+
+    /// Gets a resource handle from the store if it exists.
+    pub fn get_resource<R: TypedEcsData>(&self) -> Option<AtomicResource<R>> {
+        self.resources.try_get::<R>()
+    }
+}
+
+/// Creates an instance of the type this trait is implemented for
+/// using data from the supplied [World].
+///
+/// This can be helpful for complex initialization or context-aware defaults.
+pub trait FromWorld {
+    /// Creates `Self` using data from the given [World]
+    fn from_world(world: &mut World) -> Self;
+}
+
+impl<T: Default> FromWorld for T {
+    fn from_world(_world: &mut World) -> Self {
+        T::default()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
+
+    use super::FromWorld;
 
     #[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
     #[ulid = "01GNDN2QYC1TRE763R54HVWZ0W"]
@@ -241,4 +295,35 @@ mod tests {
     }
 
     fn send<T: Send>(_: T) {}
+
+    // ============
+    //  From World
+    // ============
+
+    #[derive(Clone, TypeUlid)]
+    #[ulid = "01GRWJV4NRXY9NJBBDMD2D9QK3"]
+    struct TestResource(u32);
+
+    #[derive(Clone, TypeUlid)]
+    #[ulid = "01GRWJW44YGNSXQ81W395J0D52"]
+    struct TestFromWorld(u32);
+    impl FromWorld for TestFromWorld {
+        fn from_world(world: &mut World) -> Self {
+            let b = world.resource::<TestResource>();
+            let b = b.borrow();
+            Self(b.0)
+        }
+    }
+
+    #[test]
+    fn init_resource_does_not_overwrite() {
+        let mut w = World::default();
+        w.insert_resource(TestResource(0));
+        w.init_resource::<TestFromWorld>();
+        w.insert_resource(TestResource(1));
+
+        let resource = w.resource::<TestFromWorld>();
+
+        assert_eq!(resource.0, 0);
+    }
 }

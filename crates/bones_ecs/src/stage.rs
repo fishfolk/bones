@@ -76,13 +76,15 @@ impl SystemStages {
         &mut self,
         label: L,
         stage: S,
-    ) {
+    ) -> &mut Self {
         let stage_idx = self
             .stages
             .iter()
-            .position(|x| x.id() == CoreStage::PreUpdate.id())
+            .position(|x| x.id() == label.id())
             .unwrap_or_else(|| panic!("Could not find stage with label `{}`", label.name()));
         self.stages.insert(stage_idx, Box::new(stage));
+
+        self
     }
 
     /// Insert a new stage, after another existing stage
@@ -91,13 +93,15 @@ impl SystemStages {
         &mut self,
         label: L,
         stage: S,
-    ) {
+    ) -> &mut Self {
         let stage_idx = self
             .stages
             .iter()
-            .position(|x| x.id() == CoreStage::PreUpdate.id())
+            .position(|x| x.id() == label.id())
             .unwrap_or_else(|| panic!("Could not find stage with label `{}`", label.name()));
         self.stages.insert(stage_idx + 1, Box::new(stage));
+
+        self
     }
 }
 
@@ -161,7 +165,7 @@ impl SystemStage for SimpleSystemStage {
 
         // Drain the command queue
         {
-            let command_queue = world.resources.get::<CommandQueue>();
+            let command_queue = world.resource::<CommandQueue>();
             let mut command_queue = command_queue.borrow_mut();
 
             for mut system in command_queue.queue.drain(..) {
@@ -174,7 +178,7 @@ impl SystemStage for SimpleSystemStage {
     }
 
     fn initialize(&mut self, world: &mut World) {
-        world.resources.init::<CommandQueue>();
+        world.init_resource::<CommandQueue>();
         for system in &mut self.systems {
             system.initialize(world);
         }
@@ -270,7 +274,7 @@ impl<'a> SystemParam for Commands<'a> {
     fn initialize(_world: &mut World) {}
 
     fn get_state(world: &World) -> Self::State {
-        world.resources.get::<CommandQueue>()
+        world.resource::<CommandQueue>()
     }
 
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {

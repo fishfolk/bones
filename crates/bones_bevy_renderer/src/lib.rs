@@ -92,9 +92,9 @@ fn sync_clear_color<W: HasBonesWorld>(
         return;
     };
     let world = world_resource.world();
-    world.resources.init::<bones::ClearColor>();
+    world.init_resource::<bones::ClearColor>();
 
-    let bones_clear_color = world.resources.get::<bones::ClearColor>();
+    let bones_clear_color = world.resource::<bones::ClearColor>();
     let bones_clear_color = bones_clear_color.borrow();
 
     clear_color.0 = Color::from(bones_clear_color.0);
@@ -120,7 +120,7 @@ fn sync_sprites<W: HasBonesWorld>(
     world.components.init::<bones::Sprite>();
     world.components.init::<bones::Transform>();
 
-    let entities = world.resources.get::<bones::Entities>();
+    let entities = world.resource::<bones::Entities>();
     let entities = entities.borrow();
     let sprites = world.components.get::<bones::Sprite>();
     let sprites = sprites.borrow();
@@ -183,7 +183,7 @@ fn sync_atlas_sprites<W: HasBonesWorld>(
     world.components.init::<bones::AtlasSprite>();
     world.components.init::<bones::Transform>();
 
-    let entities = world.resources.get::<bones::Entities>();
+    let entities = world.resource::<bones::Entities>();
     let entities = entities.borrow();
     let atlas_sprites = world.components.get::<bones::AtlasSprite>();
     let atlas_sprites = atlas_sprites.borrow();
@@ -248,7 +248,7 @@ fn sync_cameras<W: HasBonesWorld>(
     world.components.init::<bones::Transform>();
     world.components.init::<bones::Camera>();
 
-    let entities = world.resources.get::<bones::Entities>();
+    let entities = world.resource::<bones::Entities>();
     let entities = entities.borrow();
     let transforms = world.components.get::<bones::Transform>();
     let transforms = transforms.borrow();
@@ -322,7 +322,7 @@ fn sync_tilemaps<W: HasBonesWorld>(
     world.components.init::<bones::Tile>();
     world.components.init::<bones::TileLayer>();
 
-    let entities = world.resources.get::<bones::Entities>();
+    let entities = world.resource::<bones::Entities>();
     let entities = entities.borrow();
     let tiles = world.components.get::<bones::Tile>();
     let tiles = tiles.borrow();
@@ -449,7 +449,7 @@ fn sync_path2ds<W: HasBonesWorld>(
     world.components.init::<bones::Path2d>();
     world.components.init::<bones::Transform>();
 
-    let entities = world.resources.get::<bones::Entities>();
+    let entities = world.resource::<bones::Entities>();
     let entities = entities.borrow();
     let path2ds = world.components.get::<bones::Path2d>();
     let path2ds = path2ds.borrow();
