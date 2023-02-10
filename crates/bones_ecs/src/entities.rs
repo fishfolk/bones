@@ -16,7 +16,11 @@ use crate::prelude::*;
 pub struct Entity(u32, u32);
 impl Entity {
     /// Creates a new `Entity` from the provided index and generation.
-    pub(crate) fn new(index: u32, generation: u32) -> Entity {
+    ///
+    /// > ⚠️ **Warning:** It is not generally recommended to manually create [`Entity`]s unless you
+    /// > know exactly what you are doing. This can be useful in certain advanced or unusual
+    /// > use-cases, but usually you should use [`Entities::create()`] to spawn entities.
+    pub fn new(index: u32, generation: u32) -> Entity {
         Entity(index, generation)
     }
 
