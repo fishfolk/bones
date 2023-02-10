@@ -529,6 +529,10 @@
 <span id="529">529</span>
 <span id="530">530</span>
 <span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
 </pre><pre class="rust"><code><span class="doccomment">//! [`Entity`] implementation, storage, and interation.
 
 </span><span class="kw">use </span>std::rc::Rc;
@@ -547,7 +551,11 @@
 </span><span class="kw">pub struct </span>Entity(u32, u32);
 <span class="kw">impl </span>Entity {
     <span class="doccomment">/// Creates a new `Entity` from the provided index and generation.
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(index: u32, generation: u32) -&gt; Entity {
+    ///
+    /// &gt; ⚠️ **Warning:** It is not generally recommended to manually create [`Entity`]s unless you
+    /// &gt; know exactly what you are doing. This can be useful in certain advanced or unusual
+    /// &gt; use-cases, but usually you should use [`Entities::create()`] to spawn entities.
+    </span><span class="kw">pub fn </span>new(index: u32, generation: u32) -&gt; Entity {
         Entity(index, generation)
     }
 
