@@ -121,7 +121,14 @@ impl World {
     ///
     /// Panics if the resource does not exist in the store.
     pub fn resource<R: TypedEcsData>(&self) -> AtomicResource<R> {
-        self.resources.get::<R>()
+        match self.resources.try_get::<R>() {
+            Some(r) => r,
+            None => panic!(
+                "Requested resource {} does not exist in the `World`.
+                Did you forget to add it using `world.insert_resource` / `world.init_resource`?",
+                std::any::type_name::<R>()
+            ),
+        }
     }
 
     /// Gets a resource handle from the store if it exists.
@@ -131,11 +138,11 @@ impl World {
 }
 
 /// Creates an instance of the type this trait is implemented for
-/// using data from the supplied [World].
+/// using data from the supplied [`World`].
 ///
 /// This can be helpful for complex initialization or context-aware defaults.
 pub trait FromWorld {
-    /// Creates `Self` using data from the given [World]
+    /// Creates `Self` using data from the given [`World`].
     fn from_world(world: &mut World) -> Self;
 }
 
@@ -323,7 +330,7 @@ mod tests {
         w.insert_resource(TestResource(1));
 
         let resource = w.resource::<TestFromWorld>();
-
+        let resource = resource.borrow();
         assert_eq!(resource.0, 0);
     }
 }

@@ -161,9 +161,11 @@ impl<'a, T: TypedEcsData + Default> SystemParam for Res<'a, T> {
     fn initialize(world: &mut World) {
         world.init_resource::<T>()
     }
+
     fn get_state(world: &World) -> Self::State {
         world.resource::<T>()
     }
+
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
         Res(state.borrow())
     }
@@ -176,9 +178,11 @@ impl<'a, T: TypedEcsData + Default> SystemParam for ResMut<'a, T> {
     fn initialize(world: &mut World) {
         world.init_resource::<T>();
     }
+
     fn get_state(world: &World) -> Self::State {
         world.resource::<T>()
     }
+
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
         ResMut(state.borrow_mut())
     }
@@ -196,9 +200,11 @@ impl<'a, T: TypedEcsData> SystemParam for Comp<'a, T> {
     fn initialize(world: &mut World) {
         world.components.init::<T>();
     }
+
     fn get_state(world: &World) -> Self::State {
         world.components.get::<T>()
     }
+
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
         state.borrow()
     }
@@ -211,9 +217,11 @@ impl<'a, T: TypedEcsData> SystemParam for CompMut<'a, T> {
     fn initialize(world: &mut World) {
         world.components.init::<T>();
     }
+
     fn get_state(world: &World) -> Self::State {
         world.components.get::<T>()
     }
+
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
         state.borrow_mut()
     }
