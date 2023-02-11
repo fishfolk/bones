@@ -611,9 +611,9 @@
         <span class="kw">return</span>;
     };
     <span class="kw">let </span>world = world_resource.world();
-    world.resources.init::&lt;bones::ClearColor&gt;();
+    world.init_resource::&lt;bones::ClearColor&gt;();
 
-    <span class="kw">let </span>bones_clear_color = world.resources.get::&lt;bones::ClearColor&gt;();
+    <span class="kw">let </span>bones_clear_color = world.resource::&lt;bones::ClearColor&gt;();
     <span class="kw">let </span>bones_clear_color = bones_clear_color.borrow();
 
     clear_color.<span class="number">0 </span>= Color::from(bones_clear_color.<span class="number">0</span>);
@@ -639,7 +639,7 @@
     </span>world.components.init::&lt;bones::Sprite&gt;();
     world.components.init::&lt;bones::Transform&gt;();
 
-    <span class="kw">let </span>entities = world.resources.get::&lt;bones::Entities&gt;();
+    <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
     <span class="kw">let </span>entities = entities.borrow();
     <span class="kw">let </span>sprites = world.components.get::&lt;bones::Sprite&gt;();
     <span class="kw">let </span>sprites = sprites.borrow();
@@ -702,7 +702,7 @@
     world.components.init::&lt;bones::AtlasSprite&gt;();
     world.components.init::&lt;bones::Transform&gt;();
 
-    <span class="kw">let </span>entities = world.resources.get::&lt;bones::Entities&gt;();
+    <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
     <span class="kw">let </span>entities = entities.borrow();
     <span class="kw">let </span>atlas_sprites = world.components.get::&lt;bones::AtlasSprite&gt;();
     <span class="kw">let </span>atlas_sprites = atlas_sprites.borrow();
@@ -767,7 +767,7 @@
     world.components.init::&lt;bones::Transform&gt;();
     world.components.init::&lt;bones::Camera&gt;();
 
-    <span class="kw">let </span>entities = world.resources.get::&lt;bones::Entities&gt;();
+    <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
     <span class="kw">let </span>entities = entities.borrow();
     <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;();
     <span class="kw">let </span>transforms = transforms.borrow();
@@ -841,7 +841,7 @@
     world.components.init::&lt;bones::Tile&gt;();
     world.components.init::&lt;bones::TileLayer&gt;();
 
-    <span class="kw">let </span>entities = world.resources.get::&lt;bones::Entities&gt;();
+    <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
     <span class="kw">let </span>entities = entities.borrow();
     <span class="kw">let </span>tiles = world.components.get::&lt;bones::Tile&gt;();
     <span class="kw">let </span>tiles = tiles.borrow();
@@ -968,7 +968,7 @@
     world.components.init::&lt;bones::Path2d&gt;();
     world.components.init::&lt;bones::Transform&gt;();
 
-    <span class="kw">let </span>entities = world.resources.get::&lt;bones::Entities&gt;();
+    <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
     <span class="kw">let </span>entities = entities.borrow();
     <span class="kw">let </span>path2ds = world.components.get::&lt;bones::Path2d&gt;();
     <span class="kw">let </span>path2ds = path2ds.borrow();

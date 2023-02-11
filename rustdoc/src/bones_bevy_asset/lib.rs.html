@@ -398,7 +398,7 @@
     <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>bones::World) {}
 
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>bones::World) -&gt; <span class="self">Self</span>::State {
-        world.resources.get::&lt;BevyWorld&gt;()
+        world.resource::&lt;BevyWorld&gt;()
     }
 
     <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {

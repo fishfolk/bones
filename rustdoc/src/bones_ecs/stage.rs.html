@@ -448,7 +448,7 @@
 
         <span class="comment">// Drain the command queue
         </span>{
-            <span class="kw">let </span>command_queue = world.resources.get::&lt;CommandQueue&gt;();
+            <span class="kw">let </span>command_queue = world.resource::&lt;CommandQueue&gt;();
             <span class="kw">let </span><span class="kw-2">mut </span>command_queue = command_queue.borrow_mut();
 
             <span class="kw">for </span><span class="kw-2">mut </span>system <span class="kw">in </span>command_queue.queue.drain(..) {
@@ -461,7 +461,7 @@
     }
 
     <span class="kw">fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
-        world.resources.init::&lt;CommandQueue&gt;();
+        world.init_resource::&lt;CommandQueue&gt;();
         <span class="kw">for </span>system <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.systems {
             system.initialize(world);
         }
@@ -557,7 +557,7 @@
     <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
 
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
-        world.resources.get::&lt;CommandQueue&gt;()
+        world.resource::&lt;CommandQueue&gt;()
     }
 
     <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {

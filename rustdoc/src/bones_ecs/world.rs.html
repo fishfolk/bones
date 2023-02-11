@@ -242,6 +242,98 @@
 <span id="242">242</span>
 <span id="243">243</span>
 <span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains the ECS [`World`].
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -256,7 +348,7 @@
 </span><span class="attribute">#[derive(Clone)]
 </span><span class="kw">pub struct </span>World {
     <span class="doccomment">/// Stores the world resources.
-    </span><span class="kw">pub </span>resources: Resources,
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) resources: Resources,
     <span class="doccomment">/// Stores the world components.
     </span><span class="kw">pub </span>components: ComponentStores,
 }
@@ -266,7 +358,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>resources = Resources::new();
 
         <span class="comment">// Always initialize an Entities resource
-        </span>resources.init::&lt;Entities&gt;();
+        </span>resources.insert(Entities::default());
 
         <span class="self">Self </span>{
             resources,
@@ -335,11 +427,72 @@
         <span class="kw">let </span><span class="kw-2">mut </span>s = system.system();
         s.run(<span class="self">self</span>)
     }
+
+    <span class="doccomment">/// Initialize a resource of type `T` by inserting it&#39;s default value.
+    </span><span class="kw">pub fn </span>init_resource&lt;R: TypedEcsData + FromWorld&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw">if </span>!<span class="self">self</span>.resources.contains::&lt;R&gt;() {
+            <span class="kw">let </span>value = R::from_world(<span class="self">self</span>);
+            <span class="self">self</span>.resources.insert(value)
+        }
+    }
+
+    <span class="doccomment">/// Insert a resource.
+    ///
+    /// # Panics
+    ///
+    /// Panics if you try to insert a Rust type with a different [`std::any::TypeId`], but the same
+    /// [`TypeUlid`] as another resource in the store.
+    </span><span class="kw">pub fn </span>insert_resource&lt;R: TypedEcsData&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: R) {
+        <span class="self">self</span>.resources.insert(resource)
+    }
+
+    <span class="doccomment">/// Get a resource handle from the store.
+    ///
+    /// This is not the resource itself, but a handle, may be cloned cheaply.
+    ///
+    /// In order to access the resource you must call [`borrow()`][AtomicResource::borrow] or
+    /// [`borrow_mut()`][AtomicResource::borrow_mut] on the returned value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the resource does not exist in the store.
+    </span><span class="kw">pub fn </span>resource&lt;R: TypedEcsData&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicResource&lt;R&gt; {
+        <span class="kw">match </span><span class="self">self</span>.resources.try_get::&lt;R&gt;() {
+            <span class="prelude-val">Some</span>(r) =&gt; r,
+            <span class="prelude-val">None </span>=&gt; <span class="macro">panic!</span>(
+                <span class="string">&quot;Requested resource {} does not exist in the `World`.
+                Did you forget to add it using `world.insert_resource` / `world.init_resource`?&quot;</span>,
+                std::any::type_name::&lt;R&gt;()
+            ),
+        }
+    }
+
+    <span class="doccomment">/// Gets a resource handle from the store if it exists.
+    </span><span class="kw">pub fn </span>get_resource&lt;R: TypedEcsData&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;R&gt;&gt; {
+        <span class="self">self</span>.resources.try_get::&lt;R&gt;()
+    }
+}
+
+<span class="doccomment">/// Creates an instance of the type this trait is implemented for
+/// using data from the supplied [`World`].
+///
+/// This can be helpful for complex initialization or context-aware defaults.
+</span><span class="kw">pub trait </span>FromWorld {
+    <span class="doccomment">/// Creates `Self` using data from the given [`World`].
+    </span><span class="kw">fn </span>from_world(world: <span class="kw-2">&amp;mut </span>World) -&gt; <span class="self">Self</span>;
+}
+
+<span class="kw">impl</span>&lt;T: Default&gt; FromWorld <span class="kw">for </span>T {
+    <span class="kw">fn </span>from_world(_world: <span class="kw-2">&amp;mut </span>World) -&gt; <span class="self">Self </span>{
+        T::default()
+    }
 }
 
 <span class="attribute">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+
+    <span class="kw">use </span><span class="kw">super</span>::FromWorld;
 
     <span class="attribute">#[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
     #[ulid = <span class="string">&quot;01GNDN2QYC1TRE763R54HVWZ0W&quot;</span>]
@@ -485,6 +638,37 @@
     }
 
     <span class="kw">fn </span>send&lt;T: Send&gt;(<span class="kw">_</span>: T) {}
+
+    <span class="comment">// ============
+    //  From World
+    // ============
+
+    </span><span class="attribute">#[derive(Clone, TypeUlid)]
+    #[ulid = <span class="string">&quot;01GRWJV4NRXY9NJBBDMD2D9QK3&quot;</span>]
+    </span><span class="kw">struct </span>TestResource(u32);
+
+    <span class="attribute">#[derive(Clone, TypeUlid)]
+    #[ulid = <span class="string">&quot;01GRWJW44YGNSXQ81W395J0D52&quot;</span>]
+    </span><span class="kw">struct </span>TestFromWorld(u32);
+    <span class="kw">impl </span>FromWorld <span class="kw">for </span>TestFromWorld {
+        <span class="kw">fn </span>from_world(world: <span class="kw-2">&amp;mut </span>World) -&gt; <span class="self">Self </span>{
+            <span class="kw">let </span>b = world.resource::&lt;TestResource&gt;();
+            <span class="kw">let </span>b = b.borrow();
+            <span class="self">Self</span>(b.<span class="number">0</span>)
+        }
+    }
+
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>init_resource_does_not_overwrite() {
+        <span class="kw">let </span><span class="kw-2">mut </span>w = World::default();
+        w.insert_resource(TestResource(<span class="number">0</span>));
+        w.init_resource::&lt;TestFromWorld&gt;();
+        w.insert_resource(TestResource(<span class="number">1</span>));
+
+        <span class="kw">let </span>resource = w.resource::&lt;TestFromWorld&gt;();
+        <span class="kw">let </span>resource = resource.borrow();
+        <span class="macro">assert_eq!</span>(resource.<span class="number">0</span>, <span class="number">0</span>);
+    }
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="bones_ecs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

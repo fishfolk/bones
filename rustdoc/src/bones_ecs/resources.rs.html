@@ -333,13 +333,6 @@
 <span id="333">333</span>
 <span id="334">334</span>
 <span id="335">335</span>
-<span id="336">336</span>
-<span id="337">337</span>
-<span id="338">338</span>
-<span id="339">339</span>
-<span id="340">340</span>
-<span id="341">341</span>
-<span id="342">342</span>
 </pre><pre class="rust"><code><span class="doccomment">//! World resource storage.
 
 </span><span class="kw">use </span>std::{
@@ -523,13 +516,6 @@
     <span class="doccomment">/// Create an empty [`Resources`].
     </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::default()
-    }
-
-    <span class="doccomment">/// Initialize a resource of type `T` by inserting it&#39;s default value.
-    </span><span class="kw">pub fn </span>init&lt;T: TypedEcsData + Default&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">if </span>!<span class="self">self</span>.contains::&lt;T&gt;() {
-            <span class="self">self</span>.insert(T::default())
-        }
     }
 
     <span class="doccomment">/// Insert a resource.
