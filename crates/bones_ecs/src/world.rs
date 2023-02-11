@@ -104,7 +104,7 @@ impl World {
     ///
     /// # Panics
     ///
-    /// Panics if you try to insert a Rust type with a different [`TypeId`], but the same
+    /// Panics if you try to insert a Rust type with a different [`std::any::TypeId`], but the same
     /// [`TypeUlid`] as another resource in the store.
     pub fn insert_resource<R: TypedEcsData>(&mut self, resource: R) {
         self.resources.insert(resource)
