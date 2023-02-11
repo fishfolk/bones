@@ -159,11 +159,13 @@ impl<'a, T: TypedEcsData + Default> SystemParam for Res<'a, T> {
     type Param<'p> = Res<'p, T>;
 
     fn initialize(world: &mut World) {
-        world.resources.init::<T>()
+        world.init_resource::<T>()
     }
+
     fn get_state(world: &World) -> Self::State {
-        world.resources.get::<T>()
+        world.resource::<T>()
     }
+
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
         Res(state.borrow())
     }
@@ -174,11 +176,13 @@ impl<'a, T: TypedEcsData + Default> SystemParam for ResMut<'a, T> {
     type Param<'p> = ResMut<'p, T>;
 
     fn initialize(world: &mut World) {
-        world.resources.init::<T>();
+        world.init_resource::<T>();
     }
+
     fn get_state(world: &World) -> Self::State {
-        world.resources.get::<T>()
+        world.resource::<T>()
     }
+
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
         ResMut(state.borrow_mut())
     }
@@ -196,9 +200,11 @@ impl<'a, T: TypedEcsData> SystemParam for Comp<'a, T> {
     fn initialize(world: &mut World) {
         world.components.init::<T>();
     }
+
     fn get_state(world: &World) -> Self::State {
         world.components.get::<T>()
     }
+
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
         state.borrow()
     }
@@ -211,9 +217,11 @@ impl<'a, T: TypedEcsData> SystemParam for CompMut<'a, T> {
     fn initialize(world: &mut World) {
         world.components.init::<T>();
     }
+
     fn get_state(world: &World) -> Self::State {
         world.components.get::<T>()
     }
+
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
         state.borrow_mut()
     }
@@ -390,7 +398,7 @@ mod tests {
     #[test]
     fn manual_system_run() {
         let mut world = World::default();
-        world.resources.init::<u32>();
+        world.init_resource::<u32>();
     }
 
     #[test]
@@ -414,15 +422,15 @@ mod tests {
         assert!(world.resources.try_get::<B>().is_none());
         my_system.initialize(&mut world);
 
-        let res = world.resources.get::<B>();
+        let res = world.resource::<B>();
         assert_eq!(res.borrow().x, 0);
 
         my_system.run(&world).unwrap();
 
-        let res = world.resources.get::<B>();
+        let res = world.resource::<B>();
         assert_eq!(res.borrow().x, 45);
 
-        let res = world.resources.get::<A>();
+        let res = world.resource::<A>();
         assert_eq!(*res.borrow(), A);
     }
 }

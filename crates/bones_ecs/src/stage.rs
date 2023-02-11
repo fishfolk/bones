@@ -165,7 +165,7 @@ impl SystemStage for SimpleSystemStage {
 
         // Drain the command queue
         {
-            let command_queue = world.resources.get::<CommandQueue>();
+            let command_queue = world.resource::<CommandQueue>();
             let mut command_queue = command_queue.borrow_mut();
 
             for mut system in command_queue.queue.drain(..) {
@@ -178,7 +178,7 @@ impl SystemStage for SimpleSystemStage {
     }
 
     fn initialize(&mut self, world: &mut World) {
-        world.resources.init::<CommandQueue>();
+        world.init_resource::<CommandQueue>();
         for system in &mut self.systems {
             system.initialize(world);
         }
@@ -274,7 +274,7 @@ impl<'a> SystemParam for Commands<'a> {
     fn initialize(_world: &mut World) {}
 
     fn get_state(world: &World) -> Self::State {
-        world.resources.get::<CommandQueue>()
+        world.resource::<CommandQueue>()
     }
 
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {

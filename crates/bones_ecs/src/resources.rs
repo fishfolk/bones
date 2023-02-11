@@ -183,13 +183,6 @@ impl Resources {
         Self::default()
     }
 
-    /// Initialize a resource of type `T` by inserting it's default value.
-    pub fn init<T: TypedEcsData + Default>(&mut self) {
-        if !self.contains::<T>() {
-            self.insert(T::default())
-        }
-    }
-
     /// Insert a resource.
     ///
     /// # Panics
