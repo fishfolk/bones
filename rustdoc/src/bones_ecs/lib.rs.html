@@ -194,7 +194,7 @@
 <span class="kw">pub use </span>error::EcsError;
 
 <span class="kw">mod </span>world;
-<span class="kw">pub use </span>world::World;
+<span class="kw">pub use </span>world::{FromWorld, World};
 
 <span class="doccomment">/// The prelude.
 </span><span class="kw">pub mod </span>prelude {
@@ -207,7 +207,7 @@
 
     <span class="kw">pub use crate</span>::{
         bitset::<span class="kw-2">*</span>, components::<span class="kw-2">*</span>, default, entities::<span class="kw-2">*</span>, error::<span class="kw-2">*</span>, resources::<span class="kw-2">*</span>, stage::<span class="kw-2">*</span>,
-        system::<span class="kw-2">*</span>, ulid::<span class="kw-2">*</span>, EcsData, RawFns, TypedEcsData, UnwrapMany, World,
+        system::<span class="kw-2">*</span>, ulid::<span class="kw-2">*</span>, EcsData, FromWorld, RawFns, TypedEcsData, UnwrapMany, World,
     };
 }
 
