@@ -23,7 +23,7 @@ mod error;
 pub use error::EcsError;
 
 mod world;
-pub use world::World;
+pub use world::{FromWorld, World};
 
 /// The prelude.
 pub mod prelude {
@@ -36,7 +36,7 @@ pub mod prelude {
 
     pub use crate::{
         bitset::*, components::*, default, entities::*, error::*, resources::*, stage::*,
-        system::*, ulid::*, EcsData, RawFns, TypedEcsData, UnwrapMany, World,
+        system::*, ulid::*, EcsData, FromWorld, RawFns, TypedEcsData, UnwrapMany, World,
     };
 }
 
