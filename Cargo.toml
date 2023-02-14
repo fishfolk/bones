@@ -1,28 +1,26 @@
 [package]
-name = "bones_lib"
-version = "0.1.0"
+authors     = ["The Fish Folks & Spicy Lobster Developers"]
 description = "Opinionated game meta-engine built on Bevy"
-authors = ["The Fish Folks & Spicy Lobster Developers"]
-license = "MIT OR Apache-2.0"
-edition = "2021"
-repository = "https://github.com/fishfolk/bones"
+edition     = "2021"
+license     = "MIT OR Apache-2.0"
+name        = "bones_lib"
+repository  = "https://github.com/fishfolk/bones"
+version     = "0.1.0"
 
 [workspace]
-members = [
-    ".",
-    "crates/*",
-]
+members = [".", "crates/*"]
 
 [features]
-bevy = ["bones_asset/bevy", "bones_render/bevy", "dep:bones_bevy_utils"]
+bevy  = ["bones_asset/bevy", "bones_render/bevy", "dep:bones_bevy_utils"]
 serde = ["dep:serde", "bones_render/serde", "bones_ecs/serde"]
 
 [dependencies]
-bones_ecs = { version = "^0.1.0", path = "./crates/bones_ecs" }
-bones_render = { version = "^0.1.0", path = "./crates/bones_render" }
-bones_input = { version = "^0.1.0", path = "./crates/bones_input" }
-bones_asset = { version = "^0.1.0", path = "./crates/bones_asset" }
+bones_asset      = { version = "^0.1.0", path = "./crates/bones_asset" }
 bones_bevy_utils = { version = "^0.1.0", path = "./crates/bones_bevy_utils", optional = true }
-type_ulid = { version = "^0.1.0", path = "./crates/type_ulid" }
-serde = { version = "1.0.0", features = ["derive"], optional = true }
+bones_ecs        = { version = "^0.1.0", path = "./crates/bones_ecs" }
+bones_input      = { version = "^0.1.0", path = "./crates/bones_input" }
+bones_render     = { version = "^0.1.0", path = "./crates/bones_render" }
+type_ulid        = { version = "^0.1.0", path = "./crates/type_ulid" }
+
 noise = "0.8.2"
+serde = { version = "1.0.0", features = ["derive"], optional = true }

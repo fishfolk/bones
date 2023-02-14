@@ -1,0 +1,21 @@
+[package]
+authors     = ["The Fish Folk & Spicy Lobster Developers"]
+description = "Provides time functionality for bones_lib."
+edition     = "2021"
+license     = "MIT OR Apache-2.0"
+name        = "bones_time"
+repository  = "https://github.com/fishfolk/bones"
+version     = "0.1.0"
+
+[dependencies]
+bones_bevy_asset    = { version = "^0.1.0", path = "../bones_bevy_asset" }
+bones_bevy_renderer = { version = "^0.1.0", path = "../bones_bevy_renderer" }
+bones_ecs           = { version = "^0.1.0", path = "../bones_ecs" }
+type_ulid           = { version = "^0.1.0", path = "../type_ulid" }
+
+serde = { version = "1.0.0", features = ["derive"], optional = true }
+
+[dependencies.bevy]
+default-features = false
+features         = []
+version          = "0.9.1"
