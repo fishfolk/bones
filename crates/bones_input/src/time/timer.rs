@@ -35,7 +35,7 @@ impl Timer {
     ///
     /// # Example
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// ```
     pub fn from_seconds(duration: f32, mode: TimerMode) -> Self {
@@ -51,7 +51,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// timer.tick(Duration::from_secs_f32(1.5));
@@ -68,7 +68,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// timer.tick(Duration::from_secs_f32(1.5));
@@ -88,7 +88,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// timer.tick(Duration::from_secs_f32(0.5));
@@ -108,11 +108,9 @@ impl Timer {
 
     /// Sets the elapsed time of the timer without any other considerations.
     ///
-    /// See also [`Stopwatch::set`](Stopwatch::set).
-    ///
-    /// #
+    /// # Example
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// timer.set_elapsed(Duration::from_secs(2));
@@ -129,7 +127,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let timer = Timer::new(Duration::from_secs(1), TimerMode::Once);
     /// assert_eq!(timer.duration(), Duration::from_secs(1));
@@ -143,7 +141,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.5, TimerMode::Once);
     /// timer.set_duration(Duration::from_secs(1));
@@ -158,7 +156,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Repeating);
     /// assert_eq!(timer.mode(), TimerMode::Repeating);
     /// ```
@@ -171,7 +169,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Repeating);
     /// timer.set_mode(TimerMode::Once);
     /// assert_eq!(timer.mode(), TimerMode::Once);
@@ -195,7 +193,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// let mut repeating = Timer::from_seconds(1.0, TimerMode::Repeating);
@@ -244,7 +242,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// timer.pause();
@@ -262,7 +260,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// timer.pause();
@@ -282,7 +280,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// assert!(!timer.paused());
     /// timer.pause();
@@ -301,7 +299,7 @@ impl Timer {
     ///
     /// Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// timer.tick(Duration::from_secs_f32(1.5));
@@ -320,7 +318,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(2.0, TimerMode::Once);
     /// timer.tick(Duration::from_secs_f32(0.5));
@@ -335,7 +333,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(2.0, TimerMode::Once);
     /// timer.tick(Duration::from_secs_f32(0.5));
@@ -350,7 +348,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::cmp::Ordering;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(2.0, TimerMode::Once);
@@ -367,7 +365,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(2.0, TimerMode::Once);
     /// timer.tick(Duration::from_secs_f32(0.5));
@@ -386,7 +384,7 @@ impl Timer {
     ///
     /// # Examples
     /// ```
-    /// # use bones_time::*;
+    /// # use bones_input::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Repeating);
     /// timer.tick(Duration::from_secs_f32(6.0));

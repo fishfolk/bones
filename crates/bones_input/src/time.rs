@@ -1,7 +1,10 @@
 //! Time functionality for the Bones framework.
 //!
-//! This is a slimmed down version of [`bevy_time`](https://github.com/bevyengine/bevy/tree/aa4170d9a471c6f6a4f3bea4e41ed2c39de98e16/crates/bevy_time).
+//! This is a slimmed down version of [`bevy_time`].
+//!
 //! [`bevy_time`] is licensed under MIT OR Apache-2.0.
+//!
+//! [`bevy_time`]: https://github.com/bevyengine/bevy/tree/aa4170d9a471c6f6a4f3bea4e41ed2c39de98e16/crates/bevy_time
 
 use std::time::{Duration, Instant};
 
@@ -62,7 +65,7 @@ impl Time {
     /// Updates the internal time measurements.
     ///
     /// Calling this method as part of your app will most likely result in inaccurate timekeeping,
-    /// as the `Time` resource is ordinarily managed by the [`TimePlugin`](crate::TimePlugin).
+    /// as the `Time` resource is ordinarily managed by the bones rendering backend.
     pub fn update(&mut self) {
         let now = Instant::now();
         self.update_with_instant(now);
@@ -71,13 +74,13 @@ impl Time {
     /// Updates time with a specified [`Instant`].
     ///
     /// This method is provided for use in tests. Calling this method as part of your app will most
-    /// likely result in inaccurate timekeeping, as the `Time` resource is ordinarily managed by the
-    /// [`TimePlugin`](crate::TimePlugin).
+    /// likely result in inaccurate timekeeping, as the `Time` resource is ordinarily managed by
+    /// whatever bones renderer you are using.
     ///
     /// # Examples
     ///
-    /// ```
-    /// # use bones_time::prelude::*;
+    /// ```ignore
+    /// # use bones_input::prelude::*;
     /// # use bones_ecs::prelude::*;
     /// # use std::time::Duration;
     /// # fn main () {

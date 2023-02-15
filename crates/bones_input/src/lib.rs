@@ -8,11 +8,11 @@
 use type_ulid::TypeUlid;
 
 pub mod time;
-pub use time::*;
 
 /// The prelude.
 pub mod prelude {
     pub use crate::*;
+    pub use time::*;
 }
 
 /// Information about the window the game is running in.
