@@ -535,10 +535,10 @@ fn sync_time<W: HasBonesWorld>(
         world.init_resource::<bones_lib::prelude::Time>();
     }
 
-    // Use the Bevy time if it's available, otherwise use the default time.
     let time = world.resource::<bones_lib::prelude::Time>();
     let mut time = time.borrow_mut();
 
+    // Use the Bevy time if it's available, otherwise use the default time.
     if let Some(instant) = bevy_time.last_update() {
         time.update_with_instant(instant);
     } else {
