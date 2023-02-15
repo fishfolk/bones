@@ -1,6 +1,6 @@
 //! Time functionality for the Bones framework.
 //!
-//! This is a slimmed down version of [`bevy_time`](https://github.com/bevyengine/bevy/tree/main/crates/bevy_time).
+//! This is a slimmed down version of [`bevy_time`](https://github.com/bevyengine/bevy/tree/aa4170d9a471c6f6a4f3bea4e41ed2c39de98e16/crates/bevy_time).
 //! [`bevy_time`] is licensed under MIT OR Apache-2.0.
 
 use std::time::{Duration, Instant};
