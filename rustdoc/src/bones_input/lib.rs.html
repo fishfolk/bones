@@ -22,11 +22,6 @@
 <span id="22">22</span>
 <span id="23">23</span>
 <span id="24">24</span>
-<span id="25">25</span>
-<span id="26">26</span>
-<span id="27">27</span>
-<span id="28">28</span>
-<span id="29">29</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Standardized types meant to be provided to Bones games from the outside environment.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -36,17 +31,12 @@
 
 </span><span class="kw">use </span>type_ulid::TypeUlid;
 
+<span class="kw">pub mod </span>time;
+
 <span class="doccomment">/// The prelude.
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use crate</span>::<span class="kw-2">*</span>;
-}
-
-<span class="doccomment">/// Resource representing the current game time.
-</span><span class="attribute">#[derive(Clone, Copy, Debug, TypeUlid, Default)]
-#[ulid = <span class="string">&quot;01GNR4DNDZRH0E9XCSV79WRGXH&quot;</span>]
-</span><span class="kw">pub struct </span>Time {
-    <span class="doccomment">/// The time elapsed since the start of the game session.
-    </span><span class="kw">pub </span>elapsed: f32,
+    <span class="kw">pub use </span>time::<span class="kw-2">*</span>;
 }
 
 <span class="doccomment">/// Information about the window the game is running in.

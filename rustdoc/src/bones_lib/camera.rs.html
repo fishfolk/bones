@@ -235,9 +235,15 @@
 <span id="235">235</span>
 <span id="236">236</span>
 <span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Camera utilities.
 
 </span><span class="kw">use </span>std::collections::VecDeque;
+
+<span class="kw">use </span>bones_input::time::Time;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
@@ -367,8 +373,10 @@
     <span class="kw">const </span>SHAKE_SPEED: f32 = <span class="number">3.0</span>;
     <span class="macro">macro_rules! </span>offset_noise {
         (<span class="macro-nonterminal">$offset</span>:expr) =&gt; {
-            perlin_noise::perlin_1d(((time.elapsed + <span class="macro-nonterminal">$offset</span>) * SHAKE_SPEED).into(), <span class="kw-2">&amp;</span>noise.<span class="number">0</span>)
-                <span class="kw">as </span>f32
+            perlin_noise::perlin_1d(
+                ((time.elapsed_seconds() + <span class="macro-nonterminal">$offset</span>) * SHAKE_SPEED).into(),
+                <span class="kw-2">&amp;</span>noise.<span class="number">0</span>,
+            ) <span class="kw">as </span>f32
         };
     }
 

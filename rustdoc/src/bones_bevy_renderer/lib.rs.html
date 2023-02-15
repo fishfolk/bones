@@ -517,6 +517,34 @@
 <span id="517">517</span>
 <span id="518">518</span>
 <span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -599,7 +627,8 @@
             .add_system_to_stage(BonesStage::Sync, sync_atlas_sprites::&lt;W&gt;)
             .add_system_to_stage(BonesStage::Sync, sync_cameras::&lt;W&gt;)
             .add_system_to_stage(BonesStage::Sync, sync_clear_color::&lt;W&gt;)
-            .add_system_to_stage(BonesStage::Sync, sync_tilemaps::&lt;W&gt;);
+            .add_system_to_stage(BonesStage::Sync, sync_tilemaps::&lt;W&gt;)
+            .add_system_to_stage(BonesStage::Sync, sync_time::&lt;W&gt;);
     }
 }
 
@@ -1034,6 +1063,33 @@
             lyon::GeometryBuilder::build_as(<span class="kw-2">&amp;</span>path, draw_mode, transform),
             BevyBonesEntity,
         ));
+    }
+}
+
+<span class="doccomment">/// The system that renders the bones world.
+</span><span class="kw">fn </span>sync_time&lt;W: HasBonesWorld&gt;(
+    world_resource: <span class="prelude-ty">Option</span>&lt;ResMut&lt;W&gt;&gt;,
+    bevy_time: Res&lt;bevy::prelude::Time&gt;,
+) {
+    <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
+        <span class="kw">return</span>;
+    };
+
+    <span class="kw">let </span>world = world_resource.world();
+
+    <span class="comment">// Initialize the time resource if it doesn&#39;t exist.
+    </span><span class="kw">if </span>world.get_resource::&lt;bones_lib::prelude::Time&gt;().is_none() {
+        world.init_resource::&lt;bones_lib::prelude::Time&gt;();
+    }
+
+    <span class="kw">let </span>time = world.resource::&lt;bones_lib::prelude::Time&gt;();
+    <span class="kw">let </span><span class="kw-2">mut </span>time = time.borrow_mut();
+
+    <span class="comment">// Use the Bevy time if it&#39;s available, otherwise use the default time.
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(instant) = bevy_time.last_update() {
+        time.update_with_instant(instant);
+    } <span class="kw">else </span>{
+        time.update();
     }
 }
 </code></pre></div>
