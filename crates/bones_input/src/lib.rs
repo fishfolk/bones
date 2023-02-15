@@ -7,17 +7,12 @@
 
 use type_ulid::TypeUlid;
 
+pub mod time;
+pub use time::*;
+
 /// The prelude.
 pub mod prelude {
     pub use crate::*;
-}
-
-/// Resource representing the current game time.
-#[derive(Clone, Copy, Debug, TypeUlid, Default)]
-#[ulid = "01GNR4DNDZRH0E9XCSV79WRGXH"]
-pub struct Time {
-    /// The time elapsed since the start of the game session.
-    pub elapsed: f32,
 }
 
 /// Information about the window the game is running in.

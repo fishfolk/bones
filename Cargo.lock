@@ -1034,6 +1034,8 @@ dependencies = [
 name = "bones_input"
 version = "0.1.0"
 dependencies = [
+ "bevy",
+ "bones_bevy_utils",
  "glam",
  "type_ulid",
 ]
@@ -1094,18 +1096,6 @@ dependencies = [
  "bones_bevy_utils",
  "bones_ecs",
  "glam",
- "serde",
- "type_ulid",
-]
-
-[[package]]
-name = "bones_time"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bones_bevy_asset",
- "bones_bevy_renderer",
- "bones_ecs",
  "serde",
  "type_ulid",
 ]

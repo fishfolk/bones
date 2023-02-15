@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::stopwatch::Stopwatch;
+use super::stopwatch::Stopwatch;
 
 /// Tracks elapsed time. Enters the finished state once `duration` is reached.
 ///
