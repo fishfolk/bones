@@ -80,7 +80,8 @@ impl<W: HasBonesWorld> Plugin for BonesRendererPlugin<W> {
             .add_system_to_stage(BonesStage::Sync, sync_atlas_sprites::<W>)
             .add_system_to_stage(BonesStage::Sync, sync_cameras::<W>)
             .add_system_to_stage(BonesStage::Sync, sync_clear_color::<W>)
-            .add_system_to_stage(BonesStage::Sync, sync_tilemaps::<W>);
+            .add_system_to_stage(BonesStage::Sync, sync_tilemaps::<W>)
+            .add_system_to_stage(BonesStage::Sync, sync_time::<W>);
     }
 }
 
@@ -515,5 +516,32 @@ fn sync_path2ds<W: HasBonesWorld>(
             lyon::GeometryBuilder::build_as(&path, draw_mode, transform),
             BevyBonesEntity,
         ));
+    }
+}
+
+/// The system that renders the bones world.
+fn sync_time<W: HasBonesWorld>(
+    world_resource: Option<ResMut<W>>,
+    bevy_time: Res<bevy::prelude::Time>,
+) {
+    let Some(mut world_resource) = world_resource else {
+        return;
+    };
+
+    let world = world_resource.world();
+
+    // Initialize the time resource if it doesn't exist.
+    if world.get_resource::<bones_lib::prelude::Time>().is_none() {
+        world.init_resource::<bones_lib::prelude::Time>();
+    }
+
+    let time = world.resource::<bones_lib::prelude::Time>();
+    let mut time = time.borrow_mut();
+
+    // Use the Bevy time if it's available, otherwise use the default time.
+    if let Some(instant) = bevy_time.last_update() {
+        time.update_with_instant(instant);
+    } else {
+        time.update();
     }
 }

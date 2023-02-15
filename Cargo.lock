@@ -1034,6 +1034,8 @@ dependencies = [
 name = "bones_input"
 version = "0.1.0"
 dependencies = [
+ "bevy",
+ "bones_bevy_utils",
  "glam",
  "type_ulid",
 ]

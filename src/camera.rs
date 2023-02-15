@@ -2,6 +2,8 @@
 
 use std::collections::VecDeque;
 
+use bones_input::time::Time;
+
 use crate::prelude::*;
 
 /// Install the camera utilities on the given [`SystemStages`].
@@ -130,8 +132,10 @@ fn apply_shake(
     const SHAKE_SPEED: f32 = 3.0;
     macro_rules! offset_noise {
         ($offset:expr) => {
-            perlin_noise::perlin_1d(((time.elapsed + $offset) * SHAKE_SPEED).into(), &noise.0)
-                as f32
+            perlin_noise::perlin_1d(
+                ((time.elapsed_seconds() + $offset) * SHAKE_SPEED).into(),
+                &noise.0,
+            ) as f32
         };
     }
 
