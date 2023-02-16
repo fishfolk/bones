@@ -147,6 +147,14 @@ impl Time {
         self.last_update = Some(instant);
     }
 
+    /// Advance the time exactly by the given duration.
+    ///
+    /// This is useful when ticking the time exactly by a fixed timestep.
+    pub fn advance_exact(&mut self, duration: Duration) {
+        let next_instant = self.last_update.unwrap_or_else(Instant::now) + duration;
+        self.update_with_instant(next_instant);
+    }
+
     /// Returns how much time has advanced since the last [`update`](#method.update), as a [`Duration`].
     #[inline]
     pub fn delta(&self) -> Duration {
