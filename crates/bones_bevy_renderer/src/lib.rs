@@ -33,12 +33,28 @@ pub trait HasBonesWorld: Resource {
 ///
 /// This will render the bones world stored in the resource of type `W`.
 pub struct BonesRendererPlugin<W: HasBonesWorld> {
-    _phantom: PhantomData<W>,
+    /// Whether or not to synchronize the [`Time`] resource automatically with Bevy.
+    ///
+    /// This defaults to `true`, but may be set to `false` if you use a custom time step.
+    pub sync_time: bool,
+    #[doc(hidden)]
+    pub _phantom: PhantomData<W>,
+}
+
+impl<W: HasBonesWorld> BonesRendererPlugin<W> {
+    /// Initialize the plugin with the `sync_time` option set to the provided value.
+    pub fn with_sync_time(sync_time: bool) -> Self {
+        Self {
+            sync_time,
+            _phantom: PhantomData,
+        }
+    }
 }
 
 impl<W: HasBonesWorld> Default for BonesRendererPlugin<W> {
     fn default() -> Self {
         Self {
+            sync_time: true,
             _phantom: default(),
         }
     }
@@ -58,9 +74,12 @@ pub struct BevyBonesEntity;
 /// [`StageLabel`] for stages added by bones to the Bevy world.
 #[derive(StageLabel)]
 pub enum BonesStage {
+    /// This stage is run after [`CoreStage::First`] to synchronize the bevy `Time` resource with
+    /// the bones one.
+    SyncTime,
     /// This is the stage where the plugin reads the bones world adds bevy sprites, tiles, etc. to
     /// be rendered.
-    Sync,
+    SyncRender,
 }
 
 impl<W: HasBonesWorld> Plugin for BonesRendererPlugin<W> {
@@ -72,16 +91,24 @@ impl<W: HasBonesWorld> Plugin for BonesRendererPlugin<W> {
             // Add the world sync systems
             .add_stage_before(
                 CoreStage::PostUpdate,
-                BonesStage::Sync,
+                BonesStage::SyncRender,
                 SystemStage::parallel(),
             )
-            .add_system_to_stage(BonesStage::Sync, sync_sprites::<W>)
-            .add_system_to_stage(BonesStage::Sync, sync_path2ds::<W>)
-            .add_system_to_stage(BonesStage::Sync, sync_atlas_sprites::<W>)
-            .add_system_to_stage(BonesStage::Sync, sync_cameras::<W>)
-            .add_system_to_stage(BonesStage::Sync, sync_clear_color::<W>)
-            .add_system_to_stage(BonesStage::Sync, sync_tilemaps::<W>)
-            .add_system_to_stage(BonesStage::Sync, sync_time::<W>);
+            .add_stage_after(
+                CoreStage::First,
+                BonesStage::SyncTime,
+                SystemStage::single_threaded(),
+            )
+            .add_system_to_stage(BonesStage::SyncRender, sync_sprites::<W>)
+            .add_system_to_stage(BonesStage::SyncRender, sync_path2ds::<W>)
+            .add_system_to_stage(BonesStage::SyncRender, sync_atlas_sprites::<W>)
+            .add_system_to_stage(BonesStage::SyncRender, sync_cameras::<W>)
+            .add_system_to_stage(BonesStage::SyncRender, sync_clear_color::<W>)
+            .add_system_to_stage(BonesStage::SyncRender, sync_tilemaps::<W>);
+
+        if self.sync_time {
+            app.add_system_to_stage(BonesStage::SyncTime, sync_time::<W>);
+        }
     }
 }
 
@@ -527,7 +554,6 @@ fn sync_time<W: HasBonesWorld>(
     let Some(mut world_resource) = world_resource else {
         return;
     };
-
     let world = world_resource.world();
 
     // Initialize the time resource if it doesn't exist.
