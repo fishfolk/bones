@@ -545,6 +545,32 @@
 <span id="545">545</span>
 <span id="546">546</span>
 <span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
+<span id="566">566</span>
+<span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -580,12 +606,28 @@
 ///
 /// This will render the bones world stored in the resource of type `W`.
 </span><span class="kw">pub struct </span>BonesRendererPlugin&lt;W: HasBonesWorld&gt; {
-    _phantom: PhantomData&lt;W&gt;,
+    <span class="doccomment">/// Whether or not to synchronize the [`Time`] resource automatically with Bevy.
+    ///
+    /// This defaults to `true`, but may be set to `false` if you use a custom time step.
+    </span><span class="kw">pub </span>sync_time: bool,
+    <span class="attribute">#[doc(hidden)]
+    </span><span class="kw">pub </span>_phantom: PhantomData&lt;W&gt;,
+}
+
+<span class="kw">impl</span>&lt;W: HasBonesWorld&gt; BonesRendererPlugin&lt;W&gt; {
+    <span class="doccomment">/// Initialize the plugin with the `sync_time` option set to the provided value.
+    </span><span class="kw">pub fn </span>with_sync_time(sync_time: bool) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            sync_time,
+            _phantom: PhantomData,
+        }
+    }
 }
 
 <span class="kw">impl</span>&lt;W: HasBonesWorld&gt; Default <span class="kw">for </span>BonesRendererPlugin&lt;W&gt; {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
+            sync_time: <span class="bool-val">true</span>,
             _phantom: default(),
         }
     }
@@ -605,9 +647,12 @@
 <span class="doccomment">/// [`StageLabel`] for stages added by bones to the Bevy world.
 </span><span class="attribute">#[derive(StageLabel)]
 </span><span class="kw">pub enum </span>BonesStage {
+    <span class="doccomment">/// This stage is run after [`CoreStage::First`] to synchronize the bevy `Time` resource with
+    /// the bones one.
+    </span>SyncTime,
     <span class="doccomment">/// This is the stage where the plugin reads the bones world adds bevy sprites, tiles, etc. to
     /// be rendered.
-    </span>Sync,
+    </span>SyncRender,
 }
 
 <span class="kw">impl</span>&lt;W: HasBonesWorld&gt; Plugin <span class="kw">for </span>BonesRendererPlugin&lt;W&gt; {
@@ -619,16 +664,24 @@
             <span class="comment">// Add the world sync systems
             </span>.add_stage_before(
                 CoreStage::PostUpdate,
-                BonesStage::Sync,
+                BonesStage::SyncRender,
                 SystemStage::parallel(),
             )
-            .add_system_to_stage(BonesStage::Sync, sync_sprites::&lt;W&gt;)
-            .add_system_to_stage(BonesStage::Sync, sync_path2ds::&lt;W&gt;)
-            .add_system_to_stage(BonesStage::Sync, sync_atlas_sprites::&lt;W&gt;)
-            .add_system_to_stage(BonesStage::Sync, sync_cameras::&lt;W&gt;)
-            .add_system_to_stage(BonesStage::Sync, sync_clear_color::&lt;W&gt;)
-            .add_system_to_stage(BonesStage::Sync, sync_tilemaps::&lt;W&gt;)
-            .add_system_to_stage(BonesStage::Sync, sync_time::&lt;W&gt;);
+            .add_stage_after(
+                CoreStage::First,
+                BonesStage::SyncTime,
+                SystemStage::single_threaded(),
+            )
+            .add_system_to_stage(BonesStage::SyncRender, sync_sprites::&lt;W&gt;)
+            .add_system_to_stage(BonesStage::SyncRender, sync_path2ds::&lt;W&gt;)
+            .add_system_to_stage(BonesStage::SyncRender, sync_atlas_sprites::&lt;W&gt;)
+            .add_system_to_stage(BonesStage::SyncRender, sync_cameras::&lt;W&gt;)
+            .add_system_to_stage(BonesStage::SyncRender, sync_clear_color::&lt;W&gt;)
+            .add_system_to_stage(BonesStage::SyncRender, sync_tilemaps::&lt;W&gt;);
+
+        <span class="kw">if </span><span class="self">self</span>.sync_time {
+            app.add_system_to_stage(BonesStage::SyncTime, sync_time::&lt;W&gt;);
+        }
     }
 }
 
@@ -1074,7 +1127,6 @@
     <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
         <span class="kw">return</span>;
     };
-
     <span class="kw">let </span>world = world_resource.world();
 
     <span class="comment">// Initialize the time resource if it doesn&#39;t exist.

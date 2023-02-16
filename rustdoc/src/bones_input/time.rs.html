@@ -303,6 +303,14 @@
 <span id="303">303</span>
 <span id="304">304</span>
 <span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Time functionality for the Bones framework.
 //!
 //! This is a slimmed down version of [`bevy_time`].
@@ -450,6 +458,14 @@
         <span class="self">self</span>.elapsed_seconds_f64 = <span class="self">self</span>.elapsed.as_secs_f64();
 
         <span class="self">self</span>.last_update = <span class="prelude-val">Some</span>(instant);
+    }
+
+    <span class="doccomment">/// Advance the time exactly by the given duration.
+    ///
+    /// This is useful when ticking the time exactly by a fixed timestep.
+    </span><span class="kw">pub fn </span>advance_exact(<span class="kw-2">&amp;mut </span><span class="self">self</span>, duration: Duration) {
+        <span class="kw">let </span>next_instant = <span class="self">self</span>.last_update.unwrap_or_else(Instant::now) + duration;
+        <span class="self">self</span>.update_with_instant(next_instant);
     }
 
     <span class="doccomment">/// Returns how much time has advanced since the last [`update`](#method.update), as a [`Duration`].
