@@ -299,6 +299,13 @@ fn sync_cameras<W: HasBonesWorld>(
                 }
                 _ => (),
             }
+            camera.viewport = bones_camera
+                .viewport
+                .map(|x| bevy::render::camera::Viewport {
+                    physical_position: x.position,
+                    physical_size: x.size,
+                    depth: x.depth_min..x.depth_max,
+                });
 
             *transform = bones_transform.into_bevy();
         } else {
