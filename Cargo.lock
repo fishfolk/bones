@@ -1037,6 +1037,7 @@ dependencies = [
  "bevy",
  "bones_bevy_utils",
  "glam",
+ "instant",
  "type_ulid",
 ]
 

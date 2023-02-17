@@ -13,3 +13,4 @@ type_ulid        = { version = "^0.1.0", path = "../type_ulid" }
 
 bevy = { version = "0.9.1", default-features = false }
 glam = "0.22.0"
+instant = "0.1.12"
