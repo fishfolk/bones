@@ -6,7 +6,7 @@
 //!
 //! [`bevy_time`]: https://github.com/bevyengine/bevy/tree/aa4170d9a471c6f6a4f3bea4e41ed2c39de98e16/crates/bevy_time
 
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use type_ulid::TypeUlid;
 
