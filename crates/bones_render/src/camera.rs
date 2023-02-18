@@ -15,6 +15,27 @@ pub struct Camera {
     pub height: f32,
     /// Whether or not the camera is enabled and rendering.
     pub active: bool,
+    /// An optional viewport override, allowing you to specify that the camera should render to only
+    /// a portion of the window.
+    ///
+    /// This can be used, for example, for split screen functionality.
+    pub viewport: Option<Viewport>,
+}
+
+/// A custom viewport specification for a [`Camera`].
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct Viewport {
+    /// The physical position to render this viewport to within the RenderTarget of this Camera.
+    /// (0,0) corresponds to the top-left corner.
+    pub position: UVec2,
+    /// The physical size of the viewport rectangle to render to within the RenderTarget of this
+    /// Camera. The origin of the rectangle is in the top-left corner.
+    pub size: UVec2,
+    /// The minimum depth to render (on a scale from 0.0 to 1.0).
+    pub depth_min: f32,
+    /// The maximum depth to render (on a scale from 0.0 to 1.0).
+    pub depth_max: f32,
 }
 
 impl Default for Camera {
@@ -22,6 +43,7 @@ impl Default for Camera {
         Self {
             height: 400.0,
             active: true,
+            viewport: None,
         }
     }
 }
