@@ -394,6 +394,40 @@ impl<'de, T: TypeUlid> serde::Deserialize<'de> for Handle<T> {
     }
 }
 
+impl serde::Serialize for UntypedHandle {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&format!(
+            "/{}{}",
+            self.path.path.to_str().expect("Non-unicode path"),
+            self.path
+                .label
+                .as_ref()
+                .map(|x| format!("#{}", x))
+                .unwrap_or_default()
+        ))
+    }
+}
+
+impl<T: TypeUlid> serde::Serialize for Handle<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&format!(
+            "/{}{}",
+            self.path.path.to_str().expect("Non-unicode path"),
+            self.path
+                .label
+                .as_ref()
+                .map(|x| format!("#{}", x))
+                .unwrap_or_default()
+        ))
+    }
+}
+
 struct UntypedHandleVisitor;
 impl<'de> serde::de::Visitor<'de> for UntypedHandleVisitor {
     type Value = UntypedHandle;
