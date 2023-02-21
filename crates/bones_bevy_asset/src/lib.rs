@@ -8,6 +8,7 @@
 #![deny(rustdoc::all)]
 
 use std::marker::PhantomData;
+use std::time::Duration;
 
 use bevy_app::App;
 use bevy_asset::{prelude::*, Asset};
@@ -64,6 +65,8 @@ pub trait BonesBevyAssetLoad {
         let _ = (load_context, dependencies);
     }
 }
+
+impl BonesBevyAssetLoad for Duration {}
 
 impl<T: TypeUlid> BonesBevyAssetLoad for bones::Handle<T> {
     fn load(
