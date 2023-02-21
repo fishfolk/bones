@@ -206,6 +206,9 @@
 <span id="206">206</span>
 <span id="207">207</span>
 <span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
 </pre><pre class="rust"><code><span class="doccomment">//! An asset integration between Bevy and bones.
 //!
 //! Provides an easy way to load metadata for bones games using Bevy assets.
@@ -216,6 +219,7 @@
 #![deny(rustdoc::all)]
 
 </span><span class="kw">use </span>std::marker::PhantomData;
+<span class="kw">use </span>std::time::Duration;
 
 <span class="kw">use </span>bevy_app::App;
 <span class="kw">use </span>bevy_asset::{prelude::<span class="kw-2">*</span>, Asset};
@@ -272,6 +276,8 @@
         <span class="kw">let _ </span>= (load_context, dependencies);
     }
 }
+
+<span class="kw">impl </span>BonesBevyAssetLoad <span class="kw">for </span>Duration {}
 
 <span class="kw">impl</span>&lt;T: TypeUlid&gt; BonesBevyAssetLoad <span class="kw">for </span>bones::Handle&lt;T&gt; {
     <span class="kw">fn </span>load(
