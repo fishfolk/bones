@@ -49,3 +49,12 @@ You are also free to create your own rendering components that you synchronize w
 ### Bones App ( Future )
 
 As we get a feel for how things fit together with the use of Bones in [Jumpy], we hope to be able to create a standardized game runner around Bones game cores. This would allow the Bones app to handle common things like localization, asset loading, input mapping, settings menu, networking, etc., allowing you to focus on writing what makes your game unique.
+
+## Similar Projects
+
+Our architecure has many things in common with these other awesome projects:
+
+- [Gamercade](https://github.com/gamercade-io/) / wasm4
+- [Ambient](https://github.com/AmbientRun/Ambient)
+- [Tangle](https://github.com/kettle11/tangle)
+- [Godot sandbox #5010](https://github.com/godotengine/godot-proposals/issues/5010)
