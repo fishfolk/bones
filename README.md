@@ -57,3 +57,4 @@ Our architecure has many things in common with these other awesome projects:
 - [Gamercade](https://github.com/gamercade-io/) / wasm4
 - [Ambient](https://github.com/AmbientRun/Ambient)
 - [Tangle](https://github.com/kettle11/tangle)
+- [Godot sandbox #5010](https://github.com/godotengine/godot-proposals/issues/5010)
