@@ -38,6 +38,8 @@ pub struct CameraShake {
     pub max_offset: Vec2,
     /// The the length of time in seconds for the camera trauma to decay from 1 to 0.
     pub decay_rate: f32,
+    /// The speed that the screen is shook.
+    pub speed: f32,
     /// The camera will always restore to this position.
     pub center: Vec3,
 }
@@ -49,6 +51,7 @@ impl Default for CameraShake {
             max_angle_rad: 90.0,
             max_offset: Vec2::splat(100.0),
             decay_rate: 0.5,
+            speed: 1.5,
             center: Vec3::ZERO,
         }
     }
@@ -57,19 +60,26 @@ impl Default for CameraShake {
 impl CameraShake {
     /// Create a new [`CameraShake`] component with the provided maximum offset angle (in degrees)
     /// and position as well as the trauma decay rate in seconds.
-    pub fn new(max_angle_deg: f32, max_offset: Vec2, decay_rate: f32) -> Self {
+    pub fn new(max_angle_deg: f32, max_offset: Vec2, speed: f32, decay_rate: f32) -> Self {
         Self {
-            max_angle_rad: max_angle_deg * (std::f32::consts::PI / 180.0),
+            max_angle_rad: max_angle_deg.to_radians(),
             max_offset,
             decay_rate,
+            speed,
             ..default()
         }
     }
 
     /// Create a new [`CameraShake`] component with the provided maximum offset angle (in degrees)
     /// and position and its initial trauma set to some value (clamped between 0 and 1).
-    pub fn with_trauma(trauma: f32, max_angle_deg: f32, max_offset: Vec2, decay_rate: f32) -> Self {
-        let mut shake = Self::new(max_angle_deg, max_offset, decay_rate);
+    pub fn with_trauma(
+        trauma: f32,
+        max_angle_deg: f32,
+        max_offset: Vec2,
+        speed: f32,
+        decay_rate: f32,
+    ) -> Self {
+        let mut shake = Self::new(max_angle_deg, max_offset, speed, decay_rate);
         shake.trauma = trauma.min(1.0).max(0.0);
         shake
     }
@@ -129,11 +139,10 @@ fn apply_shake(
     time: Res<Time>,
     noise: Res<ShakeNoise>,
 ) {
-    const SHAKE_SPEED: f32 = 3.0;
     macro_rules! offset_noise {
-        ($offset:expr) => {
+        ($offset:expr, $shake_speed:expr) => {
             perlin_noise::perlin_1d(
-                ((time.elapsed_seconds() + $offset) * SHAKE_SPEED).into(),
+                ((time.elapsed_seconds() + $offset) * $shake_speed * 0.001).into(),
                 &noise.0,
             ) as f32
         };
@@ -145,11 +154,11 @@ fn apply_shake(
 
             let rotation = Quat::from_axis_angle(
                 Vec3::Z,
-                sqr_trauma * offset_noise!(0.0) * shake.max_angle_rad,
+                sqr_trauma * offset_noise!(0.0, shake.speed) * shake.max_angle_rad,
             );
 
-            let x_offset = sqr_trauma * offset_noise!(100.0) * shake.max_offset.x;
-            let y_offset = sqr_trauma * offset_noise!(200.0) * shake.max_offset.y;
+            let x_offset = sqr_trauma * offset_noise!(1.0, shake.speed) * shake.max_offset.x;
+            let y_offset = sqr_trauma * offset_noise!(2.0, shake.speed) * shake.max_offset.y;
 
             (rotation, shake.center + Vec3::new(x_offset, y_offset, 0.0))
         } else {
