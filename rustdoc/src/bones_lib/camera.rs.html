@@ -239,6 +239,15 @@
 <span id="239">239</span>
 <span id="240">240</span>
 <span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Camera utilities.
 
 </span><span class="kw">use </span>std::collections::VecDeque;
@@ -279,6 +288,8 @@
     </span><span class="kw">pub </span>max_offset: Vec2,
     <span class="doccomment">/// The the length of time in seconds for the camera trauma to decay from 1 to 0.
     </span><span class="kw">pub </span>decay_rate: f32,
+    <span class="doccomment">/// The speed that the screen is shook.
+    </span><span class="kw">pub </span>speed: f32,
     <span class="doccomment">/// The camera will always restore to this position.
     </span><span class="kw">pub </span>center: Vec3,
 }
@@ -290,6 +301,7 @@
             max_angle_rad: <span class="number">90.0</span>,
             max_offset: Vec2::splat(<span class="number">100.0</span>),
             decay_rate: <span class="number">0.5</span>,
+            speed: <span class="number">1.5</span>,
             center: Vec3::ZERO,
         }
     }
@@ -298,19 +310,26 @@
 <span class="kw">impl </span>CameraShake {
     <span class="doccomment">/// Create a new [`CameraShake`] component with the provided maximum offset angle (in degrees)
     /// and position as well as the trauma decay rate in seconds.
-    </span><span class="kw">pub fn </span>new(max_angle_deg: f32, max_offset: Vec2, decay_rate: f32) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new(max_angle_deg: f32, max_offset: Vec2, speed: f32, decay_rate: f32) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            max_angle_rad: max_angle_deg * (std::f32::consts::PI / <span class="number">180.0</span>),
+            max_angle_rad: max_angle_deg.to_radians(),
             max_offset,
             decay_rate,
+            speed,
             ..default()
         }
     }
 
     <span class="doccomment">/// Create a new [`CameraShake`] component with the provided maximum offset angle (in degrees)
     /// and position and its initial trauma set to some value (clamped between 0 and 1).
-    </span><span class="kw">pub fn </span>with_trauma(trauma: f32, max_angle_deg: f32, max_offset: Vec2, decay_rate: f32) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>shake = <span class="self">Self</span>::new(max_angle_deg, max_offset, decay_rate);
+    </span><span class="kw">pub fn </span>with_trauma(
+        trauma: f32,
+        max_angle_deg: f32,
+        max_offset: Vec2,
+        speed: f32,
+        decay_rate: f32,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>shake = <span class="self">Self</span>::new(max_angle_deg, max_offset, speed, decay_rate);
         shake.trauma = trauma.min(<span class="number">1.0</span>).max(<span class="number">0.0</span>);
         shake
     }
@@ -370,11 +389,10 @@
     time: Res&lt;Time&gt;,
     noise: Res&lt;ShakeNoise&gt;,
 ) {
-    <span class="kw">const </span>SHAKE_SPEED: f32 = <span class="number">3.0</span>;
     <span class="macro">macro_rules! </span>offset_noise {
-        (<span class="macro-nonterminal">$offset</span>:expr) =&gt; {
+        (<span class="macro-nonterminal">$offset</span>:expr, <span class="macro-nonterminal">$shake_speed</span>:expr) =&gt; {
             perlin_noise::perlin_1d(
-                ((time.elapsed_seconds() + <span class="macro-nonterminal">$offset</span>) * SHAKE_SPEED).into(),
+                ((time.elapsed_seconds() + <span class="macro-nonterminal">$offset</span>) * <span class="macro-nonterminal">$shake_speed </span>* <span class="number">0.001</span>).into(),
                 <span class="kw-2">&amp;</span>noise.<span class="number">0</span>,
             ) <span class="kw">as </span>f32
         };
@@ -386,11 +404,11 @@
 
             <span class="kw">let </span>rotation = Quat::from_axis_angle(
                 Vec3::Z,
-                sqr_trauma * <span class="macro">offset_noise!</span>(<span class="number">0.0</span>) * shake.max_angle_rad,
+                sqr_trauma * <span class="macro">offset_noise!</span>(<span class="number">0.0</span>, shake.speed) * shake.max_angle_rad,
             );
 
-            <span class="kw">let </span>x_offset = sqr_trauma * <span class="macro">offset_noise!</span>(<span class="number">100.0</span>) * shake.max_offset.x;
-            <span class="kw">let </span>y_offset = sqr_trauma * <span class="macro">offset_noise!</span>(<span class="number">200.0</span>) * shake.max_offset.y;
+            <span class="kw">let </span>x_offset = sqr_trauma * <span class="macro">offset_noise!</span>(<span class="number">1.0</span>, shake.speed) * shake.max_offset.x;
+            <span class="kw">let </span>y_offset = sqr_trauma * <span class="macro">offset_noise!</span>(<span class="number">2.0</span>, shake.speed) * shake.max_offset.y;
 
             (rotation, shake.center + Vec3::new(x_offset, y_offset, <span class="number">0.0</span>))
         } <span class="kw">else </span>{
