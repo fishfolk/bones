@@ -578,6 +578,27 @@
 <span id="578">578</span>
 <span id="579">579</span>
 <span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -926,6 +947,7 @@
         ),
         With&lt;BevyBonesEntity&gt;,
     &gt;,
+    atlas_assets: Res&lt;Assets&lt;TextureAtlas&gt;&gt;,
 ) {
     <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
         bevy_bones_tile_layers.for_each(|(e, ..)| commands.entity(e).despawn());
@@ -960,6 +982,10 @@
             <span class="kw-2">*</span>transform = bones_transform.into_bevy();
             transform.translation += bones_tile_layer.tile_size.extend(<span class="number">0.0</span>) / <span class="number">2.0</span>;
 
+            <span class="kw">let </span><span class="prelude-val">Some</span>(texture_atlas) = atlas_assets.get(<span class="kw-2">&amp;</span>atlas) <span class="kw">else </span>{ <span class="kw">continue</span>; };
+            <span class="kw">let </span>atlas_grid_size = texture_atlas.size / texture_atlas.textures[<span class="number">0</span>].size();
+            <span class="kw">let </span>max_tile_idx = (atlas_grid_size.x * atlas_grid_size.y) <span class="kw">as </span>u32 - <span class="number">1</span>;
+
             <span class="kw">let </span>grid_size = bones_tile_layer.grid_size;
             <span class="kw">let </span>tile_iter = bones_tile_layer
                 .tiles
@@ -972,7 +998,7 @@
                         .map(|e| {
                             <span class="kw">let </span>tile = tiles.get(e)<span class="question-mark">?</span>;
                             <span class="prelude-val">Some</span>(Tile {
-                                sprite_index: tile.idx <span class="kw">as _</span>,
+                                sprite_index: (tile.idx <span class="kw">as </span>u32).min(max_tile_idx),
                                 color: default(),
                                 flags: <span class="kw">if </span>tile.flip_x {
                                     TileFlags::FLIP_X
@@ -991,6 +1017,22 @@
 
             tile_map.clear();
             tile_map.set_tiles(tile_iter);
+
+            <span class="comment">// TODO: This is probably a bug in bevy_simple_tilemap. If the tilemap atlas has been
+            // changed, and one of the tiles in the map had a tile index greater than the max tile
+            // count in the new atlas, the map renderer will panic.
+            //
+            // This shouldn&#39;t happen because we made sure to `clear()` the tiles and ensured that
+            // all the new tile indexes are clamped, but apparently the chunks are updated a frame
+            // late or otherwise just evaluated before our tile changes take effect, so we must
+            // clamp the tiles indexes directly on the chunks as well.
+            </span>tile_map.chunks.iter_mut().for_each(|(<span class="kw">_</span>, chunk)| {
+                chunk
+                    .tiles
+                    .iter_mut()
+                    .flatten()
+                    .for_each(|x| x.sprite_index = x.sprite_index.min(max_tile_idx))
+            });
         } <span class="kw">else </span>{
             commands.entity(bevy_ent).despawn();
         }
