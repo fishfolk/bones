@@ -346,6 +346,7 @@ fn sync_tilemaps<W: HasBonesWorld>(
         ),
         With<BevyBonesEntity>,
     >,
+    atlas_assets: Res<Assets<TextureAtlas>>,
 ) {
     let Some(mut world_resource) = world_resource else {
         bevy_bones_tile_layers.for_each(|(e, ..)| commands.entity(e).despawn());
@@ -380,6 +381,10 @@ fn sync_tilemaps<W: HasBonesWorld>(
             *transform = bones_transform.into_bevy();
             transform.translation += bones_tile_layer.tile_size.extend(0.0) / 2.0;
 
+            let Some(texture_atlas) = atlas_assets.get(&atlas) else { continue; };
+            let atlas_grid_size = texture_atlas.size / texture_atlas.textures[0].size();
+            let max_tile_idx = (atlas_grid_size.x * atlas_grid_size.y) as u32 - 1;
+
             let grid_size = bones_tile_layer.grid_size;
             let tile_iter = bones_tile_layer
                 .tiles
@@ -392,7 +397,7 @@ fn sync_tilemaps<W: HasBonesWorld>(
                         .map(|e| {
                             let tile = tiles.get(e)?;
                             Some(Tile {
-                                sprite_index: tile.idx as _,
+                                sprite_index: (tile.idx as u32).min(max_tile_idx),
                                 color: default(),
                                 flags: if tile.flip_x {
                                     TileFlags::FLIP_X
@@ -411,6 +416,22 @@ fn sync_tilemaps<W: HasBonesWorld>(
 
             tile_map.clear();
             tile_map.set_tiles(tile_iter);
+
+            // TODO: This is probably a bug in bevy_simple_tilemap. If the tilemap atlas has been
+            // changed, and one of the tiles in the map had a tile index greater than the max tile
+            // count in the new atlas, the map renderer will panic.
+            //
+            // This shouldn't happen because we made sure to `clear()` the tiles and ensured that
+            // all the new tile indexes are clamped, but apparently the chunks are updated a frame
+            // late or otherwise just evaluated before our tile changes take effect, so we must
+            // clamp the tiles indexes directly on the chunks as well.
+            tile_map.chunks.iter_mut().for_each(|(_, chunk)| {
+                chunk
+                    .tiles
+                    .iter_mut()
+                    .flatten()
+                    .for_each(|x| x.sprite_index = x.sprite_index.min(max_tile_idx))
+            });
         } else {
             commands.entity(bevy_ent).despawn();
         }
