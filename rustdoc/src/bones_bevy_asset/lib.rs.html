@@ -206,9 +206,6 @@
 <span id="206">206</span>
 <span id="207">207</span>
 <span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
 </pre><pre class="rust"><code><span class="doccomment">//! An asset integration between Bevy and bones.
 //!
 //! Provides an easy way to load metadata for bones games using Bevy assets.
@@ -289,10 +286,7 @@
         </span><span class="self">self</span>.path.normalize_relative_to(load_context.path());
 
         <span class="comment">// Create a bevy asset path from this bones handle
-        </span><span class="kw">let </span>asset_path = bevy_asset::AssetPath::new(
-            <span class="self">self</span>.path.path.to_path_buf(),
-            <span class="self">self</span>.path.clone().label.map(|x| x.to_string()),
-        );
+        </span><span class="kw">let </span>asset_path = <span class="self">self</span>.path.get_bevy_asset_path();
         <span class="kw">let </span>path_id = asset_path.get_id();
         dependencies.push(asset_path);
 

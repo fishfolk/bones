@@ -498,6 +498,14 @@
 <span id="498">498</span>
 <span id="499">499</span>
 <span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
 </pre><pre class="rust"><code><span class="doccomment">//! An asset interface for Bones.
 
 </span><span class="attribute">#![warn(missing_docs)]
@@ -727,6 +735,23 @@
     </span><span class="kw">pub </span>label: <span class="prelude-ty">Option</span>&lt;Arc&lt;str&gt;&gt;,
 }
 
+<span class="attribute">#[cfg(feature = <span class="string">&quot;bevy&quot;</span>)]
+</span><span class="kw">impl </span>AssetPath {
+    <span class="doccomment">/// Get the equivalent [`bevy_asset::AssetPath`] from this Bones [`AssetPath`].
+    </span><span class="kw">pub fn </span>get_bevy_asset_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bevy_asset::AssetPath&lt;<span class="lifetime">&#39;static</span>&gt; {
+        bevy_asset::AssetPath::new(
+            <span class="comment">// Bones convention is that `/` is relative to root, but Bevy doesn&#39;t like the
+            // leading /.
+            </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(path) = <span class="self">self</span>.path.strip_prefix(<span class="string">&quot;/&quot;</span>) {
+                path.to_path_buf()
+            } <span class="kw">else </span>{
+                <span class="self">self</span>.path.to_path_buf()
+            },
+            <span class="self">self</span>.label.as_ref().map(|x| x.to_string()),
+        )
+    }
+}
+
 <span class="kw">impl </span>AssetPath {
     <span class="doccomment">/// Create a new asset path.
     </span><span class="kw">pub fn </span>new&lt;P: Into&lt;PathBuf&gt;&gt;(path: P, label: <span class="prelude-ty">Option</span>&lt;String&gt;) -&gt; <span class="self">Self </span>{
@@ -774,7 +799,7 @@
             <span class="kw">let </span>base = base_path.parent().unwrap_or_else(|| Path::new(<span class="string">&quot;&quot;</span>));
             base.join(<span class="kw-2">&amp;</span><span class="self">self</span>.path)
         } <span class="kw">else </span>{
-            <span class="self">self</span>.path.strip_prefix(<span class="string">&quot;/&quot;</span>).unwrap().to_owned()
+            <span class="self">self</span>.path.to_path_buf()
         };
 
         <span class="self">self</span>.path = Arc::from(normalize_path(<span class="kw-2">&amp;</span>path));
@@ -900,7 +925,7 @@
         </span>S: serde::Serializer,
     {
         serializer.serialize_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-            <span class="string">&quot;/{}{}&quot;</span>,
+            <span class="string">&quot;{}{}&quot;</span>,
             <span class="self">self</span>.path.path.to_str().expect(<span class="string">&quot;Non-unicode path&quot;</span>),
             <span class="self">self</span>.path
                 .label
@@ -917,7 +942,7 @@
         </span>S: serde::Serializer,
     {
         serializer.serialize_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-            <span class="string">&quot;/{}{}&quot;</span>,
+            <span class="string">&quot;{}{}&quot;</span>,
             <span class="self">self</span>.path.path.to_str().expect(<span class="string">&quot;Non-unicode path&quot;</span>),
             <span class="self">self</span>.path
                 .label
@@ -969,10 +994,7 @@
     <span class="kw">impl</span>&lt;T: Asset + TypeUlid&gt; <span class="kw">super</span>::Handle&lt;T&gt; {
         <span class="doccomment">/// Get a Bevy weak [`Handle`] from from this bones asset handle.
         </span><span class="kw">pub fn </span>get_bevy_handle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Handle&lt;T&gt; {
-            <span class="kw">let </span>asset_path = AssetPath::new(
-                <span class="self">self</span>.path.path.to_path_buf(),
-                <span class="self">self</span>.path.label.as_ref().map(|x| x.to_string()),
-            );
+            <span class="kw">let </span>asset_path = <span class="self">self</span>.path.get_bevy_asset_path();
             Handle::weak(asset_path.into())
         }
     }
@@ -980,20 +1002,14 @@
     <span class="kw">impl</span>&lt;T: TypeUlid&gt; <span class="kw">super</span>::Handle&lt;T&gt; {
         <span class="doccomment">/// Get a Bevy weak [`HandleUntyped`] from this bones asset handle.
         </span><span class="kw">pub fn </span>get_bevy_handle_untyped(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; HandleUntyped {
-            <span class="kw">let </span>asset_path = AssetPath::new(
-                <span class="self">self</span>.path.path.to_path_buf(),
-                <span class="self">self</span>.path.label.as_ref().map(|x| x.to_string()),
-            );
+            <span class="kw">let </span>asset_path = <span class="self">self</span>.path.get_bevy_asset_path();
             HandleUntyped::weak(asset_path.into())
         }
     }
     <span class="kw">impl </span><span class="kw">super</span>::UntypedHandle {
         <span class="doccomment">/// Get a Bevy weak [`HandleUntyped`] from this bones asset handle.
         </span><span class="kw">pub fn </span>get_bevy_handle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; HandleUntyped {
-            <span class="kw">let </span>asset_path = AssetPath::new(
-                <span class="self">self</span>.path.path.to_path_buf(),
-                <span class="self">self</span>.path.label.as_ref().map(|x| x.to_string()),
-            );
+            <span class="kw">let </span>asset_path = <span class="self">self</span>.path.get_bevy_asset_path();
             HandleUntyped::weak(asset_path.into())
         }
     }
