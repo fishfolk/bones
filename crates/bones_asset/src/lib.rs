@@ -227,6 +227,23 @@ pub struct AssetPath {
     pub label: Option<Arc<str>>,
 }
 
+#[cfg(feature = "bevy")]
+impl AssetPath {
+    /// Get the equivalent [`bevy_asset::AssetPath`] from this Bones [`AssetPath`].
+    pub fn get_bevy_asset_path(&self) -> bevy_asset::AssetPath<'static> {
+        bevy_asset::AssetPath::new(
+            // Bones convention is that `/` is relative to root, but Bevy doesn't like the
+            // leading /.
+            if let Ok(path) = self.path.strip_prefix("/") {
+                path.to_path_buf()
+            } else {
+                self.path.to_path_buf()
+            },
+            self.label.as_ref().map(|x| x.to_string()),
+        )
+    }
+}
+
 impl AssetPath {
     /// Create a new asset path.
     pub fn new<P: Into<PathBuf>>(path: P, label: Option<String>) -> Self {
@@ -274,7 +291,7 @@ impl AssetPath {
             let base = base_path.parent().unwrap_or_else(|| Path::new(""));
             base.join(&self.path)
         } else {
-            self.path.strip_prefix("/").unwrap().to_owned()
+            self.path.to_path_buf()
         };
 
         self.path = Arc::from(normalize_path(&path));
@@ -400,7 +417,7 @@ impl serde::Serialize for UntypedHandle {
         S: serde::Serializer,
     {
         serializer.serialize_str(&format!(
-            "/{}{}",
+            "{}{}",
             self.path.path.to_str().expect("Non-unicode path"),
             self.path
                 .label
@@ -417,7 +434,7 @@ impl<T: TypeUlid> serde::Serialize for Handle<T> {
         S: serde::Serializer,
     {
         serializer.serialize_str(&format!(
-            "/{}{}",
+            "{}{}",
             self.path.path.to_str().expect("Non-unicode path"),
             self.path
                 .label
@@ -469,10 +486,7 @@ mod bevy {
     impl<T: Asset + TypeUlid> super::Handle<T> {
         /// Get a Bevy weak [`Handle`] from from this bones asset handle.
         pub fn get_bevy_handle(&self) -> Handle<T> {
-            let asset_path = AssetPath::new(
-                self.path.path.to_path_buf(),
-                self.path.label.as_ref().map(|x| x.to_string()),
-            );
+            let asset_path = self.path.get_bevy_asset_path();
             Handle::weak(asset_path.into())
         }
     }
@@ -480,20 +494,14 @@ mod bevy {
     impl<T: TypeUlid> super::Handle<T> {
         /// Get a Bevy weak [`HandleUntyped`] from this bones asset handle.
         pub fn get_bevy_handle_untyped(&self) -> HandleUntyped {
-            let asset_path = AssetPath::new(
-                self.path.path.to_path_buf(),
-                self.path.label.as_ref().map(|x| x.to_string()),
-            );
+            let asset_path = self.path.get_bevy_asset_path();
             HandleUntyped::weak(asset_path.into())
         }
     }
     impl super::UntypedHandle {
         /// Get a Bevy weak [`HandleUntyped`] from this bones asset handle.
         pub fn get_bevy_handle(&self) -> HandleUntyped {
-            let asset_path = AssetPath::new(
-                self.path.path.to_path_buf(),
-                self.path.label.as_ref().map(|x| x.to_string()),
-            );
+            let asset_path = self.path.get_bevy_asset_path();
             HandleUntyped::weak(asset_path.into())
         }
     }
