@@ -78,10 +78,7 @@ impl<T: TypeUlid> BonesBevyAssetLoad for bones::Handle<T> {
         self.path.normalize_relative_to(load_context.path());
 
         // Create a bevy asset path from this bones handle
-        let asset_path = bevy_asset::AssetPath::new(
-            self.path.path.to_path_buf(),
-            self.path.clone().label.map(|x| x.to_string()),
-        );
+        let asset_path = self.path.get_bevy_asset_path();
         let path_id = asset_path.get_id();
         dependencies.push(asset_path);
 
