@@ -1,6 +1,6 @@
 //! Camera components.
 
-use crate::prelude::*;
+use crate::{color::Color, prelude::*};
 
 /// Makes an entity behave like a camera.
 ///
@@ -51,4 +51,4 @@ impl Default for Camera {
 /// Resource for controlling the clear color.
 #[derive(Deref, DerefMut, Clone, Copy, TypeUlid, Default)]
 #[ulid = "01GP4XRQYRPQNX4J22E513975M"]
-pub struct ClearColor(pub [f32; 4]);
+pub struct ClearColor(pub Color);
