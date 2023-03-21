@@ -19,7 +19,7 @@ bones_asset      = { version = "^0.1.0", path = "./crates/bones_asset" }
 bones_bevy_utils = { version = "^0.1.0", path = "./crates/bones_bevy_utils", optional = true }
 bones_ecs        = { version = "^0.1.0", path = "./crates/bones_ecs" }
 bones_input      = { version = "^0.1.0", path = "./crates/bones_input" }
-bones_render     = { version = "^0.1.0", path = "./crates/bones_render" }
+bones_render     = { version = "^0.1.2", path = "./crates/bones_render" }
 type_ulid        = { version = "^0.1.0", path = "./crates/type_ulid" }
 
 noise = "0.8.2"
