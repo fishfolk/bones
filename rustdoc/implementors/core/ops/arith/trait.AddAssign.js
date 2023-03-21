@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"bones_render":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.67.1/core/ops/arith/trait.AddAssign.html\" title=\"trait core::ops::arith::AddAssign\">AddAssign</a>&lt;<a class=\"enum\" href=\"bones_render/color/enum.Color.html\" title=\"enum bones_render::color::Color\">Color</a>&gt; for <a class=\"enum\" href=\"bones_render/color/enum.Color.html\" title=\"enum bones_render::color::Color\">Color</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
