@@ -21,6 +21,7 @@ pub mod prelude {
 }
 
 use bones_bevy_utils::BevyWorld;
+use bones_lib::prelude::Color;
 use prelude::*;
 
 pub use bones_bevy_asset_macros::{BonesBevyAsset, BonesBevyAssetLoad};
@@ -67,6 +68,8 @@ pub trait BonesBevyAssetLoad {
 }
 
 impl BonesBevyAssetLoad for Duration {}
+
+impl BonesBevyAssetLoad for Color {}
 
 impl<T: TypeUlid> BonesBevyAssetLoad for bones::Handle<T> {
     fn load(
