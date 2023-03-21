@@ -1,6 +1,5 @@
 //! Sprite rendering components.
 
-use crate::color::Color;
 use crate::prelude::*;
 
 /// Image asset type, contains no data, but [`Handle<Image>`] is still useful because it uniquely

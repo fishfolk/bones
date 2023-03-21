@@ -1,6 +1,6 @@
 //! Line rendering, useful for debugging.
 
-use crate::{color::Color, prelude::*};
+use crate::prelude::*;
 
 /// A component for rendering a 2D line path, made up of a list of straight line segments.
 #[derive(Clone, Debug, TypeUlid)]

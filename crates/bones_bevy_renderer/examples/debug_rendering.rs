@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bones_bevy_renderer::*;
-use bones_lib::{prelude as bones, render::color::Color};
+use bones_lib::prelude as bones;
 
 #[derive(Deref, DerefMut, Resource)]
 struct Session(pub bones_lib::prelude::World);
@@ -38,7 +38,7 @@ fn setup(mut commands: Commands) {
                 path2ds.insert(
                     ent,
                     bones::Path2d {
-                        color: Color::RED,
+                        color: bones::Color::RED,
                         points: vec![
                             glam::vec2(-SIZE, -SIZE),
                             glam::vec2(SIZE, -SIZE),
@@ -59,7 +59,7 @@ fn setup(mut commands: Commands) {
                 path2ds.insert(
                     ent,
                     bones::Path2d {
-                        color: Color::BLUE,
+                        color: bones::Color::BLUE,
                         points: vec![
                             // The first line
                             glam::vec2(-SIZE2, -SIZE2),

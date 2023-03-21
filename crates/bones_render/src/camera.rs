@@ -1,6 +1,6 @@
 //! Camera components.
 
-use crate::{color::Color, prelude::*};
+use crate::prelude::*;
 
 /// Makes an entity behave like a camera.
 ///

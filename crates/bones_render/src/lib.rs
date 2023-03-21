@@ -19,7 +19,8 @@ pub mod prelude {
     pub use {bones_asset::prelude::*, bones_ecs::prelude::*, glam::*, type_ulid::TypeUlid};
 
     pub use crate::{
-        audio::*, camera::*, datatypes::*, key, line::*, sprite::*, tilemap::*, transform::*,
+        audio::*, camera::*, color::*, datatypes::*, key, line::*, sprite::*, tilemap::*,
+        transform::*,
     };
 }
 
