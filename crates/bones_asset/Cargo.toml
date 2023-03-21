@@ -1,20 +1,22 @@
 [package]
-name = "bones_asset"
+authors     = ["The Fish Folk & Spicy Lobster Developers"]
 description = "Asset interface for bones_lib."
-version = "0.1.0"
-edition = "2021"
-authors = ["The Fish Folk & Spicy Lobster Developers"]
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/fishfolk/bones"
+edition     = "2021"
+license     = "MIT OR Apache-2.0"
+name        = "bones_asset"
+repository  = "https://github.com/fishfolk/bones"
+version     = "0.1.0"
 
 [dependencies]
-bones_ecs = { version = "^0.1.0", path = "../bones_ecs" }
-ulid = "1.0.0"
-serde = "1.0.0"
 bones_bevy_utils = { version = "^0.1.0", path = "../bones_bevy_utils", optional = true }
-type_ulid = { version = "^0.1.0", path = "../type_ulid" }
+bones_ecs        = { version = "^0.1.0", path = "../bones_ecs" }
+
 bevy_asset = { version = "0.9.1", optional = true }
 
+serde     = "1.0.0"
+type_ulid = { version = "^0.1.0", path = "../type_ulid" }
+ulid      = "1.0.0"
+
 [features]
+bevy    = ["dep:bones_bevy_utils", "dep:bevy_asset"]
 default = []
-bevy = ["dep:bones_bevy_utils", "dep:bevy_asset"]
