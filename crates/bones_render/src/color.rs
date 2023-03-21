@@ -7,6 +7,7 @@ use type_ulid::TypeUlid;
 
 /// Color type.
 #[derive(Clone, Copy, Debug, TypeUlid)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[ulid = "01GW2T0C0Q97B17MFARADVTZG5"]
 #[repr(C)]
 pub enum Color {
