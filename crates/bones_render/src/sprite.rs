@@ -18,6 +18,8 @@ pub struct Atlas;
 #[derive(Clone, TypeUlid, Debug, Default)]
 #[ulid = "01GNJXPWZKS6BHJEG1SX5B93DA"]
 pub struct Sprite {
+    /// The sprite's color tint
+    pub color: Color,
     /// The sprite image handle.
     pub image: Handle<Image>,
     /// Whether or not the flip the sprite horizontally.

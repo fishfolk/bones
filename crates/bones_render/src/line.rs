@@ -7,7 +7,7 @@ use crate::prelude::*;
 #[ulid = "01GQDVVZNVCPF1N4ADX0WVH53E"]
 pub struct Path2d {
     /// The color of the path.
-    pub color: [f32; 4],
+    pub color: Color,
     /// The list of points in the path
     pub points: Vec<Vec2>,
 
@@ -25,9 +25,9 @@ pub struct Path2d {
 impl Default for Path2d {
     fn default() -> Self {
         Self {
-            color: [1.0, 1.0, 1.0, 1.0],
-            points: default(),
             thickness: 1.0,
+            points: default(),
+            color: Color::WHITE,
             line_breaks: default(),
         }
     }

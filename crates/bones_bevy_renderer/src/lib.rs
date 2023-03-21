@@ -125,7 +125,7 @@ fn sync_clear_color<W: HasBonesWorld>(
     let bones_clear_color = world.resource::<bones::ClearColor>();
     let bones_clear_color = bones_clear_color.borrow();
 
-    clear_color.0 = Color::from(bones_clear_color.0);
+    clear_color.0 = bones_clear_color.0.into_bevy()
 }
 
 /// The system that renders the bones world.
@@ -166,6 +166,7 @@ fn sync_sprites<W: HasBonesWorld>(
 
             sprite.flip_x = bones_sprite.flip_x;
             sprite.flip_y = bones_sprite.flip_y;
+            sprite.color = bones_sprite.color.into_bevy();
             *image = bones_sprite.image.get_bevy_handle_untyped().typed();
             *transform = bones_transform.into_bevy();
         } else {
@@ -517,12 +518,7 @@ fn sync_path2ds<W: HasBonesWorld>(
         bones_transform: &bones::Transform,
     ) -> (lyon::DrawMode, lyon::Path, Transform) {
         let draw_mode = lyon::DrawMode::Stroke(lyon::StrokeMode::new(
-            Color::RgbaLinear {
-                red: bones_path2d.color[0],
-                green: bones_path2d.color[1],
-                blue: bones_path2d.color[2],
-                alpha: bones_path2d.color[3],
-            },
+            bones_path2d.color.into_bevy(),
             bones_path2d.thickness,
         ));
         let new_path = bones_path2d

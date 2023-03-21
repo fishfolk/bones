@@ -7,6 +7,7 @@
 
 pub mod audio;
 pub mod camera;
+pub mod color;
 pub mod datatypes;
 pub mod line;
 pub mod sprite;
@@ -18,7 +19,8 @@ pub mod prelude {
     pub use {bones_asset::prelude::*, bones_ecs::prelude::*, glam::*, type_ulid::TypeUlid};
 
     pub use crate::{
-        audio::*, camera::*, datatypes::*, key, line::*, sprite::*, tilemap::*, transform::*,
+        audio::*, camera::*, color::*, datatypes::*, key, line::*, sprite::*, tilemap::*,
+        transform::*,
     };
 }
 
@@ -46,6 +48,12 @@ mod bevy {
                 rotation: self.rotation,
                 scale: self.scale,
             }
+        }
+    }
+
+    impl IntoBevy<bevy_render::color::Color> for super::color::Color {
+        fn into_bevy(self) -> bevy_render::color::Color {
+            bevy_render::color::Color::from(self.as_rgba_f32())
         }
     }
 }

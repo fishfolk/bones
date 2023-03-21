@@ -1090,14 +1090,17 @@ dependencies = [
 
 [[package]]
 name = "bones_render"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
+ "bevy_render",
  "bevy_transform",
  "bones_asset",
  "bones_bevy_utils",
  "bones_ecs",
  "glam",
+ "hex",
  "serde",
+ "thiserror",
  "type_ulid",
 ]
 

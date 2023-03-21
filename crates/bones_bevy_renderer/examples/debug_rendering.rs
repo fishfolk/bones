@@ -38,7 +38,7 @@ fn setup(mut commands: Commands) {
                 path2ds.insert(
                     ent,
                     bones::Path2d {
-                        color: [1.0, 0.0, 0.0, 1.0],
+                        color: bones::Color::RED,
                         points: vec![
                             glam::vec2(-SIZE, -SIZE),
                             glam::vec2(SIZE, -SIZE),
@@ -59,7 +59,7 @@ fn setup(mut commands: Commands) {
                 path2ds.insert(
                     ent,
                     bones::Path2d {
-                        color: [0.0, 0.0, 1.0, 1.0],
+                        color: bones::Color::BLUE,
                         points: vec![
                             // The first line
                             glam::vec2(-SIZE2, -SIZE2),
