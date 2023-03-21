@@ -206,6 +206,9 @@
 <a href="#206" id="206">206</a>
 <a href="#207" id="207">207</a>
 <a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
 </pre><pre class="rust"><code><span class="doccomment">//! An asset integration between Bevy and bones.
 //!
 //! Provides an easy way to load metadata for bones games using Bevy assets.
@@ -229,6 +232,7 @@
 }
 
 <span class="kw">use </span>bones_bevy_utils::BevyWorld;
+<span class="kw">use </span>bones_lib::prelude::Color;
 <span class="kw">use </span>prelude::<span class="kw-2">*</span>;
 
 <span class="kw">pub use </span>bones_bevy_asset_macros::{BonesBevyAsset, BonesBevyAssetLoad};
@@ -275,6 +279,8 @@
 }
 
 <span class="kw">impl </span>BonesBevyAssetLoad <span class="kw">for </span>Duration {}
+
+<span class="kw">impl </span>BonesBevyAssetLoad <span class="kw">for </span>Color {}
 
 <span class="kw">impl</span>&lt;T: TypeUlid&gt; BonesBevyAssetLoad <span class="kw">for </span>bones::Handle&lt;T&gt; {
     <span class="kw">fn </span>load(

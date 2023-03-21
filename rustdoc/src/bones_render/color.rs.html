@@ -546,6 +546,7 @@
 <a href="#546" id="546">546</a>
 <a href="#547" id="547">547</a>
 <a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Color components.
 
 </span><span class="kw">use </span>glam::{Vec3, Vec4};
@@ -555,6 +556,7 @@
 
 <span class="doccomment">/// Color type.
 </span><span class="attr">#[derive(Clone, Copy, Debug, TypeUlid)]
+#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Serialize, serde::Deserialize))]
 #[ulid = <span class="string">&quot;01GW2T0C0Q97B17MFARADVTZG5&quot;</span>]
 #[repr(C)]
 </span><span class="kw">pub enum </span>Color {
