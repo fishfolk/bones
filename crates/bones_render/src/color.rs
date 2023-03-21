@@ -1,8 +1,8 @@
 //! Color components.
 
-use std::ops::{Add, AddAssign, Mul, MulAssign};
-
 use glam::{Vec3, Vec4};
+use std::ops::{Add, AddAssign, Mul, MulAssign};
+use thiserror::Error;
 use type_ulid::TypeUlid;
 
 /// Color type.
@@ -82,6 +82,52 @@ impl Color {
             blue: b,
             alpha: a,
         }
+    }
+
+    /// New `Color` from sRGB colorspace.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use bevy_render::color::Color;
+    /// let color = Color::hex("FF00FF").unwrap(); // fuchsia
+    /// let color = Color::hex("FF00FF7F").unwrap(); // partially transparent fuchsia
+    /// ```
+    ///
+    pub fn hex<T: AsRef<str>>(hex: T) -> Result<Color, HexColorError> {
+        let hex = hex.as_ref();
+
+        // RGB
+        if hex.len() == 3 {
+            let mut data = [0; 6];
+            for (i, ch) in hex.chars().enumerate() {
+                data[i * 2] = ch as u8;
+                data[i * 2 + 1] = ch as u8;
+            }
+            return decode_rgb(&data);
+        }
+
+        // RGBA
+        if hex.len() == 4 {
+            let mut data = [0; 8];
+            for (i, ch) in hex.chars().enumerate() {
+                data[i * 2] = ch as u8;
+                data[i * 2 + 1] = ch as u8;
+            }
+            return decode_rgba(&data);
+        }
+
+        // RRGGBB
+        if hex.len() == 6 {
+            return decode_rgb(hex.as_bytes());
+        }
+
+        // RRGGBBAA
+        if hex.len() == 8 {
+            return decode_rgba(hex.as_bytes());
+        }
+
+        Err(HexColorError::Length)
     }
 
     /// New `Color` from sRGB colorspace.
@@ -460,5 +506,43 @@ impl MulAssign<[f32; 3]> for Color {
                 *blue *= rhs[2];
             }
         }
+    }
+}
+
+/// Error type for hex color decoding
+#[derive(Debug, Error)]
+pub enum HexColorError {
+    /// Error for unexpected length of hex string
+    #[error("Unexpected length of hex string")]
+    Length,
+    /// Error for hex crate errors
+    #[error("Error parsing hex value")]
+    Hex(#[from] hex::FromHexError),
+}
+
+fn decode_rgb(data: &[u8]) -> Result<Color, HexColorError> {
+    let mut buf = [0; 3];
+    match hex::decode_to_slice(data, &mut buf) {
+        Ok(_) => {
+            let r = buf[0] as f32 / 255.0;
+            let g = buf[1] as f32 / 255.0;
+            let b = buf[2] as f32 / 255.0;
+            Ok(Color::rgb(r, g, b))
+        }
+        Err(err) => Err(HexColorError::Hex(err)),
+    }
+}
+
+fn decode_rgba(data: &[u8]) -> Result<Color, HexColorError> {
+    let mut buf = [0; 4];
+    match hex::decode_to_slice(data, &mut buf) {
+        Ok(_) => {
+            let r = buf[0] as f32 / 255.0;
+            let g = buf[1] as f32 / 255.0;
+            let b = buf[2] as f32 / 255.0;
+            let a = buf[3] as f32 / 255.0;
+            Ok(Color::rgba(r, g, b, a))
+        }
+        Err(err) => Err(HexColorError::Hex(err)),
     }
 }
