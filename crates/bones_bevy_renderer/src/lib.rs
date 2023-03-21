@@ -234,6 +234,7 @@ fn sync_atlas_sprites<W: HasBonesWorld>(
             atlas_sprite.index = bones_atlas.index;
             atlas_sprite.flip_x = bones_atlas.flip_x;
             atlas_sprite.flip_y = bones_atlas.flip_y;
+            atlas_sprite.color = bones_atlas.color.into_bevy();
         } else {
             commands.entity(bevy_ent).despawn();
         }
