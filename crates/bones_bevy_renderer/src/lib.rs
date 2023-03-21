@@ -166,6 +166,7 @@ fn sync_sprites<W: HasBonesWorld>(
 
             sprite.flip_x = bones_sprite.flip_x;
             sprite.flip_y = bones_sprite.flip_y;
+            sprite.color = bones_sprite.color.into_bevy();
             *image = bones_sprite.image.get_bevy_handle_untyped().typed();
             *transform = bones_transform.into_bevy();
         } else {

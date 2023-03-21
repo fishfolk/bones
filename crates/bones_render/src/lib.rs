@@ -7,6 +7,7 @@
 
 pub mod audio;
 pub mod camera;
+pub mod color;
 pub mod datatypes;
 pub mod line;
 pub mod sprite;
@@ -46,6 +47,12 @@ mod bevy {
                 rotation: self.rotation,
                 scale: self.scale,
             }
+        }
+    }
+
+    impl IntoBevy<bevy_render::color::Color> for super::color::Color {
+        fn into_bevy(self) -> bevy_render::color::Color {
+            bevy_render::color::Color::from(self.as_rgba_f32())
         }
     }
 }
