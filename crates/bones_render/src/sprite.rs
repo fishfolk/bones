@@ -35,6 +35,8 @@ pub struct Sprite {
 #[derive(Debug, Default, Clone, TypeUlid)]
 #[ulid = "01GNYXFHC6T3NS061GMVFBXFYE"]
 pub struct AtlasSprite {
+    /// The sprite's color tint
+    pub color: Color,
     /// This is the current index in the animation, with an `idx` of `0` meaning that the index in
     /// the sprite sheet will be `start`.
     ///
@@ -51,6 +53,10 @@ pub struct AtlasSprite {
 impl AtlasSprite {
     /// Create a new [`AtlasSprite`] from the given atlas handle.
     pub fn new(atlas: Handle<Atlas>) -> Self {
-        Self { atlas, ..default() }
+        Self {
+            atlas,
+            color: Color::WHITE,
+            ..default()
+        }
     }
 }
