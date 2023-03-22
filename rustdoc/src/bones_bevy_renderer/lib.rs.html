@@ -595,6 +595,7 @@
 <a href="#595" id="595">595</a>
 <a href="#596" id="596">596</a>
 <a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -831,6 +832,7 @@
             atlas_sprite.index = bones_atlas.index;
             atlas_sprite.flip_x = bones_atlas.flip_x;
             atlas_sprite.flip_y = bones_atlas.flip_y;
+            atlas_sprite.color = bones_atlas.color.into_bevy();
         } <span class="kw">else </span>{
             commands.entity(bevy_ent).despawn();
         }

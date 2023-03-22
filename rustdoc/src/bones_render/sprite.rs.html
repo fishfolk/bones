@@ -54,6 +54,12 @@
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Sprite rendering components.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -91,6 +97,8 @@
 </span><span class="attr">#[derive(Debug, Default, Clone, TypeUlid)]
 #[ulid = <span class="string">&quot;01GNYXFHC6T3NS061GMVFBXFYE&quot;</span>]
 </span><span class="kw">pub struct </span>AtlasSprite {
+    <span class="doccomment">/// The sprite&#39;s color tint
+    </span><span class="kw">pub </span>color: Color,
     <span class="doccomment">/// This is the current index in the animation, with an `idx` of `0` meaning that the index in
     /// the sprite sheet will be `start`.
     ///
@@ -107,7 +115,11 @@
 <span class="kw">impl </span>AtlasSprite {
     <span class="doccomment">/// Create a new [`AtlasSprite`] from the given atlas handle.
     </span><span class="kw">pub fn </span>new(atlas: Handle&lt;Atlas&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ atlas, ..default() }
+        <span class="self">Self </span>{
+            atlas,
+            color: Color::WHITE,
+            ..default()
+        }
     }
 }
 </code></pre></div>
