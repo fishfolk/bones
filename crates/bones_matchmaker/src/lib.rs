@@ -28,12 +28,6 @@ struct Config {
 async fn server(args: Config) -> anyhow::Result<()> {
     let task_pool = IoTaskPool::get();
 
-    // Set allowed threads for blocking thread pool. This value represents the maxiumum number of
-    // matches that can run at the same time.
-    //
-    // 10000 is the max the `blocking` crate supports.
-    std::env::set_var("BLOCKING_MAX_THREADS", "5000");
-
     // Generate certificate
     let (cert, key) = certs::generate_self_signed_cert()?;
 
