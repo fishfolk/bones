@@ -133,7 +133,7 @@ pub trait SystemParam: Sized {
 
 /// [`SystemParam`] for getting read access to a resource.
 pub struct Res<'a, T: TypedEcsData + FromWorld>(AtomicRef<'a, T>);
-impl<'a, T: TypedEcsData + Default> std::ops::Deref for Res<'a, T> {
+impl<'a, T: TypedEcsData + FromWorld> std::ops::Deref for Res<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
