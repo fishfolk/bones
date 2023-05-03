@@ -13,7 +13,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry/cache \
     --mount=type=cache,target=/usr/local/cargo/git/db \
     --mount=type=cache,target=/usr/src/bones/target \
     # Uncomment if building with behind custom CA cert
-    --mount=type=bind,src=./cacert.gitignore.crt,target=/etc/ssl/certs/ca-certificates.crt \
+    #--mount=type=bind,src=./cacert.gitignore.crt,target=/etc/ssl/certs/ca-certificates.crt \
     cargo build --release -p bones_matchmaker
 
 RUN --mount=type=cache,target=/usr/src/bones/target \
