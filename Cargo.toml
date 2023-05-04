@@ -10,6 +10,9 @@ version     = "0.1.0"
 [workspace]
 members = [".", "crates/*"]
 
+[profile.release]
+lto = true
+
 [features]
 bevy  = ["bones_asset/bevy", "bones_render/bevy", "dep:bones_bevy_utils"]
 serde = ["dep:serde", "bones_render/serde", "bones_ecs/serde"]
