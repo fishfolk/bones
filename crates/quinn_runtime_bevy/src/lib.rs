@@ -12,7 +12,7 @@ use std::{
 
 use async_io::Async;
 use bevy_tasks::IoTaskPool;
-use quinn_proto::Transmit;
+use quinn_udp::Transmit;
 
 #[derive(Clone, Debug)]
 pub struct BevyIoTaskPoolExecutor;
@@ -94,7 +94,7 @@ struct AsyncIoUdpSocket {
 
 impl quinn::AsyncUdpSocket for AsyncIoUdpSocket {
     fn poll_send(
-        &mut self,
+        &self,
         state: &quinn_udp::UdpState,
         cx: &mut Context,
         transmits: &[Transmit],
