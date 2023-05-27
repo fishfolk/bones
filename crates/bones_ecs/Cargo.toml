@@ -1,13 +1,16 @@
 [package]
-name = "bones_ecs"
-version = "0.2.0"
-authors = ["Joël Lupien (Jojolepro) <jojolepro@jojolepro.com>", "Fish Folk & Spicy Lobster Developers"]
-edition = "2021"
-description = "A tiny but very powerful ECS framework."
-keywords = ["game", "ecs"]
+authors = [
+    "Joël Lupien (Jojolepro) <jojolepro@jojolepro.com>",
+    "Fish Folk & Spicy Lobster Developers",
+]
 categories = ["game-engines"]
+description = "A tiny but very powerful ECS framework."
+edition = "2021"
+keywords = ["game", "ecs"]
 license = "Apache-2.0"
+name = "bones_ecs"
 repository = "https://github.com/fishfolk/bones"
+version = "0.2.0"
 
 [features]
 default = ["keysize16"]
@@ -18,19 +21,19 @@ keysize24 = []
 keysize32 = []
 
 [dependencies]
-aligned-vec = "0.5.0"
-anyhow = "1.0.68"
+aligned-vec    = "0.5.0"
+anyhow         = "1.0.68"
 atomic_refcell = "0.1.8"
 # TODO: Replace with our own macros
 bevy_derive = "0.10"
 bitset-core = "0.1.1"
-bytemuck = "1.12.3"
-either = "1.8.0"
-fxhash = "0.2.1"
-itertools = "0.10.5"
-thiserror = "1.0.37"
-type_ulid = { version = "^0.2.0", path = "../type_ulid" }
-serde = { version = "1.0", features = ["derive"], optional = true }
+bytemuck    = "1.12.3"
+either      = "1.8.0"
+fxhash      = "0.2.1"
+itertools   = "0.10.5"
+serde       = { version = "1.0", features = ["derive"], optional = true }
+thiserror   = "1.0.37"
+type_ulid   = { version = "^0.2.0", path = "../type_ulid" }
 
 [dev-dependencies]
 glam = "0.23"

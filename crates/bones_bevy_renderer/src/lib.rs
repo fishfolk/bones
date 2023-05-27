@@ -73,6 +73,7 @@ pub struct BevyBonesEntity;
 
 /// [`StageLabel`] for stages added by bones to the Bevy world.
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+#[system_set(base)]
 pub enum BonesStage {
     /// This stage is run after [`CoreStage::First`] to synchronize the bevy `Time` resource with
     /// the bones one.
@@ -102,11 +103,11 @@ impl<W: HasBonesWorld> Plugin for BonesRendererPlugin<W> {
                     sync_clear_color::<W>,
                     sync_atlas_sprites::<W>,
                 )
-                    .in_set(BonesStage::SyncRender),
+                    .in_base_set(BonesStage::SyncRender),
             );
 
         if self.sync_time {
-            app.add_system(sync_time::<W>.in_set(BonesStage::SyncTime));
+            app.add_system(sync_time::<W>.in_base_set(BonesStage::SyncTime));
         }
     }
 }
