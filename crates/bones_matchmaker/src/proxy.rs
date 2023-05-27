@@ -32,7 +32,7 @@ async fn impl_proxy(match_info: MatchInfo, clients: Vec<Connection>) -> anyhow::
                 let result = async {
                     loop {
                         // Wait for an incomming connection
-                        let accept = conn_.accept_uni().await?;
+                        let mut accept = conn_.accept_uni().await?;
 
                         // Parse the message
                         let message = accept.read_to_end(1024).await?;

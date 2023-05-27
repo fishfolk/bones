@@ -1,3 +1,4 @@
 target
 book/dist
 book/src/rustdoc
+.cargo

@@ -5,7 +5,7 @@ edition     = "2021"
 license     = "MIT OR Apache-2.0"
 name        = "bones_lib"
 repository  = "https://github.com/fishfolk/bones"
-version     = "0.1.0"
+version     = "0.2.0"
 
 [workspace]
 members = [".", "crates/*"]
@@ -18,12 +18,12 @@ bevy  = ["bones_asset/bevy", "bones_render/bevy", "dep:bones_bevy_utils"]
 serde = ["dep:serde", "bones_render/serde", "bones_ecs/serde"]
 
 [dependencies]
-bones_asset      = { version = "^0.1.0", path = "./crates/bones_asset" }
-bones_bevy_utils = { version = "^0.1.0", path = "./crates/bones_bevy_utils", optional = true }
-bones_ecs        = { version = "^0.1.0", path = "./crates/bones_ecs" }
-bones_input      = { version = "^0.1.0", path = "./crates/bones_input" }
-bones_render     = { version = "^0.1.2", path = "./crates/bones_render" }
-type_ulid        = { version = "^0.1.0", path = "./crates/type_ulid" }
+bones_asset      = { version = "^0.2.0", path = "./crates/bones_asset" }
+bones_bevy_utils = { version = "^0.2.0", path = "./crates/bones_bevy_utils", optional = true }
+bones_ecs        = { version = "^0.2.0", path = "./crates/bones_ecs" }
+bones_input      = { version = "^0.2.0", path = "./crates/bones_input" }
+bones_render     = { version = "^0.2.0", path = "./crates/bones_render" }
+type_ulid        = { version = "^0.2.0", path = "./crates/type_ulid" }
 
 noise = "0.8.2"
 serde = { version = "1.0.0", features = ["derive"], optional = true }

@@ -1,12 +1,12 @@
 [package]
-name = "bones_bevy_utils"
+authors     = ["The Fish Folk & Spicy Lobster Developers"]
 description = "Utilities for using Bones with Bevy."
-version = "0.1.0"
-edition = "2021"
-authors = ["The Fish Folk & Spicy Lobster Developers"]
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/fishfolk/bones"
+edition     = "2021"
+license     = "MIT OR Apache-2.0"
+name        = "bones_bevy_utils"
+repository  = "https://github.com/fishfolk/bones"
+version     = "0.2.0"
 
 [dependencies]
-type_ulid = { version = "^0.1.0", path = "../type_ulid" }
-bevy_ecs = "0.9.1"
+bevy_ecs  = "0.10"
+type_ulid = { version = "^0.2.0", path = "../type_ulid" }

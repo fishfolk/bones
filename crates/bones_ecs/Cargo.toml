@@ -1,6 +1,6 @@
 [package]
 name = "bones_ecs"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Joël Lupien (Jojolepro) <jojolepro@jojolepro.com>", "Fish Folk & Spicy Lobster Developers"]
 edition = "2021"
 description = "A tiny but very powerful ECS framework."
@@ -22,15 +22,15 @@ aligned-vec = "0.5.0"
 anyhow = "1.0.68"
 atomic_refcell = "0.1.8"
 # TODO: Replace with our own macros
-bevy_derive = "0.9.1"
+bevy_derive = "0.10"
 bitset-core = "0.1.1"
 bytemuck = "1.12.3"
 either = "1.8.0"
 fxhash = "0.2.1"
 itertools = "0.10.5"
 thiserror = "1.0.37"
-type_ulid = { version = "^0.1.0", path = "../type_ulid" }
+type_ulid = { version = "^0.2.0", path = "../type_ulid" }
 serde = { version = "1.0", features = ["derive"], optional = true }
 
 [dev-dependencies]
-glam = "0.22.0"
+glam = "0.23"

@@ -1,18 +1,18 @@
 [package]
-name = "quinn_runtime_bevy"
+authors     = ["The Fish Folk & Spicy Lobster Developers"]
 description = "Quinn runtime implementation built on Bevy's IO task pool."
-version = "0.1.0"
-edition = "2021"
-authors = ["The Fish Folk & Spicy Lobster Developers"]
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/fishfolk/bones"
+edition     = "2021"
+license     = "MIT OR Apache-2.0"
+name        = "quinn_runtime_bevy"
+repository  = "https://github.com/fishfolk/bones"
+version     = "0.2.0"
 
 [dependencies]
-quinn = { version = "0.9.1", default-features = false, features = ["native-certs", "tls-rustls"] }
-quinn-udp = { version = "0.3.0",  default-features = false }
-quinn-proto = { version = "0.9",  default-features = false }
-bevy_tasks = "0.9.1"
 async-executor = "1.4.1"
-async-io = "1.9.0"
-pin-project = "1.0.12"
-futures-lite = "1.12.0"
+async-io       = "1.9.0"
+bevy_tasks     = "0.10.1"
+futures-lite   = "1.12.0"
+pin-project    = "1.0.12"
+quinn          = { version = "0.10", default-features = false, features = ["native-certs", "tls-rustls"] }
+quinn-proto    = { version = "0.10", default-features = false }
+quinn-udp      = { version = "0.4", default-features = false }
