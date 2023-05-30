@@ -71,11 +71,11 @@ impl<W: HasBonesWorld> BonesRendererPlugin<W> {
 #[derive(Component)]
 pub struct BevyBonesEntity;
 
-/// [`StageLabel`] for stages added by bones to the Bevy world.
+/// [`SystemSet`] marker for sets added by bones to the Bevy world.
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 #[system_set(base)]
 pub enum BonesStage {
-    /// This stage is run after [`CoreStage::First`] to synchronize the bevy `Time` resource with
+    /// This stage is run after [`CoreSet::First`] to synchronize the bevy `Time` resource with
     /// the bones one.
     SyncTime,
     /// This is the stage where the plugin reads the bones world adds bevy sprites, tiles, etc. to
