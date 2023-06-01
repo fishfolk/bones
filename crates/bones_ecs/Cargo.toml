@@ -21,19 +21,19 @@ keysize24 = []
 keysize32 = []
 
 [dependencies]
-aligned-vec    = "0.5.0"
-anyhow         = "1.0.68"
-atomic_refcell = "0.1.8"
+aligned-vec    = "0.5"
+anyhow         = "1.0"
+atomic_refcell = "0.1"
 # TODO: Replace with our own macros
 bevy_derive = "0.10"
-bitset-core = "0.1.1"
-bytemuck    = "1.12.3"
-either      = "1.8.0"
-fxhash      = "0.2.1"
-itertools   = "0.10.5"
+bitset-core = "0.1"
+bytemuck    = "1.12"
+either      = "1.8"
+fxhash      = "0.2"
+itertools   = "0.10"
 serde       = { version = "1.0", features = ["derive"], optional = true }
-thiserror   = "1.0.37"
-type_ulid   = { version = "^0.2.0", path = "../type_ulid" }
+thiserror   = "1.0"
+type_ulid   = { version = "0.2", path = "../type_ulid" }
 
 [dev-dependencies]
 glam = "0.23"

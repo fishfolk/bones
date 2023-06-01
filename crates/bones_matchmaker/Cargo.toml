@@ -8,29 +8,29 @@ repository  = "https://github.com/fishfolk/bones"
 version     = "0.2.0"
 
 [dependencies]
-anyhow = "1.0.66"
-bevy_tasks = "0.10.1"
-bones_matchmaker_proto = { version = "^0.2.0", path = "../bones_matchmaker_proto" }
-bytes = "1.2.1"
-clap = { version = "4.0.18", features = ["derive", "env"] }
-either = "1.8.0"
-futures = { version = "0.3.25", default-features = false, features = ["std", "async-await"] }
-futures-lite = "1.12.0"
-once_cell = "1.15.0"
-postcard = { version = "1.0.2", default-features = false, features = ["alloc"] }
-quinn = { version = "0.10.1", default-features = false, features = [
+anyhow = "1.0"
+bevy_tasks = "0.10"
+bones_matchmaker_proto = { version = "0.2", path = "../bones_matchmaker_proto" }
+bytes = "1.2"
+clap = { version = "4.0", features = ["derive", "env"] }
+either = "1.8"
+futures = { version = "0.3", default-features = false, features = ["std", "async-await"] }
+futures-lite = "1.12"
+once_cell = "1.15"
+postcard = { version = "1.0", default-features = false, features = ["alloc"] }
+quinn = { version = "0.10", default-features = false, features = [
     "futures-io",
     "native-certs",
     "tls-rustls",
 ] }
-quinn_runtime_bevy = { version = "^0.2", path = "../quinn_runtime_bevy" }
+quinn_runtime_bevy = { version = "0.2", path = "../quinn_runtime_bevy" }
 rand = "0.8"
 rcgen = "0.10"
 rustls = { version = "0.21", features = ["dangerous_configuration", "quic"] }
-scc = "1.0.1"
-serde = { version = "1", features = ["derive"] }
+scc = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
-async-io = "1.9.0"
+async-io = "1.9"

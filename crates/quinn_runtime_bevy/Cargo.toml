@@ -11,8 +11,8 @@ version     = "0.2.0"
 async-executor = "1.4"
 async-io       = "1.9"
 bevy_tasks     = "0.10"
-futures-lite   = "1"
-pin-project    = "1"
+futures-lite   = "1.0"
+pin-project    = "1.0"
 quinn          = { version = "0.10", default-features = false, features = ["native-certs", "tls-rustls"] }
 quinn-proto    = { version = "0.10", default-features = false }
 quinn-udp      = { version = "0.4", default-features = false }
