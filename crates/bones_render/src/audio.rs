@@ -27,7 +27,7 @@ impl AudioEvents {
     /// Play a sound.
     ///
     /// Shortcut for sending an [`AudioEvent`] with [`send()`][Self::send].
-    pub fn play(&mut self, sound_source: Handle<AudioSource>, volume: f32) {
+    pub fn play(&mut self, sound_source: Handle<AudioSource>, volume: f64) {
         self.queue.push_back(AudioEvent::PlaySound {
             sound_source,
             volume,
@@ -43,6 +43,6 @@ pub enum AudioEvent {
         /// The handle to the sound to play.
         sound_source: Handle<AudioSource>,
         /// The volume to play the sound at.
-        volume: f32,
+        volume: f64,
     },
 }

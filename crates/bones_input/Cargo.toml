@@ -5,12 +5,12 @@ edition     = "2021"
 license     = "MIT OR Apache-2.0"
 name        = "bones_input"
 repository  = "https://github.com/fishfolk/bones"
-version     = "0.1.0"
+version     = "0.2.0"
 
 [dependencies]
-bones_bevy_utils = { version = "^0.1.0", path = "../bones_bevy_utils" }
-type_ulid        = { version = "^0.1.0", path = "../type_ulid" }
+bones_bevy_utils = { version = "0.2", path = "../bones_bevy_utils" }
+type_ulid        = { version = "0.2", path = "../type_ulid" }
 
-bevy = { version = "0.9.1", default-features = false }
-glam = "0.22.0"
-instant = "0.1.12"
+bevy    = { version = "0.10", default-features = false }
+glam    = "0.23"
+instant = "0.1"

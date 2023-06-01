@@ -1,11 +1,11 @@
 [package]
-name = "bones_matchmaker_proto"
+authors     = ["The Fish Folk & Spicy Lobster Developers"]
 description = "Network protocol types for the Bones matchmaking server."
-version = "0.1.0"
-edition = "2021"
-authors = ["The Fish Folk & Spicy Lobster Developers"]
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/fishfolk/bones"
+edition     = "2021"
+license     = "MIT OR Apache-2.0"
+name        = "bones_matchmaker_proto"
+repository  = "https://github.com/fishfolk/bones"
+version     = "0.2.0"
 
 [dependencies]
-serde = { version = "1.0.147", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }

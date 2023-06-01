@@ -43,7 +43,7 @@ async fn server(args: Config) -> anyhow::Result<()> {
         EndpointConfig::default(),
         Some(server_config),
         socket,
-        BevyIoTaskPoolExecutor,
+        Arc::new(BevyIoTaskPoolExecutor),
     )?;
     info!(address=%endpoint.local_addr()?, "Started server");
 

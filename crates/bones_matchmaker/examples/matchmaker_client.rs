@@ -76,7 +76,7 @@ async fn client() -> anyhow::Result<()> {
         EndpointConfig::default(),
         None,
         socket,
-        BevyIoTaskPoolExecutor,
+        Arc::new(BevyIoTaskPoolExecutor),
     )?;
 
     let i_am = std::env::args().nth(2).unwrap();
@@ -89,7 +89,7 @@ async fn client() -> anyhow::Result<()> {
         .await?;
 
     // Send a match request to the server
-    let (mut send, recv) = conn.open_bi().await?;
+    let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::RequestMatch(MatchInfo {
         client_count: std::env::args()
@@ -116,7 +116,7 @@ async fn client() -> anyhow::Result<()> {
     }
 
     loop {
-        let recv = conn.accept_uni().await?;
+        let mut recv = conn.accept_uni().await?;
         let message = recv.read_to_end(256).await?;
         let message: MatchmakerResponse = postcard::from_bytes(&message)?;
 
@@ -167,7 +167,7 @@ async fn client() -> anyhow::Result<()> {
         .spawn(async move {
             loop {
                 let result = async {
-                    let recv = conn_.accept_uni().await?;
+                    let mut recv = conn_.accept_uni().await?;
 
                     let incomming = recv.read_to_end(256).await?;
                     let message: Hello = postcard::from_bytes(&incomming).unwrap();

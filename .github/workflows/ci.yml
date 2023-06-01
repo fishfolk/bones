@@ -80,6 +80,37 @@ jobs:
           command: clippy
           args: --target ${{ matrix.config.target }} -- -W clippy::correctness -D warnings
 
+  minimal_deps_check:
+    runs-on: ubuntu-latest
+    name: 🔧 Check Minimal Dependency Versions
+    steps:
+      - name: ⬇️ Checkout Source
+        uses: actions/checkout@v3
+
+      - name: 🧰 Install Rust Nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+
+      - name: ♻️ Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: check-minimal-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            check-minimal-deps-
+
+      - name: 🔧 Check
+        uses: actions-rs/cargo@v1
+        with:
+          toolchain: nightly
+          command: check
+          args: -Z direct-minimal-versions --workspace
+
   cargo-deny:
     name: ©️ License and advisories check
     runs-on: ubuntu-latest

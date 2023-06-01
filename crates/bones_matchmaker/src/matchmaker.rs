@@ -57,7 +57,7 @@ async fn impl_matchmaker(conn: Connection) -> anyhow::Result<()> {
                 return Ok(());
             }
             either::Either::Right(bi) => {
-                let (mut send, recv) = bi?;
+                let (mut send, mut recv) = bi?;
 
                 // Parse matchmaker request
                 let request: MatchmakerRequest =

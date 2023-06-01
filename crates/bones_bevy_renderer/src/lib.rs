@@ -71,10 +71,11 @@ impl<W: HasBonesWorld> BonesRendererPlugin<W> {
 #[derive(Component)]
 pub struct BevyBonesEntity;
 
-/// [`StageLabel`] for stages added by bones to the Bevy world.
-#[derive(StageLabel)]
+/// [`SystemSet`] marker for sets added by bones to the Bevy world.
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+#[system_set(base)]
 pub enum BonesStage {
-    /// This stage is run after [`CoreStage::First`] to synchronize the bevy `Time` resource with
+    /// This stage is run after [`CoreSet::First`] to synchronize the bevy `Time` resource with
     /// the bones one.
     SyncTime,
     /// This is the stage where the plugin reads the bones world adds bevy sprites, tiles, etc. to
@@ -84,30 +85,29 @@ pub enum BonesStage {
 
 impl<W: HasBonesWorld> Plugin for BonesRendererPlugin<W> {
     fn build(&self, app: &mut App) {
+        // Configure the bones stages
+        app.configure_set(BonesStage::SyncTime.after(CoreSet::First))
+            .configure_set(BonesStage::SyncRender.before(CoreSet::Update));
+
         app.add_plugin(bevy_simple_tilemap::plugin::SimpleTileMapPlugin)
             .add_plugin(lyon::ShapePlugin)
             // Install the asset loader for .atlas.yaml files.
             .add_asset_loader(asset::TextureAtlasLoader)
             // Add the world sync systems
-            .add_stage_before(
-                CoreStage::PostUpdate,
-                BonesStage::SyncRender,
-                SystemStage::parallel(),
-            )
-            .add_stage_after(
-                CoreStage::First,
-                BonesStage::SyncTime,
-                SystemStage::single_threaded(),
-            )
-            .add_system_to_stage(BonesStage::SyncRender, sync_sprites::<W>)
-            .add_system_to_stage(BonesStage::SyncRender, sync_path2ds::<W>)
-            .add_system_to_stage(BonesStage::SyncRender, sync_atlas_sprites::<W>)
-            .add_system_to_stage(BonesStage::SyncRender, sync_cameras::<W>)
-            .add_system_to_stage(BonesStage::SyncRender, sync_clear_color::<W>)
-            .add_system_to_stage(BonesStage::SyncRender, sync_tilemaps::<W>);
+            .add_systems(
+                (
+                    sync_sprites::<W>,
+                    sync_cameras::<W>,
+                    sync_path2ds::<W>,
+                    sync_tilemaps::<W>,
+                    sync_clear_color::<W>,
+                    sync_atlas_sprites::<W>,
+                )
+                    .in_base_set(BonesStage::SyncRender),
+            );
 
         if self.sync_time {
-            app.add_system_to_stage(BonesStage::SyncTime, sync_time::<W>);
+            app.add_system(sync_time::<W>.in_base_set(BonesStage::SyncTime));
         }
     }
 }
@@ -493,7 +493,7 @@ fn sync_path2ds<W: HasBonesWorld>(
     mut commands: Commands,
     world_resource: Option<ResMut<W>>,
     mut bevy_bones_path2ds: Query<
-        (Entity, &mut lyon::Path, &mut lyon::DrawMode, &mut Transform),
+        (Entity, &mut lyon::Path, &mut lyon::Stroke, &mut Transform),
         With<BevyBonesEntity>,
     >,
 ) {
@@ -517,11 +517,8 @@ fn sync_path2ds<W: HasBonesWorld>(
     fn get_bevy_components(
         bones_path2d: &bones::Path2d,
         bones_transform: &bones::Transform,
-    ) -> (lyon::DrawMode, lyon::Path, Transform) {
-        let draw_mode = lyon::DrawMode::Stroke(lyon::StrokeMode::new(
-            bones_path2d.color.into_bevy(),
-            bones_path2d.thickness,
-        ));
+    ) -> (lyon::Stroke, lyon::Path, Transform) {
+        let stroke = lyon::Stroke::new(bones_path2d.color.into_bevy(), bones_path2d.thickness);
         let new_path = bones_path2d
             .points
             .iter()
@@ -541,7 +538,7 @@ fn sync_path2ds<W: HasBonesWorld>(
         // Offset the path towards the camera slightly to make sure it renders on top of a
         // sprite/etc. if it is applied to an entity with both a sprite and a path.
         transform.translation.z += 0.0001;
-        (draw_mode, new_path, transform)
+        (stroke, new_path, transform)
     }
 
     // Sync paths
@@ -562,10 +559,15 @@ fn sync_path2ds<W: HasBonesWorld>(
         let bones_path2d = path2ds.get(bones_ent).unwrap();
         let bones_transform = transforms.get(bones_ent).unwrap();
 
-        let (draw_mode, path, transform) = get_bevy_components(bones_path2d, bones_transform);
+        let (stroke, path, transform) = get_bevy_components(bones_path2d, bones_transform);
 
         commands.spawn((
-            lyon::GeometryBuilder::build_as(&path, draw_mode, transform),
+            lyon::ShapeBundle {
+                path,
+                transform,
+                ..default()
+            },
+            stroke,
             BevyBonesEntity,
         ));
     }
