@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+<csr-id-6825d579672fa508a4c67aa40efa970909f5ff54/>
+
+### Chore
+
+ - <csr-id-6825d579672fa508a4c67aa40efa970909f5ff54/> update bones lib  versioning.
+
+### New Features
+
+ - <csr-id-3f2e3485f9556cc68eb4c04df34d3aa2c6087330/> upgrade to Bevy 0.10.
+ - <csr-id-7e00c6e7b6300054ffeeebd186b5adf96b8aa10b/> implement `Serialize` for `Handle<T>` and `UntypedHandle`.
+
+### Bug Fixes
+
+ - <csr-id-632ef4e2d7647f6cb704a1b5eaeb2fbba9562314/> makes bones asset path representation more consistent.
+   Previously the normalize method on a bones path would remove the leading
+   `/` to make it support Bevy paths, which can't start with a `/`, but
+   this was not consistent with the way that the handle was serialized.
+   
+   Now, the bones path representations always maintain the leading `/` to
+   indicate a root path, and the leading `/` is removed when converting to
+   a Bevy handle.
+   
+   This fixes issues run into when trying to read serialized bones handles
+   during map saving in Jumpy.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 4 commits contributed to the release over the course of 103 calendar days.
+ - 133 days passed between releases.
+ - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 4 unique issues were worked on: [#101](https://github.com/fishfolk/bones/issues/101), [#106](https://github.com/fishfolk/bones/issues/106), [#111](https://github.com/fishfolk/bones/issues/111), [#122](https://github.com/fishfolk/bones/issues/122)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#101](https://github.com/fishfolk/bones/issues/101)**
+    - implement `Serialize` for `Handle<T>` and `UntypedHandle`. ([`7e00c6e`](https://github.com/fishfolk/bones/commit/7e00c6e7b6300054ffeeebd186b5adf96b8aa10b))
+ * **[#106](https://github.com/fishfolk/bones/issues/106)**
+    - makes bones asset path representation more consistent. ([`632ef4e`](https://github.com/fishfolk/bones/commit/632ef4e2d7647f6cb704a1b5eaeb2fbba9562314))
+ * **[#111](https://github.com/fishfolk/bones/issues/111)**
+    - update bones lib  versioning. ([`6825d57`](https://github.com/fishfolk/bones/commit/6825d579672fa508a4c67aa40efa970909f5ff54))
+ * **[#122](https://github.com/fishfolk/bones/issues/122)**
+    - upgrade to Bevy 0.10. ([`3f2e348`](https://github.com/fishfolk/bones/commit/3f2e3485f9556cc68eb4c04df34d3aa2c6087330))
+</details>
+
 ## 0.1.0 (2023-01-18)
 
 <csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/>
@@ -58,7 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 9 commits contributed to the release over the course of 16 calendar days.
+ - 10 commits contributed to the release over the course of 16 calendar days.
  - 8 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 8 unique issues were worked on: [#26](https://github.com/fishfolk/bones/issues/26), [#28](https://github.com/fishfolk/bones/issues/28), [#29](https://github.com/fishfolk/bones/issues/29), [#37](https://github.com/fishfolk/bones/issues/37), [#38](https://github.com/fishfolk/bones/issues/38), [#63](https://github.com/fishfolk/bones/issues/63), [#65](https://github.com/fishfolk/bones/issues/65), [#67](https://github.com/fishfolk/bones/issues/67)
 
@@ -85,6 +137,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#67](https://github.com/fishfolk/bones/issues/67)**
     - generate changelogs for all crates. ([`a68cb79`](https://github.com/fishfolk/bones/commit/a68cb79e6b7d3774c53c0236edf3a12175f297b5))
  * **Uncategorized**
-    - Release type_ulid_macros v0.1.0, type_ulid v0.1.0, bones_bevy_utils v0.1.0, bones_ecs v0.1.0, bones_asset v0.1.0, bones_input v0.1.0, bones_render v0.1.0, bones_lib v0.1.0 ([`ca37c81`](https://github.com/fishfolk/bones/commit/ca37c8150478b1c1afb687096214b1d8a0c95478))
+    - Release type_ulid v0.1.0, bones_bevy_utils v0.1.0, bones_ecs v0.1.0, bones_asset v0.1.0, bones_input v0.1.0, bones_render v0.1.0, bones_lib v0.1.0 ([`69713d7`](https://github.com/fishfolk/bones/commit/69713d7da8024ee4b3017b563f031880009c90ee))
+    - Release type_ulid_macros v0.1.0, type_ulid v0.1.0, bones_bevy_utils v0.1.0, bones_ecs v0.1.0, bones_asset v0.1.0, bones_input v0.1.0, bones_render v0.1.0, bones_lib v0.1.0 ([`db0333d`](https://github.com/fishfolk/bones/commit/db0333ddacb6f29aed8664db67973e72ea586dce))
 </details>
 

@@ -5,19 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.1.1 (2023-01-24)
+## Unreleased
+
+<csr-id-6825d579672fa508a4c67aa40efa970909f5ff54/>
+
+### Chore
+
+ - <csr-id-6825d579672fa508a4c67aa40efa970909f5ff54/> update bones lib  versioning.
 
 ### New Features
 
- - <csr-id-6abe6ee3587f737966bddb5ab0f003e62aea3291/> add 2D line path rendering.
+<csr-id-8751bdb1f2f403761e792bf489216aad02beaa92/>
+<csr-id-822fe58511e956c91a9c3b1fe338d25799696411/>
+<csr-id-605345bd3d4fa2f8f540ae106b114d52c45b904a/>
+<csr-id-6abe6ee3587f737966bddb5ab0f003e62aea3291/>
+
+ - <csr-id-3f2e3485f9556cc68eb4c04df34d3aa2c6087330/> upgrade to Bevy 0.10.
+ - <csr-id-ad6d073a33dc342d5aed1155488e4681cf1bc782/> add color to atlas sprite.
+ - <csr-id-b96133fec89330e3837575c110e587f7e11bf3a6/> add color and sync with bevy
+   - Add color type to bones
+- Add color type to Bones Sprite
+- Add color type to clear color
+- Add color type to Path2d
+- Sync with Bevy
+
+### Bug Fixes
+
+ - <csr-id-29fd36e25797749b73094b0324389d9777394552/> fix crash while rendering tile maps with out-of-bounds tile indexes.
+   This clamps the tile indexes of the tiles to be within
+   their atlas's bounds so that the game doesn't crash if a
+   tile ends up out-of-bounds while switching tilemaps.
+
+### New Features (BREAKING)
+
+ - <csr-id-00110c27b0aa76ed597c7e4d62bec70cfd1b2a23/> add `from_world` implementation similar to Bevy.
+   Allows resources to be added with either a `Default` implementation,
+   or a custom `FromWorld` implementation that allows them to derive their,
+   value from any other data currently in the world.
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
- - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
- - 1 unique issue was worked on: [#76](https://github.com/fishfolk/bones/issues/76)
+ - 11 commits contributed to the release over the course of 128 calendar days.
+ - 128 days passed between releases.
+ - 10 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 10 unique issues were worked on: [#100](https://github.com/fishfolk/bones/issues/100), [#105](https://github.com/fishfolk/bones/issues/105), [#110](https://github.com/fishfolk/bones/issues/110), [#111](https://github.com/fishfolk/bones/issues/111), [#114](https://github.com/fishfolk/bones/issues/114), [#122](https://github.com/fishfolk/bones/issues/122), [#76](https://github.com/fishfolk/bones/issues/76), [#92](https://github.com/fishfolk/bones/issues/92), [#95](https://github.com/fishfolk/bones/issues/95), [#97](https://github.com/fishfolk/bones/issues/97)
 
 ### Commit Details
 
@@ -25,9 +58,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <details><summary>view details</summary>
 
+ * **[#100](https://github.com/fishfolk/bones/issues/100)**
+    - add custom camera viewport support. ([`8751bdb`](https://github.com/fishfolk/bones/commit/8751bdb1f2f403761e792bf489216aad02beaa92))
+ * **[#105](https://github.com/fishfolk/bones/issues/105)**
+    - fix crash while rendering tile maps with out-of-bounds tile indexes. ([`29fd36e`](https://github.com/fishfolk/bones/commit/29fd36e25797749b73094b0324389d9777394552))
+ * **[#110](https://github.com/fishfolk/bones/issues/110)**
+    - add color and sync with bevy ([`b96133f`](https://github.com/fishfolk/bones/commit/b96133fec89330e3837575c110e587f7e11bf3a6))
+ * **[#111](https://github.com/fishfolk/bones/issues/111)**
+    - update bones lib  versioning. ([`6825d57`](https://github.com/fishfolk/bones/commit/6825d579672fa508a4c67aa40efa970909f5ff54))
+ * **[#114](https://github.com/fishfolk/bones/issues/114)**
+    - add color to atlas sprite. ([`ad6d073`](https://github.com/fishfolk/bones/commit/ad6d073a33dc342d5aed1155488e4681cf1bc782))
+ * **[#122](https://github.com/fishfolk/bones/issues/122)**
+    - upgrade to Bevy 0.10. ([`3f2e348`](https://github.com/fishfolk/bones/commit/3f2e3485f9556cc68eb4c04df34d3aa2c6087330))
  * **[#76](https://github.com/fishfolk/bones/issues/76)**
     - add 2D line path rendering. ([`6abe6ee`](https://github.com/fishfolk/bones/commit/6abe6ee3587f737966bddb5ab0f003e62aea3291))
+ * **[#92](https://github.com/fishfolk/bones/issues/92)**
+    - add `from_world` implementation similar to Bevy. ([`00110c2`](https://github.com/fishfolk/bones/commit/00110c27b0aa76ed597c7e4d62bec70cfd1b2a23))
+ * **[#95](https://github.com/fishfolk/bones/issues/95)**
+    - add time resource + sync system ([`605345b`](https://github.com/fishfolk/bones/commit/605345bd3d4fa2f8f540ae106b114d52c45b904a))
+ * **[#97](https://github.com/fishfolk/bones/issues/97)**
+    - add helper for advancing the Time a fixed timestep. ([`822fe58`](https://github.com/fishfolk/bones/commit/822fe58511e956c91a9c3b1fe338d25799696411))
+ * **Uncategorized**
+    - Release bones_render v0.1.1, bones_bevy_renderer v0.1.1 ([`5b33433`](https://github.com/fishfolk/bones/commit/5b3343305a0871914085eb1b98702ef82b84d98f))
 </details>
+
+<csr-unknown>
+ add custom camera viewport support. add helper for advancing the Time a fixed timestep.Adds a configurable sync_time option to the BonesRendererPluginso that you can disable the automatic time synchronization in favor of acustom implementation.It also moves the time synchronization to a new stage that happens afterCoreStage::First so that the time will be in sync during thePreUpdate and Update stages. add time resource + sync system add 2D line path rendering.<csr-unknown/>
+
+## 0.1.1 (2023-01-24)
+
+### New Features
+
+ - <csr-id-6abe6ee3587f737966bddb5ab0f003e62aea3291/> add 2D line path rendering.
 
 ## 0.1.0 (2023-01-24)
 

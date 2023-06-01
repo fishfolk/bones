@@ -5,6 +5,71 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### New Features
+
+ - <csr-id-3f2e3485f9556cc68eb4c04df34d3aa2c6087330/> upgrade to Bevy 0.10.
+ - <csr-id-db98f76c5871b5fb989c85a3d1375aca145c8941/> make `Entity::new()` public.
+   This is important for use cases where you need to manually
+   serialize/load an entity ID.
+ - <csr-id-7c578b47f5046251528e996ff00f997637385761/> make `insert_stage_before/after()` chainable.
+ - <csr-id-147ebc86744a90196dbbbde1ad0563117b3c0414/> add `get_many_mut()` method to `CompMut`.
+   This allows you to mutably borrow the component for multiple entities
+   at the same time, which was otherwise difficult, unsafe, or inefficient
+   to do previously.
+
+### Bug Fixes
+
+ - <csr-id-3a3f05ac6b1418784a404f5070e6346122600ee1/> change type bound for `Res` from `Default` to `FromWorld`.
+ - <csr-id-1335457adaf6300d166f24a175378993e9bacb75/> export `FromWorld` publicly and make compatible with `Res`/`ResMut` system parameters.
+ - <csr-id-3f061167a3f8e13a2cda7e81703d4abe42587aa6/> fix `insert_stage_before/after` always inserting before/after `PreUpdate`.
+ - <csr-id-7bfcf5ddb1ed2f42f6a34bfbbde96f0240ce7fb3/> fix returned component order in `get_many_mut()`.
+   `get_many_mut()` was previously not returning the components
+   in the same order as the entities list.
+
+### New Features (BREAKING)
+
+ - <csr-id-00110c27b0aa76ed597c7e4d62bec70cfd1b2a23/> add `from_world` implementation similar to Bevy.
+   Allows resources to be added with either a `Default` implementation,
+   or a custom `FromWorld` implementation that allows them to derive their,
+   value from any other data currently in the world.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 9 commits contributed to the release over the course of 126 calendar days.
+ - 133 days passed between releases.
+ - 9 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 9 unique issues were worked on: [#115](https://github.com/fishfolk/bones/issues/115), [#122](https://github.com/fishfolk/bones/issues/122), [#78](https://github.com/fishfolk/bones/issues/78), [#79](https://github.com/fishfolk/bones/issues/79), [#88](https://github.com/fishfolk/bones/issues/88), [#90](https://github.com/fishfolk/bones/issues/90), [#92](https://github.com/fishfolk/bones/issues/92), [#93](https://github.com/fishfolk/bones/issues/93), [#94](https://github.com/fishfolk/bones/issues/94)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#115](https://github.com/fishfolk/bones/issues/115)**
+    - change type bound for `Res` from `Default` to `FromWorld`. ([`3a3f05a`](https://github.com/fishfolk/bones/commit/3a3f05ac6b1418784a404f5070e6346122600ee1))
+ * **[#122](https://github.com/fishfolk/bones/issues/122)**
+    - upgrade to Bevy 0.10. ([`3f2e348`](https://github.com/fishfolk/bones/commit/3f2e3485f9556cc68eb4c04df34d3aa2c6087330))
+ * **[#78](https://github.com/fishfolk/bones/issues/78)**
+    - add `get_many_mut()` method to `CompMut`. ([`147ebc8`](https://github.com/fishfolk/bones/commit/147ebc86744a90196dbbbde1ad0563117b3c0414))
+ * **[#79](https://github.com/fishfolk/bones/issues/79)**
+    - fix returned component order in `get_many_mut()`. ([`7bfcf5d`](https://github.com/fishfolk/bones/commit/7bfcf5ddb1ed2f42f6a34bfbbde96f0240ce7fb3))
+ * **[#88](https://github.com/fishfolk/bones/issues/88)**
+    - fix `insert_stage_before/after` always inserting before/after `PreUpdate`. ([`3f06116`](https://github.com/fishfolk/bones/commit/3f061167a3f8e13a2cda7e81703d4abe42587aa6))
+ * **[#90](https://github.com/fishfolk/bones/issues/90)**
+    - make `insert_stage_before/after()` chainable. ([`7c578b4`](https://github.com/fishfolk/bones/commit/7c578b47f5046251528e996ff00f997637385761))
+ * **[#92](https://github.com/fishfolk/bones/issues/92)**
+    - add `from_world` implementation similar to Bevy. ([`00110c2`](https://github.com/fishfolk/bones/commit/00110c27b0aa76ed597c7e4d62bec70cfd1b2a23))
+ * **[#93](https://github.com/fishfolk/bones/issues/93)**
+    - make `Entity::new()` public. ([`db98f76`](https://github.com/fishfolk/bones/commit/db98f76c5871b5fb989c85a3d1375aca145c8941))
+ * **[#94](https://github.com/fishfolk/bones/issues/94)**
+    - export `FromWorld` publicly and make compatible with `Res`/`ResMut` system parameters. ([`1335457`](https://github.com/fishfolk/bones/commit/1335457adaf6300d166f24a175378993e9bacb75))
+</details>
+
 ## 0.1.0 (2023-01-18)
 
 <csr-id-0b424b93d127618b7ecf6b831cc71d317e28af97/>
@@ -125,7 +190,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 26 commits contributed to the release over the course of 26 calendar days.
+ - 27 commits contributed to the release over the course of 26 calendar days.
  - 25 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 19 unique issues were worked on: [#13](https://github.com/fishfolk/bones/issues/13), [#17](https://github.com/fishfolk/bones/issues/17), [#19](https://github.com/fishfolk/bones/issues/19), [#20](https://github.com/fishfolk/bones/issues/20), [#21](https://github.com/fishfolk/bones/issues/21), [#23](https://github.com/fishfolk/bones/issues/23), [#24](https://github.com/fishfolk/bones/issues/24), [#28](https://github.com/fishfolk/bones/issues/28), [#30](https://github.com/fishfolk/bones/issues/30), [#32](https://github.com/fishfolk/bones/issues/32), [#36](https://github.com/fishfolk/bones/issues/36), [#37](https://github.com/fishfolk/bones/issues/37), [#42](https://github.com/fishfolk/bones/issues/42), [#5](https://github.com/fishfolk/bones/issues/5), [#57](https://github.com/fishfolk/bones/issues/57), [#59](https://github.com/fishfolk/bones/issues/59), [#6](https://github.com/fishfolk/bones/issues/6), [#63](https://github.com/fishfolk/bones/issues/63), [#67](https://github.com/fishfolk/bones/issues/67)
 
@@ -174,7 +239,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#67](https://github.com/fishfolk/bones/issues/67)**
     - generate changelogs for all crates. ([`a68cb79`](https://github.com/fishfolk/bones/commit/a68cb79e6b7d3774c53c0236edf3a12175f297b5))
  * **Uncategorized**
-    - Release type_ulid_macros v0.1.0, type_ulid v0.1.0, bones_bevy_utils v0.1.0, bones_ecs v0.1.0, bones_asset v0.1.0, bones_input v0.1.0, bones_render v0.1.0, bones_lib v0.1.0 ([`ca37c81`](https://github.com/fishfolk/bones/commit/ca37c8150478b1c1afb687096214b1d8a0c95478))
+    - Release type_ulid v0.1.0, bones_bevy_utils v0.1.0, bones_ecs v0.1.0, bones_asset v0.1.0, bones_input v0.1.0, bones_render v0.1.0, bones_lib v0.1.0 ([`69713d7`](https://github.com/fishfolk/bones/commit/69713d7da8024ee4b3017b563f031880009c90ee))
+    - Release type_ulid_macros v0.1.0, type_ulid v0.1.0, bones_bevy_utils v0.1.0, bones_ecs v0.1.0, bones_asset v0.1.0, bones_input v0.1.0, bones_render v0.1.0, bones_lib v0.1.0 ([`db0333d`](https://github.com/fishfolk/bones/commit/db0333ddacb6f29aed8664db67973e72ea586dce))
     - add utility function for running already initialized systems. ([`2f5ff59`](https://github.com/fishfolk/bones/commit/2f5ff59d2ac0a924362846d1d78c827a98deacde))
     - add utility functions for adding stages to `SystemStages`. ([`a11fd1b`](https://github.com/fishfolk/bones/commit/a11fd1b610b79b5e9bc0d0d477bd56342da66d30))
     - add debug implementation for `System`. ([`7a99206`](https://github.com/fishfolk/bones/commit/7a9920687cb0e05a0e237ed882c3ab8ebe7624b8))
@@ -182,7 +248,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - add github workflows for ci, docs, matchmaker, and PR linter ([`a516a68`](https://github.com/fishfolk/bones/commit/a516a68902ebcd4c3e24b6a47b3ff79b92ff5f60))
     - migrate crates from the jumpy repository ([`3724c69`](https://github.com/fishfolk/bones/commit/3724c69a0bb24828d1710380bb8d139e304b7955))
 </details>
-
-<csr-unknown>
-Fixes some soundness issues when cloning or creating UntypedResources when allocation fails.<csr-unknown/>
 
