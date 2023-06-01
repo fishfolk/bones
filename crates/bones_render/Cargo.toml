@@ -8,10 +8,10 @@ repository  = "https://github.com/fishfolk/bones"
 version     = "0.2.0"
 
 [dependencies]
-bones_asset      = { version = "0.2", path = "../bones_asset" }
-bones_bevy_utils = { version = "0.2", path = "../bones_bevy_utils", optional = true }
-bones_ecs        = { version = "0.2", path = "../bones_ecs" }
-type_ulid        = { version = "0.2", path = "../type_ulid" }
+bones_asset      = { version = "^0.2.0", path = "../bones_asset" }
+bones_bevy_utils = { version = "^0.2.0", path = "../bones_bevy_utils", optional = true }
+bones_ecs        = { version = "^0.2.0", path = "../bones_ecs" }
+type_ulid        = { version = "^0.2.0", path = "../type_ulid" }
 
 bevy_render    = { version = "0.10", optional = true }
 bevy_transform = { version = "0.10", optional = true }

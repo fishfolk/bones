@@ -5,7 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.0 (2023-06-01)
+
+### Documentation
+
+ - <csr-id-3f18051e023a4deb676a5f895f1478beda513f04/> update changelogs.
 
 ### New Features
 
@@ -28,10 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release over the course of 106 calendar days.
+ - 5 commits contributed to the release over the course of 106 calendar days.
  - 133 days passed between releases.
- - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
- - 4 unique issues were worked on: [#122](https://github.com/fishfolk/bones/issues/122), [#95](https://github.com/fishfolk/bones/issues/95), [#97](https://github.com/fishfolk/bones/issues/97), [#98](https://github.com/fishfolk/bones/issues/98)
+ - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 5 unique issues were worked on: [#122](https://github.com/fishfolk/bones/issues/122), [#124](https://github.com/fishfolk/bones/issues/124), [#95](https://github.com/fishfolk/bones/issues/95), [#97](https://github.com/fishfolk/bones/issues/97), [#98](https://github.com/fishfolk/bones/issues/98)
 
 ### Commit Details
 
@@ -41,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#122](https://github.com/fishfolk/bones/issues/122)**
     - upgrade to Bevy 0.10. ([`3f2e348`](https://github.com/fishfolk/bones/commit/3f2e3485f9556cc68eb4c04df34d3aa2c6087330))
+ * **[#124](https://github.com/fishfolk/bones/issues/124)**
+    - update changelogs. ([`3f18051`](https://github.com/fishfolk/bones/commit/3f18051e023a4deb676a5f895f1478beda513f04))
  * **[#95](https://github.com/fishfolk/bones/issues/95)**
     - add time resource + sync system ([`605345b`](https://github.com/fishfolk/bones/commit/605345bd3d4fa2f8f540ae106b114d52c45b904a))
  * **[#97](https://github.com/fishfolk/bones/issues/97)**

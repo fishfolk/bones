@@ -5,13 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.0 (2023-06-01)
 
 <csr-id-6825d579672fa508a4c67aa40efa970909f5ff54/>
 
 ### Chore
 
  - <csr-id-6825d579672fa508a4c67aa40efa970909f5ff54/> update bones lib  versioning.
+
+### Documentation
+
+ - <csr-id-3f18051e023a4deb676a5f895f1478beda513f04/> update changelogs.
 
 ### New Features
 
@@ -24,10 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - <csr-id-ad6d073a33dc342d5aed1155488e4681cf1bc782/> add color to atlas sprite.
  - <csr-id-b96133fec89330e3837575c110e587f7e11bf3a6/> add color and sync with bevy
    - Add color type to bones
-- Add color type to Bones Sprite
-- Add color type to clear color
-- Add color type to Path2d
-- Sync with Bevy
 
 ### Bug Fixes
 
@@ -47,10 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 11 commits contributed to the release over the course of 128 calendar days.
+ - 12 commits contributed to the release over the course of 128 calendar days.
  - 128 days passed between releases.
- - 10 commits were understood as [conventional](https://www.conventionalcommits.org).
- - 10 unique issues were worked on: [#100](https://github.com/fishfolk/bones/issues/100), [#105](https://github.com/fishfolk/bones/issues/105), [#110](https://github.com/fishfolk/bones/issues/110), [#111](https://github.com/fishfolk/bones/issues/111), [#114](https://github.com/fishfolk/bones/issues/114), [#122](https://github.com/fishfolk/bones/issues/122), [#76](https://github.com/fishfolk/bones/issues/76), [#92](https://github.com/fishfolk/bones/issues/92), [#95](https://github.com/fishfolk/bones/issues/95), [#97](https://github.com/fishfolk/bones/issues/97)
+ - 11 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 11 unique issues were worked on: [#100](https://github.com/fishfolk/bones/issues/100), [#105](https://github.com/fishfolk/bones/issues/105), [#110](https://github.com/fishfolk/bones/issues/110), [#111](https://github.com/fishfolk/bones/issues/111), [#114](https://github.com/fishfolk/bones/issues/114), [#122](https://github.com/fishfolk/bones/issues/122), [#124](https://github.com/fishfolk/bones/issues/124), [#76](https://github.com/fishfolk/bones/issues/76), [#92](https://github.com/fishfolk/bones/issues/92), [#95](https://github.com/fishfolk/bones/issues/95), [#97](https://github.com/fishfolk/bones/issues/97)
 
 ### Commit Details
 
@@ -70,6 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - add color to atlas sprite. ([`ad6d073`](https://github.com/fishfolk/bones/commit/ad6d073a33dc342d5aed1155488e4681cf1bc782))
  * **[#122](https://github.com/fishfolk/bones/issues/122)**
     - upgrade to Bevy 0.10. ([`3f2e348`](https://github.com/fishfolk/bones/commit/3f2e3485f9556cc68eb4c04df34d3aa2c6087330))
+ * **[#124](https://github.com/fishfolk/bones/issues/124)**
+    - update changelogs. ([`3f18051`](https://github.com/fishfolk/bones/commit/3f18051e023a4deb676a5f895f1478beda513f04))
  * **[#76](https://github.com/fishfolk/bones/issues/76)**
     - add 2D line path rendering. ([`6abe6ee`](https://github.com/fishfolk/bones/commit/6abe6ee3587f737966bddb5ab0f003e62aea3291))
  * **[#92](https://github.com/fishfolk/bones/issues/92)**
@@ -83,7 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <csr-unknown>
- add custom camera viewport support. add helper for advancing the Time a fixed timestep.Adds a configurable sync_time option to the BonesRendererPluginso that you can disable the automatic time synchronization in favor of acustom implementation.It also moves the time synchronization to a new stage that happens afterCoreStage::First so that the time will be in sync during thePreUpdate and Update stages. add time resource + sync system add 2D line path rendering.<csr-unknown/>
+Add color type to Bones SpriteAdd color type to clear colorAdd color type to Path2dSync with Bevy<csr-unknown/>
 
 ## 0.1.1 (2023-01-24)
 

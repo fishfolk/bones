@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.0 (2023-06-01)
 
 <csr-id-c57a2089f4dcf6bd63e8f0e0609cf6ff3506084f/>
 
@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-c57a2089f4dcf6bd63e8f0e0609cf6ff3506084f/> add serde to bones color.
    Add serde Serialize / Deserailize to bones color.
+
+### Documentation
+
+ - <csr-id-3f18051e023a4deb676a5f895f1478beda513f04/> update changelogs.
 
 ### New Features
 
@@ -47,10 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 7 commits contributed to the release over the course of 118 calendar days.
+ - 8 commits contributed to the release over the course of 119 calendar days.
  - 133 days passed between releases.
- - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
- - 7 unique issues were worked on: [#102](https://github.com/fishfolk/bones/issues/102), [#106](https://github.com/fishfolk/bones/issues/106), [#112](https://github.com/fishfolk/bones/issues/112), [#122](https://github.com/fishfolk/bones/issues/122), [#83](https://github.com/fishfolk/bones/issues/83), [#92](https://github.com/fishfolk/bones/issues/92), [#95](https://github.com/fishfolk/bones/issues/95)
+ - 8 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 8 unique issues were worked on: [#102](https://github.com/fishfolk/bones/issues/102), [#106](https://github.com/fishfolk/bones/issues/106), [#112](https://github.com/fishfolk/bones/issues/112), [#122](https://github.com/fishfolk/bones/issues/122), [#124](https://github.com/fishfolk/bones/issues/124), [#83](https://github.com/fishfolk/bones/issues/83), [#92](https://github.com/fishfolk/bones/issues/92), [#95](https://github.com/fishfolk/bones/issues/95)
 
 ### Commit Details
 
@@ -66,6 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - add serde to bones color. ([`c57a208`](https://github.com/fishfolk/bones/commit/c57a2089f4dcf6bd63e8f0e0609cf6ff3506084f))
  * **[#122](https://github.com/fishfolk/bones/issues/122)**
     - upgrade to Bevy 0.10. ([`3f2e348`](https://github.com/fishfolk/bones/commit/3f2e3485f9556cc68eb4c04df34d3aa2c6087330))
+ * **[#124](https://github.com/fishfolk/bones/issues/124)**
+    - update changelogs. ([`3f18051`](https://github.com/fishfolk/bones/commit/3f18051e023a4deb676a5f895f1478beda513f04))
  * **[#83](https://github.com/fishfolk/bones/issues/83)**
     - implement BonesBevyAssetLoad for `Key`. ([`a699f5d`](https://github.com/fishfolk/bones/commit/a699f5d9254037d6127becae77f09527759fd408))
  * **[#92](https://github.com/fishfolk/bones/issues/92)**

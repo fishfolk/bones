@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.0 (2023-06-01)
 
 ### New Features
 
@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release over the course of 118 calendar days.
+ - 3 commits contributed to the release over the course of 119 calendar days.
  - 133 days passed between releases.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 3 unique issues were worked on: [#104](https://github.com/fishfolk/bones/issues/104), [#84](https://github.com/fishfolk/bones/issues/84), [#95](https://github.com/fishfolk/bones/issues/95)
@@ -57,12 +57,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-88b47965fb59d4ee2c1748de7d839e08072ae0b2/> add camera shake.
    Adds systems and components for easily adding camera shake.
-
+   
    Ported from the Bevy implementation in `bones_camera_shake`.
  - <csr-id-020c1244cbd27f0a32b8fad6a314bea81ef0e449/> add animation module.
  - <csr-id-ec30508e66dbc4c436a052754f1168419ad20c1a/> add `bones_camera_shake` crate
    Adds the camera shake functionality from [Bomby](https://github.com/fishfolk/bomby).
-
+   
    For the time being it uses `bevy_ecs` and not `bones_ecs`.
  - <csr-id-3724c69a0bb24828d1710380bb8d139e304b7955/> migrate crates from the jumpy repository
 
@@ -71,7 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - <csr-id-9de77ff7c9ddcb5af5737553384becbb9483b665/> fix sprite animation bug.
    Fixes the behavior when an atlas sprite's current index is less
    than the starting index of an animated sprite.
-
+   
    Previously it would play the animation from wherever the current
    index happened to be, but it was supposed to skip to the animation
    start frame.
@@ -93,7 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    Renames `bones` to `bones_lib` ( mostly because `bones` was already taken )
    and adds the `bones_asset`, `bones_bevy_renderer`, `bones_input`, and
    `bones_render` crates.
-
+   
    This sets up the overall structure for the bones library,
    though changes to some aspects of the design are likely to change.
 

@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.0 (2023-06-01)
 
 <csr-id-c57a2089f4dcf6bd63e8f0e0609cf6ff3506084f/>
 
@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
  - <csr-id-b912295c0806196e607c1d769e030e54f4e3e548/> fix incorrect code comment regarding tilemap coordinates.
+ - <csr-id-3f18051e023a4deb676a5f895f1478beda513f04/> update changelogs.
 
 ### New Features
 
@@ -27,19 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - <csr-id-ad6d073a33dc342d5aed1155488e4681cf1bc782/> add color to atlas sprite.
  - <csr-id-b96133fec89330e3837575c110e587f7e11bf3a6/> add color and sync with bevy
    - Add color type to bones
-- Add color type to Bones Sprite
-- Add color type to clear color
-- Add color type to Path2d
-- Sync with Bevy
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 8 commits contributed to the release over the course of 128 calendar days.
+ - 9 commits contributed to the release over the course of 128 calendar days.
  - 133 days passed between releases.
- - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
- - 7 unique issues were worked on: [#100](https://github.com/fishfolk/bones/issues/100), [#110](https://github.com/fishfolk/bones/issues/110), [#112](https://github.com/fishfolk/bones/issues/112), [#114](https://github.com/fishfolk/bones/issues/114), [#122](https://github.com/fishfolk/bones/issues/122), [#76](https://github.com/fishfolk/bones/issues/76), [#89](https://github.com/fishfolk/bones/issues/89)
+ - 8 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 8 unique issues were worked on: [#100](https://github.com/fishfolk/bones/issues/100), [#110](https://github.com/fishfolk/bones/issues/110), [#112](https://github.com/fishfolk/bones/issues/112), [#114](https://github.com/fishfolk/bones/issues/114), [#122](https://github.com/fishfolk/bones/issues/122), [#124](https://github.com/fishfolk/bones/issues/124), [#76](https://github.com/fishfolk/bones/issues/76), [#89](https://github.com/fishfolk/bones/issues/89)
 
 ### Commit Details
 
@@ -57,6 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - add color to atlas sprite. ([`ad6d073`](https://github.com/fishfolk/bones/commit/ad6d073a33dc342d5aed1155488e4681cf1bc782))
  * **[#122](https://github.com/fishfolk/bones/issues/122)**
     - upgrade to Bevy 0.10. ([`3f2e348`](https://github.com/fishfolk/bones/commit/3f2e3485f9556cc68eb4c04df34d3aa2c6087330))
+ * **[#124](https://github.com/fishfolk/bones/issues/124)**
+    - update changelogs. ([`3f18051`](https://github.com/fishfolk/bones/commit/3f18051e023a4deb676a5f895f1478beda513f04))
  * **[#76](https://github.com/fishfolk/bones/issues/76)**
     - add 2D line path rendering. ([`6abe6ee`](https://github.com/fishfolk/bones/commit/6abe6ee3587f737966bddb5ab0f003e62aea3291))
  * **[#89](https://github.com/fishfolk/bones/issues/89)**
@@ -66,7 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <csr-unknown>
- add custom camera viewport support. add 2D line path rendering.<csr-unknown/>
+Add color type to Bones SpriteAdd color type to clear colorAdd color type to Path2dSync with Bevy<csr-unknown/>
 
 ## 0.1.1 (2023-01-24)
 

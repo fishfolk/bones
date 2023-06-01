@@ -5,13 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.0 (2023-06-01)
 
 <csr-id-6825d579672fa508a4c67aa40efa970909f5ff54/>
 
 ### Chore
 
  - <csr-id-6825d579672fa508a4c67aa40efa970909f5ff54/> update bones lib  versioning.
+
+### Documentation
+
+ - <csr-id-3f18051e023a4deb676a5f895f1478beda513f04/> update changelogs.
 
 ### New Features
 
@@ -36,10 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release over the course of 103 calendar days.
+ - 5 commits contributed to the release over the course of 103 calendar days.
  - 133 days passed between releases.
- - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
- - 4 unique issues were worked on: [#101](https://github.com/fishfolk/bones/issues/101), [#106](https://github.com/fishfolk/bones/issues/106), [#111](https://github.com/fishfolk/bones/issues/111), [#122](https://github.com/fishfolk/bones/issues/122)
+ - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 5 unique issues were worked on: [#101](https://github.com/fishfolk/bones/issues/101), [#106](https://github.com/fishfolk/bones/issues/106), [#111](https://github.com/fishfolk/bones/issues/111), [#122](https://github.com/fishfolk/bones/issues/122), [#124](https://github.com/fishfolk/bones/issues/124)
 
 ### Commit Details
 
@@ -55,6 +59,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - update bones lib  versioning. ([`6825d57`](https://github.com/fishfolk/bones/commit/6825d579672fa508a4c67aa40efa970909f5ff54))
  * **[#122](https://github.com/fishfolk/bones/issues/122)**
     - upgrade to Bevy 0.10. ([`3f2e348`](https://github.com/fishfolk/bones/commit/3f2e3485f9556cc68eb4c04df34d3aa2c6087330))
+ * **[#124](https://github.com/fishfolk/bones/issues/124)**
+    - update changelogs. ([`3f18051`](https://github.com/fishfolk/bones/commit/3f18051e023a4deb676a5f895f1478beda513f04))
 </details>
 
 ## 0.1.0 (2023-01-18)

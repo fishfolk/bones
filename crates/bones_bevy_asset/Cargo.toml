@@ -9,9 +9,9 @@ version     = "0.2.0"
 
 [dependencies]
 bones_bevy_asset_macros = { version = "0.2", path = "./macros" }
-bones_bevy_utils        = { version = "0.2", path = "../bones_bevy_utils" }
-bones_lib               = { version = "0.2", path = "../../", features = ["bevy"] }
-type_ulid               = { version = "0.2", path = "../type_ulid" }
+bones_bevy_utils        = { version = "^0.2.0", path = "../bones_bevy_utils" }
+bones_lib               = { version = "^0.2.0", path = "../../", features = ["bevy"] }
+type_ulid               = { version = "^0.2.0", path = "../type_ulid" }
 
 bevy_app     = "0.10"
 bevy_asset   = "0.10"

@@ -9,4 +9,4 @@ version     = "0.2.0"
 
 [dependencies]
 bevy_ecs  = "0.10"
-type_ulid = { version = "0.2", path = "../type_ulid" }
+type_ulid = { version = "^0.2.0", path = "../type_ulid" }
