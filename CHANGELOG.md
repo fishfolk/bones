@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### New Features
+
+ - <csr-id-473af7fcea22f1c76a84dd3f243fc5c282b142a5/> allow setting camera shake speed.
+   Makes the shake speed parameter configurable and dramatically
+   slows the default speed so that the sampling across the perlin
+   noise produces a smooth shake instead of a random jitter.
+ - <csr-id-605345bd3d4fa2f8f540ae106b114d52c45b904a/> add time resource + sync system
+
+### New Features (BREAKING)
+
+ - Upgrade to Bevy 0.10.
+ - <csr-id-02d654ca2ed38105ecec7faccf8a9a83e24c961f/> allow specifying arbitrary frame list for animated sprites.
+   This allows for more flexible sprite animations, that aren't
+   simply represented by a range of frames in the spritesheet.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release over the course of 118 calendar days.
+ - 133 days passed between releases.
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 3 unique issues were worked on: [#104](https://github.com/fishfolk/bones/issues/104), [#84](https://github.com/fishfolk/bones/issues/84), [#95](https://github.com/fishfolk/bones/issues/95)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#104](https://github.com/fishfolk/bones/issues/104)**
+    - allow setting camera shake speed. ([`473af7f`](https://github.com/fishfolk/bones/commit/473af7fcea22f1c76a84dd3f243fc5c282b142a5))
+ * **[#84](https://github.com/fishfolk/bones/issues/84)**
+    - allow specifying arbitrary frame list for animated sprites. ([`02d654c`](https://github.com/fishfolk/bones/commit/02d654ca2ed38105ecec7faccf8a9a83e24c961f))
+ * **[#95](https://github.com/fishfolk/bones/issues/95)**
+    - add time resource + sync system ([`605345b`](https://github.com/fishfolk/bones/commit/605345bd3d4fa2f8f540ae106b114d52c45b904a))
+</details>
+
 ## 0.1.0 (2023-01-18)
 
 <csr-id-db6ad44986098e98b7117aca3b3150749bc5f90a/>
@@ -17,12 +57,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-88b47965fb59d4ee2c1748de7d839e08072ae0b2/> add camera shake.
    Adds systems and components for easily adding camera shake.
-   
+
    Ported from the Bevy implementation in `bones_camera_shake`.
  - <csr-id-020c1244cbd27f0a32b8fad6a314bea81ef0e449/> add animation module.
  - <csr-id-ec30508e66dbc4c436a052754f1168419ad20c1a/> add `bones_camera_shake` crate
    Adds the camera shake functionality from [Bomby](https://github.com/fishfolk/bomby).
-   
+
    For the time being it uses `bevy_ecs` and not `bones_ecs`.
  - <csr-id-3724c69a0bb24828d1710380bb8d139e304b7955/> migrate crates from the jumpy repository
 
@@ -31,7 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - <csr-id-9de77ff7c9ddcb5af5737553384becbb9483b665/> fix sprite animation bug.
    Fixes the behavior when an atlas sprite's current index is less
    than the starting index of an animated sprite.
-   
+
    Previously it would play the animation from wherever the current
    index happened to be, but it was supposed to skip to the animation
    start frame.
@@ -53,7 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    Renames `bones` to `bones_lib` ( mostly because `bones` was already taken )
    and adds the `bones_asset`, `bones_bevy_renderer`, `bones_input`, and
    `bones_render` crates.
-   
+
    This sets up the overall structure for the bones library,
    though changes to some aspects of the design are likely to change.
 

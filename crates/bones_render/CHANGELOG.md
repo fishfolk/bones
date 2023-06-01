@@ -5,20 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.1.1 (2023-01-24)
+## Unreleased
+
+<csr-id-c57a2089f4dcf6bd63e8f0e0609cf6ff3506084f/>
+
+### Chore
+
+ - <csr-id-c57a2089f4dcf6bd63e8f0e0609cf6ff3506084f/> add serde to bones color.
+   Add serde Serialize / Deserailize to bones color.
+
+### Documentation
+
+ - <csr-id-b912295c0806196e607c1d769e030e54f4e3e548/> fix incorrect code comment regarding tilemap coordinates.
 
 ### New Features
 
- - <csr-id-6abe6ee3587f737966bddb5ab0f003e62aea3291/> add 2D line path rendering.
+<csr-id-8751bdb1f2f403761e792bf489216aad02beaa92/>
+<csr-id-6abe6ee3587f737966bddb5ab0f003e62aea3291/>
+
+ - <csr-id-3f2e3485f9556cc68eb4c04df34d3aa2c6087330/> upgrade to Bevy 0.10.
+ - <csr-id-ad6d073a33dc342d5aed1155488e4681cf1bc782/> add color to atlas sprite.
+ - <csr-id-b96133fec89330e3837575c110e587f7e11bf3a6/> add color and sync with bevy
+   - Add color type to bones
+- Add color type to Bones Sprite
+- Add color type to clear color
+- Add color type to Path2d
+- Sync with Bevy
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
- - 4 days passed between releases.
- - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
- - 1 unique issue was worked on: [#76](https://github.com/fishfolk/bones/issues/76)
+ - 8 commits contributed to the release over the course of 128 calendar days.
+ - 133 days passed between releases.
+ - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 7 unique issues were worked on: [#100](https://github.com/fishfolk/bones/issues/100), [#110](https://github.com/fishfolk/bones/issues/110), [#112](https://github.com/fishfolk/bones/issues/112), [#114](https://github.com/fishfolk/bones/issues/114), [#122](https://github.com/fishfolk/bones/issues/122), [#76](https://github.com/fishfolk/bones/issues/76), [#89](https://github.com/fishfolk/bones/issues/89)
 
 ### Commit Details
 
@@ -26,9 +47,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <details><summary>view details</summary>
 
+ * **[#100](https://github.com/fishfolk/bones/issues/100)**
+    - add custom camera viewport support. ([`8751bdb`](https://github.com/fishfolk/bones/commit/8751bdb1f2f403761e792bf489216aad02beaa92))
+ * **[#110](https://github.com/fishfolk/bones/issues/110)**
+    - add color and sync with bevy ([`b96133f`](https://github.com/fishfolk/bones/commit/b96133fec89330e3837575c110e587f7e11bf3a6))
+ * **[#112](https://github.com/fishfolk/bones/issues/112)**
+    - add serde to bones color. ([`c57a208`](https://github.com/fishfolk/bones/commit/c57a2089f4dcf6bd63e8f0e0609cf6ff3506084f))
+ * **[#114](https://github.com/fishfolk/bones/issues/114)**
+    - add color to atlas sprite. ([`ad6d073`](https://github.com/fishfolk/bones/commit/ad6d073a33dc342d5aed1155488e4681cf1bc782))
+ * **[#122](https://github.com/fishfolk/bones/issues/122)**
+    - upgrade to Bevy 0.10. ([`3f2e348`](https://github.com/fishfolk/bones/commit/3f2e3485f9556cc68eb4c04df34d3aa2c6087330))
  * **[#76](https://github.com/fishfolk/bones/issues/76)**
     - add 2D line path rendering. ([`6abe6ee`](https://github.com/fishfolk/bones/commit/6abe6ee3587f737966bddb5ab0f003e62aea3291))
+ * **[#89](https://github.com/fishfolk/bones/issues/89)**
+    - fix incorrect code comment regarding tilemap coordinates. ([`b912295`](https://github.com/fishfolk/bones/commit/b912295c0806196e607c1d769e030e54f4e3e548))
+ * **Uncategorized**
+    - Release bones_render v0.1.1, bones_bevy_renderer v0.1.1 ([`5b33433`](https://github.com/fishfolk/bones/commit/5b3343305a0871914085eb1b98702ef82b84d98f))
 </details>
+
+<csr-unknown>
+ add custom camera viewport support. add 2D line path rendering.<csr-unknown/>
+
+## 0.1.1 (2023-01-24)
+
+### New Features
+
+ - <csr-id-6abe6ee3587f737966bddb5ab0f003e62aea3291/> add 2D line path rendering.
 
 ## 0.1.0 (2023-01-18)
 

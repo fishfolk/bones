@@ -5,12 +5,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+<csr-id-c57a2089f4dcf6bd63e8f0e0609cf6ff3506084f/>
+
+### Chore
+
+ - <csr-id-c57a2089f4dcf6bd63e8f0e0609cf6ff3506084f/> add serde to bones color.
+   Add serde Serialize / Deserailize to bones color.
+
+### New Features
+
+ - <csr-id-3f2e3485f9556cc68eb4c04df34d3aa2c6087330/> upgrade to Bevy 0.10.
+ - <csr-id-e7330d9cdb590564c3c01255401d8530425e18f0/> implement `BonesBevyAssetLoad` for `Duration`.
+ - <csr-id-605345bd3d4fa2f8f540ae106b114d52c45b904a/> add time resource + sync system
+ - <csr-id-a699f5d9254037d6127becae77f09527759fd408/> implement BonesBevyAssetLoad for `Key`.
+   This makes it easier to deserialize `Key`s in bevy assets.
+
+### Bug Fixes
+
+ - <csr-id-632ef4e2d7647f6cb704a1b5eaeb2fbba9562314/> makes bones asset path representation more consistent.
+   Previously the normalize method on a bones path would remove the leading
+   `/` to make it support Bevy paths, which can't start with a `/`, but
+   this was not consistent with the way that the handle was serialized.
+   
+   Now, the bones path representations always maintain the leading `/` to
+   indicate a root path, and the leading `/` is removed when converting to
+   a Bevy handle.
+   
+   This fixes issues run into when trying to read serialized bones handles
+   during map saving in Jumpy.
+
+### New Features (BREAKING)
+
+ - <csr-id-00110c27b0aa76ed597c7e4d62bec70cfd1b2a23/> add `from_world` implementation similar to Bevy.
+   Allows resources to be added with either a `Default` implementation,
+   or a custom `FromWorld` implementation that allows them to derive their,
+   value from any other data currently in the world.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 7 commits contributed to the release over the course of 118 calendar days.
+ - 133 days passed between releases.
+ - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 7 unique issues were worked on: [#102](https://github.com/fishfolk/bones/issues/102), [#106](https://github.com/fishfolk/bones/issues/106), [#112](https://github.com/fishfolk/bones/issues/112), [#122](https://github.com/fishfolk/bones/issues/122), [#83](https://github.com/fishfolk/bones/issues/83), [#92](https://github.com/fishfolk/bones/issues/92), [#95](https://github.com/fishfolk/bones/issues/95)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#102](https://github.com/fishfolk/bones/issues/102)**
+    - implement `BonesBevyAssetLoad` for `Duration`. ([`e7330d9`](https://github.com/fishfolk/bones/commit/e7330d9cdb590564c3c01255401d8530425e18f0))
+ * **[#106](https://github.com/fishfolk/bones/issues/106)**
+    - makes bones asset path representation more consistent. ([`632ef4e`](https://github.com/fishfolk/bones/commit/632ef4e2d7647f6cb704a1b5eaeb2fbba9562314))
+ * **[#112](https://github.com/fishfolk/bones/issues/112)**
+    - add serde to bones color. ([`c57a208`](https://github.com/fishfolk/bones/commit/c57a2089f4dcf6bd63e8f0e0609cf6ff3506084f))
+ * **[#122](https://github.com/fishfolk/bones/issues/122)**
+    - upgrade to Bevy 0.10. ([`3f2e348`](https://github.com/fishfolk/bones/commit/3f2e3485f9556cc68eb4c04df34d3aa2c6087330))
+ * **[#83](https://github.com/fishfolk/bones/issues/83)**
+    - implement BonesBevyAssetLoad for `Key`. ([`a699f5d`](https://github.com/fishfolk/bones/commit/a699f5d9254037d6127becae77f09527759fd408))
+ * **[#92](https://github.com/fishfolk/bones/issues/92)**
+    - add `from_world` implementation similar to Bevy. ([`00110c2`](https://github.com/fishfolk/bones/commit/00110c27b0aa76ed597c7e4d62bec70cfd1b2a23))
+ * **[#95](https://github.com/fishfolk/bones/issues/95)**
+    - add time resource + sync system ([`605345b`](https://github.com/fishfolk/bones/commit/605345bd3d4fa2f8f540ae106b114d52c45b904a))
+</details>
+
 ## 0.1.0 (2023-01-18)
 
 <csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/>
 <csr-id-de43e3cf45b9108bebecd4196aa7524c87758e35/>
 <csr-id-ae0a761fc9b82ba2fc639c2b6f7af09fb650cd31/>
 <csr-id-ef12c3fb681cc826199b1564e1a033a56a5ce2d4/>
+<csr-id-a68cb79e6b7d3774c53c0236edf3a12175f297b5/>
 
 ### Chore
 
@@ -38,7 +108,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    `BonesBevyAssetLoad`.
  - <csr-id-7fd1c592c61e3032d803b8f70364b826b4a9ebaf/> add extra derive support & type implementations.
    - The derive macro for `BonesBevyAssetLoad` can now be used on enums.
-- Added more implementations of `BonesBevyAssetLoad` for primitive types.
 
 ### Style
 
@@ -68,7 +137,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 11 commits contributed to the release over the course of 14 calendar days.
+ - 12 commits contributed to the release over the course of 14 calendar days.
  - 10 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 9 unique issues were worked on: [#29](https://github.com/fishfolk/bones/issues/29), [#33](https://github.com/fishfolk/bones/issues/33), [#37](https://github.com/fishfolk/bones/issues/37), [#39](https://github.com/fishfolk/bones/issues/39), [#41](https://github.com/fishfolk/bones/issues/41), [#52](https://github.com/fishfolk/bones/issues/52), [#63](https://github.com/fishfolk/bones/issues/63), [#65](https://github.com/fishfolk/bones/issues/65), [#67](https://github.com/fishfolk/bones/issues/67)
 
@@ -97,10 +166,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#67](https://github.com/fishfolk/bones/issues/67)**
     - generate changelogs for all crates. ([`a68cb79`](https://github.com/fishfolk/bones/commit/a68cb79e6b7d3774c53c0236edf3a12175f297b5))
  * **Uncategorized**
+    - Release bones_bevy_asset_macros v0.2.0, bones_bevy_asset v0.1.0, bones_bevy_renderer v0.1.0, safety bump 2 crates ([`7f7bb38`](https://github.com/fishfolk/bones/commit/7f7bb38fca7b54fd1ad408bd63f63515d07ef2ab))
     - Release type_ulid_macros v0.1.0, type_ulid v0.1.0, bones_bevy_utils v0.1.0, bones_ecs v0.1.0, bones_asset v0.1.0, bones_input v0.1.0, bones_render v0.1.0, bones_lib v0.1.0 ([`db0333d`](https://github.com/fishfolk/bones/commit/db0333ddacb6f29aed8664db67973e72ea586dce))
     - implement `BonesBevyAssetLoad` for more types. ([`c0a14c5`](https://github.com/fishfolk/bones/commit/c0a14c5681a82d8e2db725a678b3dbccfa8a80b4))
 </details>
-
-<csr-unknown>
- add derive macro for BonesBevyAssetLoad.This makes it easier to nest asset structs that have handles that need loading.<csr-unknown/>
 

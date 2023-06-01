@@ -5,9 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### New Features
+
+ - <csr-id-3f2e3485f9556cc68eb4c04df34d3aa2c6087330/> upgrade to Bevy 0.10.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 133 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#122](https://github.com/fishfolk/bones/issues/122)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#122](https://github.com/fishfolk/bones/issues/122)**
+    - upgrade to Bevy 0.10. ([`3f2e348`](https://github.com/fishfolk/bones/commit/3f2e3485f9556cc68eb4c04df34d3aa2c6087330))
+</details>
+
 ## 0.1.0 (2023-01-18)
 
 <csr-id-27252465ad0506ff2f8c377531fa079ec64d1750/>
+<csr-id-a68cb79e6b7d3774c53c0236edf3a12175f297b5/>
 
 ### Chore
 
@@ -38,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 5 commits contributed to the release over the course of 20 calendar days.
+ - 6 commits contributed to the release over the course of 20 calendar days.
  - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 5 unique issues were worked on: [#13](https://github.com/fishfolk/bones/issues/13), [#28](https://github.com/fishfolk/bones/issues/28), [#37](https://github.com/fishfolk/bones/issues/37), [#65](https://github.com/fishfolk/bones/issues/65), [#67](https://github.com/fishfolk/bones/issues/67)
 
@@ -58,5 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - add missing crate descriptions. ([`2725246`](https://github.com/fishfolk/bones/commit/27252465ad0506ff2f8c377531fa079ec64d1750))
  * **[#67](https://github.com/fishfolk/bones/issues/67)**
     - generate changelogs for all crates. ([`a68cb79`](https://github.com/fishfolk/bones/commit/a68cb79e6b7d3774c53c0236edf3a12175f297b5))
+ * **Uncategorized**
+    - Release type_ulid_macros v0.1.0, type_ulid v0.1.0, bones_bevy_utils v0.1.0, bones_ecs v0.1.0, bones_asset v0.1.0, bones_input v0.1.0, bones_render v0.1.0, bones_lib v0.1.0 ([`db0333d`](https://github.com/fishfolk/bones/commit/db0333ddacb6f29aed8664db67973e72ea586dce))
 </details>
 
