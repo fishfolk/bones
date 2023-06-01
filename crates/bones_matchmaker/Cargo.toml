@@ -10,7 +10,7 @@ version     = "0.2.0"
 [dependencies]
 anyhow = "1.0"
 bevy_tasks = "0.10"
-bones_matchmaker_proto = { version = "0.2", path = "../bones_matchmaker_proto" }
+bones_matchmaker_proto = { version = "^0.2.0", path = "../bones_matchmaker_proto" }
 bytes = "1.2"
 clap = { version = "4.0", features = ["derive", "env"] }
 either = "1.8"
@@ -23,7 +23,7 @@ quinn = { version = "0.10", default-features = false, features = [
     "native-certs",
     "tls-rustls",
 ] }
-quinn_runtime_bevy = { version = "0.2", path = "../quinn_runtime_bevy" }
+quinn_runtime_bevy = { version = "^0.2.0", path = "../quinn_runtime_bevy" }
 rand = "0.8"
 rcgen = "0.10"
 rustls = { version = "0.21", features = ["dangerous_configuration", "quic"] }
