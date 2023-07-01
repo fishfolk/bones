@@ -1,0 +1,7 @@
+name: Jane
+age: 25
+atlas: asset:./jane.atlas.yaml
+favorite_things:
+  - cupcakes
+  - sparkles
+  - pink things
