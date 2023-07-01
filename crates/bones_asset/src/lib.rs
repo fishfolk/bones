@@ -6,212 +6,290 @@
 #![deny(rustdoc::all)]
 
 use std::{
-    any::TypeId,
-    collections::hash_map::Entry,
+    any::Any,
+    collections::HashMap,
     marker::PhantomData,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
-use bones_ecs::{
-    prelude::{AtomicRefCell, Deref, DerefMut},
-    ulid::{TypeUlid, UlidMap},
-};
+use anyhow::Context;
+use bones_ecs::ulid::{TypeUlid, UlidMap};
+use serde::de::DeserializeSeed;
+use type_ulid::TypeUlidDynamic;
+use ulid::Ulid;
 
 /// The prelude.
 pub mod prelude {
-    pub use crate::*;
+    pub use crate::{cid::*, metadata::*, *};
 }
 
-/// A resource that may be used to access [`AssetProvider`]s for all the different registered asset
-/// types.
-///
-/// > ⚠️ **Warning:** This API is work-in-progress and has not been used in an actual project yet.
-/// > In the official Bevy integration we are currently "cheating" by just borrowing asset directly
-/// > from the Bevy world.
-/// >
-/// > Cheating like this means that we can't acess assets through the C API that we want to provide
-/// > later, and it isn't very ergonomic, so we will want to make something like this
-/// > [`AssetProviders`] resource work properly later.
-#[derive(Default)]
-pub struct AssetProviders {
-    providers: UlidMap<Box<dyn UntypedAssetProvider>>,
-    type_ids: UlidMap<TypeId>,
+mod cid;
+pub use cid::*;
+mod metadata;
+pub use metadata::*;
+
+/// [`AssetIo`] is a trait that is implemented for backends capable of loading all the games assets
+/// and returning a [`LoadedAssets`].
+pub trait AssetIo {
+    /// Load the game assets.
+    ///
+    /// TODO: Add a load progress and/or make this function async.
+    fn load_all(&self, server: &mut AssetServer) -> anyhow::Result<LoadedAssets>;
+
+    /// Load an asset with the given path, from the given pack, or the default pack if not
+    /// specified.
+    fn load_asset(
+        &self,
+        server: &mut AssetServer,
+        path: &Path,
+        pack: Option<&str>,
+    ) -> anyhow::Result<UntypedHandle>;
+
+    /// Get the binary contents of the asset from the given path and pack.
+    fn get_contents(&self, path: &Path, pack: Option<&str>) -> anyhow::Result<Vec<u8>>;
 }
 
-/// Type alias for getting the [`AssetProviders`] resource.
-pub type ResAssetProviders<'a> = bones_ecs::system::Res<'a, AssetProvidersResource>;
-
-/// The type of the [`AssetProviders`] resource.
-// TODO: Create custom system parameter to prevent needing to manualy `.borrow()` `AssetProvidersResource`.
-#[derive(Deref, DerefMut, Clone, TypeUlid)]
-#[ulid = "01GNWY5HKV5JZQRKG20ANJXHCK"]
-
-pub struct AssetProvidersResource(pub Arc<AtomicRefCell<AssetProviders>>);
-
-impl Default for AssetProvidersResource {
-    fn default() -> Self {
-        Self(Arc::new(AtomicRefCell::new(AssetProviders::default())))
-    }
+/// [`AssetIo`] implementation that loads from the filesystem.
+#[cfg(not(target_arch = "wasm32"))]
+pub struct FileAssetIo {
+    /// The directory to load the default asset from.
+    pub default_dir: PathBuf,
+    /// The directory to load the asset packs from.
+    pub packs_dir: PathBuf,
 }
 
-impl AssetProviders {
-    /// Add an asset provider for a specific asset type.
-    pub fn add<T, A>(&mut self, provider: A)
-    where
-        T: TypeUlid + 'static,
-        A: AssetProvider<T> + UntypedAssetProvider + 'static,
-    {
-        let type_id = TypeId::of::<T>();
-        let type_ulid = T::ULID;
-
-        match self.type_ids.entry(type_ulid) {
-            Entry::Occupied(entry) => {
-                if entry.get() != &type_id {
-                    panic!("Multiple Rust types with the same Type ULID");
+#[cfg(not(target_arch = "wasm32"))]
+impl AssetIo for FileAssetIo {
+    fn load_all(&self, server: &mut AssetServer) -> anyhow::Result<LoadedAssets> {
+        // Load the default asset pack
+        let pack_file_name = 'file: {
+            for filename in ["pack.yaml", "pack.yml", "pack.json"] {
+                let path = self.default_dir.join(filename);
+                if path.exists() {
+                    break 'file PathBuf::from(filename);
                 }
             }
-            Entry::Vacant(entry) => {
-                entry.insert(type_id);
+
+            anyhow::bail!(
+                "Pack file does not exist in default asset dir: {:?}",
+                self.default_dir
+            );
+        };
+        let default = self.load_asset(server, &pack_file_name, None)?;
+
+        // Load the asset packs
+        let packs = std::fs::read_dir(&self.packs_dir)?
+            .map(|x| x.map(|dir| dir.file_name().to_str().unwrap().to_owned()))
+            .map(|pack| {
+                let pack = pack?;
+                let pack_file_name = 'file: {
+                    for filename in ["pack.yaml", "pack.yml", "pack.json"] {
+                        let path = self.packs_dir.join(&pack).join(filename);
+                        if path.exists() {
+                            break 'file PathBuf::from(filename);
+                        }
+                    }
+
+                    anyhow::bail!(
+                        "Pack file does not exist in default asset dir: {:?}",
+                        self.default_dir
+                    );
+                };
+
+                let asset = self.load_asset(server, &pack_file_name, Some(&pack))?;
+                Ok((pack, asset))
+            })
+            .collect::<Result<HashMap<_, _>, _>>()?;
+
+        Ok(LoadedAssets { default, packs })
+    }
+
+    fn load_asset(
+        &self,
+        server: &mut AssetServer,
+        path: &Path,
+        pack: Option<&str>,
+    ) -> anyhow::Result<UntypedHandle> {
+        let asset_file_contents = self.get_contents(path, pack)?;
+        server.load_asset(self, &asset_file_contents, path, pack)
+    }
+
+    fn get_contents(&self, path: &Path, pack: Option<&str>) -> anyhow::Result<Vec<u8>> {
+        let base_dir = pack
+            .map(|x| self.packs_dir.join(x))
+            .unwrap_or_else(|| self.default_dir.clone());
+        let filepath = base_dir.join(path);
+        std::fs::read(&filepath).context(format!(
+            "Cannot read pack file for default asset: {filepath:?}"
+        ))
+    }
+}
+
+/// Struct containing all the game's loaded assets, including the default assets and
+/// asset-packs/mods.
+pub struct LoadedAssets {
+    /// The game's default asset pack.
+    pub default: UntypedHandle,
+    /// Extra asset packs. The key is the the name of the asset pack.
+    pub packs: HashMap<String, UntypedHandle>,
+}
+
+/// Trait that must be implemented by asset types.
+pub trait Asset: Any + TypeUlidDynamic {}
+impl<T: Any + TypeUlidDynamic> Asset for T {}
+
+/// Trait for asset loaders.
+pub trait AssetLoader {
+    /// Load an asset.
+    fn load(&self, bytes: &[u8]) -> Box<dyn Asset>;
+
+    /// Return the extensions to register the asset loader with.
+    fn extensions(&self) -> &'static [&'static str];
+}
+
+/// Struct responsible for loading assets.
+#[derive(Default)]
+pub struct AssetServer {
+    /// List of asset loaders.
+    pub loaders: Vec<Box<dyn AssetLoader>>,
+    /// The asset store.
+    pub store: AssetStore,
+}
+
+impl AssetServer {
+    /// Initialize a new [`AssetServer`].
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Load an asset
+    pub fn load_asset<Io: AssetIo>(
+        &mut self,
+        asset_io: &Io,
+        content: &[u8],
+        path: &Path,
+        pack: Option<&str>,
+    ) -> anyhow::Result<UntypedHandle> {
+        use sha2::Digest;
+
+        let rid = Ulid::new();
+        let ctx = AssetLoadCtxCell::new(self, asset_io, pack, path);
+        let ends_with =
+            |path: &Path, ext: &str| path.extension().unwrap().to_string_lossy().ends_with(ext);
+        let is_metadata =
+            ends_with(path, "json") || ends_with(path, "yaml") || ends_with(path, "yml");
+
+        let meta = if is_metadata {
+            if path.ends_with("json") {
+                ctx.deserialize(&mut serde_json::Deserializer::from_slice(content))?
+            } else {
+                ctx.deserialize(serde_yaml::Deserializer::from_slice(content))?
             }
-        }
-
-        self.providers.insert(type_ulid, Box::new(provider));
-    }
-
-    /// Get the asset provider for the given type
-    pub fn get<T: TypeUlid>(&self) -> AssetProviderRef<T> {
-        self.try_get::<T>().unwrap()
-    }
-
-    /// Get the asset provider for the given asset type, if it exists.
-    pub fn try_get<T: TypeUlid>(&self) -> Option<AssetProviderRef<T>> {
-        self.providers.get(&T::ULID).map(|x| {
-            let untyped = x.as_ref();
-
-            AssetProviderRef {
-                untyped,
-                _phantom: PhantomData,
-            }
-        })
-    }
-
-    /// Get the asset provider for the given type
-    pub fn get_mut<T: TypeUlid>(&mut self) -> AssetProviderMut<T> {
-        self.try_get_mut::<T>().unwrap()
-    }
-
-    /// Get the asset provider for the given asset type, if it exists.
-    pub fn try_get_mut<T: TypeUlid>(&mut self) -> Option<AssetProviderMut<T>> {
-        self.providers.get_mut(&T::ULID).map(|x| {
-            let untyped = x.as_mut();
-
-            AssetProviderMut {
-                untyped,
-                _phantom: PhantomData,
-            }
-        })
-    }
-
-    /// Remove an asset provider.
-    pub fn remove<T: TypeUlid>(&mut self) -> Box<dyn UntypedAssetProvider> {
-        self.try_remove::<T>().unwrap()
-    }
-
-    /// Remove an asset provider.
-    pub fn try_remove<T: TypeUlid>(&mut self) -> Option<Box<dyn UntypedAssetProvider>> {
-        self.providers.remove(&T::ULID)
-    }
-}
-
-/// Trait implemented for asset providers that can return untyped pointers to their assets.
-pub trait UntypedAssetProvider: Sync + Send {
-    /// Returns a read-only pointer to the asset for the given handle, or a null pointer if it
-    /// doesn't exist.
-    fn get(&self, handle: UntypedHandle) -> *const u8;
-    /// Returns a mutable-only pointer to the asset for the given handle, or a null pointer if it
-    /// doesn't exist.
-    fn get_mut(&mut self, handle: UntypedHandle) -> *mut u8;
-}
-
-/// Trait for asset providers.
-///
-/// Asset providers are reponsible for returning references to assets out of their backing asset
-/// store, when giving handles to the asset to laod
-pub trait AssetProvider<T: TypeUlid>: Sync + Send {
-    /// Get a reference to an asset, if it exists in the store.
-    fn get(&self, handle: Handle<T>) -> Option<&T>;
-    /// Get a mutable reference to an asset, if it exists in the store.
-    fn get_mut(&mut self, handle: Handle<T>) -> Option<&mut T>;
-}
-
-impl<T: TypeUlid> UntypedAssetProvider for dyn AssetProvider<T> {
-    fn get(&self, handle: UntypedHandle) -> *const u8 {
-        let asset = <Self as AssetProvider<T>>::get(self, handle.typed());
-        asset
-            .map(|x| x as *const T as *const u8)
-            .unwrap_or(std::ptr::null())
-    }
-
-    fn get_mut(&mut self, handle: UntypedHandle) -> *mut u8 {
-        let asset = <Self as AssetProvider<T>>::get_mut(self, handle.typed());
-        asset
-            .map(|x| x as *mut T as *mut u8)
-            .unwrap_or(std::ptr::null_mut())
-    }
-}
-
-/// A borrow of an [`AssetProvider`].
-pub struct AssetProviderRef<'a, T: TypeUlid> {
-    untyped: &'a dyn UntypedAssetProvider,
-    _phantom: PhantomData<T>,
-}
-
-impl<'a, T: TypeUlid> AssetProviderRef<'a, T> {
-    /// Get an asset, given it's handle
-    pub fn get(&self, handle: Handle<T>) -> Option<&T> {
-        let ptr = self.untyped.get(handle.untyped()) as *const T;
-
-        if ptr.is_null() {
-            None
         } else {
-            // SAFE: AssetProviderRef may only be constructed by us, and we only construct it ( see
-            // AssetProviders ) when we know the untyped provider matches T.
-            unsafe { Some(&*ptr) }
+            todo!();
+        };
+        let mut ctx = ctx.into_inner();
+        let dependencies = std::mem::take(&mut ctx.dependencies);
+
+        // Calculate the content ID by hashing the contents of the file with the content IDs of the
+        // dependencies.
+        let mut sha = sha2::Sha256::new();
+        sha.update(content);
+        for dep in &dependencies {
+            sha.update(dep.0);
+        }
+        let bytes = sha.finalize();
+        let mut cid = Cid::default();
+        cid.0.copy_from_slice(&bytes);
+
+        let loaded_asset = LoadedAsset {
+            cid,
+            dependencies,
+            asset_kind: Metadata::ULID,
+            data: AssetData::Metadata(meta),
+            pack: pack.map(ToOwned::to_owned),
+            path: path.to_owned(),
+        };
+
+        self.store.asset_ids.insert(rid, loaded_asset.cid);
+        self.store.assets.insert(loaded_asset.cid, loaded_asset);
+
+        Ok(UntypedHandle { rid })
+    }
+
+    /// Borrow a [`LoadedAsset`] associated to the given handle.
+    pub fn get_untyped(&self, handle: &UntypedHandle) -> Option<&LoadedAsset> {
+        let cid = self.store.asset_ids.get(&handle.rid)?;
+        self.store.assets.get(cid)
+    }
+}
+
+/// Stores assets for later retrieval.
+#[derive(Default, Clone, Debug)]
+pub struct AssetStore {
+    /// Maps the runtime ID of the asset to it's content ID.
+    pub asset_ids: UlidMap<Cid>,
+    /// Maps asset content IDs, to loaded assets.
+    pub assets: HashMap<Cid, LoadedAsset>,
+}
+
+/// An asset that has been loaded.
+#[derive(Clone, Debug)]
+pub struct LoadedAsset {
+    /// The content ID of the loaded asset.
+    ///
+    /// This is a hash of the contents of the asset's binary data and all of the cids of it's
+    /// dependencies.
+    pub cid: Cid,
+    /// The asset pack this was loaded from, or [`None`] if it is from the default pack.
+    pub pack: Option<String>,
+    /// The path in the asset pack that this asset is from.
+    pub path: PathBuf,
+    /// The content IDs of any assets needed by this asset as a dependency.
+    pub dependencies: Vec<Cid>,
+    /// Unique identifier for the asset kind. For Rust structs this will match the [`TypeUlid`].
+    pub asset_kind: Ulid,
+    /// The loaded data of the asset. This is in the format produced by the asset loader, not the
+    /// binary of the asset source.
+    pub data: AssetData,
+}
+
+/// The raw data stored for a loaded asset.
+#[derive(Debug, Clone)]
+pub enum AssetData {
+    /// Asset has been loaded and stored at the given pointer.
+    Raw(*mut u8),
+    /// The asset has been loaded from JSON/YAML data.
+    Metadata(Metadata),
+}
+
+impl AssetData {
+    /// Get the metadata, if this is an [`AssetData::Metadata`].
+    pub fn as_metadata(&self) -> Option<&Metadata> {
+        if let Self::Metadata(m) = self {
+            Some(m)
+        } else {
+            None
         }
     }
 }
 
-/// A mutable borrow of an [`AssetProvider`].
-pub struct AssetProviderMut<'a, T: TypeUlid> {
-    untyped: &'a mut dyn UntypedAssetProvider,
-    _phantom: PhantomData<T>,
+/// An identifier for an asset.
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Default)]
+pub struct AssetInfo {
+    /// The unique ID of the asset pack this asset is located in.
+    pub pack: Cid,
+    /// The path to the asset, relative to the root of the asset pack.
+    pub path: AssetPath,
 }
 
-impl<'a, T: TypeUlid> AssetProviderMut<'a, T> {
-    /// Get an asset, given it's handle
-    pub fn get(&self, handle: Handle<T>) -> Option<&T> {
-        let ptr = self.untyped.get(handle.untyped()) as *const T;
-
-        if ptr.is_null() {
-            None
-        } else {
-            // SAFE: AssetProviderRef may only be constructed by us, and we only construct it ( see
-            // AssetProviders ) when we know the untyped provider matches T.
-            unsafe { Some(&*ptr) }
-        }
-    }
-
-    /// Get an asset, given it's handle
-    pub fn get_mut(&mut self, handle: Handle<T>) -> Option<&mut T> {
-        let ptr = self.untyped.get_mut(handle.untyped()) as *mut T;
-
-        if ptr.is_null() {
-            None
-        } else {
-            // SAFE: AssetProviderRef may only be constructed by us, and we only construct it ( see
-            // AssetProviders ) when we know the untyped provider matches T.
-            unsafe { Some(&mut *ptr) }
+impl AssetInfo {
+    /// Create a new asset ID.
+    pub fn new<P: Into<PathBuf>>(pack: Cid, path: P, label: Option<String>) -> Self {
+        Self {
+            pack,
+            path: AssetPath::new(path, label),
         }
     }
 }
@@ -225,23 +303,6 @@ pub struct AssetPath {
     pub path: Arc<Path>,
     /// The optional sub-asset label
     pub label: Option<Arc<str>>,
-}
-
-#[cfg(feature = "bevy")]
-impl AssetPath {
-    /// Get the equivalent [`bevy_asset::AssetPath`] from this Bones [`AssetPath`].
-    pub fn get_bevy_asset_path(&self) -> bevy_asset::AssetPath<'static> {
-        bevy_asset::AssetPath::new(
-            // Bones convention is that `/` is relative to root, but Bevy doesn't like the
-            // leading /.
-            if let Ok(path) = self.path.strip_prefix("/") {
-                path.to_path_buf()
-            } else {
-                self.path.to_path_buf()
-            },
-            self.label.as_ref().map(|x| x.to_string()),
-        )
-    }
 }
 
 impl AssetPath {
@@ -315,17 +376,17 @@ impl Default for AssetPath {
 /// You can change the type of a handle by converting it to an untyped handle with
 /// [`untyped()`][Self::untyped] and converting it back to a typed handle with
 /// [`typed()`][UntypedHandle::typed].
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Default)]
 pub struct Handle<T: TypeUlid> {
-    /// The [`AssetPath`] for the asset.
-    pub path: AssetPath,
+    /// The runtime ID of the asset.
+    pub id: Ulid,
     phantom: PhantomData<T>,
 }
 
 impl<T: TypeUlid> Clone for Handle<T> {
     fn clone(&self) -> Self {
         Self {
-            path: self.path.clone(),
+            id: self.id,
             phantom: self.phantom,
         }
     }
@@ -333,33 +394,33 @@ impl<T: TypeUlid> Clone for Handle<T> {
 
 impl<T: TypeUlid> std::fmt::Debug for Handle<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Handle").field("path", &self.path).finish()
+        f.debug_struct("Handle").field("id", &self.id).finish()
     }
 }
 
-impl<T: TypeUlid> Handle<T> {
-    /// Create a new asset handle, from it's path and label.
-    pub fn new<P: Into<PathBuf>>(path: P, label: Option<String>) -> Self {
-        Handle {
-            path: AssetPath::new(path, label),
-            phantom: PhantomData,
-        }
-    }
-}
+// impl<T: TypeUlid> Handle<T> {
+//     /// Create a new asset handle, from it's path and label.
+//     pub fn new<P: Into<PathBuf>>(pack: Cid, path: P, label: Option<String>) -> Self {
+//         Handle {
+//             id: AssetInfo::new(pack, path, label),
+//             phantom: PhantomData,
+//         }
+//     }
+// }
 
-impl<T: TypeUlid> Default for Handle<T> {
-    fn default() -> Self {
-        Self {
-            path: AssetPath::default(),
-            phantom: Default::default(),
-        }
-    }
-}
+// impl<T: TypeUlid> Default for Handle<T> {
+//     fn default() -> Self {
+//         Self {
+//             id: AssetInfo::default(),
+//             phantom: Default::default(),
+//         }
+//     }
+// }
 
 impl<T: TypeUlid> Handle<T> {
     /// Convert the handle to an [`UntypedHandle`].
     pub fn untyped(self) -> UntypedHandle {
-        UntypedHandle { path: self.path }
+        UntypedHandle { rid: self.id }
     }
 }
 
@@ -368,141 +429,105 @@ impl<T: TypeUlid> Handle<T> {
 /// This simply contains the [`AssetPath`] of the asset.
 ///
 /// Can be converted to a typed handle with the [`typed()`][Self::typed] method.
-#[derive(Default, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Default, Clone, Debug, Hash, PartialEq, Eq, Copy)]
 pub struct UntypedHandle {
-    /// The unique identifier of the asset this handle represents.
-    pub path: AssetPath,
+    /// The runtime ID of the handle
+    pub rid: Ulid,
 }
 
 impl UntypedHandle {
-    /// Create a new handle from it's path and label.
-    pub fn new<P: Into<PathBuf>>(path: P, label: Option<String>) -> Self {
-        UntypedHandle {
-            path: AssetPath::new(path, label),
-        }
-    }
+    // /// Create a new handle from it's path and label.
+    // pub fn new<P: Into<PathBuf>>(pack: Cid, path: P, label: Option<String>) -> Self {
+    //     UntypedHandle {
+    //         id: AssetInfo::new(pack, path, label),
+    //     }
+    // }
 
     /// Create a typed [`Handle<T>`] from this [`UntypedHandle`].
     pub fn typed<T: TypeUlid>(self) -> Handle<T> {
         Handle {
-            path: self.path,
+            id: self.rid,
             phantom: PhantomData,
         }
     }
 }
 
-impl<'de> serde::Deserialize<'de> for UntypedHandle {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_str(UntypedHandleVisitor)
-    }
-}
+// impl<'de> serde::Deserialize<'de> for UntypedHandle {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: serde::Deserializer<'de>,
+//     {
+//         deserializer.deserialize_str(UntypedHandleVisitor)
+//     }
+// }
 
-impl<'de, T: TypeUlid> serde::Deserialize<'de> for Handle<T> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer
-            .deserialize_str(UntypedHandleVisitor)
-            .map(UntypedHandle::typed)
-    }
-}
+// impl<'de, T: TypeUlid> serde::Deserialize<'de> for Handle<T> {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: serde::Deserializer<'de>,
+//     {
+//         deserializer
+//             .deserialize_str(UntypedHandleVisitor)
+//             .map(UntypedHandle::typed)
+//     }
+// }
 
-impl serde::Serialize for UntypedHandle {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&format!(
-            "{}{}",
-            self.path.path.to_str().expect("Non-unicode path"),
-            self.path
-                .label
-                .as_ref()
-                .map(|x| format!("#{}", x))
-                .unwrap_or_default()
-        ))
-    }
-}
+// impl serde::Serialize for UntypedHandle {
+//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//     where
+//         S: serde::Serializer,
+//     {
+//         serializer.serialize_str(&format!(
+//             "{}{}",
+//             self.path.path.to_str().expect("Non-unicode path"),
+//             self.path
+//                 .label
+//                 .as_ref()
+//                 .map(|x| format!("#{}", x))
+//                 .unwrap_or_default()
+//         ))
+//     }
+// }
 
-impl<T: TypeUlid> serde::Serialize for Handle<T> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&format!(
-            "{}{}",
-            self.path.path.to_str().expect("Non-unicode path"),
-            self.path
-                .label
-                .as_ref()
-                .map(|x| format!("#{}", x))
-                .unwrap_or_default()
-        ))
-    }
-}
+// impl<T: TypeUlid> serde::Serialize for Handle<T> {
+//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//     where
+//         S: serde::Serializer,
+//     {
+//         serializer.serialize_str(&format!(
+//             "{}{}",
+//             self.path.path.to_str().expect("Non-unicode path"),
+//             self.path
+//                 .label
+//                 .as_ref()
+//                 .map(|x| format!("#{}", x))
+//                 .unwrap_or_default()
+//         ))
+//     }
+// }
 
-struct UntypedHandleVisitor;
-impl<'de> serde::de::Visitor<'de> for UntypedHandleVisitor {
-    type Value = UntypedHandle;
+// struct UntypedHandleVisitor;
+// impl<'de> serde::de::Visitor<'de> for UntypedHandleVisitor {
+//     type Value = UntypedHandle;
 
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            formatter,
-            "A string path to an asset with an optional label."
-        )
-    }
+//     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+//         write!(
+//             formatter,
+//             "A string path to an asset with an optional label."
+//         )
+//     }
 
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        let (path, label) = match v.rsplit_once('#') {
-            Some((path, label)) => (path, Some(label)),
-            None => (v, None),
-        };
+//     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+//     where
+//         E: serde::de::Error,
+//     {
+//         let (path, label) = match v.rsplit_once('#') {
+//             Some((path, label)) => (path, Some(label)),
+//             None => (v, None),
+//         };
 
-        Ok(UntypedHandle {
-            path: AssetPath::new(path, label.map(String::from)),
-        })
-    }
-}
-
-/// Implement bevy conversions when bevy feature is enabled
-#[cfg(feature = "bevy")]
-mod bevy {
-    use bevy_asset::{prelude::*, Asset, AssetPath};
-    use bones_bevy_utils::*;
-    use bones_ecs::ulid::TypeUlid;
-
-    impl IntoBevy<AssetPath<'static>> for super::AssetPath {
-        fn into_bevy(self) -> AssetPath<'static> {
-            AssetPath::new(self.path.to_path_buf(), self.label.map(|x| x.to_string()))
-        }
-    }
-    impl<T: Asset + TypeUlid> super::Handle<T> {
-        /// Get a Bevy weak [`Handle`] from from this bones asset handle.
-        pub fn get_bevy_handle(&self) -> Handle<T> {
-            let asset_path = self.path.get_bevy_asset_path();
-            Handle::weak(asset_path.into())
-        }
-    }
-
-    impl<T: TypeUlid> super::Handle<T> {
-        /// Get a Bevy weak [`HandleUntyped`] from this bones asset handle.
-        pub fn get_bevy_handle_untyped(&self) -> HandleUntyped {
-            let asset_path = self.path.get_bevy_asset_path();
-            HandleUntyped::weak(asset_path.into())
-        }
-    }
-    impl super::UntypedHandle {
-        /// Get a Bevy weak [`HandleUntyped`] from this bones asset handle.
-        pub fn get_bevy_handle(&self) -> HandleUntyped {
-            let asset_path = self.path.get_bevy_asset_path();
-            HandleUntyped::weak(asset_path.into())
-        }
-    }
-}
+//         Ok(UntypedHandle {
+//             path: AssetPath::new(path, label.map(String::from)),
+//         })
+//     }
+// }
