@@ -2,6 +2,11 @@
 
 use crate::prelude::*;
 
+#[derive(Deref, DerefMut)]
+struct Test {
+    s: String,
+}
+
 /// Struct used to run a system function using the world.
 pub struct System<Out = ()> {
     /// This should be called once to initialize the system, allowing it to intialize any resources
