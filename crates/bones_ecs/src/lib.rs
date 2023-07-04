@@ -15,6 +15,7 @@ pub mod bitset;
 pub mod components;
 pub mod entities;
 pub mod resources;
+pub mod schema;
 pub mod stage;
 pub mod system;
 pub mod ulid;
@@ -29,14 +30,14 @@ pub use world::{FromWorld, World};
 pub mod prelude {
     pub use {
         atomic_refcell::*,
-        bevy_derive::{Deref, DerefMut},
         bitset_core::BitSet,
+        bones_ecs_macros::*,
         type_ulid::{TypeUlid, Ulid},
     };
 
     pub use crate::{
-        bitset::*, components::*, default, entities::*, error::*, resources::*, stage::*,
-        system::*, ulid::*, EcsData, FromWorld, RawFns, TypedEcsData, UnwrapMany, World,
+        bitset::*, components::*, default, entities::*, error::*, resources::*, schema::*,
+        stage::*, system::*, ulid::*, EcsData, FromWorld, RawFns, TypedEcsData, UnwrapMany, World,
     };
 }
 

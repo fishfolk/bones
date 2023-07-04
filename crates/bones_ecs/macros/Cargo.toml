@@ -1,0 +1,17 @@
+[package]
+name = "bones_ecs_macros"
+description = "Macros for the bones_ecs crate."
+version = "0.2.0"
+edition = "2021"
+authors = ["The Fish Folk & Spicy Lobster Developers"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/fishfolk/bones"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+venial = "0.5"
+

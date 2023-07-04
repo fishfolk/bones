@@ -999,16 +999,27 @@ dependencies = [
  "aligned-vec",
  "anyhow",
  "atomic_refcell",
- "bevy_derive",
  "bitset-core",
+ "bones_ecs_macros",
  "bytemuck",
  "either",
  "fxhash",
  "glam",
  "itertools",
+ "paste",
  "serde",
+ "serde_yaml",
  "thiserror",
  "type_ulid",
+]
+
+[[package]]
+name = "bones_ecs_macros"
+version = "0.2.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "venial",
 ]
 
 [[package]]
@@ -3282,6 +3293,16 @@ name = "valuable"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
+
+[[package]]
+name = "venial"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61584a325b16f97b5b25fcc852eb9550843a251057a5e3e5992d2376f3df4bb2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+]
 
 [[package]]
 name = "version_check"
