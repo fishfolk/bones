@@ -1,0 +1,17 @@
+[package]
+authors     = ["The Fish Folk & Spicy Lobster Developers"]
+description = "Macros for the bones_reflectish crate."
+edition     = "2021"
+license     = "MIT OR Apache-2.0"
+name        = "bones_reflectish_macros"
+repository  = "https://github.com/fishfolk/bones"
+version     = "0.1.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.63"
+quote       = "1.0.28"
+regex       = "1.8.4"
+syn         = { version = "2.0.22", features = ["extra-traits"] }
