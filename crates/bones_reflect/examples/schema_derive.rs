@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use bones_ecs::prelude::*;
+use bones_reflect::prelude::*;
 use glam::UVec2;
 
 #[derive(HasSchema)]

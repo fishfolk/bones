@@ -1071,25 +1071,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "bones_reflectish"
+name = "bones_reflect"
 version = "0.1.0"
 dependencies = [
- "bones_bevy_utils",
- "bones_lib",
- "bones_reflectish_macros",
+ "bones_reflect_macros",
  "downcast-rs",
+ "glam",
  "hashbrown 0.14.0",
+ "paste",
  "serde",
+ "serde_yaml",
 ]
 
 [[package]]
-name = "bones_reflectish_macros"
+name = "bones_reflect_macros"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
  "regex",
- "syn 2.0.23",
+ "venial",
 ]
 
 [[package]]

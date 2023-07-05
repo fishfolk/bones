@@ -1,4 +1,4 @@
-use bones_reflectish_macros::HasTypeRegistration;
+use bones_reflect_macros::HasTypeRegistration;
 
 /// Example of an airplane asset.
 #[derive(HasTypeRegistration)]

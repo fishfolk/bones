@@ -45,23 +45,24 @@ impl TypeRegistry {
     /// Create a type registry with default registrations for primitive types.
     pub fn new() -> Self {
         let mut registry = Self::empty();
-        registry.register::<bool>();
-        registry.register::<char>();
-        registry.register::<u8>();
-        registry.register::<u16>();
-        registry.register::<u32>();
-        registry.register::<u64>();
-        registry.register::<u128>();
-        registry.register::<usize>();
-        registry.register::<i8>();
-        registry.register::<i16>();
-        registry.register::<i32>();
-        registry.register::<i64>();
-        registry.register::<i128>();
-        registry.register::<isize>();
-        registry.register::<f32>();
-        registry.register::<f64>();
-        registry.register::<String>();
+        // FIXME:
+        // registry.register::<bool>();
+        // registry.register::<char>();
+        // registry.register::<u8>();
+        // registry.register::<u16>();
+        // registry.register::<u32>();
+        // registry.register::<u64>();
+        // registry.register::<u128>();
+        // registry.register::<usize>();
+        // registry.register::<i8>();
+        // registry.register::<i16>();
+        // registry.register::<i32>();
+        // registry.register::<i64>();
+        // registry.register::<i128>();
+        // registry.register::<isize>();
+        // registry.register::<f32>();
+        // registry.register::<f64>();
+        // registry.register::<String>();
         registry
     }
 
@@ -74,7 +75,8 @@ impl TypeRegistry {
     where
         T: HasTypeRegistration,
     {
-        self.add_registration(T::get_type_registration());
+        // FIXME:
+        // self.add_registration(T::get_type_registration());
     }
 
     /// Registers the type described by `registration`.
@@ -94,8 +96,9 @@ impl TypeRegistry {
             self.short_name_to_id
                 .insert(short_name, registration.type_id());
         }
-        self.full_name_to_id
-            .insert(registration.type_name().to_string(), registration.type_id());
+        // FIXME:
+        // self.full_name_to_id
+        //     .insert(registration.type_name().to_string(), registration.type_id());
         self.registrations
             .insert(registration.type_id(), registration);
     }

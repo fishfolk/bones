@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use bones_ecs::prelude::*;
+use bones_reflect::prelude::*;
 
 fn main() {
     let schema_path = Path::new(env!("CARGO_MANIFEST_DIR"))
