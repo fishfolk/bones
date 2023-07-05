@@ -18,6 +18,5 @@ hashbrown               = { version = "0.14", features = ["serde"] }
 serde                   = { version = "1.0", features = ["derive"], optional = true }
 
 [dev-dependencies]
-bones_bevy_asset = { version = "^0.2.0", path = "../bones_bevy_asset" }
 bones_bevy_utils = { version = "^0.2.0", path = "../bones_bevy_utils" }
 bones_lib        = { version = "^0.2.0", path = "../../", features = ["bevy"] }

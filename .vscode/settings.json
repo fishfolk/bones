@@ -6,7 +6,6 @@
         "bones_render",
         "bones_input",
         "bones_bevy_utils",
-        "bones_bevy_asset",
         "bones_bevy_renderer",
         "bones_has_load_progress",
         "bones_matchmaker",
