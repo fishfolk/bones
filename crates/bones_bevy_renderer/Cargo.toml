@@ -8,7 +8,6 @@ repository  = "https://github.com/fishfolk/bones"
 version     = "0.2.0"
 
 [dependencies]
-bones_bevy_asset = { version = "^0.2.0", path = "../bones_bevy_asset" }
 bones_lib        = { version = "^0.2.0", path = "../../", features = ["bevy"] }
 type_ulid        = { version = "^0.2.0", path = "../type_ulid" }
 
