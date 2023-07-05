@@ -536,7 +536,6 @@ dependencies = [
  "bevy_transform",
  "bevy_utils",
  "bevy_window",
- "bevy_winit",
 ]
 
 [[package]]
@@ -938,44 +937,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "bones_bevy_asset"
-version = "0.2.0"
-dependencies = [
- "bevy",
- "bevy_app",
- "bevy_asset",
- "bevy_reflect",
- "bevy_utils",
- "bones_bevy_asset_macros",
- "bones_bevy_utils",
- "bones_lib",
- "glam",
- "serde",
- "serde_json",
- "serde_yaml",
- "type_ulid",
- "uuid",
-]
-
-[[package]]
-name = "bones_bevy_asset_macros"
-version = "0.2.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "regex",
- "syn 1.0.109",
- "ulid",
-]
-
-[[package]]
 name = "bones_bevy_renderer"
 version = "0.2.0"
 dependencies = [
  "bevy",
  "bevy_prototype_lyon",
  "bevy_simple_tilemap",
- "bones_bevy_asset",
  "bones_lib",
  "glam",
  "serde",
@@ -2056,18 +2023,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mio"
-version = "0.8.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b9d9a46eff5b4ff64b45a9e316a6d1e0bc719ef429cbec4dc630684212bfdf9"
-dependencies = [
- "libc",
- "log",
- "wasi 0.11.0+wasi-snapshot-preview1",
- "windows-sys 0.45.0",
-]
-
-[[package]]
 name = "naga"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2324,12 +2279,6 @@ checksum = "a8835c273a76a90455d7344889b0964598e3316e2a79ede8e36f16bdcf2228b8"
 dependencies = [
  "base64 0.13.1",
 ]
-
-[[package]]
-name = "percent-encoding"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "478c572c3d73181ff3c2539045f6eb99e5491218eae919370993b890cdbdd98e"
 
 [[package]]
 name = "petgraph"
@@ -3747,19 +3696,16 @@ dependencies = [
  "instant",
  "libc",
  "log",
- "mio",
  "ndk",
  "objc2",
  "once_cell",
  "orbclient",
- "percent-encoding",
  "raw-window-handle",
  "redox_syscall 0.3.5",
  "wasm-bindgen",
  "wayland-scanner",
  "web-sys",
  "windows-sys 0.45.0",
- "x11-dl",
 ]
 
 [[package]]
@@ -3769,17 +3715,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61de7bac303dc551fe038e2b3cef0f571087a47571ea6e79a87692ac99b99699"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "x11-dl"
-version = "2.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38735924fedd5314a6e548792904ed8c6de6636285cb9fec04d5b1db85c1516f"
-dependencies = [
- "libc",
- "once_cell",
- "pkg-config",
 ]
 
 [[package]]
