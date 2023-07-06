@@ -15,9 +15,8 @@ use std::{
 
 use anyhow::Context;
 use bones_ecs::ulid::{TypeUlid, UlidMap};
-use serde::de::DeserializeSeed;
-use type_ulid::TypeUlidDynamic;
-use ulid::Ulid;
+use serde::{de::DeserializeSeed, Deserialize};
+use type_ulid::{TypeUlidDynamic, Ulid};
 
 /// The prelude.
 pub mod prelude {
@@ -28,6 +27,23 @@ mod cid;
 pub use cid::*;
 mod metadata;
 pub use metadata::*;
+mod labeled_id;
+pub use labeled_id::*;
+
+/// An asset pack contains assets that are loaded by the game.
+///
+/// The game's built-in assets are contained the the core asset pack, and mods or other assets may
+/// also be loaded.
+#[derive(Deserialize, Clone, Debug)]
+pub struct AssetPack {
+    /// The display name of the asset pack.
+    pub name: String,
+    /// The unique ID of the asset pack.
+    pub id: LabeledId,
+}
+
+/// The asset ID of the core asset pack.
+pub static CORE_ASSET_PACK_ID: Ulid = Ulid::from_parts(u64::MAX, u128::MAX);
 
 /// [`AssetIo`] is a trait that is implemented for backends capable of loading all the games assets
 /// and returning a [`LoadedAssets`].
@@ -398,25 +414,6 @@ impl<T: TypeUlid> std::fmt::Debug for Handle<T> {
     }
 }
 
-// impl<T: TypeUlid> Handle<T> {
-//     /// Create a new asset handle, from it's path and label.
-//     pub fn new<P: Into<PathBuf>>(pack: Cid, path: P, label: Option<String>) -> Self {
-//         Handle {
-//             id: AssetInfo::new(pack, path, label),
-//             phantom: PhantomData,
-//         }
-//     }
-// }
-
-// impl<T: TypeUlid> Default for Handle<T> {
-//     fn default() -> Self {
-//         Self {
-//             id: AssetInfo::default(),
-//             phantom: Default::default(),
-//         }
-//     }
-// }
-
 impl<T: TypeUlid> Handle<T> {
     /// Convert the handle to an [`UntypedHandle`].
     pub fn untyped(self) -> UntypedHandle {
@@ -436,13 +433,6 @@ pub struct UntypedHandle {
 }
 
 impl UntypedHandle {
-    // /// Create a new handle from it's path and label.
-    // pub fn new<P: Into<PathBuf>>(pack: Cid, path: P, label: Option<String>) -> Self {
-    //     UntypedHandle {
-    //         id: AssetInfo::new(pack, path, label),
-    //     }
-    // }
-
     /// Create a typed [`Handle<T>`] from this [`UntypedHandle`].
     pub fn typed<T: TypeUlid>(self) -> Handle<T> {
         Handle {
@@ -451,83 +441,3 @@ impl UntypedHandle {
         }
     }
 }
-
-// impl<'de> serde::Deserialize<'de> for UntypedHandle {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: serde::Deserializer<'de>,
-//     {
-//         deserializer.deserialize_str(UntypedHandleVisitor)
-//     }
-// }
-
-// impl<'de, T: TypeUlid> serde::Deserialize<'de> for Handle<T> {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: serde::Deserializer<'de>,
-//     {
-//         deserializer
-//             .deserialize_str(UntypedHandleVisitor)
-//             .map(UntypedHandle::typed)
-//     }
-// }
-
-// impl serde::Serialize for UntypedHandle {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: serde::Serializer,
-//     {
-//         serializer.serialize_str(&format!(
-//             "{}{}",
-//             self.path.path.to_str().expect("Non-unicode path"),
-//             self.path
-//                 .label
-//                 .as_ref()
-//                 .map(|x| format!("#{}", x))
-//                 .unwrap_or_default()
-//         ))
-//     }
-// }
-
-// impl<T: TypeUlid> serde::Serialize for Handle<T> {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: serde::Serializer,
-//     {
-//         serializer.serialize_str(&format!(
-//             "{}{}",
-//             self.path.path.to_str().expect("Non-unicode path"),
-//             self.path
-//                 .label
-//                 .as_ref()
-//                 .map(|x| format!("#{}", x))
-//                 .unwrap_or_default()
-//         ))
-//     }
-// }
-
-// struct UntypedHandleVisitor;
-// impl<'de> serde::de::Visitor<'de> for UntypedHandleVisitor {
-//     type Value = UntypedHandle;
-
-//     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-//         write!(
-//             formatter,
-//             "A string path to an asset with an optional label."
-//         )
-//     }
-
-//     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-//     where
-//         E: serde::de::Error,
-//     {
-//         let (path, label) = match v.rsplit_once('#') {
-//             Some((path, label)) => (path, Some(label)),
-//             None => (v, None),
-//         };
-
-//         Ok(UntypedHandle {
-//             path: AssetPath::new(path, label.map(String::from)),
-//         })
-//     }
-// }

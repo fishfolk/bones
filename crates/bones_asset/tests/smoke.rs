@@ -163,8 +163,7 @@ fn smoke1() -> anyhow::Result<()> {
             .unwrap(),
         "Pack 2"
     );
-
-    panic!();
+    // panic!();
 
     Ok(())
 }
