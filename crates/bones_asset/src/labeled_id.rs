@@ -7,12 +7,18 @@ use ulid::Ulid;
 ///
 /// This is essentially like a [TypeId](https://github.com/jetpack-io/typeid), but the prefix can be
 /// any ascii string instead of only ascii lowercase.
-#[derive(Hash, PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy)]
+#[derive(Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct LabeledId {
     /// The prefix
     prefix: Option<[u8; 63]>,
     /// The ULID.
     ulid: Ulid,
+}
+
+impl std::fmt::Debug for LabeledId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LabeledId({self})")
+    }
 }
 
 /// Error creating a [`LabledId`].
@@ -61,6 +67,31 @@ impl LabeledId {
             })
         }
     }
+
+    /// Get the prefix of the ID.
+    pub fn prefix(&self) -> &str {
+        self.prefix
+            .as_ref()
+            .map(|x| {
+                let prefix_len = Self::prefix_len(x);
+                let bytes = &x[0..prefix_len];
+                std::str::from_utf8(bytes).unwrap()
+            })
+            .unwrap_or("")
+    }
+
+    /// Get the [`Ulid`] of the ID.
+    pub fn ulid(&self) -> Ulid {
+        self.ulid
+    }
+
+    fn prefix_len(prefix: &[u8; 63]) -> usize {
+        let mut len = 0;
+        while prefix[len] != 0 {
+            len += 1;
+        }
+        len
+    }
 }
 
 impl std::fmt::Display for LabeledId {
@@ -69,13 +100,7 @@ impl std::fmt::Display for LabeledId {
             if !prefix.is_ascii() {
                 return Err(std::fmt::Error);
             }
-            let prefix_len = {
-                let mut len = 0;
-                while prefix[len] != 0 {
-                    len += 1;
-                }
-                len
-            };
+            let prefix_len = Self::prefix_len(prefix);
             write!(
                 f,
                 "{}_{}",
