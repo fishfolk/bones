@@ -5,6 +5,8 @@ use hashbrown::{HashMap, HashSet};
 use std::any::{Any, TypeId};
 use std::fmt::Debug;
 
+use crate::prelude::HasSchema;
+
 pub trait HasTypeRegistration {
     fn get_type_registration() -> TypeRegistration;
 }
@@ -175,7 +177,7 @@ impl TypeRegistration {
     }
 
     /// Creates type registration information for `T`.
-    pub fn of<T: type_info::Typed>() -> Self {
+    pub fn of<T: HasSchema + type_info::Typed>() -> Self {
         let type_name = std::any::type_name::<T>();
         Self {
             data: HashMap::default(),

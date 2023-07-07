@@ -1,4 +1,6 @@
-pub trait Typed {
+use crate::prelude::HasSchema;
+
+pub trait Typed: HasSchema {
     /// Returns the compile-time [info] for the underlying type.
     ///
     /// [info]: TypeInfo
