@@ -1,20 +1,12 @@
+mod type_info;
+
 use downcast_rs::{impl_downcast, Downcast};
 use hashbrown::{HashMap, HashSet};
 use std::any::{Any, TypeId};
 use std::fmt::Debug;
 
 pub trait HasTypeRegistration {
-    /// Returns the [`std::alloc::Layout`] of the type.
-    fn layout() -> std::alloc::Layout;
-
-    /// Returns a pointer to the drop function for the type.
-    fn drop_fn() -> Option<unsafe extern "C" fn(*mut u8)>;
-
-    /// Returns a pointer to the clone function for the type.
-    fn clone_fn() -> unsafe extern "C" fn(*const u8, *mut u8);
-
-    /// Returns the [type name][std::any::type_name] of the underlying type.
-    fn type_name(&self) -> &str;
+    fn get_type_registration() -> TypeRegistration;
 }
 
 // ===================================== TypeRegistry ===================================== //
@@ -75,8 +67,7 @@ impl TypeRegistry {
     where
         T: HasTypeRegistration,
     {
-        // FIXME:
-        // self.add_registration(T::get_type_registration());
+        self.add_registration(T::get_type_registration());
     }
 
     /// Registers the type described by `registration`.
@@ -107,7 +98,7 @@ impl TypeRegistry {
 
 pub struct TypeRegistration {
     short_name: String,
-    type_info: &'static TypeInfo,
+    type_info: &'static type_info::TypeInfo,
     data: HashMap<TypeId, Box<dyn TypeData>>,
 }
 
@@ -165,7 +156,7 @@ impl TypeRegistration {
     }
 
     /// Returns a reference to the registration's [`TypeInfo`]
-    pub fn type_info(&self) -> &'static TypeInfo {
+    pub fn type_info(&self) -> &'static type_info::TypeInfo {
         self.type_info
     }
 
@@ -183,6 +174,16 @@ impl TypeRegistration {
         &self.short_name
     }
 
+    /// Creates type registration information for `T`.
+    pub fn of<T: type_info::Typed>() -> Self {
+        let type_name = std::any::type_name::<T>();
+        Self {
+            data: HashMap::default(),
+            type_info: T::type_info(),
+            short_name: bones_utils::get_short_name(type_name),
+        }
+    }
+
     // Returns the [name] of the type.
     //
     // [name]: std::any::type_name
@@ -190,13 +191,6 @@ impl TypeRegistration {
     //     self.type_info.type_name()
     // }
 }
-
-// ===================================== Type Info ===================================== //
-
-#[derive(Debug, Clone)]
-pub enum TypeInfo {}
-
-impl TypeInfo {}
 
 // ===================================== Type Data ===================================== //
 

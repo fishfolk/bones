@@ -1,0 +1,12 @@
+[package]
+authors     = ["The Fish Folk & Spicy Lobster Developers"]
+description = "Core rendering types for bones_lib."
+edition     = "2021"
+license     = "MIT OR Apache-2.0"
+name        = "bones_utils"
+repository  = "https://github.com/fishfolk/bones"
+version     = "0.1.0"
+
+[dependencies]
+ahash     = "0.8.3"
+hashbrown = { version = "0.14", features = ["serde"] }

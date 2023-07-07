@@ -23,6 +23,7 @@ bones_bevy_utils = { version = "^0.2.0", path = "./crates/bones_bevy_utils", opt
 bones_ecs        = { version = "^0.2.0", path = "./crates/bones_ecs" }
 bones_input      = { version = "^0.2.0", path = "./crates/bones_input" }
 bones_render     = { version = "^0.2.0", path = "./crates/bones_render" }
+bones_utils      = { version = "^0.1.0", path = "./crates/bones_utils" }
 type_ulid        = { version = "^0.2.0", path = "./crates/type_ulid" }
 
 noise = "0.8"

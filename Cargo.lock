@@ -88,6 +88,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c99f64d1e06488f620f932677e24bc6e2897582980441ae90a671415bd7ec2f"
 dependencies = [
  "cfg-if",
+ "getrandom 0.2.10",
  "once_cell",
  "version_check",
 ]
@@ -1032,6 +1033,7 @@ dependencies = [
  "bones_ecs",
  "bones_input",
  "bones_render",
+ "bones_utils",
  "noise",
  "serde",
  "type_ulid",
@@ -1075,6 +1077,7 @@ name = "bones_reflect"
 version = "0.1.0"
 dependencies = [
  "bones_reflect_macros",
+ "bones_utils",
  "downcast-rs",
  "glam",
  "hashbrown 0.14.0",
@@ -1107,6 +1110,14 @@ dependencies = [
  "serde",
  "thiserror",
  "type_ulid",
+]
+
+[[package]]
+name = "bones_utils"
+version = "0.1.0"
+dependencies = [
+ "ahash 0.8.3",
+ "hashbrown 0.14.0",
 ]
 
 [[package]]

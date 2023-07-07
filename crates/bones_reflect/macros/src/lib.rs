@@ -32,20 +32,9 @@ pub fn derive_has_type_registration(input: TokenStream) -> TokenStream {
             use super::#item_ident;
 
             impl ::bones_reflect::registry::HasTypeRegistration for #item_ident {
-                fn layout() -> std::alloc::Layout {
-                    std::alloc::Layout::new::<#item_ident>()
-                }
-
-                fn drop_fn() -> Option<unsafe extern "C" fn(*mut u8)> {
-                    #item_ident::drop_fn()
-                }
-
-                fn clone_fn() -> unsafe extern "C" fn(*const u8, *mut u8) {
-                    #item_ident::clone_fn()
-                }
-
-                fn type_name(&self) -> &str {
-                    #item_ident::type_name(self)
+                fn get_type_registration() -> ::bones_reflect::registry::TypeRegistration {
+                    let mut registration = ::bones_reflect::registry::TypeRegistration::of::<Self>();
+                    registration
                 }
             }
         }
