@@ -6,21 +6,23 @@
 #![warn(missing_docs)]
 #![warn(clippy::undocumented_unsafe_blocks)]
 
-#[allow(missing_docs)]
-pub mod prelude {
-    pub use crate::default;
-}
+use std::hash::BuildHasherDefault;
+
+use ahash::AHasher;
 
 mod names;
-
 pub use names::get_short_name;
+
 mod default;
-
-pub use ahash::{AHasher, RandomState};
 pub use default::default;
-pub use hashbrown;
 
-use std::hash::BuildHasherDefault;
+mod labeled_id;
+pub use labeled_id::*;
+
+#[allow(missing_docs)]
+pub mod prelude {
+    pub use crate::*;
+}
 
 /// A [`HashMap`][hashbrown::HashMap] implementing aHash, a high
 /// speed keyed hashing algorithm intended for use in in-memory hashmaps.

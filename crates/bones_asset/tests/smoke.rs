@@ -11,16 +11,19 @@ fn smoke1() -> anyhow::Result<()> {
         .join("tests")
         .join("packs");
     let pack1_file = std::fs::read_to_string(packs_dir.join("pack1").join("pack.yaml"))?;
-    let io = FileAssetIo {
-        default_dir,
-        packs_dir,
-    };
-    let mut asset_server = AssetServer::new();
+    // let io = FileAssetIo {
+    //     default_dir,
+    //     packs_dir,
+    // };
+    // let mut asset_server = AssetServer::new();
 
     let pack: AssetPack = serde_yaml::from_str(&pack1_file)?;
+    dbg!(&pack);
 
     assert_eq!(pack.name, "Pack 1");
     assert_eq!(pack.id.prefix(), "pack-1");
+
+    panic!();
 
     Ok(())
 }

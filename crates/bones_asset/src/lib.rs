@@ -7,7 +7,6 @@
 
 use std::{
     any::Any,
-    collections::HashMap,
     marker::PhantomData,
     path::{Path, PathBuf},
     sync::Arc,
@@ -15,35 +14,52 @@ use std::{
 
 use anyhow::Context;
 use bones_ecs::ulid::{TypeUlid, UlidMap};
-use serde::{de::DeserializeSeed, Deserialize};
+use bones_reflect::schema::Schema;
+use bones_utils::prelude::*;
 use type_ulid::{TypeUlidDynamic, Ulid};
 
 /// The prelude.
 pub mod prelude {
-    pub use crate::{cid::*, metadata::*, *};
+    pub use crate::{cid::*, *};
 }
 
 mod cid;
 pub use cid::*;
-mod metadata;
-pub use metadata::*;
-mod labeled_id;
-pub use labeled_id::*;
 
 /// An asset pack contains assets that are loaded by the game.
 ///
 /// The game's built-in assets are contained the the core asset pack, and mods or other assets may
 /// also be loaded.
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct AssetPack {
     /// The display name of the asset pack.
     pub name: String,
     /// The unique ID of the asset pack.
     pub id: LabeledId,
+    /// Schemas provided in the asset pack.
+    pub schemas: HashMap<String, Schema>,
+    /// The root asset for the asset pack.
+    pub root: UntypedHandle,
 }
 
-/// The asset ID of the core asset pack.
-pub static CORE_ASSET_PACK_ID: Ulid = Ulid::from_parts(u64::MAX, u128::MAX);
+/// A schema identifier, containing the ID of the pack that defined the schema, and the name of the
+/// schema in the pack.
+#[derive(Clone, Debug)]
+pub struct SchemaId {
+    /// The ID of the pack, or [`None`] if it refers to the core pack.
+    pub pack: Option<LabeledId>,
+    /// The name of the schema.
+    pub name: String,
+}
+
+/// Struct responsible for loading assets.
+#[derive(Default)]
+pub struct AssetServer {
+    // /// The asset store.
+    // pub store: AssetStore,
+    // /// List of asset loaders.
+    // pub loaders: Vec<Box<dyn AssetLoader>>,
+}
 
 /// [`AssetIo`] is a trait that is implemented for backends capable of loading all the games assets
 /// and returning a [`LoadedAssets`].
@@ -164,15 +180,6 @@ pub trait AssetLoader {
     fn extensions(&self) -> &'static [&'static str];
 }
 
-/// Struct responsible for loading assets.
-#[derive(Default)]
-pub struct AssetServer {
-    /// List of asset loaders.
-    pub loaders: Vec<Box<dyn AssetLoader>>,
-    /// The asset store.
-    pub store: AssetStore,
-}
-
 impl AssetServer {
     /// Initialize a new [`AssetServer`].
     pub fn new() -> Self {
@@ -187,57 +194,59 @@ impl AssetServer {
         path: &Path,
         pack: Option<&str>,
     ) -> anyhow::Result<UntypedHandle> {
-        use sha2::Digest;
+        // use sha2::Digest;
 
-        let rid = Ulid::new();
-        let ctx = AssetLoadCtxCell::new(self, asset_io, pack, path);
-        let ends_with =
-            |path: &Path, ext: &str| path.extension().unwrap().to_string_lossy().ends_with(ext);
-        let is_metadata =
-            ends_with(path, "json") || ends_with(path, "yaml") || ends_with(path, "yml");
+        // let rid = Ulid::new();
+        // let ctx = AssetLoadCtxCell::new(self, asset_io, pack, path);
+        // let ends_with =
+        //     |path: &Path, ext: &str| path.extension().unwrap().to_string_lossy().ends_with(ext);
+        // let is_metadata =
+        //     ends_with(path, "json") || ends_with(path, "yaml") || ends_with(path, "yml");
 
-        let meta = if is_metadata {
-            if path.ends_with("json") {
-                ctx.deserialize(&mut serde_json::Deserializer::from_slice(content))?
-            } else {
-                ctx.deserialize(serde_yaml::Deserializer::from_slice(content))?
-            }
-        } else {
-            todo!();
-        };
-        let mut ctx = ctx.into_inner();
-        let dependencies = std::mem::take(&mut ctx.dependencies);
+        // let meta = if is_metadata {
+        //     if path.ends_with("json") {
+        //         ctx.deserialize(&mut serde_json::Deserializer::from_slice(content))?
+        //     } else {
+        //         ctx.deserialize(serde_yaml::Deserializer::from_slice(content))?
+        //     }
+        // } else {
+        //     todo!();
+        // };
+        // let mut ctx = ctx.into_inner();
+        // let dependencies = std::mem::take(&mut ctx.dependencies);
 
-        // Calculate the content ID by hashing the contents of the file with the content IDs of the
-        // dependencies.
-        let mut sha = sha2::Sha256::new();
-        sha.update(content);
-        for dep in &dependencies {
-            sha.update(dep.0);
-        }
-        let bytes = sha.finalize();
-        let mut cid = Cid::default();
-        cid.0.copy_from_slice(&bytes);
+        // // Calculate the content ID by hashing the contents of the file with the content IDs of the
+        // // dependencies.
+        // let mut sha = sha2::Sha256::new();
+        // sha.update(content);
+        // for dep in &dependencies {
+        //     sha.update(dep.0);
+        // }
+        // let bytes = sha.finalize();
+        // let mut cid = Cid::default();
+        // cid.0.copy_from_slice(&bytes);
 
-        let loaded_asset = LoadedAsset {
-            cid,
-            dependencies,
-            asset_kind: Metadata::ULID,
-            data: AssetData::Metadata(meta),
-            pack: pack.map(ToOwned::to_owned),
-            path: path.to_owned(),
-        };
+        // let loaded_asset = LoadedAsset {
+        //     cid,
+        //     dependencies,
+        //     asset_kind: Metadata::ULID,
+        //     data: AssetData::Metadata(meta),
+        //     pack: pack.map(ToOwned::to_owned),
+        //     path: path.to_owned(),
+        // };
 
-        self.store.asset_ids.insert(rid, loaded_asset.cid);
-        self.store.assets.insert(loaded_asset.cid, loaded_asset);
+        // self.store.asset_ids.insert(rid, loaded_asset.cid);
+        // self.store.assets.insert(loaded_asset.cid, loaded_asset);
 
-        Ok(UntypedHandle { rid })
+        // Ok(UntypedHandle { rid })
+        todo!();
     }
 
     /// Borrow a [`LoadedAsset`] associated to the given handle.
     pub fn get_untyped(&self, handle: &UntypedHandle) -> Option<&LoadedAsset> {
-        let cid = self.store.asset_ids.get(&handle.rid)?;
-        self.store.assets.get(cid)
+        // let cid = self.store.asset_ids.get(&handle.rid)?;
+        // self.store.assets.get(cid)
+        todo!();
     }
 }
 
@@ -274,21 +283,10 @@ pub struct LoadedAsset {
 /// The raw data stored for a loaded asset.
 #[derive(Debug, Clone)]
 pub enum AssetData {
-    /// Asset has been loaded and stored at the given pointer.
-    Raw(*mut u8),
-    /// The asset has been loaded from JSON/YAML data.
-    Metadata(Metadata),
-}
-
-impl AssetData {
-    /// Get the metadata, if this is an [`AssetData::Metadata`].
-    pub fn as_metadata(&self) -> Option<&Metadata> {
-        if let Self::Metadata(m) = self {
-            Some(m)
-        } else {
-            None
-        }
-    }
+    // /// Asset has been loaded and stored at the given pointer.
+    // Raw(*mut u8),
+    // /// The asset has been loaded from JSON/YAML data.
+    // Metadata(Metadata),
 }
 
 /// An identifier for an asset.

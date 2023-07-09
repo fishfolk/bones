@@ -950,6 +950,8 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "bones_ecs",
+ "bones_reflect",
+ "bones_utils",
  "bs58",
  "paste",
  "serde",
@@ -1118,6 +1120,8 @@ version = "0.1.0"
 dependencies = [
  "ahash 0.8.3",
  "hashbrown 0.14.0",
+ "serde",
+ "ulid",
 ]
 
 [[package]]

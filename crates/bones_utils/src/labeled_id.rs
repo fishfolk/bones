@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
 /// A [`Ulid`] with a human-readable ascii prefix.
@@ -151,23 +150,29 @@ impl FromStr for LabeledId {
     }
 }
 
-impl Serialize for LabeledId {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&self.to_string())
-    }
-}
+#[cfg(feature = "serde")]
+mod ser_de {
+    use super::*;
+    use serde::{Deserialize, Serialize};
 
-impl<'de> Deserialize<'de> for LabeledId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::Error;
-        let s = String::deserialize(deserializer)?;
-        s.parse().map_err(|e| D::Error::custom(format!("{e}")))
+    impl Serialize for LabeledId {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            serializer.serialize_str(&self.to_string())
+        }
+    }
+
+    impl<'de> Deserialize<'de> for LabeledId {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            use serde::de::Error;
+            let s = String::deserialize(deserializer)?;
+            s.parse().map_err(|e| D::Error::custom(format!("{e}")))
+        }
     }
 }
 
