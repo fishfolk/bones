@@ -24,6 +24,7 @@ keysize32 = []
 
 [dependencies]
 bones_ecs_macros = { version = "0.2.0", path = "./macros" }
+bones_utils = { version = "0.1.0", path = "../bones_utils" }
 
 aligned-vec    = "0.5"
 anyhow         = "1.0"

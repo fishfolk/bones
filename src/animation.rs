@@ -5,7 +5,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::prelude::*;
 
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 pub(crate) mod prelude {
     pub use super::{AnimatedSprite, AnimationBankSprite};

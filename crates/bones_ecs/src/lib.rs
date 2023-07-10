@@ -17,7 +17,6 @@ pub mod entities;
 pub mod resources;
 pub mod stage;
 pub mod system;
-pub mod ulid;
 
 mod error;
 pub use error::EcsError;
@@ -31,12 +30,13 @@ pub mod prelude {
         atomic_refcell::*,
         bitset_core::BitSet,
         bones_ecs_macros::*,
+        bones_utils::HashMap,
         type_ulid::{TypeUlid, Ulid},
     };
 
     pub use crate::{
         bitset::*, components::*, default, entities::*, error::*, resources::*, stage::*,
-        system::*, ulid::*, EcsData, FromWorld, RawFns, TypedEcsData, UnwrapMany, World,
+        system::*, EcsData, FromWorld, RawFns, TypedEcsData, UnwrapMany, World,
     };
 }
 

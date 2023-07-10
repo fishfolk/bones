@@ -8,6 +8,7 @@ mod iterator;
 mod typed;
 mod untyped;
 
+use bones_utils::hashbrown::hash_map::Entry;
 pub use iterator::*;
 pub use typed::*;
 pub use untyped::*;
@@ -15,7 +16,7 @@ pub use untyped::*;
 /// Makes sure that the component type `T` matches the component type previously registered with
 /// the same UUID.
 fn validate_type_uuid_match<T: TypeUlid + 'static>(
-    type_ids: &UlidMap<TypeId>,
+    type_ids: &HashMap<Ulid, TypeId>,
 ) -> Result<(), EcsError> {
     if type_ids.get(&T::ULID).ok_or(EcsError::NotInitialized)? != &TypeId::of::<T>() {
         Err(EcsError::TypeUlidCollision)
@@ -30,8 +31,8 @@ fn validate_type_uuid_match<T: TypeUlid + 'static>(
 /// initialized for that world.
 #[derive(Default)]
 pub struct ComponentStores {
-    pub(crate) components: UlidMap<Arc<AtomicRefCell<UntypedComponentStore>>>,
-    type_ids: UlidMap<TypeId>,
+    pub(crate) components: HashMap<Ulid, Arc<AtomicRefCell<UntypedComponentStore>>>,
+    type_ids: HashMap<Ulid, TypeId>,
 }
 
 impl Clone for ComponentStores {
@@ -60,10 +61,8 @@ impl ComponentStores {
         &mut self,
     ) -> Result<(), EcsError> {
         match self.components.entry(T::ULID) {
-            std::collections::hash_map::Entry::Occupied(_) => {
-                validate_type_uuid_match::<T>(&self.type_ids)
-            }
-            std::collections::hash_map::Entry::Vacant(entry) => {
+            Entry::Occupied(_) => validate_type_uuid_match::<T>(&self.type_ids),
+            Entry::Vacant(entry) => {
                 entry.insert(Arc::new(AtomicRefCell::new(
                     UntypedComponentStore::for_type::<T>(),
                 )));

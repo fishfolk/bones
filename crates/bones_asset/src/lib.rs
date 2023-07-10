@@ -6,12 +6,10 @@
 #![deny(rustdoc::all)]
 
 use std::{
-    marker::PhantomData,
     path::{Path, PathBuf},
     str::FromStr,
 };
 
-use bones_ecs::ulid::{TypeUlid, UlidMap};
 use bones_reflect::schema::Schema;
 use bones_utils::prelude::*;
 use semver::{Version, VersionReq};
@@ -31,6 +29,8 @@ mod io;
 pub use io::*;
 mod path;
 pub use path::*;
+mod handle;
+use handle::*;
 
 mod parse;
 
@@ -189,7 +189,7 @@ impl AssetServer {
 #[derive(Default, Clone, Debug)]
 pub struct AssetStore {
     /// Maps the runtime ID of the asset to it's content ID.
-    pub asset_ids: UlidMap<Cid>,
+    pub asset_ids: HashMap<Ulid, Cid>,
     /// Maps asset content IDs, to loaded assets.
     pub assets: HashMap<Cid, LoadedAsset>,
 }
@@ -231,52 +231,4 @@ pub struct AssetInfo {
     pub pack: Cid,
     /// The path to the asset, relative to the root of the asset pack.
     pub path: PathBuf,
-}
-
-impl AssetInfo {
-    /// Create a new asset ID.
-    pub fn new<P: Into<PathBuf>>(pack: Cid, path: P) -> Self {
-        Self {
-            pack,
-            path: path.into(),
-        }
-    }
-}
-
-/// A typed handle to an asset.
-#[derive(PartialEq, Eq, Hash, Default, Clone, Copy)]
-pub struct Handle<T> {
-    /// The runtime ID of the asset.
-    pub id: Ulid,
-    phantom: PhantomData<T>,
-}
-
-impl<T> std::fmt::Debug for Handle<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Handle").field("id", &self.id).finish()
-    }
-}
-
-impl<T> Handle<T> {
-    /// Convert the handle to an [`UntypedHandle`].
-    pub fn untyped(self) -> UntypedHandle {
-        UntypedHandle { rid: self.id }
-    }
-}
-
-/// An untyped handle to an asset.
-#[derive(Default, Clone, Debug, Hash, PartialEq, Eq, Copy)]
-pub struct UntypedHandle {
-    /// The runtime ID of the handle
-    pub rid: Ulid,
-}
-
-impl UntypedHandle {
-    /// Create a typed [`Handle<T>`] from this [`UntypedHandle`].
-    pub fn typed<T: TypeUlid>(self) -> Handle<T> {
-        Handle {
-            id: self.rid,
-            phantom: PhantomData,
-        }
-    }
 }

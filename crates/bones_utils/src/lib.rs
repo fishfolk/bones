@@ -6,6 +6,7 @@
 #![warn(missing_docs)]
 #![warn(clippy::undocumented_unsafe_blocks)]
 
+pub use hashbrown;
 use std::hash::BuildHasherDefault;
 
 use ahash::AHasher;

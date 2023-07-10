@@ -10,6 +10,8 @@ use std::{
     sync::Arc,
 };
 
+use bones_utils::hashbrown::hash_map::Entry;
+
 use crate::prelude::*;
 
 /// Storage for un-typed resources.
@@ -20,7 +22,7 @@ use crate::prelude::*;
 /// should use [`Resources`] instead.
 #[derive(Clone, Default)]
 pub struct UntypedResources {
-    resources: UlidMap<UntypedResource>,
+    resources: HashMap<Ulid, UntypedResource>,
 }
 
 /// Used to construct an [`UntypedResource`].
@@ -175,7 +177,7 @@ impl UntypedResources {
 #[derive(Clone, Default)]
 pub struct Resources {
     untyped: UntypedResources,
-    type_ids: UlidMap<TypeId>,
+    type_ids: HashMap<Ulid, TypeId>,
 }
 
 impl Resources {
@@ -206,14 +208,14 @@ impl Resources {
         let type_id = TypeId::of::<T>();
 
         match self.type_ids.entry(uuid) {
-            std::collections::hash_map::Entry::Occupied(entry) => {
+            Entry::Occupied(entry) => {
                 if entry.get() != &type_id {
                     return Err(EcsError::TypeUlidCollision);
                 }
 
                 self.untyped.insert(uuid, UntypedResource::new(resource));
             }
-            std::collections::hash_map::Entry::Vacant(entry) => {
+            Entry::Vacant(entry) => {
                 entry.insert(type_id);
                 self.untyped.insert(uuid, UntypedResource::new(resource));
             }

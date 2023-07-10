@@ -995,6 +995,7 @@ dependencies = [
  "atomic_refcell",
  "bitset-core",
  "bones_ecs_macros",
+ "bones_utils",
  "bytemuck",
  "either",
  "fxhash",
