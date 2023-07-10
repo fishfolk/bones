@@ -9,7 +9,6 @@ use std::{
     marker::PhantomData,
     path::{Path, PathBuf},
     str::FromStr,
-    sync::Arc,
 };
 
 use bones_ecs::ulid::{TypeUlid, UlidMap};
@@ -30,10 +29,20 @@ mod load;
 pub use load::*;
 mod io;
 pub use io::*;
+mod path;
+pub use path::*;
 
 mod parse;
 
 /// The unique ID for an asset pack.
+///
+/// Asset pack IDs are made up of a human-readable label, and a unique identifier. For example:
+///
+///     awesome-pack_01h502c309fddv1vq1gwa918e8
+///
+/// These IDs can be generated with the [TypeID gen][gen] utility.
+///
+/// [gen]: https://zicklag.github.io/type-id-gen/
 pub type AssetPackId = LabeledId;
 
 /// An asset pack contains assets that are loaded by the game.
@@ -118,8 +127,8 @@ impl AssetServer {
     /// Load an asset
     pub fn load_asset<Io: AssetIo>(
         &mut self,
-        path: &Path,
-        pack: Option<&str>,
+        _path: &Path,
+        _pack: Option<&str>,
     ) -> anyhow::Result<UntypedHandle> {
         // use sha2::Digest;
 
@@ -171,9 +180,8 @@ impl AssetServer {
 
     /// Borrow a [`LoadedAsset`] associated to the given handle.
     pub fn get_untyped(&self, handle: &UntypedHandle) -> Option<&LoadedAsset> {
-        // let cid = self.store.asset_ids.get(&handle.rid)?;
-        // self.store.assets.get(cid)
-        todo!();
+        let cid = self.store.asset_ids.get(&handle.rid)?;
+        self.store.assets.get(cid)
     }
 }
 
@@ -222,124 +230,34 @@ pub struct AssetInfo {
     /// The unique ID of the asset pack this asset is located in.
     pub pack: Cid,
     /// The path to the asset, relative to the root of the asset pack.
-    pub path: AssetPath,
+    pub path: PathBuf,
 }
 
 impl AssetInfo {
     /// Create a new asset ID.
-    pub fn new<P: Into<PathBuf>>(pack: Cid, path: P, label: Option<String>) -> Self {
+    pub fn new<P: Into<PathBuf>>(pack: Cid, path: P) -> Self {
         Self {
             pack,
-            path: AssetPath::new(path, label),
-        }
-    }
-}
-
-/// A path to an asset.
-///
-/// This is a virtual filesystem path, and may not actually refer to physical files.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct AssetPath {
-    /// The virtual filesystem path
-    pub path: Arc<Path>,
-    /// The optional sub-asset label
-    pub label: Option<Arc<str>>,
-}
-
-impl AssetPath {
-    /// Create a new asset path.
-    pub fn new<P: Into<PathBuf>>(path: P, label: Option<String>) -> Self {
-        AssetPath {
-            path: Arc::from(path.into()),
-            label: label.map(Arc::from),
-        }
-    }
-
-    /// Take this path, treat it as a path relative to `base_path`, normalize it, and update `self`
-    /// with the result.
-    pub fn normalize_relative_to(&mut self, base_path: &Path) {
-        fn normalize_path(path: &std::path::Path) -> std::path::PathBuf {
-            let mut components = path.components().peekable();
-            let mut ret = if let Some(c @ std::path::Component::Prefix(..)) = components.peek() {
-                let buf = std::path::PathBuf::from(c.as_os_str());
-                components.next();
-                buf
-            } else {
-                std::path::PathBuf::new()
-            };
-
-            for component in components {
-                match component {
-                    std::path::Component::Prefix(..) => unreachable!(),
-                    std::path::Component::RootDir => {
-                        ret.push(component.as_os_str());
-                    }
-                    std::path::Component::CurDir => {}
-                    std::path::Component::ParentDir => {
-                        ret.pop();
-                    }
-                    std::path::Component::Normal(c) => {
-                        ret.push(c);
-                    }
-                }
-            }
-
-            ret
-        }
-
-        let is_relative = !self.path.starts_with(Path::new("/"));
-
-        let path = if is_relative {
-            let base = base_path.parent().unwrap_or_else(|| Path::new(""));
-            base.join(&self.path)
-        } else {
-            self.path.to_path_buf()
-        };
-
-        self.path = Arc::from(normalize_path(&path));
-    }
-}
-
-impl Default for AssetPath {
-    fn default() -> Self {
-        Self {
-            path: Arc::from(PathBuf::default()),
-            label: Default::default(),
+            path: path.into(),
         }
     }
 }
 
 /// A typed handle to an asset.
-///
-/// The type of the handle is used to help reduce runtime errors arising from mis-matching handle
-/// types, but internally, the handle's only stored data is it's [`AssetPath`].
-///
-/// You can change the type of a handle by converting it to an untyped handle with
-/// [`untyped()`][Self::untyped] and converting it back to a typed handle with
-/// [`typed()`][UntypedHandle::typed].
-#[derive(PartialEq, Eq, Hash, Default)]
-pub struct Handle<T: TypeUlid> {
+#[derive(PartialEq, Eq, Hash, Default, Clone, Copy)]
+pub struct Handle<T> {
     /// The runtime ID of the asset.
     pub id: Ulid,
     phantom: PhantomData<T>,
 }
 
-impl<T: TypeUlid> Clone for Handle<T> {
-    fn clone(&self) -> Self {
-        Self {
-            id: self.id,
-            phantom: self.phantom,
-        }
-    }
-}
-
-impl<T: TypeUlid> std::fmt::Debug for Handle<T> {
+impl<T> std::fmt::Debug for Handle<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Handle").field("id", &self.id).finish()
     }
 }
 
-impl<T: TypeUlid> Handle<T> {
+impl<T> Handle<T> {
     /// Convert the handle to an [`UntypedHandle`].
     pub fn untyped(self) -> UntypedHandle {
         UntypedHandle { rid: self.id }
@@ -347,10 +265,6 @@ impl<T: TypeUlid> Handle<T> {
 }
 
 /// An untyped handle to an asset.
-///
-/// This simply contains the [`AssetPath`] of the asset.
-///
-/// Can be converted to a typed handle with the [`typed()`][Self::typed] method.
 #[derive(Default, Clone, Debug, Hash, PartialEq, Eq, Copy)]
 pub struct UntypedHandle {
     /// The runtime ID of the handle
