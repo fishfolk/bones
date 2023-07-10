@@ -6,7 +6,6 @@
 #![deny(rustdoc::all)]
 
 use std::{
-    any::Any,
     marker::PhantomData,
     path::{Path, PathBuf},
     str::FromStr,
@@ -18,7 +17,7 @@ use bones_reflect::schema::Schema;
 use bones_utils::prelude::*;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
-use type_ulid::{TypeUlidDynamic, Ulid};
+use ulid::Ulid;
 
 /// The prelude.
 pub mod prelude {
@@ -29,6 +28,10 @@ mod cid;
 pub use cid::*;
 mod load;
 pub use load::*;
+mod io;
+pub use io::*;
+
+mod parse;
 
 /// The unique ID for an asset pack.
 pub type AssetPackId = LabeledId;
@@ -76,23 +79,6 @@ pub struct AssetPackReq {
     pub version: VersionReq,
 }
 
-impl FromStr for AssetPackReq {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Some((id, version)) = s.split_once('@') {
-            let id = id.parse::<LabeledId>().map_err(|e| e.to_string())?;
-            let version = version.parse::<VersionReq>().map_err(|e| e.to_string())?;
-            Ok(Self { id, version })
-        } else {
-            let id = s.parse::<LabeledId>().map_err(|e| e.to_string())?;
-            Ok(Self {
-                id,
-                version: VersionReq::STAR,
-            })
-        }
-    }
-}
-
 /// A schema identifier, containing the ID of the pack that defined the schema, and the name of the
 /// schema in the pack.
 #[derive(Clone, Debug)]
@@ -103,106 +89,12 @@ pub struct SchemaId {
     pub name: String,
 }
 
-impl FromStr for SchemaId {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Some((pack_id, schema)) = s.split_once('/') {
-            let pack = AssetPackReq::from_str(pack_id)?;
-
-            Ok(SchemaId {
-                pack: Some(pack),
-                name: schema.into(),
-            })
-        } else {
-            Ok(SchemaId {
-                pack: None,
-                name: s.into(),
-            })
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for SchemaId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::Error;
-        let s = String::deserialize(deserializer)?;
-        s.parse::<SchemaId>().map_err(D::Error::custom)
-    }
-}
-
 /// Struct responsible for loading assets.
-#[derive(Default)]
 pub struct AssetServer {
-    // /// The asset store.
-    // pub store: AssetStore,
-    // /// List of asset loaders.
-    // pub loaders: Vec<Box<dyn AssetLoader>>,
-}
-
-/// [`AssetIo`] is a trait that is implemented for backends capable of loading all the games assets
-/// and returning a [`LoadedAssets`].
-pub trait AssetIo {
-    /// List the names of the non-core asset pack folders that are installed.
-    ///
-    /// These names, are not necessarily the names of the pack, but the names of the folders that
-    /// they are located in. These names can be used to load files from the pack in the
-    /// [`load_file()`][Self::load_file] method.
-    fn enumerate_packs(&self) -> anyhow::Result<Vec<String>>;
-    /// Get the binary contents of an asset.
-    ///
-    /// The [`pack_folder`] is the name of a folder returned by
-    /// [`enumerate_packs()`][Self::enumerate_packs], or [`None`] to refer to the core pack.
-    fn load_file(&self, pack_folder: Option<String>, path: &Path) -> anyhow::Result<Vec<u8>>;
-}
-
-/// [`AssetIo`] implementation that loads from the filesystem.
-#[cfg(not(target_arch = "wasm32"))]
-pub struct FileAssetIo {
-    /// The directory to load the default asset from.
-    pub default_dir: PathBuf,
-    /// The directory to load the asset packs from.
-    pub packs_dir: PathBuf,
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl AssetIo for FileAssetIo {
-    fn enumerate_packs(&self) -> anyhow::Result<Vec<String>> {
-        if !self.packs_dir.exists() {
-            return Ok(Vec::new());
-        }
-
-        // List the folders in the asset packs dir.
-        let dirs = std::fs::read_dir(&self.packs_dir)?
-            .map(|entry| {
-                let entry = entry?;
-                let name = entry
-                    .file_name()
-                    .to_str()
-                    .expect("non-unicode filename")
-                    .to_owned();
-                Ok::<_, std::io::Error>(name)
-            })
-            .filter(|x| {
-                x.as_ref()
-                    .map(|name| self.packs_dir.join(name).is_dir())
-                    .unwrap_or(true)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(dirs)
-    }
-
-    fn load_file(&self, pack_folder: Option<String>, path: &Path) -> anyhow::Result<Vec<u8>> {
-        let base_dir = match pack_folder {
-            Some(folder) => self.packs_dir.join(folder),
-            None => self.default_dir.clone(),
-        };
-        let path = base_dir.join(path);
-        Ok(std::fs::read(path)?)
-    }
+    /// The [`AssetIo`] implementation used to load assets.
+    pub io: Box<dyn AssetIo>,
+    /// The asset store.
+    pub store: AssetStore,
 }
 
 /// Struct containing all the game's loaded assets, including the default assets and
@@ -214,30 +106,18 @@ pub struct LoadedAssets {
     pub packs: HashMap<String, UntypedHandle>,
 }
 
-/// Trait that must be implemented by asset types.
-pub trait Asset: Any + TypeUlidDynamic {}
-impl<T: Any + TypeUlidDynamic> Asset for T {}
-
-/// Trait for asset loaders.
-pub trait AssetLoader {
-    /// Load an asset.
-    fn load(&self, bytes: &[u8]) -> Box<dyn Asset>;
-
-    /// Return the extensions to register the asset loader with.
-    fn extensions(&self) -> &'static [&'static str];
-}
-
 impl AssetServer {
     /// Initialize a new [`AssetServer`].
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new<Io: AssetIo + 'static>(io: Io) -> Self {
+        Self {
+            io: Box::new(io),
+            store: default(),
+        }
     }
 
     /// Load an asset
     pub fn load_asset<Io: AssetIo>(
         &mut self,
-        asset_io: &Io,
-        content: &[u8],
         path: &Path,
         pack: Option<&str>,
     ) -> anyhow::Result<UntypedHandle> {
