@@ -9,22 +9,29 @@ use std::{
     any::Any,
     marker::PhantomData,
     path::{Path, PathBuf},
+    str::FromStr,
     sync::Arc,
 };
 
-use anyhow::Context;
 use bones_ecs::ulid::{TypeUlid, UlidMap};
 use bones_reflect::schema::Schema;
 use bones_utils::prelude::*;
+use semver::{Version, VersionReq};
+use serde::Deserialize;
 use type_ulid::{TypeUlidDynamic, Ulid};
 
 /// The prelude.
 pub mod prelude {
-    pub use crate::{cid::*, *};
+    pub use crate::*;
 }
 
 mod cid;
 pub use cid::*;
+mod load;
+pub use load::*;
+
+/// The unique ID for an asset pack.
+pub type AssetPackId = LabeledId;
 
 /// An asset pack contains assets that are loaded by the game.
 ///
@@ -35,11 +42,55 @@ pub struct AssetPack {
     /// The display name of the asset pack.
     pub name: String,
     /// The unique ID of the asset pack.
-    pub id: LabeledId,
+    pub id: AssetPackId,
+    /// The version number of the asset pack.
+    pub version: Version,
+
+    /// The game [`VersionReq`] this asset pack is compatible with.
+    pub game_version: VersionReq,
+
     /// Schemas provided in the asset pack.
     pub schemas: HashMap<String, Schema>,
+    /// Specify schemas to import from other asset packs.
+    pub import_schemas: HashMap<String, SchemaId>,
     /// The root asset for the asset pack.
     pub root: UntypedHandle,
+}
+
+/// Specifies an asset pack, and it's exact version.
+#[derive(Clone, Debug)]
+pub struct AssetPackSpecifier {
+    /// The ID of the asset pack.
+    pub id: AssetPackId,
+    /// The version of the asset pack.
+    pub version: Version,
+}
+
+/// A requirement specifier for an asset pack, made up of the asset pack's [`LabeledId`] and it's
+/// [`VersionReq`].
+#[derive(Debug, Clone)]
+pub struct AssetPackReq {
+    /// The asset pack ID.
+    pub id: LabeledId,
+    /// The version of the asset pack.
+    pub version: VersionReq,
+}
+
+impl FromStr for AssetPackReq {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some((id, version)) = s.split_once('@') {
+            let id = id.parse::<LabeledId>().map_err(|e| e.to_string())?;
+            let version = version.parse::<VersionReq>().map_err(|e| e.to_string())?;
+            Ok(Self { id, version })
+        } else {
+            let id = s.parse::<LabeledId>().map_err(|e| e.to_string())?;
+            Ok(Self {
+                id,
+                version: VersionReq::STAR,
+            })
+        }
+    }
 }
 
 /// A schema identifier, containing the ID of the pack that defined the schema, and the name of the
@@ -47,9 +98,39 @@ pub struct AssetPack {
 #[derive(Clone, Debug)]
 pub struct SchemaId {
     /// The ID of the pack, or [`None`] if it refers to the core pack.
-    pub pack: Option<LabeledId>,
+    pub pack: Option<AssetPackReq>,
     /// The name of the schema.
     pub name: String,
+}
+
+impl FromStr for SchemaId {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some((pack_id, schema)) = s.split_once('/') {
+            let pack = AssetPackReq::from_str(pack_id)?;
+
+            Ok(SchemaId {
+                pack: Some(pack),
+                name: schema.into(),
+            })
+        } else {
+            Ok(SchemaId {
+                pack: None,
+                name: s.into(),
+            })
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for SchemaId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+        let s = String::deserialize(deserializer)?;
+        s.parse::<SchemaId>().map_err(D::Error::custom)
+    }
 }
 
 /// Struct responsible for loading assets.
@@ -64,22 +145,17 @@ pub struct AssetServer {
 /// [`AssetIo`] is a trait that is implemented for backends capable of loading all the games assets
 /// and returning a [`LoadedAssets`].
 pub trait AssetIo {
-    /// Load the game assets.
+    /// List the names of the non-core asset pack folders that are installed.
     ///
-    /// TODO: Add a load progress and/or make this function async.
-    fn load_all(&self, server: &mut AssetServer) -> anyhow::Result<LoadedAssets>;
-
-    /// Load an asset with the given path, from the given pack, or the default pack if not
-    /// specified.
-    fn load_asset(
-        &self,
-        server: &mut AssetServer,
-        path: &Path,
-        pack: Option<&str>,
-    ) -> anyhow::Result<UntypedHandle>;
-
-    /// Get the binary contents of the asset from the given path and pack.
-    fn get_contents(&self, path: &Path, pack: Option<&str>) -> anyhow::Result<Vec<u8>>;
+    /// These names, are not necessarily the names of the pack, but the names of the folders that
+    /// they are located in. These names can be used to load files from the pack in the
+    /// [`load_file()`][Self::load_file] method.
+    fn enumerate_packs(&self) -> anyhow::Result<Vec<String>>;
+    /// Get the binary contents of an asset.
+    ///
+    /// The [`pack_folder`] is the name of a folder returned by
+    /// [`enumerate_packs()`][Self::enumerate_packs], or [`None`] to refer to the core pack.
+    fn load_file(&self, pack_folder: Option<String>, path: &Path) -> anyhow::Result<Vec<u8>>;
 }
 
 /// [`AssetIo`] implementation that loads from the filesystem.
@@ -93,68 +169,39 @@ pub struct FileAssetIo {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl AssetIo for FileAssetIo {
-    fn load_all(&self, server: &mut AssetServer) -> anyhow::Result<LoadedAssets> {
-        // Load the default asset pack
-        let pack_file_name = 'file: {
-            for filename in ["pack.yaml", "pack.yml", "pack.json"] {
-                let path = self.default_dir.join(filename);
-                if path.exists() {
-                    break 'file PathBuf::from(filename);
-                }
-            }
+    fn enumerate_packs(&self) -> anyhow::Result<Vec<String>> {
+        if !self.packs_dir.exists() {
+            return Ok(Vec::new());
+        }
 
-            anyhow::bail!(
-                "Pack file does not exist in default asset dir: {:?}",
-                self.default_dir
-            );
-        };
-        let default = self.load_asset(server, &pack_file_name, None)?;
-
-        // Load the asset packs
-        let packs = std::fs::read_dir(&self.packs_dir)?
-            .map(|x| x.map(|dir| dir.file_name().to_str().unwrap().to_owned()))
-            .map(|pack| {
-                let pack = pack?;
-                let pack_file_name = 'file: {
-                    for filename in ["pack.yaml", "pack.yml", "pack.json"] {
-                        let path = self.packs_dir.join(&pack).join(filename);
-                        if path.exists() {
-                            break 'file PathBuf::from(filename);
-                        }
-                    }
-
-                    anyhow::bail!(
-                        "Pack file does not exist in default asset dir: {:?}",
-                        self.default_dir
-                    );
-                };
-
-                let asset = self.load_asset(server, &pack_file_name, Some(&pack))?;
-                Ok((pack, asset))
+        // List the folders in the asset packs dir.
+        let dirs = std::fs::read_dir(&self.packs_dir)?
+            .map(|entry| {
+                let entry = entry?;
+                let name = entry
+                    .file_name()
+                    .to_str()
+                    .expect("non-unicode filename")
+                    .to_owned();
+                Ok::<_, std::io::Error>(name)
             })
-            .collect::<Result<HashMap<_, _>, _>>()?;
+            .filter(|x| {
+                x.as_ref()
+                    .map(|name| self.packs_dir.join(name).is_dir())
+                    .unwrap_or(true)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(LoadedAssets { default, packs })
+        Ok(dirs)
     }
 
-    fn load_asset(
-        &self,
-        server: &mut AssetServer,
-        path: &Path,
-        pack: Option<&str>,
-    ) -> anyhow::Result<UntypedHandle> {
-        let asset_file_contents = self.get_contents(path, pack)?;
-        server.load_asset(self, &asset_file_contents, path, pack)
-    }
-
-    fn get_contents(&self, path: &Path, pack: Option<&str>) -> anyhow::Result<Vec<u8>> {
-        let base_dir = pack
-            .map(|x| self.packs_dir.join(x))
-            .unwrap_or_else(|| self.default_dir.clone());
-        let filepath = base_dir.join(path);
-        std::fs::read(&filepath).context(format!(
-            "Cannot read pack file for default asset: {filepath:?}"
-        ))
+    fn load_file(&self, pack_folder: Option<String>, path: &Path) -> anyhow::Result<Vec<u8>> {
+        let base_dir = match pack_folder {
+            Some(folder) => self.packs_dir.join(folder),
+            None => self.default_dir.clone(),
+        };
+        let path = base_dir.join(path);
+        Ok(std::fs::read(path)?)
     }
 }
 

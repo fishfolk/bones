@@ -954,6 +954,7 @@ dependencies = [
  "bones_utils",
  "bs58",
  "paste",
+ "semver",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -2926,6 +2927,15 @@ checksum = "f51d0c0d83bec45f16480d0ce0058397a69e48fcdc52d1dc8855fb68acbd31a7"
 dependencies = [
  "core-foundation-sys",
  "libc",
+]
+
+[[package]]
+name = "semver"
+version = "1.0.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bebd363326d05ec3e2f532ab7660680f3b02130d780c299bca73469d521bc0ed"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
