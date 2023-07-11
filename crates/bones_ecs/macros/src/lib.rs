@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use quote::{quote, quote_spanned, spanned::Spanned};
+use quote::{quote, quote_spanned, spanned::Spanned, ToTokens};
 
 /// Helper macro to bail out of the macro with a compile error.
 macro_rules! throw {
@@ -12,7 +12,7 @@ macro_rules! throw {
 }
 
 /// Derive macro for deriving [`Deref`] on structs with one field.
-#[proc_macro_derive(Deref, attributes(asset_id, asset))]
+#[proc_macro_derive(Deref, attributes(deref))]
 pub fn derive_deref(input: TokenStream) -> TokenStream {
     let input = venial::parse_declaration(input.into()).unwrap();
 
@@ -40,12 +40,33 @@ pub fn derive_deref(input: TokenStream) -> TokenStream {
                 .into()
             }
             venial::StructFields::Named(named) => {
-                if named.fields.len() != 1 {
-                    throw!(named, "May only derive Deref for structs with one field.");
-                }
+                let (deref_type, field_name) = if named.fields.is_empty() {
+                    throw!(named, "May not derive Deref for struct without fields");
+                } else if named.fields.len() > 1 {
+                    let mut info = None;
+                    for (field, _) in named.fields.iter() {
+                        for attr in &field.attributes {
+                            if attr.to_token_stream().to_string() == "#[deref]" {
+                                if info.is_some() {
+                                    throw!(attr, "Only one field may have the #[deref] attribute");
+                                } else {
+                                    info = Some((&field.ty, &field.name));
+                                }
+                            }
+                        }
+                    }
 
-                let deref_type = &named.fields[0].0.ty;
-                let field_name = &named.fields[0].0.name;
+                    if let Some(info) = info {
+                        info
+                    } else {
+                        throw!(
+                            named,
+                            "One field must be annotated with a #[deref] attribute"
+                        );
+                    }
+                } else {
+                    (&named.fields[0].0.ty, &named.fields[0].0.name)
+                };
 
                 quote! {
                     impl #params ::std::ops::Deref for #name #params {
@@ -68,7 +89,7 @@ pub fn derive_deref(input: TokenStream) -> TokenStream {
 }
 
 /// Derive macro for deriving [`DerefMut`] on structs with one field.
-#[proc_macro_derive(DerefMut, attributes(asset_id, asset))]
+#[proc_macro_derive(DerefMut, attributes(deref))]
 pub fn derive_deref_mut(input: TokenStream) -> TokenStream {
     let input = venial::parse_declaration(input.into()).unwrap();
 
@@ -95,14 +116,33 @@ pub fn derive_deref_mut(input: TokenStream) -> TokenStream {
                 .into()
             }
             venial::StructFields::Named(named) => {
-                if named.fields.len() != 1 {
-                    throw!(
-                        named,
-                        "May only derive DerefMut for structs with one field."
-                    );
-                }
+                let field_name = if named.fields.is_empty() {
+                    throw!(named, "May not derive Deref for struct without fields");
+                } else if named.fields.len() > 1 {
+                    let mut info = None;
+                    for (field, _) in named.fields.iter() {
+                        for attr in &field.attributes {
+                            if attr.to_token_stream().to_string() == "#[deref]" {
+                                if info.is_some() {
+                                    throw!(attr, "Only one field may have the #[deref] attribute");
+                                } else {
+                                    info = Some(&field.name);
+                                }
+                            }
+                        }
+                    }
 
-                let field_name = &named.fields[0].0.name;
+                    if let Some(name) = info {
+                        name
+                    } else {
+                        throw!(
+                            named,
+                            "One field must be annotated with a #[deref] attribute"
+                        );
+                    }
+                } else {
+                    &named.fields[0].0.name
+                };
 
                 quote! {
                     impl #params std::ops::DerefMut for #name #params {
