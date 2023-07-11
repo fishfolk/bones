@@ -1040,6 +1040,7 @@ dependencies = [
  "bones_render",
  "bones_utils",
  "noise",
+ "once_cell",
  "serde",
  "type_ulid",
 ]
@@ -1086,6 +1087,7 @@ dependencies = [
  "downcast-rs",
  "glam",
  "hashbrown 0.14.0",
+ "parking_lot",
  "paste",
  "serde",
  "serde_yaml",
@@ -2348,6 +2350,9 @@ name = "once_cell"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
+dependencies = [
+ "parking_lot_core",
+]
 
 [[package]]
 name = "openssl-probe"

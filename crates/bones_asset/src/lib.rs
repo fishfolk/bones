@@ -10,7 +10,7 @@ use std::{
     str::FromStr,
 };
 
-use bones_reflect::schema::Schema;
+use bones_reflect::prelude::*;
 use bones_utils::prelude::*;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
@@ -140,9 +140,8 @@ pub struct LoadedAsset {
     pub dependencies: Vec<Cid>,
     /// Unique identifier for the asset kind. For Rust structs this will match the [`TypeUlid`].
     pub asset_kind: Ulid,
-    /// The loaded data of the asset. This is in the format produced by the asset loader, not the
-    /// binary of the asset source.
-    pub data: AssetData,
+    /// The loaded data of the asset.
+    pub data: SchemaBox,
 }
 
 /// The raw data stored for a loaded asset.

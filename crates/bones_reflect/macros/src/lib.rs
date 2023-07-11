@@ -69,7 +69,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                         quote_spanned! {field.ty.__span() =>
                             #schema_mod::StructField {
                                 name: None,
-                                schema: <#ty as #schema_mod::HasSchema>::schema(),
+                                schema: <#ty as #schema_mod::HasSchema>::schema().clone(),
                             }
                         }
                     })
@@ -105,7 +105,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                             quote_spanned! {field.ty.__span() =>
                                 #schema_mod::StructField {
                                     name: Some(stringify!(#name).to_owned()),
-                                    schema: <#ty as #schema_mod::HasSchema>::schema(),
+                                    schema: <#ty as #schema_mod::HasSchema>::schema().clone(),
                                 }
                             }
                         }
@@ -135,8 +135,11 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 
     quote! {
         unsafe impl #schema_mod::HasSchema for #name {
-            fn schema() -> #schema_mod::Schema {
-                #schema
+            fn schema() -> &'static #schema_mod::Schema {
+                static S: ::std::sync::OnceLock<#schema_mod::Schema> = ::std::sync::OnceLock::new();
+                S.get_or_init(|| {
+                    #schema
+                })
             }
         }
     }

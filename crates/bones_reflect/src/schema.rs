@@ -34,7 +34,7 @@ mod std_impls;
 /// registry. I haven't thought all the way through this.
 pub unsafe trait HasSchema {
     /// Get this type's [`Schema`].
-    fn schema() -> Schema;
+    fn schema() -> &'static Schema;
 
     /// Cast a reference of this type to a reference of another type with the same memory layout.
     ///
@@ -54,7 +54,7 @@ pub unsafe trait HasSchema {
     fn try_cast<T: HasSchema>(&self) -> Result<&T, SchemaMismatchError> {
         let s1 = Self::schema();
         let s2 = T::schema();
-        if s1.represents(&s2) {
+        if s1.represents(s2) {
             // SAFE: the schemas have the same memory representation.
             unsafe { Ok(&*(self as *const Self as *const T)) }
         } else {
@@ -82,7 +82,7 @@ pub unsafe trait HasSchema {
     fn try_cast_mut<T: HasSchema>(&mut self) -> Result<&mut T, SchemaMismatchError> {
         let s1 = Self::schema();
         let s2 = T::schema();
-        if s1.represents(&s2) {
+        if s1.represents(s2) {
             // SAFE: the schemas have the same memory representation.
             unsafe { Ok(&mut *(self as *mut Self as *mut T)) }
         } else {

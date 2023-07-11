@@ -24,7 +24,7 @@ impl SchemaPtr {
     ///
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
     pub fn try_cast<T: HasSchema>(&self) -> Result<*const T, SchemaMismatchError> {
-        if self.schema.represents(&T::schema()) {
+        if self.schema.represents(T::schema()) {
             // SAFE: the schemas have the same memory representation.
             Ok(self.ptr as *const T)
         } else {
@@ -35,7 +35,7 @@ impl SchemaPtr {
     /// Create a new [`SchemaPtr`] from a reference to a type that implements [`HasSchema`].
     pub fn new<T: HasSchema>(v: &T) -> Self {
         let ptr = v as *const T as *const u8;
-        let schema = T::schema();
+        let schema = T::schema().clone();
         Self { ptr, schema }
     }
 
@@ -79,7 +79,7 @@ impl SchemaPtrMut {
     ///
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
     pub fn try_cast_mut<T: HasSchema>(&self) -> Result<*mut T, SchemaMismatchError> {
-        if self.schema.represents(&T::schema()) {
+        if self.schema.represents(T::schema()) {
             // SAFE: the schemas have the same memory representation.
             Ok(self.ptr as *mut T)
         } else {
@@ -90,7 +90,7 @@ impl SchemaPtrMut {
     /// Create a new [`SchemaPtr`] from a reference to a type that implements [`HasSchema`].
     pub fn new<T: HasSchema>(v: &mut T) -> Self {
         let ptr = v as *mut T as *mut u8;
-        let schema = T::schema();
+        let schema = T::schema().clone();
         Self { ptr, schema }
     }
 
@@ -167,7 +167,7 @@ impl SchemaBox {
     ///
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
     pub fn try_cast<T: HasSchema>(&self) -> Result<&T, SchemaMismatchError> {
-        if self.schema.represents(&T::schema()) {
+        if self.schema.represents(T::schema()) {
             // SAFE: the schemas have the same memory representation.
             unsafe { Ok(&*(self.ptr as *const T)) }
         } else {
@@ -191,7 +191,7 @@ impl SchemaBox {
     ///
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
     pub fn try_cast_mut<T: HasSchema>(&mut self) -> Result<&mut T, SchemaMismatchError> {
-        if self.schema.represents(&T::schema()) {
+        if self.schema.represents(T::schema()) {
             // SAFE: the schemas have the same memory representation.
             unsafe { Ok(&mut *(self.ptr as *mut T)) }
         } else {
@@ -202,7 +202,7 @@ impl SchemaBox {
     /// Create a new [`SchemaBox`].
     #[track_caller]
     pub fn new<T: HasSchema + Clone>(v: T) -> Self {
-        let schema = T::schema();
+        let schema = T::schema().clone();
         let layout = std::alloc::Layout::new::<T>();
         debug_assert_eq!(
             layout,

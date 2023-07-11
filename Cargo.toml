@@ -28,3 +28,4 @@ type_ulid        = { version = "^0.2.0", path = "./crates/type_ulid" }
 
 noise = "0.8"
 serde = { version = "1.0", features = ["derive"], optional = true }
+once_cell = { version = "1.18.0", features = ["parking_lot"] }

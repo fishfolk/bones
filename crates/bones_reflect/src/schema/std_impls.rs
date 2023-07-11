@@ -1,10 +1,16 @@
+use bones_utils::HashMap;
+use parking_lot::RwLock;
+
 use super::*;
+
+use std::{any::TypeId, sync::OnceLock};
 
 macro_rules! impl_primitive {
     ($t:ty, $prim:ident) => {
         unsafe impl HasSchema for $t {
-            fn schema() -> Schema {
-                Schema::Primitive(Primitive::$prim)
+            fn schema() -> &'static Schema {
+                static S: Schema = Schema::Primitive(Primitive::$prim);
+                &S
             }
         }
     };
@@ -24,9 +30,23 @@ impl_primitive!(i128, I128);
 impl_primitive!(f32, F32);
 impl_primitive!(f64, F64);
 
-unsafe impl<T: HasSchema> HasSchema for Vec<T> {
-    fn schema() -> Schema {
-        Schema::Vec(Box::new(T::schema()))
+unsafe impl<T: HasSchema + 'static> HasSchema for Vec<T> {
+    fn schema() -> &'static Schema {
+        static STORE: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
+        let store = STORE.get_or_init(Default::default);
+        let read = store.read();
+        let type_id = TypeId::of::<Self>();
+
+        if let Some(schema) = read.get(&type_id) {
+            schema
+        } else {
+            drop(read);
+            let schema = Schema::Vec(Box::new(T::schema().to_owned()));
+            let schema: &'static Schema = Box::leak(Box::new(schema));
+            let mut write = store.write();
+            write.insert(type_id, schema);
+            schema
+        }
     }
 }
 
@@ -38,8 +58,10 @@ mod impl_glam {
     macro_rules! impl_glam {
         ($t:ty, $prim:ident, $($field:ident),+) => {
             unsafe impl HasSchema for $t {
-                fn schema() -> Schema {
-                    Schema::Struct(StructSchema {
+                fn schema() -> &'static Schema {
+                    static S: OnceLock<Schema> = OnceLock::new();
+
+                    S.get_or_init(|| Schema::Struct(StructSchema {
                         fields: vec![
                             $(
                                 StructField {
@@ -48,7 +70,7 @@ mod impl_glam {
                                 }
                             ),*
                         ],
-                    })
+                    }))
                 }
             }
         };
