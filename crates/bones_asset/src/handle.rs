@@ -3,11 +3,41 @@ use std::marker::PhantomData;
 use ulid::Ulid;
 
 /// A typed handle to an asset.
-#[derive(PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub struct Handle<T> {
     /// The runtime ID of the asset.
     pub id: Ulid,
     phantom: PhantomData<T>,
+}
+
+// Manually implement these traits we normally derive because the derive assumes that `T` must also
+// implement these traits.
+impl<T> Clone for Handle<T> {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id,
+            phantom: self.phantom,
+        }
+    }
+}
+impl<T> Copy for Handle<T> {}
+impl<T> PartialEq for Handle<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+impl<T> Eq for Handle<T> {}
+impl<T> std::hash::Hash for Handle<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+impl<T> Default for Handle<T> {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            phantom: Default::default(),
+        }
+    }
 }
 
 impl<T> std::fmt::Debug for Handle<T> {

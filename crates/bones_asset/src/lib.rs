@@ -10,11 +10,11 @@ use std::{
     str::FromStr,
 };
 
+use bones_ecs::prelude::{Deref, DerefMut};
 use bones_reflect::prelude::*;
 use bones_utils::prelude::*;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
-use ulid::Ulid;
 
 /// The prelude.
 pub mod prelude {
@@ -71,7 +71,7 @@ pub struct AssetPack {
 
 /// Specifies an asset pack, and it's exact version.
 #[derive(Clone, Debug)]
-pub struct AssetPackSpecifier {
+pub struct AssetPackSpec {
     /// The ID of the asset pack.
     pub id: AssetPackId,
     /// The version of the asset pack.
@@ -118,14 +118,18 @@ pub struct LoadedAssets {
 /// Stores assets for later retrieval.
 #[derive(Default, Clone, Debug)]
 pub struct AssetStore {
-    /// Maps the runtime ID of the asset to it's content ID.
-    pub asset_ids: HashMap<Ulid, Cid>,
+    /// Maps the handle of the asset to it's content ID.
+    pub asset_ids: HashMap<UntypedHandle, Cid>,
     /// Maps asset content IDs, to loaded assets.
     pub assets: HashMap<Cid, LoadedAsset>,
+    /// The core asset pack, if it's been loaded.
+    pub core_pack: Option<AssetPack>,
+    /// The asset packs that have been loaded.
+    pub packs: HashMap<AssetPackSpec, AssetPack>,
 }
 
 /// An asset that has been loaded.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deref, DerefMut)]
 pub struct LoadedAsset {
     /// The content ID of the loaded asset.
     ///
@@ -133,24 +137,16 @@ pub struct LoadedAsset {
     /// dependencies.
     pub cid: Cid,
     /// The asset pack this was loaded from, or [`None`] if it is from the default pack.
-    pub pack: Option<String>,
+    pub pack: Option<AssetPackSpec>,
+    /// The name of the directory this pack was loaded from, unless it is from the default pack.
+    pub pack_dir: Option<String>,
     /// The path in the asset pack that this asset is from.
     pub path: PathBuf,
     /// The content IDs of any assets needed by this asset as a dependency.
     pub dependencies: Vec<Cid>,
-    /// Unique identifier for the asset kind. For Rust structs this will match the [`TypeUlid`].
-    pub asset_kind: Ulid,
     /// The loaded data of the asset.
+    #[deref]
     pub data: SchemaBox,
-}
-
-/// The raw data stored for a loaded asset.
-#[derive(Debug, Clone)]
-pub enum AssetData {
-    // /// Asset has been loaded and stored at the given pointer.
-    // Raw(*mut u8),
-    // /// The asset has been loaded from JSON/YAML data.
-    // Metadata(Metadata),
 }
 
 /// An identifier for an asset.
