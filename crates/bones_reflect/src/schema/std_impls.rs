@@ -1,8 +1,8 @@
 use super::*;
 
-macro_rules! impl_has_schema_for_primitive {
+macro_rules! impl_primitive {
     ($t:ty, $prim:ident) => {
-        impl HasSchema for $t {
+        unsafe impl HasSchema for $t {
             fn schema() -> Schema {
                 Schema::Primitive(Primitive::$prim)
             }
@@ -10,21 +10,21 @@ macro_rules! impl_has_schema_for_primitive {
     };
 }
 
-impl_has_schema_for_primitive!(String, String);
-impl_has_schema_for_primitive!(u8, U8);
-impl_has_schema_for_primitive!(u16, U16);
-impl_has_schema_for_primitive!(u32, U32);
-impl_has_schema_for_primitive!(u64, U64);
-impl_has_schema_for_primitive!(u128, U128);
-impl_has_schema_for_primitive!(i8, I8);
-impl_has_schema_for_primitive!(i16, I16);
-impl_has_schema_for_primitive!(i32, I32);
-impl_has_schema_for_primitive!(i64, I64);
-impl_has_schema_for_primitive!(i128, I128);
-impl_has_schema_for_primitive!(f32, F32);
-impl_has_schema_for_primitive!(f64, F64);
+impl_primitive!(String, String);
+impl_primitive!(u8, U8);
+impl_primitive!(u16, U16);
+impl_primitive!(u32, U32);
+impl_primitive!(u64, U64);
+impl_primitive!(u128, U128);
+impl_primitive!(i8, I8);
+impl_primitive!(i16, I16);
+impl_primitive!(i32, I32);
+impl_primitive!(i64, I64);
+impl_primitive!(i128, I128);
+impl_primitive!(f32, F32);
+impl_primitive!(f64, F64);
 
-impl<T: HasSchema> HasSchema for Vec<T> {
+unsafe impl<T: HasSchema> HasSchema for Vec<T> {
     fn schema() -> Schema {
         Schema::Vec(Box::new(T::schema()))
     }
@@ -37,7 +37,7 @@ mod impl_glam {
 
     macro_rules! impl_glam {
         ($t:ty, $prim:ident, $($field:ident),+) => {
-            impl HasSchema for $t {
+            unsafe impl HasSchema for $t {
                 fn schema() -> Schema {
                     Schema::Struct(StructSchema {
                         fields: vec![

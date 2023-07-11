@@ -1,3 +1,1 @@
-players:
-  - asset:./players/john/john.player.yaml
-  - asset:./players/jane/jane.player.yaml
+root: ./default.game.yaml

@@ -23,7 +23,7 @@ pub fn derive_has_type_registration(input: TokenStream) -> TokenStream {
     );
 
     // Parse the struct
-    let Some(in_struct) = input.as_struct() else {
+    let Some(_in_struct) = input.as_struct() else {
         throw!(item_ident.span(), "You may only derive HasTypeRegistration on structs");
     };
 
@@ -92,6 +92,9 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                     schema: {
                                         let layout = ::std::alloc::Layout::new::<#ty>();
                                         #schema_mod::Schema::Primitive(#schema_mod::Primitive::Opaque {
+                                            // TODO: Allow adding annotation to use `TypeUlid`
+                                            // implementation to set the ID.
+                                            id: None,
                                             size: layout.size(),
                                             align: layout.align(),
                                         })
@@ -131,7 +134,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     };
 
     quote! {
-        impl #schema_mod::HasSchema for #name {
+        unsafe impl #schema_mod::HasSchema for #name {
             fn schema() -> #schema_mod::Schema {
                 #schema
             }
