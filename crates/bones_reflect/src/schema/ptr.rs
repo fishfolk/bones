@@ -231,6 +231,30 @@ impl SchemaBox {
         }
     }
 
+    /// Create a new [`SchemaBox`] from raw parts.
+    ///
+    /// This is useful for creating a [`SchemaBox`] for data with a schema loaded at runtime and
+    /// without a Rust type.
+    ///
+    /// # Safety
+    ///
+    /// You must insure that the pointer is valid for the given `layout`, `schem`, `drop_fn`, and
+    /// `clone_fn`.
+    pub unsafe fn from_raw_parts(
+        ptr: *mut u8,
+        schema: Schema,
+        drop_fn: unsafe extern "C" fn(*mut u8),
+        clone_fn: unsafe extern "C" fn(src: *const u8, dst: *mut u8),
+    ) -> Self {
+        Self {
+            ptr,
+            layout: schema.layout(),
+            schema,
+            drop_fn,
+            clone_fn,
+        }
+    }
+
     /// Get the raw pointer.
     pub fn into_raw(s: Self) -> *mut u8 {
         s.ptr
