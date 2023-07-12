@@ -119,6 +119,8 @@ pub struct SchemaBox {
     drop_fn: unsafe extern "C" fn(*mut u8),
     clone_fn: unsafe extern "C" fn(src: *const u8, dst: *mut u8),
 }
+unsafe impl Sync for SchemaBox {}
+unsafe impl Send for SchemaBox {}
 
 impl Clone for SchemaBox {
     fn clone(&self) -> Self {
@@ -201,7 +203,7 @@ impl SchemaBox {
 
     /// Create a new [`SchemaBox`].
     #[track_caller]
-    pub fn new<T: HasSchema + Clone>(v: T) -> Self {
+    pub fn new<T: HasSchema + Clone + Sync + Send>(v: T) -> Self {
         let schema = T::schema().clone();
         let layout = std::alloc::Layout::new::<T>();
         debug_assert_eq!(

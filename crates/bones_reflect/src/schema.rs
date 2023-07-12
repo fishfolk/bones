@@ -1,7 +1,8 @@
 //! Type layout schema, used to guide dynamic access to type data in scripts.
 
-use std::alloc::Layout;
+use std::{alloc::Layout, any::TypeId};
 
+use bones_utils::HashMap;
 use serde::Deserialize;
 use ulid::Ulid;
 
@@ -93,7 +94,7 @@ pub unsafe trait HasSchema {
 }
 
 /// Container for a schema that is nested in another schema.
-#[derive(PartialEq, Eq, Hash, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub enum NestedSchema {
     /// The nested schema is a static reference to a schema.
     Static(&'static Schema),
@@ -131,12 +132,40 @@ impl<'de> Deserialize<'de> for NestedSchema {
     }
 }
 
-/// A schema describes the data layout of a type, to enable dynamic access to the type's data
-/// through a pointer.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
-pub enum Schema {
+pub struct Schema {
+    #[serde(skip)]
+    /// The Rust [`TypeId`] that this [`Schema`] was created from, if it was created from a Rust
+    /// type.
+    pub type_id: Option<TypeId>,
+    /// The kind of schema.
+    pub kind: SchemaKind,
+    #[serde(skip)]
+    /// Arbitrary type data assocated to the schema.
+    ///
+    /// The [`Ulid`] key is arbitrary, allows different types to add different kinds of data to the
+    /// schema.
+    pub type_data: HashMap<Ulid, SchemaBox>,
+}
+
+impl From<SchemaKind> for Schema {
+    fn from(kind: SchemaKind) -> Self {
+        Self {
+            type_id: None,
+            kind,
+            type_data: Default::default(),
+        }
+    }
+}
+
+/// A schema describes the data layout of a type, to enable dynamic access to the type's data
+/// through a pointer.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+pub enum SchemaKind {
     /// The type represents a struct.
     Struct(StructSchema),
     /// Type represents a Rust [`Vec`], where each item in the vec has the contained [`Schema`].
@@ -165,15 +194,15 @@ impl Schema {
             }
         };
 
-        match self {
-            Schema::Struct(s) => {
+        match &self.kind {
+            SchemaKind::Struct(s) => {
                 for field in &s.fields {
                     let field_layout = field.schema.layout();
                     extend_layout(&mut layout, field_layout);
                 }
             }
-            Schema::Vec(_) => extend_layout(&mut layout, Layout::new::<Vec<u8>>()),
-            Schema::Primitive(p) => extend_layout(
+            SchemaKind::Vec(_) => extend_layout(&mut layout, Layout::new::<Vec<u8>>()),
+            SchemaKind::Primitive(p) => extend_layout(
                 &mut layout,
                 match p {
                     Primitive::Bool => Layout::new::<bool>(),
@@ -190,7 +219,7 @@ impl Schema {
                     Primitive::F32 => Layout::new::<f32>(),
                     Primitive::F64 => Layout::new::<f64>(),
                     Primitive::String => Layout::new::<String>(),
-                    Primitive::Opaque { id: _, size, align } => {
+                    Primitive::Opaque { size, align } => {
                         Layout::from_size_align(*size, *align).unwrap()
                     }
                 },
@@ -200,51 +229,34 @@ impl Schema {
         layout.unwrap().pad_to_align()
     }
 
-    /// Returns whether or not the schema contains an [`Opaque`][Primitive::Opaque] primitive
-    /// anywhere in the nested schema.
-    ///
-    /// This is important because a cast between two types with the same [`Schema`] is safe, as long
-    /// as the schema doesn't contain any `Opaque` primitives.
-    ///
-    /// If you have two equal schemas that have an `Opaque` primitive, they may or may not have the
-    /// same memory layout, and casting to a Rust struct with that schema may not be sound, if that
-    /// opaque field is ever accessed.
-    pub fn represents(&self, other: &Schema) -> bool {
-        match (self, other) {
-            (Schema::Struct(s1), Schema::Struct(s2)) => {
-                s1.fields.len() == s2.fields.len()
-                    && s1
-                        .fields
-                        .iter()
-                        .zip(s2.fields.iter())
-                        .all(|(f1, f2)| f1.schema.represents(&f2.schema))
-            }
-            (Schema::Vec(v1), Schema::Vec(v2)) => v1.represents(v2),
-            (Schema::Primitive(p1), Schema::Primitive(p2)) => match (p1, p2) {
-                (
-                    Primitive::Opaque {
-                        id: id1,
-                        size: size1,
-                        align: align1,
-                    },
-                    Primitive::Opaque {
-                        id: id2,
-                        size: size2,
-                        align: align2,
-                    },
-                ) => {
-                    // If there is no opaque ID, then we cannot know if these schemas represent the
-                    // same memory layout.
-                    if id1.is_none() || id2.is_none() {
-                        false
-                    } else {
-                        id1 == id2 && size1 == size2 && align1 == align2
-                    }
-                }
-                (p1, p2) => p1 == p2,
-            },
-            _ => false,
+    /// Recursively checks whether or not the schema contains any [`Opaque`][Primitive::Opaque] primitives.
+    pub fn has_opaque(&self) -> bool {
+        match &self.kind {
+            SchemaKind::Struct(s) => s.fields.iter().any(|field| field.schema.has_opaque()),
+            SchemaKind::Vec(v) => v.has_opaque(),
+            SchemaKind::Primitive(p) => matches!(p, Primitive::Opaque { .. }),
         }
+    }
+
+    /// Returns whether or not this schema represents the same memory layout as the other schema,
+    /// and you can safely cast a pointer to one to a pointer to the other.
+    pub fn represents(&self, other: &Schema) -> bool {
+        // If these have equal Rust type IDs, then they are the same.
+        (self.type_id.is_some() && other.type_id.is_some() && self.type_id == other.type_id)
+            // If the schemas don't have any opaque fields, and are equal to each-other, then they
+            // have the same representation.
+            || (!self.has_opaque() && !other.has_opaque() && {
+                match (&self.kind, &other.kind) {
+                    (SchemaKind::Struct(s1), SchemaKind::Struct(s2)) => {
+                        s1.fields.len() == s2.fields.len() &&
+                            s1.fields.iter().zip(s2.fields.iter())
+                            .all(|(f1, f2)| f1.schema.represents(&f2.schema))
+                    },
+                    (SchemaKind::Vec(v1), SchemaKind::Vec(v2)) => v1.represents(v2),
+                    (SchemaKind::Primitive(p1), SchemaKind::Primitive(p2)) => p1 == p2,
+                    _ => false
+                }
+            })
     }
 }
 
@@ -266,7 +278,7 @@ pub struct SchemaFile {
 }
 
 /// The schema for a struct.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct StructSchema {
     /// The fields in the struct, in the order they are defined.
     pub fields: Vec<StructField>,
@@ -327,7 +339,7 @@ mod ser_de {
 }
 
 /// A field in a [`StructSchema`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct StructField {
     /// The name of the field. Will be [`None`] if this is a field of a tuple struct.
     pub name: Option<String>,
@@ -371,17 +383,6 @@ pub enum Primitive {
     String,
     /// Opaque data that cannot described by a schema.
     Opaque {
-        /// An optional unique ID for the opaque type.
-        ///
-        /// If this is specified, then it will be used when checking the compatibility of two opaque
-        /// types in [`Schema::represents()`]. Two opaque types, both with a set ID, and where the
-        /// IDs are equal to each-other, will be considered to have exactly the same memory layout
-        /// and can be safely cast from one to the other.
-        ///
-        /// If this is [`None`] then `represents()` will always return `false`, because we cannot be
-        /// sure that the two opaque types actually represent the same exact type layout.
-        #[cfg_attr(feature = "serde", serde(default))]
-        id: Option<Ulid>,
         /// The size of the data.
         size: usize,
         /// The alignment of the data.

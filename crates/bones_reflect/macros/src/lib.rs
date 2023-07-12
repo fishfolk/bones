@@ -58,7 +58,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         );
     }
 
-    let schema = match input {
+    let schema_kind = match input {
         venial::Declaration::Struct(s) => {
             let fields = match s.fields {
                 venial::StructFields::Tuple(tuple) => tuple
@@ -91,13 +91,14 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                     name: Some(stringify!(#name).to_owned()),
                                     schema: {
                                         let layout = ::std::alloc::Layout::new::<#ty>();
-                                        #schema_mod::Schema::Primitive(#schema_mod::Primitive::Opaque {
-                                            // TODO: Allow adding annotation to use `TypeUlid`
-                                            // implementation to set the ID.
-                                            id: None,
-                                            size: layout.size(),
-                                            align: layout.align(),
-                                        })
+                                        #schema_mod::Schema {
+                                            kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
+                                                size: layout.size(),
+                                                align: layout.align(),
+                                            }),
+                                            type_id: Some(std::any::TypeId::of::<#ty>()),
+                                            type_data: Default::default(),
+                                        }
                                     },
                                 }
                             }
@@ -117,7 +118,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
             };
 
             quote! {
-                #schema_mod::Schema::Struct(#schema_mod::StructSchema {
+                #schema_mod::SchemaKind::Struct(#schema_mod::StructSchema {
                     fields: vec![
                         #(#fields),*
                     ]
@@ -138,7 +139,11 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
             fn schema() -> &'static #schema_mod::Schema {
                 static S: ::std::sync::OnceLock<#schema_mod::Schema> = ::std::sync::OnceLock::new();
                 S.get_or_init(|| {
-                    #schema
+                    #schema_mod::Schema {
+                        type_id: Some(std::any::TypeId::of::<Self>()),
+                        kind: #schema_kind,
+                        type_data: Default::default(),
+                    }
                 })
             }
         }

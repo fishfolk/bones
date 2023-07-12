@@ -9,8 +9,12 @@ macro_rules! impl_primitive {
     ($t:ty, $prim:ident) => {
         unsafe impl HasSchema for $t {
             fn schema() -> &'static Schema {
-                static S: Schema = Schema::Primitive(Primitive::$prim);
-                &S
+                static S: OnceLock<Schema> = OnceLock::new();
+                S.get_or_init(|| Schema {
+                    kind: SchemaKind::Primitive(Primitive::$prim),
+                    type_id: Some(TypeId::of::<$t>()),
+                    type_data: Default::default(),
+                })
             }
         }
     };
@@ -41,7 +45,12 @@ unsafe impl<T: HasSchema + 'static> HasSchema for Vec<T> {
             schema
         } else {
             drop(read);
-            let schema = Schema::Vec(T::schema().into());
+            let kind = SchemaKind::Vec(T::schema().into());
+            let schema = Schema {
+                kind,
+                type_id: Some(type_id),
+                type_data: Default::default(),
+            };
             let schema: &'static Schema = Box::leak(Box::new(schema));
             let mut write = store.write();
             write.insert(type_id, schema);
@@ -61,16 +70,28 @@ mod impl_glam {
                 fn schema() -> &'static Schema {
                     static S: OnceLock<Schema> = OnceLock::new();
 
-                    S.get_or_init(|| Schema::Struct(StructSchema {
-                        fields: vec![
-                            $(
-                                StructField {
-                                    name: Some(stringify!($field).to_owned()),
-                                    schema: Schema::Primitive(Primitive::$prim),
-                                }
-                            ),*
-                        ],
-                    }))
+                    S.get_or_init(|| {
+                        let type_id = Some(TypeId::of::<Self>());
+                        let kind = SchemaKind::Struct(StructSchema {
+                            fields: vec![
+                                $(
+                                    StructField {
+                                        name: Some(stringify!($field).to_owned()),
+                                        schema: Schema {
+                                            kind: SchemaKind::Primitive(Primitive::$prim),
+                                            type_id: Some(TypeId::of::<$t>()),
+                                            type_data: Default::default(),
+                                        }
+                                    }
+                                ),*
+                            ],
+                        });
+                        Schema {
+                            type_id,
+                            kind,
+                            type_data: Default::default(),
+                        }
+                    })
                 }
             }
         };
