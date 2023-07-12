@@ -1,10 +1,10 @@
-pub mod registry;
+// pub mod registry; // Don't need this for now, we'll re-enable if we find use for it.
 pub mod schema;
 
 pub use bones_reflect_macros::*;
 
 pub mod prelude {
-    pub use {crate::registry::*, crate::schema::*, crate::RawFns, bones_reflect_macros::*};
+    pub use {crate::schema::*, crate::RawFns, bones_reflect_macros::*};
 }
 
 /// Helper trait that is auto-implemented for all `Clone`-able types. Provides easy access to drop
