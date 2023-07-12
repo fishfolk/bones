@@ -6,20 +6,40 @@ pub struct AssetPackLoadCtx<'a> {
     pub server: &'a AssetServer,
 }
 
+/// YAML format for the core asset pack's `pack.yaml` file.
+#[derive(Debug, Clone, Deserialize)]
+pub struct CorePackileMeta {
+    /// The path to the root asset for the pack.
+    pub root: PathBuf,
+}
+
 impl AssetServer {
     /// Initialize a new [`AssetServer`].
     pub fn new<Io: AssetIo + 'static>(io: Io) -> Self {
         Self {
             io: Box::new(io),
             store: default(),
+            core_schemas: default(),
         }
+    }
+
+    /// Register a type with the core schema, and the given name.
+    ///
+    /// TODO: better docs.
+    pub fn register_core_schema<T: HasSchema>(&mut self, name: &str) {
+        self.core_schemas
+            .insert(name.into(), Cow::Borrowed(T::schema()));
     }
 
     /// Load the assets.
     ///
     /// All of the assets are immediately loaded synchronously, blocking until load is complete.
-    pub fn load_assets<Io: AssetIo>(&mut self) {
-        todo!();
+    pub fn load_assets(&mut self) -> anyhow::Result<()> {
+        // Load the core asset packfile
+        let core_packfile_contents = self.io.load_file(None, Path::new("pack.yaml"))?;
+        let core_packfile_meta: CorePackileMeta = serde_yaml::from_slice(&core_packfile_contents)?;
+
+        Ok(())
     }
 
     /// Borrow a [`LoadedAsset`] associated to the given handle.

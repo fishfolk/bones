@@ -41,7 +41,7 @@ unsafe impl<T: HasSchema + 'static> HasSchema for Vec<T> {
             schema
         } else {
             drop(read);
-            let schema = Schema::Vec(Box::new(T::schema().to_owned()));
+            let schema = Schema::Vec(T::schema().into());
             let schema: &'static Schema = Box::leak(Box::new(schema));
             let mut write = store.write();
             write.insert(type_id, schema);

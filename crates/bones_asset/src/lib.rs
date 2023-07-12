@@ -6,6 +6,7 @@
 #![deny(rustdoc::all)]
 
 use std::{
+    borrow::Cow,
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -19,6 +20,7 @@ use serde::Deserialize;
 /// The prelude.
 pub mod prelude {
     pub use crate::*;
+    pub use bones_reflect::prelude::*;
 }
 
 mod cid;
@@ -30,7 +32,7 @@ pub use io::*;
 mod path;
 pub use path::*;
 mod handle;
-use handle::*;
+pub use handle::*;
 
 mod parse;
 
@@ -98,12 +100,18 @@ pub struct SchemaId {
     pub name: String,
 }
 
-/// Struct responsible for loading assets.
+/// Struct responsible for loading assets into it's contained [`AssetStore`], using an [`AssetIo`]
+/// implementation.
 pub struct AssetServer {
     /// The [`AssetIo`] implementation used to load assets.
     pub io: Box<dyn AssetIo>,
     /// The asset store.
     pub store: AssetStore,
+    /// Mapping of core schemas.
+    ///
+    /// The string key may be used in asset file extensions like `some_name.key.yaml` or
+    /// `some_name.key.json`.
+    pub core_schemas: HashMap<String, Cow<'static, Schema>>,
 }
 
 /// Struct containing all the game's loaded assets, including the default assets and
@@ -122,6 +130,7 @@ pub struct AssetStore {
     pub asset_ids: HashMap<UntypedHandle, Cid>,
     /// Maps asset content IDs, to loaded assets.
     pub assets: HashMap<Cid, LoadedAsset>,
+
     /// The core asset pack, if it's been loaded.
     pub core_pack: Option<AssetPack>,
     /// The asset packs that have been loaded.

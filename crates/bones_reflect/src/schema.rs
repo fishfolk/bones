@@ -2,6 +2,7 @@
 
 use std::alloc::Layout;
 
+use serde::Deserialize;
 use ulid::Ulid;
 
 use crate::prelude::*;
@@ -91,6 +92,45 @@ pub unsafe trait HasSchema {
     }
 }
 
+/// Container for a schema that is nested in another schema.
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
+pub enum NestedSchema {
+    /// The nested schema is a static reference to a schema.
+    Static(&'static Schema),
+    /// The nested schema is an owned box of a schema.
+    Boxed(Box<Schema>),
+}
+
+impl From<&'static Schema> for NestedSchema {
+    fn from(s: &'static Schema) -> Self {
+        Self::Static(s)
+    }
+}
+impl From<Schema> for NestedSchema {
+    fn from(s: Schema) -> Self {
+        Self::Boxed(Box::new(s))
+    }
+}
+impl std::ops::Deref for NestedSchema {
+    type Target = Schema;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            NestedSchema::Static(s) => s,
+            NestedSchema::Boxed(s) => s,
+        }
+    }
+}
+impl<'de> Deserialize<'de> for NestedSchema {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = Schema::deserialize(deserializer)?;
+        Ok(NestedSchema::Boxed(Box::new(s)))
+    }
+}
+
 /// A schema describes the data layout of a type, to enable dynamic access to the type's data
 /// through a pointer.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -106,7 +146,7 @@ pub enum Schema {
     ///
     /// The scripting solution must facilitate a way for scripts to access data in the [`Vec`] if it
     /// is to be readable/modifyable from scripts.
-    Vec(Box<Schema>),
+    Vec(NestedSchema),
     /// The type represents a primitive value.
     Primitive(Primitive),
 }

@@ -953,6 +953,7 @@ dependencies = [
  "bones_reflect",
  "bones_utils",
  "bs58",
+ "glam",
  "paste",
  "semver",
  "serde",

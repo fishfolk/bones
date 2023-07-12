@@ -3,10 +3,11 @@ use std::marker::PhantomData;
 use ulid::Ulid;
 
 /// A typed handle to an asset.
+#[repr(C)]
 pub struct Handle<T> {
     /// The runtime ID of the asset.
     pub id: Ulid,
-    phantom: PhantomData<T>,
+    phantom: PhantomData<*const T>,
 }
 
 // Manually implement these traits we normally derive because the derive assumes that `T` must also
@@ -55,6 +56,7 @@ impl<T> Handle<T> {
 
 /// An untyped handle to an asset.
 #[derive(Default, Clone, Debug, Hash, PartialEq, Eq, Copy)]
+#[repr(C)]
 pub struct UntypedHandle {
     /// The runtime ID of the handle
     pub rid: Ulid,

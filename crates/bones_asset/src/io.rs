@@ -19,8 +19,8 @@ pub trait AssetIo {
 /// [`AssetIo`] implementation that loads from the filesystem.
 #[cfg(not(target_arch = "wasm32"))]
 pub struct FileAssetIo {
-    /// The directory to load the default asset from.
-    pub default_dir: PathBuf,
+    /// The directory to load the core asset pack.
+    pub core_dir: PathBuf,
     /// The directory to load the asset packs from.
     pub packs_dir: PathBuf,
 }
@@ -56,7 +56,7 @@ impl AssetIo for FileAssetIo {
     fn load_file(&self, pack_folder: Option<String>, path: &Path) -> anyhow::Result<Vec<u8>> {
         let base_dir = match pack_folder {
             Some(folder) => self.packs_dir.join(folder),
-            None => self.default_dir.clone(),
+            None => self.core_dir.clone(),
         };
         let path = base_dir.join(path);
         Ok(std::fs::read(path)?)
