@@ -21,6 +21,7 @@ macro_rules! impl_primitive {
 }
 
 impl_primitive!(String, String);
+impl_primitive!(bool, Bool);
 impl_primitive!(u8, U8);
 impl_primitive!(u16, U16);
 impl_primitive!(u32, U32);
@@ -76,7 +77,7 @@ mod impl_glam {
                             fields: vec![
                                 $(
                                     StructField {
-                                        name: Some(stringify!($field).to_owned()),
+                                        name: Some(stringify!($field).into()),
                                         schema: Schema {
                                             kind: SchemaKind::Primitive(Primitive::$prim),
                                             type_id: Some(TypeId::of::<$t>()),

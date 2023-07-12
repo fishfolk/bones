@@ -1,6 +1,6 @@
 //! Type layout schema, used to guide dynamic access to type data in scripts.
 
-use std::{alloc::Layout, any::TypeId};
+use std::{alloc::Layout, any::TypeId, borrow::Cow};
 
 use bones_utils::HashMap;
 use serde::Deserialize;
@@ -342,7 +342,7 @@ mod ser_de {
 #[derive(Debug, Clone)]
 pub struct StructField {
     /// The name of the field. Will be [`None`] if this is a field of a tuple struct.
-    pub name: Option<String>,
+    pub name: Option<Cow<'static, str>>,
     /// The schema of the field.
     pub schema: Schema,
 }

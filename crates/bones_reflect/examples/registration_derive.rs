@@ -1,4 +1,4 @@
-use bones_reflect_macros::HasTypeRegistration;
+// use bones_reflect_macros::HasTypeRegistration;
 
 //
 // Commented out because it's not compiling yet.

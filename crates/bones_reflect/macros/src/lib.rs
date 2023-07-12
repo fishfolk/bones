@@ -88,7 +88,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                         if opaque {
                             quote_spanned! {field.ty.__span() =>
                                 #schema_mod::StructField {
-                                    name: Some(stringify!(#name).to_owned()),
+                                    name: Some(stringify!(#name).into()),
                                     schema: {
                                         let layout = ::std::alloc::Layout::new::<#ty>();
                                         #schema_mod::Schema {
@@ -105,7 +105,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                         } else {
                             quote_spanned! {field.ty.__span() =>
                                 #schema_mod::StructField {
-                                    name: Some(stringify!(#name).to_owned()),
+                                    name: Some(stringify!(#name).into()),
                                     schema: <#ty as #schema_mod::HasSchema>::schema().clone(),
                                 }
                             }
