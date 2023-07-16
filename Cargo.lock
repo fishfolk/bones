@@ -949,11 +949,13 @@ name = "bones_asset"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "async-channel",
  "bones_ecs",
  "bones_reflect",
  "bones_utils",
  "bs58",
  "glam",
+ "once_cell",
  "paste",
  "semver",
  "serde",

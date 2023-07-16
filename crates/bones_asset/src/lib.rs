@@ -72,7 +72,7 @@ pub struct AssetPack {
 }
 
 /// Specifies an asset pack, and it's exact version.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssetPackSpec {
     /// The ID of the asset pack.
     pub id: AssetPackId,

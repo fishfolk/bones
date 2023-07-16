@@ -13,7 +13,19 @@ pub trait AssetIo {
     ///
     /// The [`pack_folder`] is the name of a folder returned by
     /// [`enumerate_packs()`][Self::enumerate_packs], or [`None`] to refer to the core pack.
-    fn load_file(&self, pack_folder: Option<String>, path: &Path) -> anyhow::Result<Vec<u8>>;
+    fn load_file(&self, pack_folder: Option<&str>, path: &Path) -> anyhow::Result<Vec<u8>>;
+
+    /// Subscribe to asset changes.
+    fn watch(&self) -> Option<async_channel::Receiver<AssetChange>>;
+}
+
+/// Change event returned by [`AssetIo::watch`].
+#[derive(Clone, Debug)]
+pub struct AssetChange {
+    /// The path of the asset that changed.
+    pub path: PathBuf,
+    /// The pack that the changed asset was in, or [`None`] if it was the core pack.
+    pub pack: Option<String>,
 }
 
 /// [`AssetIo`] implementation that loads from the filesystem.
@@ -53,12 +65,17 @@ impl AssetIo for FileAssetIo {
         Ok(dirs)
     }
 
-    fn load_file(&self, pack_folder: Option<String>, path: &Path) -> anyhow::Result<Vec<u8>> {
+    fn load_file(&self, pack_folder: Option<&str>, path: &Path) -> anyhow::Result<Vec<u8>> {
         let base_dir = match pack_folder {
             Some(folder) => self.packs_dir.join(folder),
             None => self.core_dir.clone(),
         };
         let path = base_dir.join(path);
         Ok(std::fs::read(path)?)
+    }
+
+    fn watch(&self) -> Option<async_channel::Receiver<AssetChange>> {
+        // TODO: implement filesystem watcher.
+        None
     }
 }

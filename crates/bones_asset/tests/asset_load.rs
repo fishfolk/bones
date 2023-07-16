@@ -52,5 +52,10 @@ fn asset_load1() -> anyhow::Result<()> {
     asset_server.register_core_schema::<PlayerMeta>("player");
     asset_server.register_core_schema::<AtlasMeta>("atlas");
 
+    // Load all of the assets
+    asset_server.load_assets()?;
+
+    panic!();
+
     Ok(())
 }

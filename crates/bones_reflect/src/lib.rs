@@ -20,6 +20,7 @@ pub mod prelude {
 /// # Example
 ///
 /// ```
+/// # use bones_reflect::RawFns;
 /// # use bones_ecs::prelude::*;
 /// # use core::alloc::Layout;
 /// let components = unsafe {
