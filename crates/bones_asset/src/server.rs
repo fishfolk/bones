@@ -4,12 +4,6 @@ use ulid::Ulid;
 
 use crate::prelude::*;
 
-/// Context needed to load an asset pack. Can be used to deserialize assets.
-pub struct AssetPackLoadCtx<'a> {
-    /// Reference to the asset server.
-    pub server: &'a AssetServer,
-}
-
 /// YAML format for the core asset pack's `pack.yaml` file.
 #[derive(Debug, Clone, Deserialize)]
 pub struct CorePackfileMeta {
@@ -80,7 +74,7 @@ impl AssetServer {
         Ok(())
     }
 
-    /// Load the asset pack with the given name, or else the default pack if [`None`].
+    /// Load the asset pack with the given folder name, or else the default pack if [`None`].
     pub fn load_pack(&mut self, pack: Option<&str>) -> anyhow::Result<AssetPack> {
         // Load the core pack differently
         if pack.is_none() {
@@ -99,10 +93,18 @@ impl AssetServer {
         }
 
         // Load the asset and produce a handle
-        let root_asset = self.load_asset(&meta.root, pack)?;
+        let partial = self.load_asset(&meta.root, None)?;
+        let loaded_asset = LoadedAsset {
+            cid: partial.cid,
+            pack: None,
+            pack_dir: None,
+            path: meta.root.to_owned(),
+            dependencies: partial.dependencies,
+            data: partial.data,
+        };
         let root_handle = UntypedHandle { rid: Ulid::new() };
-        self.store.asset_ids.insert(root_handle, root_asset.cid);
-        self.store.assets.insert(root_asset.cid, root_asset);
+        self.store.asset_ids.insert(root_handle, partial.cid);
+        self.store.assets.insert(partial.cid, loaded_asset);
 
         // Return the loaded asset pack.
         Ok(AssetPack {
@@ -131,10 +133,18 @@ impl AssetServer {
         }
 
         // Load the asset and produce a handle
-        let root_asset = self.load_asset(&meta.root, None)?;
+        let partial = self.load_asset(&meta.root, None)?;
+        let loaded_asset = LoadedAsset {
+            cid: partial.cid,
+            pack: None,
+            pack_dir: None,
+            path: meta.root.to_owned(),
+            dependencies: partial.dependencies,
+            data: partial.data,
+        };
         let root_handle = UntypedHandle { rid: Ulid::new() };
-        self.store.asset_ids.insert(root_handle, root_asset.cid);
-        self.store.assets.insert(root_asset.cid, root_asset);
+        self.store.asset_ids.insert(root_handle, partial.cid);
+        self.store.assets.insert(partial.cid, loaded_asset);
         let game_version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
 
         // Return the loaded asset pack.
@@ -159,7 +169,7 @@ impl AssetServer {
     }
 
     /// Load the asset
-    pub fn load_asset(&mut self, path: &Path, pack: Option<&str>) -> anyhow::Result<LoadedAsset> {
+    fn load_asset(&mut self, path: &Path, pack: Option<&str>) -> anyhow::Result<PartialAsset> {
         let contents = self.io.load_file(pack, path)?;
         if path_is_metadata(path) {
             self.load_metadata_asset(path, pack, contents)
@@ -173,7 +183,7 @@ impl AssetServer {
         path: &Path,
         pack: Option<&str>,
         contents: Vec<u8>,
-    ) -> anyhow::Result<LoadedAsset> {
+    ) -> anyhow::Result<PartialAsset> {
         // Get the schema for the asset
         let filename = path
             .file_name()
@@ -182,27 +192,45 @@ impl AssetServer {
             .ok_or_else(|| anyhow::format_err!("Invalid unicode in filename"))?;
         let (_name, schema_name) = filename
             .rsplit_once('.')
+            .unwrap()
+            .0
+            .rsplit_once('.')
             .ok_or_else(|| anyhow::format_err!("Missing schema name in asset filename"))?;
         let schema = self
             .core_schemas
             .get(schema_name)
             .ok_or_else(|| anyhow::format_err!("Schema not found: {schema_name}"))?
             .clone();
+        let mut dependencies = Vec::new();
 
+        let mut cid = Cid::default();
+        cid.update(&contents);
         let loader = MetadataLoadContext {
             server: self,
             path,
             pack,
             schema,
+            dependencies: &mut dependencies,
         };
-        if path.extension().unwrap().to_str().unwrap() == "json" {
+        let data = if path.extension().unwrap().to_str().unwrap() == "json" {
             let mut deserializer = serde_json::Deserializer::from_slice(&contents);
-
-            Ok(loader.deserialize(&mut deserializer)?)
+            loader.deserialize(&mut deserializer)?
         } else {
             let deserializer = serde_yaml::Deserializer::from_slice(&contents);
-            Ok(loader.deserialize(deserializer)?)
+            loader.deserialize(deserializer)?
+        };
+
+        // Update the CI
+        dependencies.sort();
+        for dep in &dependencies {
+            cid.update(&dep.0);
         }
+
+        Ok(PartialAsset {
+            cid,
+            dependencies,
+            data,
+        })
     }
 
     fn load_data_asset(
@@ -210,7 +238,7 @@ impl AssetServer {
         _path: &Path,
         _pack: Option<&str>,
         _contents: Vec<u8>,
-    ) -> anyhow::Result<LoadedAsset> {
+    ) -> anyhow::Result<PartialAsset> {
         todo!()
     }
 
@@ -257,6 +285,13 @@ impl AssetServer {
     }
 }
 
+/// Partial of a [`LoadedAsset`] used internally while loading is in progress.
+struct PartialAsset {
+    pub cid: Cid,
+    pub data: SchemaBox,
+    pub dependencies: Vec<Cid>,
+}
+
 const NO_ASSET_MSG: &str = "Asset not loaded";
 fn path_is_metadata(path: &Path) -> bool {
     let Some(ext) = path.extension().and_then(|ext| ext.to_str()) else {
@@ -268,29 +303,119 @@ fn path_is_metadata(path: &Path) -> bool {
 
 use metadata::*;
 mod metadata {
-    use serde::de::DeserializeSeed;
+    use serde::de::{DeserializeSeed, Error, Visitor};
 
     use super::*;
 
     pub struct MetadataLoadContext<'a> {
         pub server: &'a mut AssetServer,
+        pub dependencies: &'a mut Vec<Cid>,
         pub path: &'a Path,
         pub pack: Option<&'a str>,
         pub schema: Cow<'static, Schema>,
     }
 
-    impl<'a, 'de> DeserializeSeed<'de> for MetadataLoadContext<'a> {
-        type Value = LoadedAsset;
+    impl<'a: 'de, 'de> DeserializeSeed<'de> for MetadataLoadContext<'a> {
+        type Value = SchemaBox;
 
         fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where
             D: serde::Deserializer<'de>,
         {
-            match &self.schema.kind {
-                SchemaKind::Struct(_) => todo!(),
-                SchemaKind::Vec(_) => todo!(),
-                SchemaKind::Primitive(_) => todo!(),
-            }
+            Ok(match &self.schema.kind {
+                SchemaKind::Struct(s) => deserializer.deserialize_map(StructVisitor {
+                    ctx: &self,
+                    schema: s,
+                })?,
+                SchemaKind::Vec(v) => deserializer.deserialize_seq(SeqVisitor {
+                    ctx: &self,
+                    schema: v,
+                })?,
+                SchemaKind::Primitive(p) => PrimitiveLoader(p).deserialize(deserializer)?,
+            })
+        }
+    }
+
+    struct PrimitiveLoader<'a>(&'a Primitive);
+
+    impl<'a, 'de> DeserializeSeed<'de> for PrimitiveLoader<'a> {
+        type Value = SchemaBox;
+
+        fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            Ok(match self.0 {
+                Primitive::Bool => SchemaBox::new(bool::deserialize(deserializer)?),
+                Primitive::U8 => SchemaBox::new(u8::deserialize(deserializer)?),
+                Primitive::U16 => SchemaBox::new(u16::deserialize(deserializer)?),
+                Primitive::U32 => SchemaBox::new(u32::deserialize(deserializer)?),
+                Primitive::U64 => SchemaBox::new(u64::deserialize(deserializer)?),
+                Primitive::U128 => SchemaBox::new(u128::deserialize(deserializer)?),
+                Primitive::I8 => SchemaBox::new(i8::deserialize(deserializer)?),
+                Primitive::I16 => SchemaBox::new(i16::deserialize(deserializer)?),
+                Primitive::I32 => SchemaBox::new(i32::deserialize(deserializer)?),
+                Primitive::I64 => SchemaBox::new(i64::deserialize(deserializer)?),
+                Primitive::I128 => SchemaBox::new(i128::deserialize(deserializer)?),
+                Primitive::F32 => SchemaBox::new(f32::deserialize(deserializer)?),
+                Primitive::F64 => SchemaBox::new(f64::deserialize(deserializer)?),
+                Primitive::String => SchemaBox::new(String::deserialize(deserializer)?),
+                Primitive::Opaque { .. } => {
+                    return Err(D::Error::custom(
+                        "Cannot deserialize opaque types from metadata files.",
+                    ));
+                }
+            })
+        }
+    }
+
+    struct StructVisitor<'a, 'b> {
+        pub ctx: &'b MetadataLoadContext<'a>,
+        pub schema: &'b StructSchema,
+    }
+
+    impl<'a, 'b, 'de> Visitor<'de> for StructVisitor<'a, 'b> {
+        type Value = SchemaBox;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(
+                formatter,
+                "asset metadata matching the schema: {:#?}",
+                self.schema
+            )
+        }
+
+        fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::MapAccess<'de>,
+        {
+            // let mut fields = HashMap::with_capacity(map.size_hint().unwrap_or(0));
+
+            todo!();
+        }
+    }
+
+    struct SeqVisitor<'a, 'b> {
+        pub ctx: &'b MetadataLoadContext<'a>,
+        pub schema: &'b Schema,
+    }
+
+    impl<'a, 'b, 'de> Visitor<'de> for SeqVisitor<'a, 'b> {
+        type Value = SchemaBox;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(
+                formatter,
+                "asset metadata matching the schema: {:#?}",
+                self.schema
+            )
+        }
+
+        fn visit_seq<A>(self, _seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::SeqAccess<'de>,
+        {
+            todo!("Implement custom Vec type that can store dynamic layout data.");
         }
     }
 }

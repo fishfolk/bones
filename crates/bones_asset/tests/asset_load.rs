@@ -47,15 +47,24 @@ fn asset_load1() -> anyhow::Result<()> {
 
     // Register our GameMeta type as a core schema with the "game" file extension, so that all
     // `.game.yaml` files will be loaded with the GameMeta schema.
-    asset_server.register_core_schema::<GameMeta>("game");
-    // Do the same for our atlas and player metadata
-    asset_server.register_core_schema::<PlayerMeta>("player");
-    asset_server.register_core_schema::<AtlasMeta>("atlas");
+    asset_server.register_core_schema::<u32>("game");
+    // // Do the same for our atlas and player metadata
+    // asset_server.register_core_schema::<PlayerMeta>("player");
+    // asset_server.register_core_schema::<AtlasMeta>("atlas");
 
     // Load all of the assets
     asset_server.load_assets()?;
 
-    panic!();
+    let data: &u32 = asset_server
+        .store
+        .assets
+        .values()
+        .next()
+        .unwrap()
+        .data
+        .cast();
+
+    assert_eq!(*data, 42);
 
     Ok(())
 }

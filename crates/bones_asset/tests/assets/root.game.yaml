@@ -1,3 +1,4 @@
-players:
-  - ./players/jane/jane.player.yaml
-  - ./players/john/john.player.yaml
+42
+# players:
+#   - ./players/jane/jane.player.yaml
+#   - ./players/john/john.player.yaml
