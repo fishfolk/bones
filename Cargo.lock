@@ -463,7 +463,7 @@ checksum = "bed2f74687ccf13046c0f8e3b00dc61d7e656877b4a1380cf04635bb74d8e586"
 dependencies = [
  "async-channel",
  "bevy_ecs_macros",
- "bevy_ptr",
+ "bevy_ptr 0.10.1",
  "bevy_reflect",
  "bevy_tasks",
  "bevy_utils",
@@ -545,7 +545,7 @@ dependencies = [
  "bevy_log",
  "bevy_math",
  "bevy_pbr",
- "bevy_ptr",
+ "bevy_ptr 0.10.1",
  "bevy_reflect",
  "bevy_render",
  "bevy_sprite",
@@ -643,13 +643,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c4b88451d4c5a353bff67dbaa937b6886efd26ae114769c17f2b35099c7a4de"
 
 [[package]]
+name = "bevy_ptr"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c74fcf37593a0053f539c3b088f34f268cbefed031d8eb8ff0fb10d175160242"
+
+[[package]]
 name = "bevy_reflect"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9fc3979471890e336f3ba87961ef3ecd45c331cf2cb2f582c885e541af228b48"
 dependencies = [
  "bevy_math",
- "bevy_ptr",
+ "bevy_ptr 0.10.1",
  "bevy_reflect_derive",
  "bevy_utils",
  "downcast-rs",
@@ -1128,6 +1134,7 @@ name = "bones_utils"
 version = "0.1.0"
 dependencies = [
  "ahash 0.8.3",
+ "bevy_ptr 0.11.0",
  "hashbrown 0.14.0",
  "serde",
  "ulid",

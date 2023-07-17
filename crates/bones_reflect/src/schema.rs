@@ -11,6 +11,9 @@ use crate::prelude::*;
 mod ptr;
 pub use ptr::*;
 
+#[cfg(feature = "serde")]
+mod ser_de;
+
 mod std_impls;
 
 /// Trait implemented for types that have a [`Schema`].
@@ -93,45 +96,6 @@ pub unsafe trait HasSchema {
     }
 }
 
-/// Container for a schema that is nested in another schema.
-#[derive(Debug, Clone)]
-pub enum NestedSchema {
-    /// The nested schema is a static reference to a schema.
-    Static(&'static Schema),
-    /// The nested schema is an owned box of a schema.
-    Boxed(Box<Schema>),
-}
-
-impl From<&'static Schema> for NestedSchema {
-    fn from(s: &'static Schema) -> Self {
-        Self::Static(s)
-    }
-}
-impl From<Schema> for NestedSchema {
-    fn from(s: Schema) -> Self {
-        Self::Boxed(Box::new(s))
-    }
-}
-impl std::ops::Deref for NestedSchema {
-    type Target = Schema;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            NestedSchema::Static(s) => s,
-            NestedSchema::Boxed(s) => s,
-        }
-    }
-}
-impl<'de> Deserialize<'de> for NestedSchema {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = Schema::deserialize(deserializer)?;
-        Ok(NestedSchema::Boxed(Box::new(s)))
-    }
-}
-
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
@@ -148,16 +112,6 @@ pub struct Schema {
     /// The [`Ulid`] key is arbitrary, allows different types to add different kinds of data to the
     /// schema.
     pub type_data: HashMap<Ulid, SchemaBox>,
-}
-
-impl From<SchemaKind> for Schema {
-    fn from(kind: SchemaKind) -> Self {
-        Self {
-            type_id: None,
-            kind,
-            type_data: Default::default(),
-        }
-    }
 }
 
 /// A schema describes the data layout of a type, to enable dynamic access to the type's data
@@ -180,84 +134,22 @@ pub enum SchemaKind {
     Primitive(Primitive),
 }
 
-impl Schema {
-    /// Get the layout of the type represented by the schema.
-    pub fn layout(&self) -> Layout {
-        let mut layout: Option<Layout> = None;
+/// Container for a schema that is nested in another schema.
+#[derive(Debug, Clone)]
+pub enum NestedSchema {
+    /// The nested schema is a static reference to a schema.
+    Static(&'static Schema),
+    /// The nested schema is an owned box of a schema.
+    Boxed(Box<Schema>),
+}
 
-        let extend_layout = |layout: &mut Option<Layout>, l| {
-            if let Some(layout) = layout {
-                let (new_layout, _offset) = layout.extend(l).unwrap();
-                *layout = new_layout;
-            } else {
-                *layout = Some(l)
-            }
-        };
-
-        match &self.kind {
-            SchemaKind::Struct(s) => {
-                for field in &s.fields {
-                    let field_layout = field.schema.layout();
-                    extend_layout(&mut layout, field_layout);
-                }
-            }
-            SchemaKind::Vec(_) => extend_layout(&mut layout, Layout::new::<Vec<u8>>()),
-            SchemaKind::Primitive(p) => extend_layout(
-                &mut layout,
-                match p {
-                    Primitive::Bool => Layout::new::<bool>(),
-                    Primitive::U8 => Layout::new::<u8>(),
-                    Primitive::U16 => Layout::new::<u16>(),
-                    Primitive::U32 => Layout::new::<u32>(),
-                    Primitive::U64 => Layout::new::<u64>(),
-                    Primitive::U128 => Layout::new::<u128>(),
-                    Primitive::I8 => Layout::new::<i8>(),
-                    Primitive::I16 => Layout::new::<i16>(),
-                    Primitive::I32 => Layout::new::<i32>(),
-                    Primitive::I64 => Layout::new::<i64>(),
-                    Primitive::I128 => Layout::new::<i128>(),
-                    Primitive::F32 => Layout::new::<f32>(),
-                    Primitive::F64 => Layout::new::<f64>(),
-                    Primitive::String => Layout::new::<String>(),
-                    Primitive::Opaque { size, align } => {
-                        Layout::from_size_align(*size, *align).unwrap()
-                    }
-                },
-            ),
-        }
-
-        layout.unwrap().pad_to_align()
-    }
-
-    /// Recursively checks whether or not the schema contains any [`Opaque`][Primitive::Opaque] primitives.
-    pub fn has_opaque(&self) -> bool {
-        match &self.kind {
-            SchemaKind::Struct(s) => s.fields.iter().any(|field| field.schema.has_opaque()),
-            SchemaKind::Vec(v) => v.has_opaque(),
-            SchemaKind::Primitive(p) => matches!(p, Primitive::Opaque { .. }),
-        }
-    }
-
-    /// Returns whether or not this schema represents the same memory layout as the other schema,
-    /// and you can safely cast a pointer to one to a pointer to the other.
-    pub fn represents(&self, other: &Schema) -> bool {
-        // If these have equal Rust type IDs, then they are the same.
-        (self.type_id.is_some() && other.type_id.is_some() && self.type_id == other.type_id)
-            // If the schemas don't have any opaque fields, and are equal to each-other, then they
-            // have the same representation.
-            || (!self.has_opaque() && !other.has_opaque() && {
-                match (&self.kind, &other.kind) {
-                    (SchemaKind::Struct(s1), SchemaKind::Struct(s2)) => {
-                        s1.fields.len() == s2.fields.len() &&
-                            s1.fields.iter().zip(s2.fields.iter())
-                            .all(|(f1, f2)| f1.schema.represents(&f2.schema))
-                    },
-                    (SchemaKind::Vec(v1), SchemaKind::Vec(v2)) => v1.represents(v2),
-                    (SchemaKind::Primitive(p1), SchemaKind::Primitive(p2)) => p1 == p2,
-                    _ => false
-                }
-            })
-    }
+/// Layout information about the schema.
+#[derive(Debug, Clone)]
+pub struct SchemaLayoutInfo {
+    /// The layout of the type.
+    pub layout: Layout,
+    /// The field offsets if this is a struct schema.
+    pub field_offsets: Vec<(Option<Cow<'static, str>>, usize)>,
 }
 
 /// Deserialize able struct for schema files.
@@ -282,60 +174,6 @@ pub struct SchemaFile {
 pub struct StructSchema {
     /// The fields in the struct, in the order they are defined.
     pub fields: Vec<StructField>,
-}
-
-#[cfg(feature = "serde")]
-mod ser_de {
-    use super::*;
-
-    impl<'de> serde::Deserialize<'de> for StructSchema {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: serde::Deserializer<'de>,
-        {
-            deserializer.deserialize_any(StructSchemaVisitor)
-        }
-    }
-
-    struct StructSchemaVisitor;
-    impl<'de> serde::de::Visitor<'de> for StructSchemaVisitor {
-        type Value = StructSchema;
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(formatter, "a struct definition")
-        }
-
-        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: serde::de::SeqAccess<'de>,
-        {
-            let mut struct_schema = StructSchema {
-                fields: Vec::with_capacity(seq.size_hint().unwrap_or(0)),
-            };
-            while let Some(schema) = seq.next_element()? {
-                struct_schema
-                    .fields
-                    .push(StructField { name: None, schema });
-            }
-            Ok(struct_schema)
-        }
-
-        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-        where
-            A: serde::de::MapAccess<'de>,
-        {
-            let mut struct_schema = StructSchema {
-                fields: Vec::with_capacity(map.size_hint().unwrap_or(0)),
-            };
-            while let Some((name, schema)) = map.next_entry()? {
-                struct_schema.fields.push(StructField {
-                    name: Some(name),
-                    schema,
-                });
-            }
-            Ok(struct_schema)
-        }
-    }
 }
 
 /// A field in a [`StructSchema`].
@@ -388,4 +226,127 @@ pub enum Primitive {
         /// The alignment of the data.
         align: usize,
     },
+}
+
+impl Schema {
+    /// Get the layout of the type represented by the schema.
+    pub fn layout_info(&self) -> SchemaLayoutInfo {
+        let mut layout: Option<Layout> = None;
+        let mut field_offsets = Vec::new();
+        let mut current_offset = 0;
+
+        let extend_layout = |layout: &mut Option<Layout>, l| {
+            if let Some(layout) = layout {
+                let (new_layout, offset) = layout.extend(l).unwrap();
+                *layout = new_layout;
+                offset
+            } else {
+                *layout = Some(l);
+                0
+            }
+        };
+
+        match &self.kind {
+            SchemaKind::Struct(s) => {
+                for field in &s.fields {
+                    let field_layout_info = field.schema.layout_info();
+                    current_offset += extend_layout(&mut layout, field_layout_info.layout);
+                    field_offsets.push((field.name.clone(), current_offset));
+                }
+            }
+            SchemaKind::Vec(_) => {
+                extend_layout(&mut layout, Layout::new::<Vec<u8>>());
+            }
+            SchemaKind::Primitive(p) => {
+                extend_layout(
+                    &mut layout,
+                    match p {
+                        Primitive::Bool => Layout::new::<bool>(),
+                        Primitive::U8 => Layout::new::<u8>(),
+                        Primitive::U16 => Layout::new::<u16>(),
+                        Primitive::U32 => Layout::new::<u32>(),
+                        Primitive::U64 => Layout::new::<u64>(),
+                        Primitive::U128 => Layout::new::<u128>(),
+                        Primitive::I8 => Layout::new::<i8>(),
+                        Primitive::I16 => Layout::new::<i16>(),
+                        Primitive::I32 => Layout::new::<i32>(),
+                        Primitive::I64 => Layout::new::<i64>(),
+                        Primitive::I128 => Layout::new::<i128>(),
+                        Primitive::F32 => Layout::new::<f32>(),
+                        Primitive::F64 => Layout::new::<f64>(),
+                        Primitive::String => Layout::new::<String>(),
+                        Primitive::Opaque { size, align } => {
+                            Layout::from_size_align(*size, *align).unwrap()
+                        }
+                    },
+                );
+            }
+        }
+
+        SchemaLayoutInfo {
+            layout: layout.unwrap().pad_to_align(),
+            field_offsets,
+        }
+    }
+
+    /// Recursively checks whether or not the schema contains any [`Opaque`][Primitive::Opaque] primitives.
+    pub fn has_opaque(&self) -> bool {
+        match &self.kind {
+            SchemaKind::Struct(s) => s.fields.iter().any(|field| field.schema.has_opaque()),
+            SchemaKind::Vec(v) => v.has_opaque(),
+            SchemaKind::Primitive(p) => matches!(p, Primitive::Opaque { .. }),
+        }
+    }
+
+    /// Returns whether or not this schema represents the same memory layout as the other schema,
+    /// and you can safely cast a pointer to one to a pointer to the other.
+    pub fn represents(&self, other: &Schema) -> bool {
+        // If these have equal Rust type IDs, then they are the same.
+        (self.type_id.is_some() && other.type_id.is_some() && self.type_id == other.type_id)
+            // If the schemas don't have any opaque fields, and are equal to each-other, then they
+            // have the same representation.
+            || (!self.has_opaque() && !other.has_opaque() && {
+                match (&self.kind, &other.kind) {
+                    (SchemaKind::Struct(s1), SchemaKind::Struct(s2)) => {
+                        s1.fields.len() == s2.fields.len() &&
+                            s1.fields.iter().zip(s2.fields.iter())
+                            .all(|(f1, f2)| f1.schema.represents(&f2.schema))
+                    },
+                    (SchemaKind::Vec(v1), SchemaKind::Vec(v2)) => v1.represents(v2),
+                    (SchemaKind::Primitive(p1), SchemaKind::Primitive(p2)) => p1 == p2,
+                    _ => false
+                }
+            })
+    }
+}
+
+impl From<SchemaKind> for Schema {
+    fn from(kind: SchemaKind) -> Self {
+        Self {
+            type_id: None,
+            kind,
+            type_data: Default::default(),
+        }
+    }
+}
+
+impl From<&'static Schema> for NestedSchema {
+    fn from(s: &'static Schema) -> Self {
+        Self::Static(s)
+    }
+}
+impl From<Schema> for NestedSchema {
+    fn from(s: Schema) -> Self {
+        Self::Boxed(Box::new(s))
+    }
+}
+impl std::ops::Deref for NestedSchema {
+    type Target = Schema;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            NestedSchema::Static(s) => s,
+            NestedSchema::Boxed(s) => s,
+        }
+    }
 }

@@ -6,6 +6,7 @@
 #![warn(missing_docs)]
 #![warn(clippy::undocumented_unsafe_blocks)]
 
+pub use bevy_ptr::*;
 pub use hashbrown;
 use std::hash::BuildHasherDefault;
 

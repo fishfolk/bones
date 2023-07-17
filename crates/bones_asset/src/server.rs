@@ -322,16 +322,36 @@ mod metadata {
         where
             D: serde::Deserializer<'de>,
         {
+            if self.schema.has_opaque() {
+                return Err(D::Error::custom(
+                    "Cannot deserialize schemas containing opaque types.",
+                ));
+            }
+
+            // Deserialize primitive types differently
+            if let SchemaKind::Primitive(p) = &self.schema.kind {
+                return PrimitiveLoader(p).deserialize(deserializer);
+            }
+
+            // Allocate the object.
+            let layout_info = self.schema.layout_info();
+            assert_ne!(layout_info.layout.size(), 0, "Layout size cannot be zero");
+            // SAFE: checked layout size is not zero above
+            let ptr = unsafe { std::alloc::alloc(layout_info.layout) };
+
             Ok(match &self.schema.kind {
                 SchemaKind::Struct(s) => deserializer.deserialize_map(StructVisitor {
+                    schema: &self.schema,
+                    layout_info: &layout_info,
                     ctx: &self,
-                    schema: s,
+                    struct_schema: s,
+                    ptr,
                 })?,
                 SchemaKind::Vec(v) => deserializer.deserialize_seq(SeqVisitor {
                     ctx: &self,
                     schema: v,
                 })?,
-                SchemaKind::Primitive(p) => PrimitiveLoader(p).deserialize(deserializer)?,
+                SchemaKind::Primitive(_) => unreachable!("Handled above"),
             })
         }
     }
@@ -360,18 +380,20 @@ mod metadata {
                 Primitive::F32 => SchemaBox::new(f32::deserialize(deserializer)?),
                 Primitive::F64 => SchemaBox::new(f64::deserialize(deserializer)?),
                 Primitive::String => SchemaBox::new(String::deserialize(deserializer)?),
-                Primitive::Opaque { .. } => {
-                    return Err(D::Error::custom(
-                        "Cannot deserialize opaque types from metadata files.",
-                    ));
-                }
+                Primitive::Opaque { .. } => panic!(
+                    "Cannot deserialize opaque types from metadata files.\
+                        This error should have been handled above"
+                ),
             })
         }
     }
 
     struct StructVisitor<'a, 'b> {
         pub ctx: &'b MetadataLoadContext<'a>,
-        pub schema: &'b StructSchema,
+        pub schema: &'b Schema,
+        pub struct_schema: &'b StructSchema,
+        pub layout_info: &'b SchemaLayoutInfo,
+        pub ptr: *mut u8,
     }
 
     impl<'a, 'b, 'de> Visitor<'de> for StructVisitor<'a, 'b> {
@@ -381,7 +403,7 @@ mod metadata {
             write!(
                 formatter,
                 "asset metadata matching the schema: {:#?}",
-                self.schema
+                self.struct_schema
             )
         }
 
@@ -389,8 +411,6 @@ mod metadata {
         where
             A: serde::de::MapAccess<'de>,
         {
-            // let mut fields = HashMap::with_capacity(map.size_hint().unwrap_or(0));
-
             todo!();
         }
     }

@@ -1,5 +1,6 @@
-use bones_reflect::schema::{HasSchema, SchemaBox};
+use bones_reflect::schema::{HasSchema, SchemaBox, SchemaWalkerMut};
 use bones_reflect_macros::HasSchema;
+use bones_utils::PtrMut;
 use glam::{Vec2, Vec3};
 
 #[derive(HasSchema, Debug)]
@@ -92,4 +93,24 @@ fn cast_not_matching_fails_ref() {
 fn cast_not_matching_fails_mut() {
     let mut a = Vec3::ONE;
     a.cast_mut::<DataA>();
+}
+
+#[test]
+fn double_borrow() {
+    unsafe {
+        let schema = DataA::schema();
+        let mut data = DataA { x: 3.0, y: 4.0 };
+        let ptr = PtrMut::from(&mut data);
+        let mut walker: SchemaWalkerMut<'_, '_, 'static> =
+            SchemaWalkerMut::from_ptr_schema(ptr, schema);
+
+        let mut field: SchemaWalkerMut<'_, '_, '_> = walker.get_field("x").unwrap();
+
+        walker.get_field("y").unwrap();
+
+        // let f2 = &mut field;
+
+        // dbg!(f2);
+        todo!("Implement proper test.");
+    }
 }

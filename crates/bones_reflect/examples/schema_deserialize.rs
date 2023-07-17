@@ -11,5 +11,5 @@ fn main() {
     let SchemaFile { schema } = serde_yaml::from_str(&schema_yaml).unwrap();
 
     dbg!(&schema);
-    dbg!(schema.layout());
+    dbg!(schema.layout_info());
 }

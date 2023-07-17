@@ -23,7 +23,7 @@ impl Cid {
         use sha2::Digest;
         let pre_hash = self.0;
         let mut hasher = sha2::Sha256::new();
-        hasher.update(&pre_hash);
+        hasher.update(pre_hash);
         hasher.update(bytes);
         let result = hasher.finalize();
         self.0.copy_from_slice(&result);

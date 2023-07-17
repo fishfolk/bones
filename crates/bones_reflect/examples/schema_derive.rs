@@ -25,5 +25,5 @@ struct Player {
 fn main() {
     dbg!(TupleExample::schema());
     dbg!(Player::schema());
-    dbg!(Player::schema().layout());
+    dbg!(Player::schema().layout_info());
 }
