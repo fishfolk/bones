@@ -1,6 +1,5 @@
-use bones_reflect::schema::{HasSchema, SchemaBox, SchemaWalkerMut};
+use bones_reflect::schema::{HasSchema, SchemaBox, SchemaPtr, SchemaPtrMut};
 use bones_reflect_macros::HasSchema;
-use bones_utils::PtrMut;
 use glam::{Vec2, Vec3};
 
 #[derive(HasSchema, Debug)]
@@ -13,6 +12,13 @@ struct DataA {
 #[derive(HasSchema, Debug)]
 #[repr(C)]
 struct DataB(f32, f32);
+
+#[derive(HasSchema, Debug)]
+#[repr(C)]
+struct DataC {
+    a: DataA,
+    b: DataB,
+}
 
 #[test]
 fn cast_glam() {
@@ -96,21 +102,49 @@ fn cast_not_matching_fails_mut() {
 }
 
 #[test]
-fn double_borrow() {
-    unsafe {
-        let schema = DataA::schema();
-        let mut data = DataA { x: 3.0, y: 4.0 };
-        let ptr = PtrMut::from(&mut data);
-        let mut walker: SchemaWalkerMut<'_, '_, 'static> =
-            SchemaWalkerMut::from_ptr_schema(ptr, schema);
+fn ptr_fields() {
+    let mut data = DataC {
+        a: DataA { x: 1.0, y: 2.0 },
+        b: DataB(3.0, 4.0),
+    };
 
-        let mut field: SchemaWalkerMut<'_, '_, '_> = walker.get_field("x").unwrap();
+    {
+        let ptr = SchemaPtr::new(&data);
 
-        walker.get_field("y").unwrap();
+        let a = ptr.field("a");
+        let x = a.field("x").cast::<f32>();
+        let y = a.field("y").cast::<f32>();
+        let b = ptr.field("b");
+        let b0 = b.field(0).cast::<f32>();
+        let b1 = b.field(1).cast::<f32>();
 
-        // let f2 = &mut field;
-
-        // dbg!(f2);
-        todo!("Implement proper test.");
+        assert_eq!(*x, 1.0);
+        assert_eq!(*y, 2.0);
+        assert_eq!(*b0, 3.0);
+        assert_eq!(*b1, 4.0);
     }
+
+    {
+        let mut ptr = SchemaPtrMut::new(&mut data);
+
+        let mut a = ptr.field("a");
+        let x = a.field("x").cast_mut::<f32>();
+        assert_eq!(*x, 1.0);
+        *x *= 3.0;
+        let y = a.field("y").cast_mut::<f32>();
+        assert_eq!(*y, 2.0);
+        *y *= 3.0;
+        let mut b = ptr.field("b");
+        let b0 = b.field(0).cast_mut::<f32>();
+        assert_eq!(*b0, 3.0);
+        *b0 *= 3.0;
+        let b1 = b.field(1).cast_mut::<f32>();
+        assert_eq!(*b1, 4.0);
+        *b1 *= 3.0
+    }
+
+    assert_eq!(data.a.x, 3.0);
+    assert_eq!(data.a.y, 6.0);
+    assert_eq!(data.b.0, 9.0);
+    assert_eq!(data.b.1, 12.0);
 }

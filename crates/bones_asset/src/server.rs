@@ -392,7 +392,7 @@ mod metadata {
         pub ctx: &'b MetadataLoadContext<'a>,
         pub schema: &'b Schema,
         pub struct_schema: &'b StructSchema,
-        pub layout_info: &'b SchemaLayoutInfo,
+        pub layout_info: &'b SchemaLayoutInfo<'b>,
         pub ptr: *mut u8,
     }
 

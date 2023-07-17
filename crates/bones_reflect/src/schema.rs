@@ -145,11 +145,11 @@ pub enum NestedSchema {
 
 /// Layout information about the schema.
 #[derive(Debug, Clone)]
-pub struct SchemaLayoutInfo {
+pub struct SchemaLayoutInfo<'a> {
     /// The layout of the type.
     pub layout: Layout,
     /// The field offsets if this is a struct schema.
-    pub field_offsets: Vec<(Option<Cow<'static, str>>, usize)>,
+    pub field_offsets: Vec<(Option<&'a str>, usize)>,
 }
 
 /// Deserialize able struct for schema files.
@@ -230,7 +230,7 @@ pub enum Primitive {
 
 impl Schema {
     /// Get the layout of the type represented by the schema.
-    pub fn layout_info(&self) -> SchemaLayoutInfo {
+    pub fn layout_info(&self) -> SchemaLayoutInfo<'_> {
         let mut layout: Option<Layout> = None;
         let mut field_offsets = Vec::new();
         let mut current_offset = 0;
@@ -251,7 +251,7 @@ impl Schema {
                 for field in &s.fields {
                     let field_layout_info = field.schema.layout_info();
                     current_offset += extend_layout(&mut layout, field_layout_info.layout);
-                    field_offsets.push((field.name.clone(), current_offset));
+                    field_offsets.push((field.name.as_deref(), current_offset));
                 }
             }
             SchemaKind::Vec(_) => {
