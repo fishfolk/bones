@@ -143,7 +143,7 @@ impl<'pointer, 'schema, 'parent> SchemaPtrMut<'pointer, 'schema, 'parent> {
     ///
     /// Panics if the schema of the pointer does not match that of the type you are casting to.
     #[track_caller]
-    pub fn cast_mut<T: HasSchema + 'static>(self) -> &'pointer mut T {
+    pub fn cast_mut<T: HasSchema + 'static>(&mut self) -> SchemaPtrMutCast<'_, T> {
         self.try_cast_mut().expect(SchemaMismatchError::MSG)
     }
 
@@ -153,13 +153,17 @@ impl<'pointer, 'schema, 'parent> SchemaPtrMut<'pointer, 'schema, 'parent> {
     ///
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
     pub fn try_cast_mut<T: HasSchema>(
-        self,
-    ) -> Result<&'pointer mut T, SchemaPtrMutMismatchError<'pointer, 'schema, 'parent>> {
+        &mut self,
+    ) -> Result<SchemaPtrMutCast<T>, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
             // SAFE: the schemas have the same memory representation.
-            Ok(unsafe { self.ptr.deref_mut() })
+            let ptr = self.ptr.as_ptr();
+            Ok(SchemaPtrMutCast {
+                ptr,
+                parent_lifetime: PhantomData,
+            })
         } else {
-            Err(SchemaPtrMutMismatchError(self))
+            Err(SchemaMismatchError)
         }
     }
 
@@ -269,6 +273,25 @@ impl<'pointer, 'schema, 'parent> SchemaPtrMut<'pointer, 'schema, 'parent> {
     /// Get the [`Schema`] for the pointer.
     pub fn schema(&self) -> &Schema {
         &self.schema
+    }
+}
+
+/// A casted borrow of a [`SchemaPtrMut`].
+pub struct SchemaPtrMutCast<'parent, T> {
+    ptr: *mut u8,
+    parent_lifetime: PhantomData<&'parent mut T>,
+}
+
+impl<'a, T> std::ops::Deref for SchemaPtrMutCast<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*(self.ptr as *const u8 as *const T) }
+    }
+}
+impl<'a, T> std::ops::DerefMut for SchemaPtrMutCast<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *(self.ptr as *mut T) }
     }
 }
 
@@ -414,7 +437,7 @@ impl SchemaBox {
     ///
     /// - You must insure that the pointer is valid for the given `layout`, `schem`, `drop_fn`, and
     /// `clone_fn`.
-    pub unsafe fn from_raw_parts<'a, S>(
+    pub unsafe fn from_raw_parts<S>(
         ptr: OwningPtr<'static>,
         schema: S,
         drop_fn: unsafe extern "C" fn(*mut u8),
