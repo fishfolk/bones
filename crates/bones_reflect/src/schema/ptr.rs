@@ -1,4 +1,4 @@
-use bones_utils::{OwningPtr, Ptr, PtrMut};
+use bones_utils::{Aligned, OwningPtr, Ptr, PtrMut};
 
 use std::{marker::PhantomData, ptr::NonNull};
 
@@ -143,7 +143,7 @@ impl<'pointer, 'schema, 'parent> SchemaPtrMut<'pointer, 'schema, 'parent> {
     ///
     /// Panics if the schema of the pointer does not match that of the type you are casting to.
     #[track_caller]
-    pub fn cast_mut<T: HasSchema + 'static>(&mut self) -> SchemaPtrMutCast<'_, T> {
+    pub fn cast_mut<T: HasSchema + 'static>(&mut self) -> &mut T {
         self.try_cast_mut().expect(SchemaMismatchError::MSG)
     }
 
@@ -152,16 +152,32 @@ impl<'pointer, 'schema, 'parent> SchemaPtrMut<'pointer, 'schema, 'parent> {
     /// # Errors
     ///
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
-    pub fn try_cast_mut<T: HasSchema>(
-        &mut self,
-    ) -> Result<SchemaPtrMutCast<T>, SchemaMismatchError> {
+    pub fn try_cast_mut<T: HasSchema>(&mut self) -> Result<&mut T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
-            // SAFE: the schemas have the same memory representation.
-            let ptr = self.ptr.as_ptr();
-            Ok(SchemaPtrMutCast {
-                ptr,
-                parent_lifetime: PhantomData,
-            })
+            // // SAFE: the schemas have the same memory representation.
+            // let ptr = self.ptr.as_ptr();
+            // Ok(SchemaPtrMutCast {
+            //     ptr,
+            //     parent_lifetime: PhantomData,
+            // })
+
+            // SOUND: here we clone our mutable pointer, and then offset it according to the
+            // field. This is dangerous, but sound because we make sure that this
+            // `get_field` method returns a `SchemaWalkerMut` with a virtual mutable borrow
+            // to this one.
+            //
+            // This means that Rust will not let anybody use this `SchemaWalkerMut`, until
+            // the other one is dropped. That means all we have to do is not use our
+            // `self.ptr` while the `offset_ptr` exists.
+            //
+            // Additionally, the `new_unchecked` is sound because our pointer cannot be null
+            // because it comes out of a `PtrMut`.
+            unsafe {
+                let copied_ptr: PtrMut<'_, Aligned> =
+                    PtrMut::new(NonNull::new_unchecked(self.ptr.as_ptr()));
+
+                Ok(copied_ptr.deref_mut())
+            }
         } else {
             Err(SchemaMismatchError)
         }
@@ -276,25 +292,6 @@ impl<'pointer, 'schema, 'parent> SchemaPtrMut<'pointer, 'schema, 'parent> {
     }
 }
 
-/// A casted borrow of a [`SchemaPtrMut`].
-pub struct SchemaPtrMutCast<'parent, T> {
-    ptr: *mut u8,
-    parent_lifetime: PhantomData<&'parent mut T>,
-}
-
-impl<'a, T> std::ops::Deref for SchemaPtrMutCast<'a, T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*(self.ptr as *const u8 as *const T) }
-    }
-}
-impl<'a, T> std::ops::DerefMut for SchemaPtrMutCast<'a, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { &mut *(self.ptr as *mut T) }
-    }
-}
-
 /// A owning, type-erased [`Box`]-like container.
 pub struct SchemaBox {
     ptr: OwningPtr<'static>,
@@ -392,6 +389,23 @@ impl SchemaBox {
             unsafe { Ok(self.ptr.as_mut().deref_mut()) }
         } else {
             Err(SchemaMismatchError)
+        }
+    }
+
+    /// Borrow this as a [`SchemaPtr`].
+    pub fn as_ref(&self) -> SchemaPtr<'_, '_> {
+        SchemaPtr {
+            ptr: self.ptr.as_ref(),
+            schema: Cow::Borrowed(&self.schema),
+        }
+    }
+
+    /// Borrow this as a [`SchemaPtrMut`].
+    pub fn as_mut(&mut self) -> SchemaPtrMut<'_, '_, '_> {
+        SchemaPtrMut {
+            ptr: self.ptr.as_mut(),
+            schema: Cow::Borrowed(&self.schema),
+            parent_lifetime: PhantomData,
         }
     }
 
