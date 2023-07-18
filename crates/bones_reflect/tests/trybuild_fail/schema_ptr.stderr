@@ -1,0 +1,11 @@
+error[E0499]: cannot borrow `a` as mutable more than once at a time
+  --> tests/trybuild_fail/schema_ptr.rs:32:17
+   |
+29 |     let mut x = a.field("x");
+   |                 ------------ first mutable borrow occurs here
+...
+32 |     let mut y = a.field("y");
+   |                 ^^^^^^^^^^^^ second mutable borrow occurs here
+...
+37 |     dbg!(x);
+   |          - first borrow later used here

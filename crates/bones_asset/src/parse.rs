@@ -1,5 +1,22 @@
 use crate::prelude::*;
 
+/// Deserializeable struct for schema files.
+///
+/// This struct is required because you can't use `serde(with = "..")` directly on the [`Schema`]
+/// enum to make it use nested struct syntax instead of YAML tags for enum representation. Avoiding
+/// tags is necessary because we use nested enums such as `vec: primitive: string`.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+pub struct SchemaFile {
+    /// The schema defined in the file
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_yaml::with::singleton_map_recursive")
+    )]
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub schema: Schema,
+}
+
 impl FromStr for AssetPackReq {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {

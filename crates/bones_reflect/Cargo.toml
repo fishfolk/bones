@@ -9,22 +9,19 @@ version     = "0.1.0"
 
 [features]
 # TODO: make these non-default ( I think )
-default = ["serde", "dep:serde_yaml", "glam"]
-serde   = ["dep:serde", "ulid/serde"]
+default = ["serde", "glam"]
+serde   = ["dep:serde", "ulid/serde", "bones_utils/serde"]
 
 [dependencies]
 bones_reflect_macros = { version = "0.1", path = "./macros" }
 bones_utils          = { version = "0.1", path = "../bones_utils" }
+ulid                 = { version = "1.0" }
+paste                = "1.0"
 
-downcast-rs = "1.2"
+# Optional deps
 glam        = { version = "0.23", optional = true }
-hashbrown   = { version = "0.14", features = ["serde"] }
-parking_lot = "0.12.1"
-paste       = "1.0"
 serde       = { version = "1.0", features = ["derive"], optional = true }
-serde_yaml  = { version = "0.9", optional = true }
-ulid        = { version = "1.0" }
 
 [dev-dependencies]
-# bones_bevy_utils = { version = "^0.2.0", path = "../bones_bevy_utils" }
-# bones_lib        = { version = "^0.2.0", path = "../../", features = ["bevy"] }
+serde_yaml  = "0.9"
+trybuild = "1.0"
