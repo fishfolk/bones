@@ -49,9 +49,37 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     let name = input.name().expect("Type must have a name");
     let schema_mod = quote!(::bones_reflect::schema);
 
-    if !input.attributes().iter().any(|attr| {
-        &attr.path[0].to_string() == "repr" && &attr.value.get_value_tokens()[0].to_string() == "C"
-    }) {
+    let is_opaque = input
+        .attributes()
+        .iter()
+        .any(|attr| quote!(#attr).to_string() == "#[schema(opaque)]");
+    if is_opaque {
+        return quote! {
+            unsafe impl #schema_mod::HasSchema for #name {
+                fn schema() -> &'static #schema_mod::Schema {
+                    static S: ::std::sync::OnceLock<#schema_mod::Schema> = ::std::sync::OnceLock::new();
+                    S.get_or_init(|| {
+                        let layout = std::alloc::Layout::new::<Self>();
+                        #schema_mod::Schema {
+                            type_id: Some(std::any::TypeId::of::<Self>()),
+                            kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
+                                size: layout.size(),
+                                align: layout.align(),
+                            }),
+                            type_data: Default::default(),
+                        }
+                    })
+                }
+            }
+        }
+        .into();
+    }
+
+    if !input
+        .attributes()
+        .iter()
+        .any(|attr| quote!(#attr).to_string() == "#[repr(C)]")
+    {
         throw!(
             input.name(),
             "You must have a `#[repr(C)]` annotation on your struct to derive `HasSchema`"

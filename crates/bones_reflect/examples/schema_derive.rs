@@ -22,8 +22,15 @@ struct Player {
     fancier: Vec<Vec<TupleExample>>,
 }
 
+#[derive(HasSchema)]
+#[schema(opaque)] // An entirely opaque type
+struct OpaqueType {
+    data: u32,
+}
+
 fn main() {
     dbg!(TupleExample::schema());
     dbg!(Player::schema());
     dbg!(Player::schema().layout_info());
+    dbg!(OpaqueType::schema());
 }
