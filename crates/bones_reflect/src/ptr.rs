@@ -314,7 +314,17 @@ impl std::fmt::Debug for SchemaBox {
 
 impl Clone for SchemaBox {
     fn clone(&self) -> Self {
-        let clone_fn = self.schema.type_data.get::<SchemaClone>().clone_fn;
+        let clone_fn = self
+            .schema
+            .type_data
+            .get::<SchemaClone>()
+            .unwrap_or_else(|| {
+                panic!(
+                    "The schema for this type does not allow cloning it.\nSchema: {:#?}",
+                    self.schema
+                )
+            })
+            .clone_fn;
         // SAFE: the layout is not zero, or we could not create this box,
         // and the new pointer has the same layout as the source.
         let new_ptr = unsafe {
@@ -333,9 +343,11 @@ impl Clone for SchemaBox {
 impl Drop for SchemaBox {
     fn drop(&mut self) {
         unsafe {
-            let drop_fn = self.schema.type_data.get::<SchemaDrop>().drop_fn;
-            // Drop the type
-            (drop_fn)(self.ptr.as_mut().as_ptr());
+            if let Some(drop_fn) = self.schema.type_data.get::<SchemaDrop>().map(|d| d.drop_fn) {
+                // Drop the type
+                (drop_fn)(self.ptr.as_mut().as_ptr());
+            }
+
             // De-allocate the memory
             std::alloc::dealloc(self.ptr.as_mut().as_ptr(), self.layout)
         }

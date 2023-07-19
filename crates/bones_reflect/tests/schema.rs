@@ -1,4 +1,4 @@
-use bones_reflect::schema::{HasSchema, SchemaBox, SchemaPtr, SchemaPtrMut};
+use bones_reflect::prelude::*;
 use bones_reflect_macros::HasSchema;
 use glam::{Vec2, Vec3};
 

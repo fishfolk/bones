@@ -6,8 +6,8 @@ use std::sync::OnceLock;
 #[derive(Clone, Debug, Default)]
 pub struct TypeDatas(pub HashMap<Ulid, SchemaBox>);
 impl TypeDatas {
-    pub fn get<T: TypeData>(&self) -> &T {
-        self.0.get(&T::TYPE_DATA_ID).unwrap().cast()
+    pub fn get<T: TypeData>(&self) -> Option<&T> {
+        self.0.get(&T::TYPE_DATA_ID).map(|x| x.cast())
     }
 }
 
@@ -22,18 +22,13 @@ pub trait TypeData: HasSchema {
     const TYPE_DATA_ID: Ulid;
 }
 
-/// Helper to implement an opaque schema for a struct
-macro_rules! opaque_schema {
-    (
-        $(#[$attrs:meta])*
-        pub struct $name:ident {
-            $($fields:tt)*
-        }
-    ) => {
-        $(#[$attrs])*
-        pub struct $name {
-            $($fields)*
-        }
+/// Helper to implement an opaque schema for a type with the given name.
+///
+/// This is equivalent to using the [`HasSchema`] derive macro with the `#[schema(opaque)]`
+/// attribute, but avoids a proc macro.
+#[macro_export]
+macro_rules! impl_has_schema_opaque {
+    ($name:ident) => {
         unsafe impl HasSchema for $name {
             fn schema() -> &'static Schema {
                 static S: OnceLock<Schema> = OnceLock::new();
@@ -51,6 +46,7 @@ macro_rules! opaque_schema {
     };
 }
 
+use bones_utils::HashMap;
 pub use type_id::*;
 mod type_id {
 
@@ -58,13 +54,12 @@ mod type_id {
 
     use super::*;
 
-    opaque_schema! {
-        /// Type data that stores the Rust type ID.
-        pub struct SchemaRustTypeId {
-            /// The [`TypeId`] of the Rust type represented by this schema.
-            pub id: TypeId,
-        }
+    /// Type data that stores the Rust type ID.
+    pub struct SchemaRustTypeId {
+        /// The [`TypeId`] of the Rust type represented by this schema.
+        pub id: TypeId,
     }
+    impl_has_schema_opaque!(SchemaRustTypeId);
     impl<T: 'static> FromType<T> for SchemaRustTypeId {
         fn from_type() -> Self {
             Self {
@@ -81,14 +76,13 @@ pub use default::*;
 mod default {
     use super::*;
 
-    opaque_schema! {
-        /// Type data for producing a default value of a type.
-        pub struct SchemaDefault {
-            /// The default function, which takes a mutable pointer that the default value of the data
-            /// will be written to.
-            pub default_fn: unsafe extern "C-unwind" fn(ptr: *mut u8),
-        }
+    /// Type data for producing a default value of a type.
+    pub struct SchemaDefault {
+        /// The default function, which takes a mutable pointer that the default value of the data
+        /// will be written to.
+        pub default_fn: unsafe extern "C-unwind" fn(ptr: *mut u8),
     }
+    impl_has_schema_opaque!(SchemaDefault);
     impl<T: Default> FromType<T> for SchemaDefault {
         fn from_type() -> Self {
             SchemaDefault {
@@ -114,13 +108,12 @@ pub use drop::*;
 mod drop {
     use super::*;
 
-    opaque_schema! {
-        /// Type data for cloning a type.
-        pub struct SchemaDrop {
-            /// The function to use to drop the type.
-            pub drop_fn: unsafe extern "C-unwind" fn(ptr: *mut u8),
-        }
+    /// Type data for cloning a type.
+    pub struct SchemaDrop {
+        /// The function to use to drop the type.
+        pub drop_fn: unsafe extern "C-unwind" fn(ptr: *mut u8),
     }
+    impl_has_schema_opaque!(SchemaDrop);
     impl<T> FromType<T> for SchemaDrop {
         fn from_type() -> Self {
             Self {
@@ -147,13 +140,12 @@ pub use clone::*;
 mod clone {
     use super::*;
 
-    opaque_schema! {
-        /// Type data for cloning a type.
-        pub struct SchemaClone {
-            /// The function to use to clone the type.
-            pub clone_fn: unsafe extern "C-unwind" fn(src: *const u8, dst: *mut u8),
-        }
+    /// Type data for cloning a type.
+    pub struct SchemaClone {
+        /// The function to use to clone the type.
+        pub clone_fn: unsafe extern "C-unwind" fn(src: *const u8, dst: *mut u8),
     }
+    impl_has_schema_opaque!(SchemaClone);
     impl<T: Clone> FromType<T> for SchemaClone {
         fn from_type() -> Self {
             Self {

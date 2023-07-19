@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use quote::{format_ident, quote, quote_spanned, spanned::Spanned};
+use quote::{quote, quote_spanned, spanned::Spanned};
 
 /// Helper macro to bail out of the macro with a compile error.
 macro_rules! throw {
@@ -11,43 +11,12 @@ macro_rules! throw {
     };
 }
 
-/// Derive macro for the `HasTypeRegistration` trait.
-#[proc_macro_derive(HasTypeRegistration)]
-pub fn derive_has_type_registration(input: TokenStream) -> TokenStream {
-    let input = venial::parse_declaration(input.into()).unwrap();
-    let item_ident = &input.name().unwrap();
-
-    let module_ident = format_ident!(
-        "{}_derive_has_type_registration",
-        item_ident.to_string().to_lowercase()
-    );
-
-    // Parse the struct
-    let Some(_in_struct) = input.as_struct() else {
-        throw!(item_ident.span(), "You may only derive HasTypeRegistration on structs");
-    };
-
-    quote! {
-        mod #module_ident {
-            use super::#item_ident;
-
-            impl ::bones_reflect::registry::HasTypeRegistration for #item_ident {
-                fn get_type_registration() -> ::bones_reflect::registry::TypeRegistration {
-                    let mut registration = ::bones_reflect::registry::TypeRegistration::of::<Self>();
-                    registration
-                }
-            }
-        }
-    }
-    .into()
-}
-
 /// Derive macro for the `HasSchema` trait.
 #[proc_macro_derive(HasSchema, attributes(schema))]
 pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     let input = venial::parse_declaration(input.into()).unwrap();
     let name = input.name().expect("Type must have a name");
-    let schema_mod = quote!(::bones_reflect::schema);
+    let schema_mod = quote!(::bones_reflect);
 
     let is_opaque = input
         .attributes()

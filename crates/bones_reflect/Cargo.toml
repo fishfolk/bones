@@ -9,11 +9,12 @@ version     = "0.1.0"
 
 [features]
 # TODO: make these non-default ( I think )
-default = ["serde", "glam"]
+default = ["serde", "glam", "derive"]
 serde   = ["dep:serde", "ulid/serde", "bones_utils/serde"]
+derive  = ["bones_reflect_macros"]
 
 [dependencies]
-bones_reflect_macros = { version = "0.1", path = "./macros" }
+bones_reflect_macros = { version = "0.1", path = "./macros", optional = true }
 bones_utils          = { version = "0.1", path = "../bones_utils" }
 ulid                 = { version = "1.0" }
 paste                = "1.0"
