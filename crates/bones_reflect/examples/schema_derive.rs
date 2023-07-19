@@ -1,3 +1,5 @@
+#![allow(warnings)]
+
 use std::sync::{Arc, Mutex};
 
 use bones_reflect::prelude::*;

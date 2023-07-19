@@ -30,7 +30,7 @@ pub mod prelude {
         atomic_refcell::*,
         bitset_core::BitSet,
         bones_ecs_macros::*,
-        bones_reflect::RawFns,
+        bones_reflect::RawClone,
         bones_utils::HashMap,
         type_ulid::{TypeUlid, Ulid},
     };

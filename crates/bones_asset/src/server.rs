@@ -333,26 +333,25 @@ mod metadata {
                 return PrimitiveLoader(p).deserialize(deserializer);
             }
 
-            // Allocate the object.
-            let layout_info = self.schema.layout_info();
-            assert_ne!(layout_info.layout.size(), 0, "Layout size cannot be zero");
-            // SAFE: checked layout size is not zero above
-            let ptr = unsafe { std::alloc::alloc(layout_info.layout) };
+            todo!();
 
-            Ok(match &self.schema.kind {
-                SchemaKind::Struct(s) => deserializer.deserialize_map(StructVisitor {
-                    schema: &self.schema,
-                    layout_info: &layout_info,
-                    ctx: &self,
-                    struct_schema: s,
-                    ptr,
-                })?,
-                SchemaKind::Vec(v) => deserializer.deserialize_seq(SeqVisitor {
-                    ctx: &self,
-                    schema: v,
-                })?,
-                SchemaKind::Primitive(_) => unreachable!("Handled above"),
-            })
+            // // Allocate the object.
+            // let layout_info = self.schema.layout_info();
+            // assert_ne!(layout_info.layout.size(), 0, "Layout size cannot be zero");
+            // // SAFE: checked layout size is not zero above
+            // let ptr = unsafe { std::alloc::alloc(layout_info.layout) };
+
+            // Ok(match &self.schema.kind {
+            //     SchemaKind::Struct(s) => deserializer.deserialize_map(StructVisitor {
+            //         ctx: &self,
+            //         ptr: ,
+            //     })?,
+            //     SchemaKind::Vec(v) => deserializer.deserialize_seq(SeqVisitor {
+            //         ctx: &self,
+            //         schema: v,
+            //     })?,
+            //     SchemaKind::Primitive(_) => unreachable!("Handled above"),
+            // })
         }
     }
 
@@ -390,10 +389,7 @@ mod metadata {
 
     struct StructVisitor<'a, 'b> {
         pub ctx: &'b MetadataLoadContext<'a>,
-        pub schema: &'b Schema,
-        pub struct_schema: &'b StructSchema,
-        pub layout_info: &'b SchemaLayoutInfo<'b>,
-        pub ptr: *mut u8,
+        pub ptr: &'b SchemaPtrMut<'b, 'b, 'b>,
     }
 
     impl<'a, 'b, 'de> Visitor<'de> for StructVisitor<'a, 'b> {
@@ -403,7 +399,7 @@ mod metadata {
             write!(
                 formatter,
                 "asset metadata matching the schema: {:#?}",
-                self.struct_schema
+                self.ptr.schema()
             )
         }
 

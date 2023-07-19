@@ -6,10 +6,12 @@ use bones_utils::HashMap;
 use serde::Deserialize;
 use ulid::Ulid;
 
-use crate::prelude::*;
-
 mod ptr;
 pub use ptr::*;
+
+use self::type_datas::TypeDatas;
+
+pub mod type_datas;
 
 #[cfg(feature = "serde")]
 mod ser_de;
@@ -111,7 +113,7 @@ pub struct Schema {
     ///
     /// The [`Ulid`] key is arbitrary, allows different types to add different kinds of data to the
     /// schema.
-    pub type_data: HashMap<Ulid, SchemaBox>,
+    pub type_data: TypeDatas,
 }
 
 /// A schema describes the data layout of a type, to enable dynamic access to the type's data

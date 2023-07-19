@@ -2,7 +2,10 @@ use bones_utils::{Aligned, OwningPtr, Ptr, PtrMut};
 
 use std::{marker::PhantomData, ptr::NonNull};
 
-use super::*;
+use super::{
+    type_datas::{SchemaClone, SchemaDrop},
+    *,
+};
 
 /// A wrapper for a pointer, that also contains it's schema.
 #[derive(Clone)]
@@ -297,8 +300,6 @@ pub struct SchemaBox {
     ptr: OwningPtr<'static>,
     schema: Cow<'static, Schema>,
     layout: Layout,
-    drop_fn: unsafe extern "C" fn(*mut u8),
-    clone_fn: unsafe extern "C" fn(src: *const u8, dst: *mut u8),
 }
 unsafe impl Sync for SchemaBox {}
 unsafe impl Send for SchemaBox {}
@@ -307,27 +308,24 @@ impl std::fmt::Debug for SchemaBox {
         f.debug_struct("SchemaBox")
             .field("schema", &self.schema)
             .field("layout", &self.layout)
-            .field("drop_fn", &self.drop_fn)
-            .field("clone_fn", &self.clone_fn)
             .finish_non_exhaustive()
     }
 }
 
 impl Clone for SchemaBox {
     fn clone(&self) -> Self {
+        let clone_fn = self.schema.type_data.get::<SchemaClone>().clone_fn;
         // SAFE: the layout is not zero, or we could not create this box,
         // and the new pointer has the same layout as the source.
         let new_ptr = unsafe {
             let new_ptr = std::alloc::alloc(self.layout);
-            (self.clone_fn)(self.ptr.as_ref().as_ptr(), new_ptr);
+            (clone_fn)(self.ptr.as_ref().as_ptr(), new_ptr);
             OwningPtr::new(NonNull::new(new_ptr).expect("Allocation failed"))
         };
         Self {
             ptr: new_ptr,
             schema: self.schema.clone(),
             layout: self.layout,
-            drop_fn: self.drop_fn,
-            clone_fn: self.clone_fn,
         }
     }
 }
@@ -335,8 +333,9 @@ impl Clone for SchemaBox {
 impl Drop for SchemaBox {
     fn drop(&mut self) {
         unsafe {
+            let drop_fn = self.schema.type_data.get::<SchemaDrop>().drop_fn;
             // Drop the type
-            (self.drop_fn)(self.ptr.as_mut().as_ptr());
+            (drop_fn)(self.ptr.as_mut().as_ptr());
             // De-allocate the memory
             std::alloc::dealloc(self.ptr.as_mut().as_ptr(), self.layout)
         }
@@ -411,7 +410,7 @@ impl SchemaBox {
 
     /// Create a new [`SchemaBox`].
     #[track_caller]
-    pub fn new<T: HasSchema + Clone + Sync + Send>(v: T) -> Self {
+    pub fn new<T: HasSchema + Sync + Send>(v: T) -> Self {
         let schema = T::schema();
         let layout = std::alloc::Layout::new::<T>();
         debug_assert_eq!(
@@ -437,8 +436,6 @@ impl SchemaBox {
             ptr,
             schema: Cow::Borrowed(schema),
             layout,
-            drop_fn: <T as RawFns>::raw_drop,
-            clone_fn: <T as RawFns>::raw_clone,
         }
     }
 
@@ -451,12 +448,7 @@ impl SchemaBox {
     ///
     /// - You must insure that the pointer is valid for the given `layout`, `schem`, `drop_fn`, and
     /// `clone_fn`.
-    pub unsafe fn from_raw_parts<S>(
-        ptr: OwningPtr<'static>,
-        schema: S,
-        drop_fn: unsafe extern "C" fn(*mut u8),
-        clone_fn: unsafe extern "C" fn(src: *const u8, dst: *mut u8),
-    ) -> Self
+    pub unsafe fn from_raw_parts<S>(ptr: OwningPtr<'static>, schema: S) -> Self
     where
         S: Into<Cow<'static, Schema>>,
     {
@@ -465,8 +457,6 @@ impl SchemaBox {
             ptr,
             layout: schema.layout_info().layout,
             schema,
-            drop_fn,
-            clone_fn,
         }
     }
 
