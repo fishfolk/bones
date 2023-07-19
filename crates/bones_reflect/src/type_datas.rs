@@ -6,11 +6,13 @@ use super::*;
 #[derive(Clone, Debug, Default)]
 pub struct TypeDatas(pub HashMap<Ulid, SchemaBox>);
 impl TypeDatas {
+    /// Get a type data out of the store.
     pub fn get<T: TypeData>(&self) -> Option<&T> {
         self.0.get(&T::TYPE_DATA_ID).map(|x| x.cast())
     }
 }
 
+/// Trait implemented for types that can produce an instance of themselves from a type.
 pub trait FromType<T> {
     /// Return the data for the type.
     fn from_type() -> Self;

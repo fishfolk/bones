@@ -474,6 +474,7 @@ impl SchemaBox {
 #[derive(Debug)]
 pub struct SchemaMismatchError;
 impl SchemaMismatchError {
+    /// The display error message for this error type.
     pub const MSG: &str = "Invalid cast: the schemas of the casted types are not compatible.";
 }
 impl std::error::Error for SchemaMismatchError {}
@@ -486,7 +487,9 @@ impl std::fmt::Display for SchemaMismatchError {
 /// The index of a field in a struct in a [`Schema`].
 #[derive(Debug, Clone, Copy)]
 pub enum FieldIdx<'a> {
+    /// The name of a field.
     Name(&'a str),
+    /// The index of a field. Works for tuple fields and named fields.
     Idx(usize),
 }
 impl From<usize> for FieldIdx<'static> {
@@ -508,6 +511,7 @@ impl<'a> std::fmt::Display for FieldIdx<'a> {
     }
 }
 
+/// Error returned when a field is not found in a schema.
 #[derive(Debug)]
 pub struct SchemaFieldNotFoundError<'a> {
     idx: FieldIdx<'a>,

@@ -1,8 +1,13 @@
-//! Type layout schema, used to guide dynamic access to type data in scripts.
-//!
+//! Simple reflection system based on the `#[repr(C)]` memory layout.
+
+#![warn(missing_docs)]
+// This cfg_attr is needed because `rustdoc::all` includes lints not supported on stable
+#![cfg_attr(doc, allow(unknown_lints))]
+#![deny(rustdoc::all)]
 
 pub use bones_reflect_macros::*;
 
+/// The prelude.
 pub mod prelude {
     pub use crate::*;
     #[cfg(feature = "derive")]
@@ -17,8 +22,8 @@ use ulid::Ulid;
 mod ptr;
 pub use ptr::*;
 
-pub use type_datas::{FromType, TypeData, TypeDatas};
-pub mod type_datas;
+pub use type_datas::*;
+mod type_datas;
 
 #[cfg(feature = "serde")]
 mod ser_de;
@@ -35,17 +40,6 @@ mod std_impls;
 ///
 /// If implemented manually, you must ensure that the schema accurately describes the memory layout
 /// of the type, or else accessing the type according to the schema would be unsound.
-///
-/// # TODO
-///
-/// TODO: We need a way to have schemas that don't allocate every time we call
-/// [`HasSchema::schema()`]. Maybe we do that by requiring schema() to return a `&'static Schema`.
-/// The issue is that means we have to memory leak all schemas essentially, which might be a problem
-/// if a program generates a lot of schemas over time?
-///
-/// Maybe we could instead have a global schema registry and have `schema()` return a handle into
-/// that registry ( maybe based on the schema hash? ). Then you could still delete schemas from the
-/// registry. I haven't thought all the way through this.
 pub unsafe trait HasSchema {
     /// Get this type's [`Schema`].
     fn schema() -> &'static Schema;
@@ -104,6 +98,8 @@ pub unsafe trait HasSchema {
         }
     }
 }
+
+/// A schema describing the memory layout of a type.
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
@@ -359,30 +355,6 @@ impl std::ops::Deref for NestedSchema {
             NestedSchema::Boxed(s) => s,
         }
     }
-}
-
-/// Helper to implement an opaque schema for a type with the given name.
-///
-/// This is equivalent to using the [`HasSchema`] derive macro with the `#[schema(opaque)]`
-/// attribute, but avoids a proc macro.
-#[macro_export]
-macro_rules! impl_has_schema_opaque {
-    ($name:ident) => {
-        unsafe impl HasSchema for $name {
-            fn schema() -> &'static Schema {
-                static S: OnceLock<Schema> = OnceLock::new();
-                let layout = Layout::new::<Self>();
-                S.get_or_init(|| Schema {
-                    kind: SchemaKind::Primitive(Primitive::Opaque {
-                        size: layout.size(),
-                        align: layout.align(),
-                    }),
-                    type_id: Some(TypeId::of::<Self>()),
-                    type_data: Default::default(),
-                })
-            }
-        }
-    };
 }
 
 /// Trait implemented automatically for types that implement [`Clone`] and can be used to clone the
