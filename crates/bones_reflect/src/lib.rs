@@ -9,8 +9,6 @@ pub mod prelude {
     pub use bones_reflect_macros::*;
 }
 
-// pub mod registry; // Don't need this for now, we'll re-enable if we find use for it.
-
 use std::{alloc::Layout, any::TypeId, borrow::Cow};
 
 use serde::Deserialize;
