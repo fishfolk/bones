@@ -412,7 +412,7 @@ impl SchemaBox {
         }
     }
 
-    /// Create a new [`SchemaBox`].
+    /// Create a new [`SchemaBox`] from an owned type.
     #[track_caller]
     pub fn new<T: HasSchema + Sync + Send>(v: T) -> Self {
         let schema = T::schema();
@@ -424,7 +424,7 @@ impl SchemaBox {
         );
         assert!(
             layout.size() != 0,
-            "Cannot allocate SchemaBox for zero-sized-type"
+            "Cannot allocate SchemaBox for zero-sized-type ( yet )"
         );
 
         // SAFE: we check that the layout is non-zero, and
@@ -439,6 +439,42 @@ impl SchemaBox {
         Self {
             ptr,
             schema: Cow::Borrowed(schema),
+            layout,
+        }
+    }
+
+    /// Create a new [`SchemaBox`] for a type with a [`Schema`] that has a [`Schema::default_fn`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if the passed in schema doesn't have a `default_fn`.
+    #[track_caller]
+    pub fn default<S>(schema: S) -> Self
+    where
+        S: Into<Cow<'static, Schema>>,
+    {
+        let schema = schema.into();
+        let Some(default_fn) = schema.default_fn else {
+            panic!("Schema doesn't have `default_fn` to create default value with.");
+        };
+        let layout = schema.layout_info().layout;
+        assert!(
+            layout.size() != 0,
+            "Cannot allocate SchemaBox for zero-sized-type ( yet )"
+        );
+
+        // SAFE: we check that the layout is non-zero, and the pointer is allocated for the layout
+        // matching the schema.
+        let ptr = unsafe {
+            let ptr = std::alloc::alloc(layout);
+            let ptr = OwningPtr::new(NonNull::new(ptr).expect("Allocation failed"));
+            (default_fn)(ptr.as_ptr());
+            ptr
+        };
+
+        Self {
+            ptr,
+            schema,
             layout,
         }
     }
