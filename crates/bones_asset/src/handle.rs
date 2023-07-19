@@ -78,12 +78,15 @@ impl UntypedHandle {
 // Schema implementations
 //
 
-/// This is the [`Schema::type_data`] key for the asset handle marker.
+/// [`TypeData`] implementation for asset handles.
 ///
-/// The value is unimportant, as simply having a type data with this key indicates that the type is
-/// an asset handle. This information is used when deserializing assets from a schema, to know that
-/// a handle should be deserialized.
+/// This allows the asset loader to distinguish when a `SomeStruct(u128)` schema layout should be
+/// deserialized as a normal struct or as an asset handle.
 ///
+/// It doesn't need to contain any data, because it's very presense in a schema's [`TypeDatas`]
+/// indicates that the schema represents a handle.
+pub struct SchemaAssetHandle;
+
 pub const ASSET_HANDLE_TYPE_DATA: Ulid = Ulid(2042034270141692702617108034127624904);
 
 /// Helper to avoid typing the duplicate implementations of [`HasSchema`] for typed and untyped

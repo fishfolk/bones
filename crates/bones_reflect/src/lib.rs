@@ -13,6 +13,7 @@ pub mod prelude {
         ptr::*, type_datas::*, HasSchema, NestedSchema, Primitive, RawClone, RawDefault, RawDrop,
         Schema, SchemaKind, SchemaLayoutInfo, StructField, StructSchema,
     };
+    pub use ulid::Ulid;
     #[cfg(feature = "derive")]
     pub use bones_reflect_macros::*;
 }

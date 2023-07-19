@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenTree;
-use quote::{quote, quote_spanned, spanned::Spanned};
+use quote::{format_ident, quote, quote_spanned, spanned::Spanned};
 
 /// Helper macro to bail out of the macro with a compile error.
 macro_rules! throw {
@@ -13,18 +13,18 @@ macro_rules! throw {
 }
 
 /// Derive macro for the `HasSchema` trait.
-#[proc_macro_derive(HasSchema, attributes(schema))]
+#[proc_macro_derive(HasSchema, attributes(schema, type_datas))]
 pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     let input = venial::parse_declaration(input.into()).unwrap();
     let name = input.name().expect("Type must have a name");
     let schema_mod = quote!(::bones_reflect);
 
-    let schema_attr = input
-        .attributes()
-        .iter()
-        .find(|attr| attr.path.len() == 1 && attr.path[0].to_string() == "schema");
-    let schema_flags = schema_attr
-        .map(|attr| match &attr.value {
+    let get_flags_for_attr = |attr_name: &str| {
+        let attr = input
+            .attributes()
+            .iter()
+            .find(|attr| attr.path.len() == 1 && attr.path[0].to_string() == attr_name);
+        attr.map(|attr| match &attr.value {
             venial::AttributeValue::Group(_, value) => {
                 let mut flags = Vec::new();
 
@@ -48,7 +48,30 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
             }
             venial::AttributeValue::Empty => Vec::new(),
         })
-        .unwrap_or_default();
+        .unwrap_or_default()
+    };
+
+    let type_datas_flags = get_flags_for_attr("type_datas");
+    let type_datas = {
+        let add_type_datas = type_datas_flags.into_iter().map(|ty| {
+            let ty = format_ident!("{ty}");
+            quote! {
+                let id = <#ty as #schema_mod::TypeData>::TYPE_DATA_ID;
+                tds.0.insert(id, #schema_mod::SchemaBox::new(<#ty as #schema_mod::FromType<#name>>::from_type()));
+            }
+        });
+
+        quote! {
+            {
+                let mut tds = #schema_mod::TypeDatas::default();
+                #(#add_type_datas),*
+                tds
+            }
+        }
+    };
+
+    let schema_flags = get_flags_for_attr("schema");
+
     let is_opaque = schema_flags.iter().any(|x| x.as_str() == "opaque");
     let no_clone = schema_flags.iter().any(|x| x.as_str() == "no_clone");
     let no_default = schema_flags.iter().any(|x| x.as_str() == "no_default");
@@ -80,7 +103,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                 size: layout.size(),
                                 align: layout.align(),
                             }),
-                            type_data: Default::default(),
+                            type_data: #type_datas,
                         }
                     })
                 }
@@ -139,7 +162,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                                 align: layout.align(),
                                             }),
                                             type_id: Some(std::any::TypeId::of::<#ty>()),
-                                            type_data: Default::default(),
+                                            type_data: #type_datas,
                                             clone_fn: #clone_fn,
                                             default_fn: #default_fn,
                                             drop_fn: Some(<Self as #schema_mod::RawDrop>::raw_drop),
@@ -187,7 +210,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                     #schema_mod::Schema {
                         type_id: Some(std::any::TypeId::of::<Self>()),
                         kind: #schema_kind,
-                        type_data: Default::default(),
+                        type_data: #type_datas,
                         default_fn: #default_fn,
                         clone_fn: #clone_fn,
                         drop_fn: Some(<Self as #schema_mod::RawDrop>::raw_drop),
