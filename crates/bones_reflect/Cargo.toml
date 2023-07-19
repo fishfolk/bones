@@ -1,6 +1,6 @@
 [package]
 authors     = ["The Fish Folk & Spicy Lobster Developers"]
-description = "Core rendering types for bones_lib."
+description = "Simple reflection system based on the #[repr(C)] memory layout."
 edition     = "2021"
 license     = "MIT OR Apache-2.0"
 name        = "bones_reflect"
@@ -14,14 +14,14 @@ serde   = ["dep:serde", "ulid/serde", "bones_utils/serde"]
 derive  = ["bones_reflect_macros"]
 
 [dependencies]
-bones_reflect_macros = { version = "0.1", path = "./macros", optional = true }
-bones_utils          = { version = "0.1", path = "../bones_utils" }
-ulid                 = { version = "1.0" }
-paste                = "1.0"
+bones_utils = { version = "0.1", path = "../bones_utils" }
+ulid        = { version = "1.0" }
+paste       = "1.0"
 
 # Optional deps
-glam        = { version = "0.23", optional = true }
-serde       = { version = "1.0", features = ["derive"], optional = true }
+bones_reflect_macros = { version = "0.1", path = "./macros", optional = true }
+glam                 = { version = "0.23", optional = true }
+serde                = { version = "1.0", features = ["derive"], optional = true }
 
 [dev-dependencies]
 serde_yaml  = "0.9"
