@@ -483,7 +483,7 @@ impl std::fmt::Display for SchemaMismatchError {
     }
 }
 
-/// The index of a field in a struct in a [`SchemaWalkerMut`].
+/// The index of a field in a struct in a [`Schema`].
 #[derive(Debug, Clone, Copy)]
 pub enum FieldIdx<'a> {
     Name(&'a str),
