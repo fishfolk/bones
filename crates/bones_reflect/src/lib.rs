@@ -9,7 +9,10 @@ pub use bones_reflect_macros::*;
 
 /// The prelude.
 pub mod prelude {
-    pub use crate::*;
+    pub use crate::{
+        ptr::*, type_datas::*, HasSchema, NestedSchema, Primitive, RawClone, RawDefault, RawDrop,
+        Schema, SchemaKind, SchemaLayoutInfo, StructField, StructSchema,
+    };
     #[cfg(feature = "derive")]
     pub use bones_reflect_macros::*;
 }

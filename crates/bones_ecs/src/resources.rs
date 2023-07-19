@@ -35,17 +35,17 @@ pub struct UntypedResourceInfo {
     // instead of cloning the Arc like we do here.
     pub cell: Arc<AtomicRefCell<*mut u8>>,
     /// A function that may be called to clone the resource from one pointer to another.
-    pub clone_fn: unsafe extern "C" fn(*const u8, *mut u8),
+    pub clone_fn: unsafe extern "C-unwind" fn(*const u8, *mut u8),
     /// An optional function that will be called to drop the resource.
-    pub drop_fn: Option<unsafe extern "C" fn(*mut u8)>,
+    pub drop_fn: Option<unsafe extern "C-unwind" fn(*mut u8)>,
 }
 
 /// An untyped resource that may be inserted into [`UntypedResources`].
 pub struct UntypedResource {
     layout: Layout,
     cell: Arc<AtomicRefCell<*mut u8>>,
-    clone_fn: unsafe extern "C" fn(*const u8, *mut u8),
-    drop_fn: Option<unsafe extern "C" fn(*mut u8)>,
+    clone_fn: unsafe extern "C-unwind" fn(*const u8, *mut u8),
+    drop_fn: Option<unsafe extern "C-unwind" fn(*mut u8)>,
 }
 
 impl UntypedResource {

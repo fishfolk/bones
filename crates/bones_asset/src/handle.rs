@@ -1,8 +1,6 @@
 use std::{alloc::Layout, any::TypeId, marker::PhantomData, sync::OnceLock};
 
-use bones_reflect::schema::{
-    HasSchema, Primitive, Schema, SchemaBox, SchemaKind, StructField, StructSchema,
-};
+use bones_reflect::prelude::*;
 use bones_utils::HashMap;
 use ulid::Ulid;
 
@@ -92,7 +90,7 @@ pub const ASSET_HANDLE_TYPE_DATA: Ulid = Ulid(2042034270141692702617108034127624
 /// handles.
 macro_rules! schema_impl_for_handle {
     () => {
-        fn schema() -> &'static bones_reflect::schema::Schema {
+        fn schema() -> &'static bones_reflect::Schema {
             static S: OnceLock<Schema> = OnceLock::new();
             // This is a hack to make sure that `Ulid` has the memory representation we
             // expect. It is extremely unlike, but possible that this would otherwise be

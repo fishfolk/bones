@@ -29,9 +29,8 @@ pub mod prelude {
     pub use {
         atomic_refcell::*,
         bitset_core::BitSet,
-        bones_ecs_macros::*,
-        bones_reflect::RawClone,
-        bones_utils::HashMap,
+        bones_reflect::prelude::*,
+        bones_utils::prelude::*,
         type_ulid::{TypeUlid, Ulid},
     };
 

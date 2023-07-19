@@ -15,8 +15,8 @@ pub struct UntypedComponentStore {
     pub(crate) storage: AVec<u8>,
     pub(crate) layout: Layout,
     pub(crate) max_id: usize,
-    pub(crate) drop_fn: Option<unsafe extern "C" fn(*mut u8)>,
-    pub(crate) clone_fn: unsafe extern "C" fn(*const u8, *mut u8),
+    pub(crate) drop_fn: Option<unsafe extern "C-unwind" fn(*mut u8)>,
+    pub(crate) clone_fn: unsafe extern "C-unwind" fn(*const u8, *mut u8),
 }
 
 impl Clone for UntypedComponentStore {
@@ -85,8 +85,8 @@ impl UntypedComponentStore {
     /// pointers to clone or drop.
     pub unsafe fn new(
         layout: Layout,
-        clone_fn: unsafe extern "C" fn(*const u8, *mut u8),
-        drop_fn: Option<unsafe extern "C" fn(*mut u8)>,
+        clone_fn: unsafe extern "C-unwind" fn(*const u8, *mut u8),
+        drop_fn: Option<unsafe extern "C-unwind" fn(*mut u8)>,
     ) -> Self {
         Self {
             bitset: create_bitset(),

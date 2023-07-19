@@ -1012,7 +1012,6 @@ dependencies = [
  "anyhow",
  "atomic_refcell",
  "bitset-core",
- "bones_ecs_macros",
  "bones_reflect",
  "bones_utils",
  "bytemuck",
@@ -1025,15 +1024,6 @@ dependencies = [
  "serde_yaml",
  "thiserror",
  "type_ulid",
-]
-
-[[package]]
-name = "bones_ecs_macros"
-version = "0.2.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "venial",
 ]
 
 [[package]]
@@ -1142,9 +1132,19 @@ version = "0.1.0"
 dependencies = [
  "ahash 0.8.3",
  "bevy_ptr 0.11.0",
+ "bones_utils_macros",
  "hashbrown 0.14.0",
  "serde",
  "ulid",
+]
+
+[[package]]
+name = "bones_utils_macros"
+version = "0.2.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "venial",
 ]
 
 [[package]]

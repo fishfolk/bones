@@ -1,6 +1,6 @@
 [package]
-name = "bones_ecs_macros"
-description = "Macros for the bones_ecs crate."
+name = "bones_utils_macros"
+description = "Bones utility macros"
 version = "0.2.0"
 edition = "2021"
 authors = ["The Fish Folk & Spicy Lobster Developers"]

@@ -7,6 +7,7 @@
 #![warn(clippy::undocumented_unsafe_blocks)]
 
 pub use bevy_ptr::*;
+pub use bones_utils_macros::*;
 pub use hashbrown;
 use std::hash::BuildHasherDefault;
 
