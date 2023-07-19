@@ -1,17 +1,17 @@
 use bones_reflect::prelude::*;
 
-#[derive(HasSchema)]
+#[derive(HasSchema, Clone, Default)]
 #[repr(C)]
 struct DataA {
     x: f32,
     y: f32,
 }
 
-#[derive(HasSchema)]
+#[derive(HasSchema, Clone, Default)]
 #[repr(C)]
 struct DataB(u32, u32);
 
-#[derive(HasSchema)]
+#[derive(HasSchema, Clone, Default)]
 #[repr(C)]
 struct DataC {
     a: DataA,

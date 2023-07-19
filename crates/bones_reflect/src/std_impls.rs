@@ -15,6 +15,9 @@ macro_rules! impl_primitive {
                 S.get_or_init(|| Schema {
                     kind: SchemaKind::Primitive(Primitive::$prim),
                     type_id: Some(TypeId::of::<$t>()),
+                    clone_fn: Some(<$t as RawClone>::raw_clone),
+                    drop_fn: Some(<$t as RawDrop>::raw_drop),
+                    default_fn: Some(<$t as RawDefault>::raw_default),
                     type_data: Default::default(),
                 })
             }
@@ -37,7 +40,10 @@ impl_primitive!(i128, I128);
 impl_primitive!(f32, F32);
 impl_primitive!(f64, F64);
 
-unsafe impl<T: HasSchema + 'static> HasSchema for Vec<T> {
+// TODO: since we don't have specialization, we have to require this `Clone` bound. :/ :/ :/ Figure
+// out if there is some tricky way we can get around this limitation, and have a separate impl for
+// `Vec<T: Clone>` and `Vec<T: !Clone>`.
+unsafe impl<T: Clone + HasSchema + 'static> HasSchema for Vec<T> {
     fn schema() -> &'static Schema {
         static STORE: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
         let store = STORE.get_or_init(Default::default);
@@ -51,8 +57,11 @@ unsafe impl<T: HasSchema + 'static> HasSchema for Vec<T> {
             let kind = SchemaKind::Vec(T::schema().into());
             let schema = Schema {
                 kind,
-                type_id: Some(type_id),
                 type_data: Default::default(),
+                type_id: Some(type_id),
+                clone_fn: Some(<Self as RawClone>::raw_clone),
+                drop_fn: Some(<Self as RawDrop>::raw_drop),
+                default_fn: Some(<Self as RawDefault>::raw_default),
             };
             let schema: &'static Schema = Box::leak(Box::new(schema));
             let mut write = store.write().unwrap();
@@ -84,6 +93,9 @@ mod impl_glam {
                                             kind: SchemaKind::Primitive(Primitive::$prim),
                                             type_id: Some(TypeId::of::<$t>()),
                                             type_data: Default::default(),
+                                            clone_fn: Some(<Self as RawClone>::raw_clone),
+                                            drop_fn: Some(<Self as RawDrop>::raw_drop),
+                                            default_fn: Some(<Self as RawDefault>::raw_default),
                                         }
                                     }
                                 ),*
@@ -93,6 +105,9 @@ mod impl_glam {
                             type_id,
                             kind,
                             type_data: Default::default(),
+                            clone_fn: Some(<Self as RawClone>::raw_clone),
+                            drop_fn: Some(<Self as RawDrop>::raw_drop),
+                            default_fn: Some(<Self as RawDefault>::raw_default),
                         }
                     })
                 }

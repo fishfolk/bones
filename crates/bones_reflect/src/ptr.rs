@@ -2,10 +2,7 @@ use bones_utils::{Aligned, OwningPtr, Ptr, PtrMut};
 
 use std::{marker::PhantomData, ptr::NonNull};
 
-use super::{
-    type_datas::{SchemaClone, SchemaDrop},
-    *,
-};
+use super::*;
 
 /// A wrapper for a pointer, that also contains it's schema.
 #[derive(Clone)]
@@ -314,17 +311,12 @@ impl std::fmt::Debug for SchemaBox {
 
 impl Clone for SchemaBox {
     fn clone(&self) -> Self {
-        let clone_fn = self
-            .schema
-            .type_data
-            .get::<SchemaClone>()
-            .unwrap_or_else(|| {
-                panic!(
-                    "The schema for this type does not allow cloning it.\nSchema: {:#?}",
-                    self.schema
-                )
-            })
-            .clone_fn;
+        let clone_fn = self.schema.clone_fn.unwrap_or_else(|| {
+            panic!(
+                "The schema for this type does not allow cloning it.\nSchema: {:#?}",
+                self.schema
+            )
+        });
         // SAFE: the layout is not zero, or we could not create this box,
         // and the new pointer has the same layout as the source.
         let new_ptr = unsafe {
@@ -343,7 +335,7 @@ impl Clone for SchemaBox {
 impl Drop for SchemaBox {
     fn drop(&mut self) {
         unsafe {
-            if let Some(drop_fn) = self.schema.type_data.get::<SchemaDrop>().map(|d| d.drop_fn) {
+            if let Some(drop_fn) = self.schema.drop_fn {
                 // Drop the type
                 (drop_fn)(self.ptr.as_mut().as_ptr());
             }

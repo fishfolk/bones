@@ -4,9 +4,9 @@
 pub use bones_reflect_macros::*;
 
 pub mod prelude {
+    pub use crate::*;
     #[cfg(feature = "derive")]
     pub use bones_reflect_macros::*;
-    pub use crate::*;
 }
 
 // pub mod registry; // Don't need this for now, we'll re-enable if we find use for it.
@@ -111,10 +111,6 @@ pub unsafe trait HasSchema {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 pub struct Schema {
-    #[serde(skip)]
-    /// The Rust [`TypeId`] that this [`Schema`] was created from, if it was created from a Rust
-    /// type.
-    pub type_id: Option<TypeId>,
     /// The kind of schema.
     pub kind: SchemaKind,
     #[serde(skip)]
@@ -123,6 +119,24 @@ pub struct Schema {
     /// The [`Ulid`] key is arbitrary, allows different types to add different kinds of data to the
     /// schema.
     pub type_data: TypeDatas,
+
+    // NOTE: The fields below could be implemented as type datas, and it would be nicely elegant to
+    // do so, but for performance reasons, we put them right in the [`Schema`] struct because
+    // they're use is so common. If profiling does not reveal any performance issues with using them
+    // as type datas, we may want to remove these fields in favor of the type data.
+    /// The Rust [`TypeId`] that this [`Schema`] was created from, if it was created from a Rust
+    /// type.
+    #[serde(skip)]
+    pub type_id: Option<TypeId>,
+    /// The function pointer that may be used to clone data with this schema.
+    #[serde(skip)]
+    pub clone_fn: Option<unsafe extern "C-unwind" fn(src: *const u8, dst: *mut u8)>,
+    /// The function pointer that may be used to drop data with this schema.
+    #[serde(skip)]
+    pub drop_fn: Option<unsafe extern "C-unwind" fn(ptr: *mut u8)>,
+    /// The function pointer that may be used to write a default value to a pointer.
+    #[serde(skip)]
+    pub default_fn: Option<unsafe extern "C-unwind" fn(ptr: *mut u8)>,
 }
 
 /// A schema describes the data layout of a type, to enable dynamic access to the type's data
@@ -300,6 +314,7 @@ impl Schema {
             // If the schemas don't have any opaque fields, and are equal to each-other, then they
             // have the same representation.
             || (!self.has_opaque() && !other.has_opaque() && {
+                // FIXME: do we need to compare clone_fn and drop_fn!?
                 match (&self.kind, &other.kind) {
                     (SchemaKind::Struct(s1), SchemaKind::Struct(s2)) => {
                         s1.fields.len() == s2.fields.len() &&
@@ -318,6 +333,9 @@ impl From<SchemaKind> for Schema {
     fn from(kind: SchemaKind) -> Self {
         Self {
             type_id: None,
+            clone_fn: None,
+            drop_fn: None,
+            default_fn: None,
             kind,
             type_data: Default::default(),
         }
@@ -342,5 +360,85 @@ impl std::ops::Deref for NestedSchema {
             NestedSchema::Static(s) => s,
             NestedSchema::Boxed(s) => s,
         }
+    }
+}
+
+/// Helper to implement an opaque schema for a type with the given name.
+///
+/// This is equivalent to using the [`HasSchema`] derive macro with the `#[schema(opaque)]`
+/// attribute, but avoids a proc macro.
+#[macro_export]
+macro_rules! impl_has_schema_opaque {
+    ($name:ident) => {
+        unsafe impl HasSchema for $name {
+            fn schema() -> &'static Schema {
+                static S: OnceLock<Schema> = OnceLock::new();
+                let layout = Layout::new::<Self>();
+                S.get_or_init(|| Schema {
+                    kind: SchemaKind::Primitive(Primitive::Opaque {
+                        size: layout.size(),
+                        align: layout.align(),
+                    }),
+                    type_id: Some(TypeId::of::<Self>()),
+                    type_data: Default::default(),
+                })
+            }
+        }
+    };
+}
+
+/// Trait implemented automatically for types that implement [`Clone`] and can be used to clone the
+/// type through raw pointers.
+pub trait RawClone {
+    /// Write the default value of the type to the pointer.
+    ///
+    /// # Safety
+    ///
+    /// The `dst` pointer must be aligned, writable, and have the same layout that this function is
+    /// assocated to, and the `src` pointer must be readable and point to a valid instance of the
+    /// type that this function is associated with.
+    unsafe extern "C-unwind" fn raw_clone(src: *const u8, dst: *mut u8);
+}
+impl<T: Clone> RawClone for T {
+    unsafe extern "C-unwind" fn raw_clone(src: *const u8, dst: *mut u8) {
+        let t = &*(src as *const T);
+        let t = t.clone();
+        (dst as *mut T).write(t)
+    }
+}
+/// Trait implemented automatically for types that implement [`Drop`] and can be used to drop the
+/// type through a raw pointer.
+pub trait RawDrop {
+    /// Write the default value of the type to the pointer.
+    ///
+    /// # Safety
+    ///
+    /// The pointer must be aligned, writable, and have the same layout that this function is
+    /// assocated to.
+    unsafe extern "C-unwind" fn raw_drop(ptr: *mut u8);
+}
+impl<T> RawDrop for T {
+    unsafe extern "C-unwind" fn raw_drop(ptr: *mut u8) {
+        if std::mem::needs_drop::<T>() {
+            (ptr as *mut T).drop_in_place()
+        }
+    }
+}
+
+/// Trait implemented automatically for types that implement [`Default`] and can be used to write
+/// the default value of the type to a pointer.
+pub trait RawDefault {
+    /// Write the default value of the type to the pointer.
+    ///
+    /// # Safety
+    ///
+    /// The pointer must be aligned, writable, and have the same layout that this function is
+    /// assocated to.
+    unsafe extern "C-unwind" fn raw_default(dst: *mut u8);
+}
+impl<T: Default> RawDefault for T {
+    unsafe extern "C-unwind" fn raw_default(dst: *mut u8) {
+        let d = T::default();
+        (dst as *mut T).write(d)
     }
 }

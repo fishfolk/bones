@@ -2,18 +2,18 @@ use bones_reflect::prelude::*;
 use bones_reflect_macros::HasSchema;
 use glam::{Vec2, Vec3};
 
-#[derive(HasSchema, Debug)]
+#[derive(HasSchema, Debug, Clone, Default)]
 #[repr(C)]
 struct DataA {
     x: f32,
     y: f32,
 }
 
-#[derive(HasSchema, Debug)]
+#[derive(HasSchema, Debug, Clone, Default)]
 #[repr(C)]
 struct DataB(f32, f32);
 
-#[derive(HasSchema, Debug)]
+#[derive(HasSchema, Debug, Clone, Default)]
 #[repr(C)]
 struct DataC {
     a: DataA,
