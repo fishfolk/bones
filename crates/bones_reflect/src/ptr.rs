@@ -317,10 +317,14 @@ impl Clone for SchemaBox {
                 self.schema
             )
         });
-        // SAFE: the layout is not zero, or we could not create this box,
-        // and the new pointer has the same layout as the source.
+
+        let new_ptr = if self.layout.size() == 0 {
+            NonNull::<u8>::dangling().as_ptr()
+        } else {
+            // SAFE: Non-zero size for layout
+            unsafe { std::alloc::alloc(self.layout) }
+        };
         let new_ptr = unsafe {
-            let new_ptr = std::alloc::alloc(self.layout);
             (clone_fn)(self.ptr.as_ref().as_ptr(), new_ptr);
             OwningPtr::new(NonNull::new(new_ptr).expect("Allocation failed"))
         };
@@ -422,15 +426,15 @@ impl SchemaBox {
             schema.layout_info().layout,
             "BIG BUG: Schema layout doesn't match type layout!!"
         );
-        assert!(
-            layout.size() != 0,
-            "Cannot allocate SchemaBox for zero-sized-type ( yet )"
-        );
 
-        // SAFE: we check that the layout is non-zero, and
-        // the pointer is allocated for the layout of type T.
+        let ptr = if layout.size() == 0 {
+            NonNull::<u8>::dangling().as_ptr()
+        } else {
+            // SAFE: Non-zero size for layout
+            unsafe { std::alloc::alloc(layout) }
+        };
+        // SAFE: The pointer is allocated for the layout of type T.
         let ptr = unsafe {
-            let ptr = std::alloc::alloc(layout);
             let mut ptr = OwningPtr::new(NonNull::new(ptr).expect("Allocation failed"));
             *ptr.as_mut().deref_mut() = v;
             ptr
@@ -463,10 +467,14 @@ impl SchemaBox {
             "Cannot allocate SchemaBox for zero-sized-type ( yet )"
         );
 
-        // SAFE: we check that the layout is non-zero, and the pointer is allocated for the layout
-        // matching the schema.
+        let ptr = if layout.size() == 0 {
+            NonNull::<u8>::dangling().as_ptr()
+        } else {
+            // SAFE: Non-zero size for layout
+            unsafe { std::alloc::alloc(layout) }
+        };
+        // SAFE: The pointer is allocated for the layout matching the schema.
         let ptr = unsafe {
-            let ptr = std::alloc::alloc(layout);
             let ptr = OwningPtr::new(NonNull::new(ptr).expect("Allocation failed"));
             (default_fn)(ptr.as_ptr());
             ptr
@@ -535,6 +543,11 @@ impl From<usize> for FieldIdx<'static> {
 }
 impl<'a> From<&'a str> for FieldIdx<'a> {
     fn from(value: &'a str) -> Self {
+        Self::Name(value)
+    }
+}
+impl<'a> From<&'a String> for FieldIdx<'a> {
+    fn from(value: &'a String) -> Self {
         Self::Name(value)
     }
 }

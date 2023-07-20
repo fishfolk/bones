@@ -13,9 +13,9 @@ pub mod prelude {
         ptr::*, type_datas::*, HasSchema, NestedSchema, Primitive, RawClone, RawDefault, RawDrop,
         Schema, SchemaKind, SchemaLayoutInfo, StructField, StructSchema,
     };
-    pub use ulid::Ulid;
     #[cfg(feature = "derive")]
     pub use bones_reflect_macros::*;
+    pub use ulid::Ulid;
 }
 
 use std::{alloc::Layout, any::TypeId, borrow::Cow};
@@ -155,6 +155,33 @@ pub enum SchemaKind {
     Vec(NestedSchema),
     /// The type represents a primitive value.
     Primitive(Primitive),
+}
+
+impl SchemaKind {
+    /// Get the primitive, if this is a primitive.
+    pub fn as_primitive(&self) -> Option<&Primitive> {
+        if let Self::Primitive(p) = self {
+            Some(p)
+        } else {
+            None
+        }
+    }
+    /// Get the struct, if this is a struct.
+    pub fn as_struct(&self) -> Option<&StructSchema> {
+        if let Self::Struct(s) = self {
+            Some(s)
+        } else {
+            None
+        }
+    }
+    /// Get the vector's [`NestedSchema`], if this is a vector.
+    pub fn as_vec(&self) -> Option<&NestedSchema> {
+        if let Self::Vec(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 
 /// Container for a schema that is nested in another schema.

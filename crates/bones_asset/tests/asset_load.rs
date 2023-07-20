@@ -2,23 +2,24 @@ use std::path::PathBuf;
 
 use bones_asset::prelude::*;
 
-#[derive(HasSchema)]
+#[derive(HasSchema, Debug, Default, Clone)]
 #[repr(C)]
 struct GameMeta {
     pub gravity: f32,
-    pub players: Vec<Handle<PlayerMeta>>,
+    pub player: PlayerMeta,
+    // pub players: Vec<Handle<PlayerMeta>>,
 }
 
-#[derive(HasSchema)]
+#[derive(HasSchema, Debug, Default, Clone)]
 #[repr(C)]
 struct PlayerMeta {
     name: String,
-    atlas: Handle<AtlasMeta>,
-    favorite_things: Vec<String>,
+    // atlas: Handle<AtlasMeta>,
+    // favorite_things: Vec<String>,
     age: u8,
 }
 
-#[derive(HasSchema)]
+#[derive(HasSchema, Debug, Default, Clone)]
 #[repr(C)]
 struct AtlasMeta {
     tile_size: glam::UVec2,
@@ -47,24 +48,26 @@ fn asset_load1() -> anyhow::Result<()> {
 
     // Register our GameMeta type as a core schema with the "game" file extension, so that all
     // `.game.yaml` files will be loaded with the GameMeta schema.
-    asset_server.register_core_schema::<u32>("game");
-    // // Do the same for our atlas and player metadata
-    // asset_server.register_core_schema::<PlayerMeta>("player");
-    // asset_server.register_core_schema::<AtlasMeta>("atlas");
+    asset_server.register_core_schema::<GameMeta>("game");
+    // Do the same for our atlas and player metadata
+    asset_server.register_core_schema::<PlayerMeta>("player");
+    asset_server.register_core_schema::<AtlasMeta>("atlas");
 
     // Load all of the assets
     asset_server.load_assets()?;
 
-    let data: &u32 = asset_server
+    let data: &GameMeta = asset_server
         .store
         .assets
         .values()
-        .next()
+        .next() // We only have one asset, so we can just get it
         .unwrap()
         .data
         .cast();
 
-    assert_eq!(*data, 42);
+    dbg!(&data);
+    assert_eq!(data.gravity, 9.8);
+    assert_eq!(data.player.name, "John");
 
     Ok(())
 }

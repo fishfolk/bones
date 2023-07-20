@@ -205,7 +205,7 @@ impl AssetServer {
 
         let mut cid = Cid::default();
         cid.update(&contents);
-        let loader = MetadataLoadContext {
+        let loader = MetaAssetLoadCtx {
             server: self,
             path,
             pack,
@@ -297,7 +297,6 @@ fn path_is_metadata(path: &Path) -> bool {
     let Some(ext) = path.extension().and_then(|ext| ext.to_str()) else {
         return false
     };
-
     ext == "yaml" || ext == "yml" || ext == "json"
 }
 
@@ -307,15 +306,15 @@ mod metadata {
 
     use super::*;
 
-    pub struct MetadataLoadContext<'a> {
-        pub server: &'a mut AssetServer,
-        pub dependencies: &'a mut Vec<Cid>,
-        pub path: &'a Path,
-        pub pack: Option<&'a str>,
+    pub struct MetaAssetLoadCtx<'srv> {
+        pub server: &'srv mut AssetServer,
+        pub dependencies: &'srv mut Vec<Cid>,
+        pub path: &'srv Path,
+        pub pack: Option<&'srv str>,
         pub schema: Cow<'static, Schema>,
     }
 
-    impl<'a: 'de, 'de> DeserializeSeed<'de> for MetadataLoadContext<'a> {
+    impl<'asset, 'de> DeserializeSeed<'de> for MetaAssetLoadCtx<'asset> {
         type Value = SchemaBox;
 
         fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
@@ -328,72 +327,88 @@ mod metadata {
                 ));
             }
 
-            // Deserialize primitive types differently
-            if let SchemaKind::Primitive(p) = &self.schema.kind {
-                return PrimitiveLoader(p).deserialize(deserializer);
+            // Allocate the object.
+            let mut ptr = SchemaBox::default(self.schema.clone());
+
+            SchemaPtrLoadCtx {
+                ctx: self,
+                ptr: ptr.as_mut(),
             }
+            .deserialize(deserializer)?;
 
-            todo!();
-
-            // // Allocate the object.
-            // let layout_info = self.schema.layout_info();
-            // assert_ne!(layout_info.layout.size(), 0, "Layout size cannot be zero");
-            // // SAFE: checked layout size is not zero above
-            // let ptr = unsafe { std::alloc::alloc(layout_info.layout) };
-
-            // Ok(match &self.schema.kind {
-            //     SchemaKind::Struct(s) => deserializer.deserialize_map(StructVisitor {
-            //         ctx: &self,
-            //         ptr: ,
-            //     })?,
-            //     SchemaKind::Vec(v) => deserializer.deserialize_seq(SeqVisitor {
-            //         ctx: &self,
-            //         schema: v,
-            //     })?,
-            //     SchemaKind::Primitive(_) => unreachable!("Handled above"),
-            // })
+            Ok(ptr)
         }
     }
 
-    struct PrimitiveLoader<'a>(&'a Primitive);
+    struct SchemaPtrLoadCtx<'srv, 'ptr, 'schm, 'prnt> {
+        ctx: MetaAssetLoadCtx<'srv>,
+        ptr: SchemaPtrMut<'ptr, 'schm, 'prnt>,
+    }
 
-    impl<'a, 'de> DeserializeSeed<'de> for PrimitiveLoader<'a> {
-        type Value = SchemaBox;
+    impl<'srv, 'ptr, 'schm, 'prnt, 'de> DeserializeSeed<'de>
+        for SchemaPtrLoadCtx<'srv, 'ptr, 'schm, 'prnt>
+    {
+        type Value = MetaAssetLoadCtx<'srv>;
 
-        fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        fn deserialize<D>(mut self, deserializer: D) -> Result<Self::Value, D::Error>
         where
             D: serde::Deserializer<'de>,
         {
-            Ok(match self.0 {
-                Primitive::Bool => SchemaBox::new(bool::deserialize(deserializer)?),
-                Primitive::U8 => SchemaBox::new(u8::deserialize(deserializer)?),
-                Primitive::U16 => SchemaBox::new(u16::deserialize(deserializer)?),
-                Primitive::U32 => SchemaBox::new(u32::deserialize(deserializer)?),
-                Primitive::U64 => SchemaBox::new(u64::deserialize(deserializer)?),
-                Primitive::U128 => SchemaBox::new(u128::deserialize(deserializer)?),
-                Primitive::I8 => SchemaBox::new(i8::deserialize(deserializer)?),
-                Primitive::I16 => SchemaBox::new(i16::deserialize(deserializer)?),
-                Primitive::I32 => SchemaBox::new(i32::deserialize(deserializer)?),
-                Primitive::I64 => SchemaBox::new(i64::deserialize(deserializer)?),
-                Primitive::I128 => SchemaBox::new(i128::deserialize(deserializer)?),
-                Primitive::F32 => SchemaBox::new(f32::deserialize(deserializer)?),
-                Primitive::F64 => SchemaBox::new(f64::deserialize(deserializer)?),
-                Primitive::String => SchemaBox::new(String::deserialize(deserializer)?),
-                Primitive::Opaque { .. } => panic!(
-                    "Cannot deserialize opaque types from metadata files.\
+            // Load asset handles.
+            if self
+                .ptr
+                .schema()
+                .type_data
+                .get::<SchemaAssetHandle>()
+                .is_some()
+            {
+                todo!("Load asset handle");
+            }
+
+            let ctx = match &self.ptr.schema().kind {
+                SchemaKind::Struct(_) => deserializer.deserialize_map(StructVisitor {
+                    ptr: self.ptr,
+                    ctx: self.ctx,
+                })?,
+                SchemaKind::Vec(_) => todo!("{:#?}", self.ptr.schema()),
+                SchemaKind::Primitive(p) => {
+                    match p {
+                        Primitive::Bool => *self.ptr.cast_mut() = bool::deserialize(deserializer)?,
+                        Primitive::U8 => *self.ptr.cast_mut() = u8::deserialize(deserializer)?,
+                        Primitive::U16 => *self.ptr.cast_mut() = u16::deserialize(deserializer)?,
+                        Primitive::U32 => *self.ptr.cast_mut() = u32::deserialize(deserializer)?,
+                        Primitive::U64 => *self.ptr.cast_mut() = u64::deserialize(deserializer)?,
+                        Primitive::U128 => *self.ptr.cast_mut() = u128::deserialize(deserializer)?,
+                        Primitive::I8 => *self.ptr.cast_mut() = i8::deserialize(deserializer)?,
+                        Primitive::I16 => *self.ptr.cast_mut() = i16::deserialize(deserializer)?,
+                        Primitive::I32 => *self.ptr.cast_mut() = i32::deserialize(deserializer)?,
+                        Primitive::I64 => *self.ptr.cast_mut() = i64::deserialize(deserializer)?,
+                        Primitive::I128 => *self.ptr.cast_mut() = i128::deserialize(deserializer)?,
+                        Primitive::F32 => *self.ptr.cast_mut() = f32::deserialize(deserializer)?,
+                        Primitive::F64 => *self.ptr.cast_mut() = f64::deserialize(deserializer)?,
+                        Primitive::String => {
+                            *self.ptr.cast_mut() = String::deserialize(deserializer)?
+                        }
+                        Primitive::Opaque { .. } => panic!(
+                            "Cannot deserialize opaque types from metadata files.\
                         This error should have been handled above"
-                ),
-            })
+                        ),
+                    };
+                    self.ctx
+                }
+            };
+
+            Ok(ctx)
         }
     }
 
-    struct StructVisitor<'a, 'b> {
-        pub ctx: &'b MetadataLoadContext<'a>,
-        pub ptr: &'b SchemaPtrMut<'b, 'b, 'b>,
+    struct StructVisitor<'srv, 'ptr, 'schm, 'prnt> {
+        ctx: MetaAssetLoadCtx<'srv>,
+        ptr: SchemaPtrMut<'ptr, 'schm, 'prnt>,
     }
 
-    impl<'a, 'b, 'de> Visitor<'de> for StructVisitor<'a, 'b> {
-        type Value = SchemaBox;
+    impl<'srv, 'ptr, 'schm, 'prnt, 'de> Visitor<'de> for StructVisitor<'srv, 'ptr, 'schm, 'prnt> {
+        type Value = MetaAssetLoadCtx<'srv>;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
             write!(
@@ -403,35 +418,47 @@ mod metadata {
             )
         }
 
-        fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+        fn visit_map<A>(mut self, mut map: A) -> Result<Self::Value, A::Error>
         where
             A: serde::de::MapAccess<'de>,
         {
-            todo!();
+            println!("Deserializing struct");
+            let mut ctx = self.ctx;
+            while let Ok(Some(key)) = map.next_key::<String>() {
+                let field = self
+                    .ptr
+                    .get_field(&key)
+                    // TODO: add expected fields.
+                    .map_err(|_| A::Error::unknown_field(&key, &[]))?;
+
+                ctx = map.next_value_seed(SchemaPtrLoadCtx { ctx, ptr: field })?;
+            }
+
+            Ok(ctx)
         }
     }
 
-    struct SeqVisitor<'a, 'b> {
-        pub ctx: &'b MetadataLoadContext<'a>,
-        pub schema: &'b Schema,
-    }
+    // struct SeqVisitor<'a, 'b> {
+    //     pub ctx: &'b MetaAssetLoadCtx<'a>,
+    //     pub schema: &'b Schema,
+    // }
 
-    impl<'a, 'b, 'de> Visitor<'de> for SeqVisitor<'a, 'b> {
-        type Value = SchemaBox;
+    // impl<'a, 'b, 'de> Visitor<'de> for SeqVisitor<'a, 'b> {
+    //     type Value = SchemaBox;
 
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(
-                formatter,
-                "asset metadata matching the schema: {:#?}",
-                self.schema
-            )
-        }
+    //     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+    //         write!(
+    //             formatter,
+    //             "asset metadata matching the schema: {:#?}",
+    //             self.schema
+    //         )
+    //     }
 
-        fn visit_seq<A>(self, _seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: serde::de::SeqAccess<'de>,
-        {
-            todo!("Implement custom Vec type that can store dynamic layout data.");
-        }
-    }
+    //     fn visit_seq<A>(self, _seq: A) -> Result<Self::Value, A::Error>
+    //     where
+    //         A: serde::de::SeqAccess<'de>,
+    //     {
+    //         todo!("Implement custom Vec type that can store dynamic layout data.");
+    //     }
+    // }
 }

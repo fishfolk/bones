@@ -1,4 +1,4 @@
-42
-# players:
-#   - ./players/jane/jane.player.yaml
-#   - ./players/john/john.player.yaml
+gravity: 9.8
+player:
+  name: John
+  age: 32

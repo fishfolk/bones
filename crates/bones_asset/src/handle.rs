@@ -85,9 +85,12 @@ impl UntypedHandle {
 ///
 /// It doesn't need to contain any data, because it's very presense in a schema's [`TypeDatas`]
 /// indicates that the schema represents a handle.
+#[derive(HasSchema, Clone, Copy, Default, Debug)]
+#[schema(opaque)]
 pub struct SchemaAssetHandle;
-
-pub const ASSET_HANDLE_TYPE_DATA: Ulid = Ulid(2042034270141692702617108034127624904);
+impl TypeData for SchemaAssetHandle {
+    const TYPE_DATA_ID: Ulid = Ulid(2042034270141692702617108034127624904);
+}
 
 /// Helper to avoid typing the duplicate implementations of [`HasSchema`] for typed and untyped
 /// handles.
@@ -114,14 +117,22 @@ macro_rules! schema_impl_for_handle {
                             type_id: Some(TypeId::of::<Ulid>()),
                             kind: SchemaKind::Primitive(Primitive::U128),
                             type_data: Default::default(),
+                            clone_fn: Some(<u128 as RawClone>::raw_clone),
+                            drop_fn: None,
+                            default_fn: Some(<u128 as RawDefault>::raw_default),
                         },
                     }],
                 }),
+                clone_fn: Some(<Self as RawClone>::raw_clone),
+                drop_fn: None,
+                default_fn: Some(<Self as RawDefault>::raw_default),
                 type_data: {
-                    let mut h = HashMap::with_capacity(1);
-                    // TODO: Make that a `SchemaBox::new(())` once schema box can handle ZSTs.
-                    h.insert(ASSET_HANDLE_TYPE_DATA, SchemaBox::new(true));
-                    h
+                    let mut td = TypeDatas(HashMap::with_capacity(1));
+                    td.0.insert(
+                        SchemaAssetHandle::TYPE_DATA_ID,
+                        SchemaBox::new(SchemaAssetHandle),
+                    );
+                    td
                 },
             })
         }
