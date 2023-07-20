@@ -2,3 +2,4 @@ gravity: 9.8
 player:
   name: John
   age: 32
+  collision_size: [1.2, 3.4]

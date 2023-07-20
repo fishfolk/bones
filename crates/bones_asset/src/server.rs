@@ -317,7 +317,7 @@ mod metadata {
     impl<'asset, 'de> DeserializeSeed<'de> for MetaAssetLoadCtx<'asset> {
         type Value = SchemaBox;
 
-        fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        fn deserialize<D>(mut self, deserializer: D) -> Result<Self::Value, D::Error>
         where
             D: serde::Deserializer<'de>,
         {
@@ -331,7 +331,7 @@ mod metadata {
             let mut ptr = SchemaBox::default(self.schema.clone());
 
             SchemaPtrLoadCtx {
-                ctx: self,
+                ctx: &mut self,
                 ptr: ptr.as_mut(),
             }
             .deserialize(deserializer)?;
@@ -340,15 +340,15 @@ mod metadata {
         }
     }
 
-    struct SchemaPtrLoadCtx<'srv, 'ptr, 'schm, 'prnt> {
-        ctx: MetaAssetLoadCtx<'srv>,
+    struct SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'schm, 'prnt> {
+        ctx: &'a mut MetaAssetLoadCtx<'srv>,
         ptr: SchemaPtrMut<'ptr, 'schm, 'prnt>,
     }
 
-    impl<'srv, 'ptr, 'schm, 'prnt, 'de> DeserializeSeed<'de>
-        for SchemaPtrLoadCtx<'srv, 'ptr, 'schm, 'prnt>
+    impl<'a, 'srv, 'ptr, 'schm, 'prnt, 'de> DeserializeSeed<'de>
+        for SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'schm, 'prnt>
     {
-        type Value = MetaAssetLoadCtx<'srv>;
+        type Value = ();
 
         fn deserialize<D>(mut self, deserializer: D) -> Result<Self::Value, D::Error>
         where
@@ -365,8 +365,8 @@ mod metadata {
                 todo!("Load asset handle");
             }
 
-            let ctx = match &self.ptr.schema().kind {
-                SchemaKind::Struct(_) => deserializer.deserialize_map(StructVisitor {
+            match &self.ptr.schema().kind {
+                SchemaKind::Struct(_) => deserializer.deserialize_any(StructVisitor {
                     ptr: self.ptr,
                     ctx: self.ctx,
                 })?,
@@ -391,26 +391,28 @@ mod metadata {
                         }
                         Primitive::Opaque { .. } => panic!(
                             "Cannot deserialize opaque types from metadata files.\
-                        This error should have been handled above"
+                            This error should have been handled above"
                         ),
                     };
-                    self.ctx
                 }
             };
 
-            Ok(ctx)
+            Ok(())
         }
     }
 
-    struct StructVisitor<'srv, 'ptr, 'schm, 'prnt> {
-        ctx: MetaAssetLoadCtx<'srv>,
+    struct StructVisitor<'a, 'srv, 'ptr, 'schm, 'prnt> {
+        ctx: &'a mut MetaAssetLoadCtx<'srv>,
         ptr: SchemaPtrMut<'ptr, 'schm, 'prnt>,
     }
 
-    impl<'srv, 'ptr, 'schm, 'prnt, 'de> Visitor<'de> for StructVisitor<'srv, 'ptr, 'schm, 'prnt> {
-        type Value = MetaAssetLoadCtx<'srv>;
+    impl<'a, 'srv, 'ptr, 'schm, 'prnt, 'de> Visitor<'de>
+        for StructVisitor<'a, 'srv, 'ptr, 'schm, 'prnt>
+    {
+        type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            // FIXME: write a really nice error message for this.
             write!(
                 formatter,
                 "asset metadata matching the schema: {:#?}",
@@ -418,23 +420,64 @@ mod metadata {
             )
         }
 
+        fn visit_seq<A>(mut self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::SeqAccess<'de>,
+        {
+            let field_count = self.ptr.schema().kind.as_struct().unwrap().fields.len();
+
+            for i in 0..field_count {
+                let field = self.ptr.get_field(i).unwrap();
+                if seq
+                    .next_element_seed(SchemaPtrLoadCtx {
+                        ctx: self.ctx,
+                        ptr: field,
+                    })?
+                    .is_none()
+                {
+                    break;
+                }
+            }
+
+            Ok(())
+        }
+
         fn visit_map<A>(mut self, mut map: A) -> Result<Self::Value, A::Error>
         where
             A: serde::de::MapAccess<'de>,
         {
-            println!("Deserializing struct");
-            let mut ctx = self.ctx;
-            while let Ok(Some(key)) = map.next_key::<String>() {
-                let field = self
-                    .ptr
-                    .get_field(&key)
-                    // TODO: add expected fields.
-                    .map_err(|_| A::Error::unknown_field(&key, &[]))?;
-
-                ctx = map.next_value_seed(SchemaPtrLoadCtx { ctx, ptr: field })?;
+            while let Some(key) = map.next_key::<String>()? {
+                match self.ptr.get_field(&key) {
+                    Ok(field) => {
+                        map.next_value_seed(SchemaPtrLoadCtx {
+                            ctx: self.ctx,
+                            ptr: field,
+                        })?;
+                    }
+                    Err(_) => {
+                        let fields = &self.ptr.schema().kind.as_struct().unwrap().fields;
+                        let mut msg = format!("unknown field `{key}`, ");
+                        if !fields.is_empty() {
+                            msg += "expected one of ";
+                            for (i, field) in fields.iter().enumerate() {
+                                msg += &field
+                                    .name
+                                    .as_ref()
+                                    .map(|x| format!("`{x}`"))
+                                    .unwrap_or_else(|| format!("`{i}`"));
+                                if i < fields.len() - 1 {
+                                    msg += ", "
+                                }
+                            }
+                        } else {
+                            msg += "there are no fields"
+                        }
+                        return Err(A::Error::custom(msg));
+                    }
+                }
             }
 
-            Ok(ctx)
+            Ok(())
         }
     }
 

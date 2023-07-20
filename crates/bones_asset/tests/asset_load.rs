@@ -1,30 +1,21 @@
 use std::path::PathBuf;
 
 use bones_asset::prelude::*;
+use glam::Vec2;
 
 #[derive(HasSchema, Debug, Default, Clone)]
 #[repr(C)]
 struct GameMeta {
     pub gravity: f32,
     pub player: PlayerMeta,
-    // pub players: Vec<Handle<PlayerMeta>>,
 }
 
 #[derive(HasSchema, Debug, Default, Clone)]
 #[repr(C)]
 struct PlayerMeta {
-    name: String,
-    // atlas: Handle<AtlasMeta>,
-    // favorite_things: Vec<String>,
-    age: u8,
-}
-
-#[derive(HasSchema, Debug, Default, Clone)]
-#[repr(C)]
-struct AtlasMeta {
-    tile_size: glam::UVec2,
-    columns: u32,
-    rows: u32,
+    pub name: String,
+    pub age: u8,
+    pub collision_size: Vec2,
 }
 
 #[test]
@@ -49,9 +40,6 @@ fn asset_load1() -> anyhow::Result<()> {
     // Register our GameMeta type as a core schema with the "game" file extension, so that all
     // `.game.yaml` files will be loaded with the GameMeta schema.
     asset_server.register_core_schema::<GameMeta>("game");
-    // Do the same for our atlas and player metadata
-    asset_server.register_core_schema::<PlayerMeta>("player");
-    asset_server.register_core_schema::<AtlasMeta>("atlas");
 
     // Load all of the assets
     asset_server.load_assets()?;
@@ -67,6 +55,7 @@ fn asset_load1() -> anyhow::Result<()> {
 
     dbg!(&data);
     assert_eq!(data.gravity, 9.8);
+    assert_eq!(data.player.collision_size, Vec2::new(1.2, 3.4));
     assert_eq!(data.player.name, "John");
 
     Ok(())
