@@ -15,6 +15,7 @@ struct GameMeta {
 struct PlayerMeta {
     pub name: String,
     pub age: u8,
+    // FIXME:!! Segfault when adding loading this field sometimes !!
     pub collision_size: Vec2,
 }
 
