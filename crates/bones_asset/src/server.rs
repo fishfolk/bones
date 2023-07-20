@@ -480,28 +480,4 @@ mod metadata {
             Ok(())
         }
     }
-
-    // struct SeqVisitor<'a, 'b> {
-    //     pub ctx: &'b MetaAssetLoadCtx<'a>,
-    //     pub schema: &'b Schema,
-    // }
-
-    // impl<'a, 'b, 'de> Visitor<'de> for SeqVisitor<'a, 'b> {
-    //     type Value = SchemaBox;
-
-    //     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-    //         write!(
-    //             formatter,
-    //             "asset metadata matching the schema: {:#?}",
-    //             self.schema
-    //         )
-    //     }
-
-    //     fn visit_seq<A>(self, _seq: A) -> Result<Self::Value, A::Error>
-    //     where
-    //         A: serde::de::SeqAccess<'de>,
-    //     {
-    //         todo!("Implement custom Vec type that can store dynamic layout data.");
-    //     }
-    // }
 }
