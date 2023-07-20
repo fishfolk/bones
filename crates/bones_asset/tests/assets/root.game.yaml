@@ -1,6 +1,9 @@
+# This is the root asset. It is referenced by the pack.yaml file.
+# In Rust this is represented by the GameMeta struct.
+# This asset will reference all the other assets that are included in the pack.
+
+# We can have global game options here.
 gravity: 9.8
-player:
-  name: John
-  age: 32
-  collision_size: [1.2, 3.4]
-  tile_size: [5, 6]
+
+# And we can reference other assets.
+player: ./players/jane/jane.player.yaml

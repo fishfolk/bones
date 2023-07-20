@@ -135,6 +135,8 @@ pub struct AssetStore {
     pub core_pack: Option<AssetPack>,
     /// The asset packs that have been loaded.
     pub packs: HashMap<AssetPackSpec, AssetPack>,
+    /// Maps the directory names of asset packs to their [`AssetPackSpec`].
+    pub pack_dirs: HashMap<String, AssetPackSpec>,
 }
 
 /// An asset that has been loaded.

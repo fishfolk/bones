@@ -1,3 +1,8 @@
-tile_size: [25, 30]
-columns: 2
-rows: 4
+# Struct fields can be filled out by name, as we have seen before.
+tile_size:
+  x: 25.5
+  y: 30
+
+# Or they can also be filled out as a list, which is particularly
+# convenient for glam vectors.
+grid_size: [2, 4]

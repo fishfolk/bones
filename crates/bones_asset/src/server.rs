@@ -85,6 +85,17 @@ impl AssetServer {
         let packfile_contents = self.io.load_file(pack, Path::new("pack.yaml"))?;
         let meta: PackfileMeta = serde_yaml::from_slice(&packfile_contents)?;
 
+        // Store the asset pack spec associated to the pack dir name.
+        if let Some(pack_dir) = pack {
+            self.store.pack_dirs.insert(
+                pack_dir.into(),
+                AssetPackSpec {
+                    id: meta.id,
+                    version: meta.version.clone(),
+                },
+            );
+        }
+
         if !path_is_metadata(&meta.root) {
             anyhow::bail!(
                 "Root asset must be a JSON or YAML file with a name in the form: \
@@ -93,18 +104,7 @@ impl AssetServer {
         }
 
         // Load the asset and produce a handle
-        let partial = self.load_asset(&meta.root, None)?;
-        let loaded_asset = LoadedAsset {
-            cid: partial.cid,
-            pack: None,
-            pack_dir: None,
-            path: meta.root.to_owned(),
-            dependencies: partial.dependencies,
-            data: partial.data,
-        };
-        let root_handle = UntypedHandle { rid: Ulid::new() };
-        self.store.asset_ids.insert(root_handle, partial.cid);
-        self.store.assets.insert(partial.cid, loaded_asset);
+        let root_handle = self.load_asset(&meta.root, None)?;
 
         // Return the loaded asset pack.
         Ok(AssetPack {
@@ -133,18 +133,7 @@ impl AssetServer {
         }
 
         // Load the asset and produce a handle
-        let partial = self.load_asset(&meta.root, None)?;
-        let loaded_asset = LoadedAsset {
-            cid: partial.cid,
-            pack: None,
-            pack_dir: None,
-            path: meta.root.to_owned(),
-            dependencies: partial.dependencies,
-            data: partial.data,
-        };
-        let root_handle = UntypedHandle { rid: Ulid::new() };
-        self.store.asset_ids.insert(root_handle, partial.cid);
-        self.store.assets.insert(partial.cid, loaded_asset);
+        let handle = self.load_asset(&meta.root, None)?;
         let game_version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
 
         // Return the loaded asset pack.
@@ -164,18 +153,37 @@ impl AssetServer {
             },
             schemas: default(),
             import_schemas: default(),
-            root: root_handle,
+            root: handle,
         })
     }
 
     /// Load the asset
-    fn load_asset(&mut self, path: &Path, pack: Option<&str>) -> anyhow::Result<PartialAsset> {
+    fn load_asset(&mut self, path: &Path, pack: Option<&str>) -> anyhow::Result<UntypedHandle> {
         let contents = self.io.load_file(pack, path)?;
-        if path_is_metadata(path) {
+        let partial = if path_is_metadata(path) {
             self.load_metadata_asset(path, pack, contents)
         } else {
             self.load_data_asset(path, pack, contents)
-        }
+        }?;
+        let loaded_asset = LoadedAsset {
+            cid: partial.cid,
+            pack: pack.map(|x| {
+                self.store
+                    .pack_dirs
+                    .get(x)
+                    .expect("Pack dir not loaded properly")
+                    .clone()
+            }),
+            pack_dir: None,
+            path: path.to_owned(),
+            dependencies: partial.dependencies,
+            data: partial.data,
+        };
+        let handle = UntypedHandle { rid: Ulid::new() };
+        self.store.asset_ids.insert(handle, partial.cid);
+        self.store.assets.insert(partial.cid, loaded_asset);
+
+        Ok(handle)
     }
 
     fn load_metadata_asset(
@@ -246,6 +254,16 @@ impl AssetServer {
     pub fn get_untyped(&self, handle: &UntypedHandle) -> Option<&LoadedAsset> {
         let cid = self.store.asset_ids.get(handle)?;
         self.store.assets.get(cid)
+    }
+
+    /// Read the core asset pack.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the assets have not be loaded yet with [`AssetServer::load_assets`].
+    #[track_caller]
+    pub fn core(&self) -> &AssetPack {
+        self.store.core_pack.as_ref().unwrap()
     }
 
     /// Borrow a loaded asset.
@@ -362,7 +380,18 @@ mod metadata {
                 .get::<SchemaAssetHandle>()
                 .is_some()
             {
-                todo!("Load asset handle");
+                let relative_path = PathBuf::from(String::deserialize(deserializer)?);
+                let path = normalize_path_relative_to(&relative_path, self.ctx.path);
+                let handle = self
+                    .ctx
+                    .server
+                    .load_asset(&path, self.ctx.pack)
+                    .map_err(|e| D::Error::custom(e.to_string()))?;
+                *self
+                    .ptr
+                    .try_cast_mut()
+                    .map_err(|e| D::Error::custom(e.to_string()))? = handle;
+                return Ok(());
             }
 
             match &self.ptr.schema().kind {

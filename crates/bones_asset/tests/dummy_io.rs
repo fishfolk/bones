@@ -1,3 +1,5 @@
+//! This is a dummy IO module that may be useful for testing without accessing the filesystem.
+
 use std::path::PathBuf;
 
 use bones_utils::HashMap;
