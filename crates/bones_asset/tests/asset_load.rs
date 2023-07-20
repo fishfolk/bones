@@ -1,7 +1,8 @@
-use std::path::PathBuf;
-
 use bones_asset::prelude::*;
-use glam::Vec2;
+use glam::{UVec2, Vec2};
+
+mod dummy_io;
+use dummy_io::DummyIo;
 
 #[derive(HasSchema, Debug, Default, Clone)]
 #[repr(C)]
@@ -17,23 +18,19 @@ struct PlayerMeta {
     pub age: u8,
     // FIXME:!! Segfault when adding loading this field sometimes !!
     pub collision_size: Vec2,
+    pub tile_size: UVec2,
 }
 
 #[test]
 fn asset_load1() -> anyhow::Result<()> {
-    // Locate our core asset dir and asset pack dir
-    let core_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests")
-        .join("assets");
-    let packs_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests")
-        .join("packs");
-
     // Create a file asset IO to load assets from the filesystem.
-    let io = FileAssetIo {
-        core_dir,
-        packs_dir,
-    };
+    let io = DummyIo::new([
+        ("pack.yaml", include_bytes!("./assets/pack.yaml").to_vec()),
+        (
+            "root.game.yaml",
+            include_bytes!("./assets/root.game.yaml").to_vec(),
+        ),
+    ]);
 
     // Create an asset server that we can load the assets with.
     let mut asset_server = AssetServer::new(io);
@@ -57,6 +54,7 @@ fn asset_load1() -> anyhow::Result<()> {
     dbg!(&data);
     assert_eq!(data.gravity, 9.8);
     assert_eq!(data.player.collision_size, Vec2::new(1.2, 3.4));
+    assert_eq!(data.player.tile_size, UVec2::new(5, 6));
     assert_eq!(data.player.name, "John");
 
     Ok(())

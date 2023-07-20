@@ -266,7 +266,7 @@ impl Schema {
     pub fn layout_info(&self) -> SchemaLayoutInfo<'_> {
         let mut layout: Option<Layout> = None;
         let mut field_offsets = Vec::new();
-        let mut current_offset = 0;
+        let mut offset;
 
         let extend_layout = |layout: &mut Option<Layout>, l| {
             if let Some(layout) = layout {
@@ -283,8 +283,8 @@ impl Schema {
             SchemaKind::Struct(s) => {
                 for field in &s.fields {
                     let field_layout_info = field.schema.layout_info();
-                    current_offset += extend_layout(&mut layout, field_layout_info.layout);
-                    field_offsets.push((field.name.as_deref(), current_offset));
+                    offset = extend_layout(&mut layout, field_layout_info.layout);
+                    field_offsets.push((field.name.as_deref(), offset));
                 }
             }
             SchemaKind::Vec(_) => {

@@ -3,3 +3,4 @@ player:
   name: John
   age: 32
   collision_size: [1.2, 3.4]
+  tile_size: [5, 6]
