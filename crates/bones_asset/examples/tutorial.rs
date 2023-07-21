@@ -56,14 +56,24 @@ struct AtlasMeta {
     pub grid_size: UVec2,
 }
 
-#[test]
-fn asset_load1() -> anyhow::Result<()> {
-    // Locate our core asset dir and asset pack dir
+/// We also want to support loading asset packs, so we create a plugin metdata type that will be
+/// used for plugin assets.
+#[derive(HasSchema, Debug, Default, Clone)]
+#[repr(C)]
+struct PluginMeta {
+    /// We'll keep this one simple for now.
+    pub description: String,
+}
+
+fn main() -> anyhow::Result<()> {
+    // Locate the dir that our core asset pack will be loaded from.
     let core_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests")
+        .join("examples")
         .join("assets");
+    // Locate the dir that our other asset packs will be loaded from. These are presumably able to
+    // be installed by the user for modding, etc.
     let packs_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests")
+        .join("examples")
         .join("packs");
 
     // Create a FileAssetIo to load assets from the filesystem.
@@ -74,16 +84,18 @@ fn asset_load1() -> anyhow::Result<()> {
         packs_dir,
     };
 
-    // Create an asset server that we can load the assets with, and pass it our AssetIo
-    // implementation.
-    let mut asset_server = AssetServer::new(io);
+    // Create an asset server that we can load the assets with. We must provide our AssetIo
+    // implementation, and the version of our game, which is used to determine if asset packs are
+    // compatible with our game version.
+    let mut asset_server = AssetServer::new(io, Version::new(0, 1, 3));
 
     // Register our GameMeta type as a core schema with the "game" file extension, so that all
     // `.game.yaml` files will be loaded with the GameMeta schema.
     asset_server.register_core_schema::<GameMeta>("game");
-    // We also need to register file extensions for PlayerMeta and AtlasMeta.
+    // We also need to register file extensions for PlayerMeta, AtlasMeta, and PluginMeta.
     asset_server.register_core_schema::<PlayerMeta>("player");
     asset_server.register_core_schema::<AtlasMeta>("atlas");
+    asset_server.register_core_schema::<PluginMeta>("plugin");
 
     // Load all of the assets. This happens synchronously. After this function completes, all the
     // assets have been loaded, or an error is returned.
@@ -118,6 +130,33 @@ fn asset_load1() -> anyhow::Result<()> {
     dbg!(atlas_meta);
     assert_eq!(atlas_meta.tile_size, Vec2::new(25.5, 30.));
     assert_eq!(atlas_meta.grid_size, UVec2::new(2, 4));
+
+    // We can also check out our loaded asset packs.
+    println!("\n===== Asset Packs =====\n");
+    for (pack_spec, asset_pack) in asset_server.packs() {
+        // Let's load the plugin metadata from the pack.
+        let plugin_handle = asset_pack.root.typed::<PluginMeta>();
+        let plugin_meta = asset_server.get(&plugin_handle);
+
+        // Print the pack name and version and it's description
+        println!("{pack_spec}: {}", plugin_meta.description);
+    }
+
+    // Finally, there may be some asset packs that are installed, but not compatible with our game
+    // version. Let's check for those.
+    println!("\n===== Incompatible Asset Packs ====\n");
+
+    // We can iterate over the incompatible packs, and print a message describing the mismatch.
+    for (folder_name, pack_meta) in &asset_server.incompabile_packs {
+        let id = pack_meta.id;
+        let version = &pack_meta.version;
+        let actual_game_version = &asset_server.game_version;
+        let compatible_game_version = &pack_meta.game_version;
+        println!(
+            "{id}@{version} in folder `{folder_name}` is not compatible with game version \
+            {actual_game_version} - pack is compatible with game version {compatible_game_version}"
+        );
+    }
 
     Ok(())
 }

@@ -21,6 +21,7 @@ use serde::Deserialize;
 pub mod prelude {
     pub use crate::*;
     pub use bones_reflect::prelude::*;
+    pub use semver::Version;
 }
 
 mod cid;
@@ -80,6 +81,13 @@ pub struct AssetPackSpec {
     pub version: Version,
 }
 
+impl std::fmt::Display for AssetPackSpec {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self { id, version } = self;
+        write!(f, "{id}@{version}")
+    }
+}
+
 /// A requirement specifier for an asset pack, made up of the asset pack's [`LabeledId`] and it's
 /// [`VersionReq`].
 #[derive(Debug, Clone)]
@@ -103,6 +111,9 @@ pub struct SchemaId {
 /// Struct responsible for loading assets into it's contained [`AssetStore`], using an [`AssetIo`]
 /// implementation.
 pub struct AssetServer {
+    /// The version of the game. This is used to evaluate whether asset packs are compatible with
+    /// the game.
+    pub game_version: Version,
     /// The [`AssetIo`] implementation used to load assets.
     pub io: Box<dyn AssetIo>,
     /// The asset store.
@@ -112,6 +123,8 @@ pub struct AssetServer {
     /// The string key may be used in asset file extensions like `some_name.key.yaml` or
     /// `some_name.key.json`.
     pub core_schemas: HashMap<String, Cow<'static, Schema>>,
+    /// Lists the packs that have not been loaded due to an incompatible game version.
+    pub incompabile_packs: HashMap<String, PackfileMeta>,
 }
 
 /// Struct containing all the game's loaded assets, including the default assets and

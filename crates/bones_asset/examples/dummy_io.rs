@@ -54,3 +54,5 @@ impl bones_asset::AssetIo for DummyIo {
         None
     }
 }
+
+fn main() {}

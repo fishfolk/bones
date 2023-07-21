@@ -1,0 +1,24 @@
+#
+# This is an example asset pack.
+#
+
+# Each pack has a name, meant to be a user display name.
+name: Pack 1
+
+# Each pack has a version. Packs will use semver to match dependencies between packs.
+version: 0.1.0
+
+# The pack must also specify the game version that it is compatible with. This uses
+# cargo's version parsing conventions.
+#
+#   Note: In the tutorial example we set the game version to 0.1.3. That is compatible
+#   with version 0.1.0, so this asset pack will load, even though there is not an exact
+#   version match.
+game_version: 0.1.0
+
+# Each pack has a unique ID, which is made up of a string prefix, an underscore, and a ULID
+# identifier.
+id: pack-1_01H4PKNEVFFW3TH09R1N8006BA
+
+# Finally, we specify the root asset for the pack.
+root: ./pack1.plugin.yaml

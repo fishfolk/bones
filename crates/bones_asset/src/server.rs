@@ -1,3 +1,4 @@
+use anyhow::Context;
 use once_cell::sync::Lazy;
 use serde::de::DeserializeSeed;
 use ulid::Ulid;
@@ -28,13 +29,41 @@ pub struct PackfileMeta {
 pub static CORE_PACK_ID: Lazy<AssetPackId> =
     Lazy::new(|| AssetPackId::new_with_ulid("core", Ulid(0)).unwrap());
 
+/// An error returned when an asset pack does not support the game version.
+#[derive(Debug, Clone)]
+pub struct IncompatibleGameVersionError {
+    /// The version of the game that the pack is not compatible with.
+    pub game_version: Version,
+    /// The directory of the pack that
+    pub pack_dir: String,
+    /// The metadata of the pack that could not be loaded.
+    pub pack_meta: PackfileMeta,
+}
+
+impl std::error::Error for IncompatibleGameVersionError {}
+impl std::fmt::Display for IncompatibleGameVersionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Asset pack `{}` v{} from folder `{}` is only compatible with game versions matching {}, not {}",
+            self.pack_meta.id,
+            self.pack_meta.version,
+            self.pack_dir,
+            self.pack_meta.game_version,
+            self.game_version
+        )
+    }
+}
+
 impl AssetServer {
     /// Initialize a new [`AssetServer`].
-    pub fn new<Io: AssetIo + 'static>(io: Io) -> Self {
+    pub fn new<Io: AssetIo + 'static>(io: Io, version: Version) -> Self {
         Self {
             io: Box::new(io),
+            game_version: version,
             store: default(),
             core_schemas: default(),
+            incompabile_packs: default(),
         }
     }
 
@@ -51,22 +80,36 @@ impl AssetServer {
     /// All of the assets are immediately loaded synchronously, blocking until load is complete.
     pub fn load_assets(&mut self) -> anyhow::Result<()> {
         let core_pack = self.load_pack(None)?;
-        let packs = self
-            .io
-            .enumerate_packs()?
-            .into_iter()
-            .map(|name| {
-                self.load_pack(Some(&name)).map(|pack| {
-                    (
-                        AssetPackSpec {
-                            id: pack.id,
-                            version: pack.version.clone(),
-                        },
-                        pack,
-                    )
-                })
-            })
-            .collect::<Result<_, _>>()?;
+        let mut packs = HashMap::new();
+
+        // For every asset pack
+        for pack_dir in self.io.enumerate_packs()? {
+            // Load the asset pack
+            let pack_result = self.load_pack(Some(&pack_dir));
+            match pack_result {
+                // If the load was successful
+                Ok(pack) => {
+                    // Add it to our pack list.
+                    let spec = AssetPackSpec {
+                        id: pack.id,
+                        version: pack.version.clone(),
+                    };
+                    packs.insert(spec, pack);
+                }
+                // If there was an error.
+                Err(e) => match e.downcast::<IncompatibleGameVersionError>() {
+                    // Check for a compatibility error
+                    Ok(e) => {
+                        // Add it to the list of incompatible packs.
+                        self.incompabile_packs.insert(e.pack_dir, e.pack_meta);
+                    }
+                    // If this is another kind of error, return the error
+                    Err(e) => {
+                        return Err(e).context(format!("Error loading asset pack: {pack_dir}"))
+                    }
+                },
+            }
+        }
 
         self.store.packs = packs;
         self.store.core_pack = Some(core_pack);
@@ -78,12 +121,24 @@ impl AssetServer {
     pub fn load_pack(&mut self, pack: Option<&str>) -> anyhow::Result<AssetPack> {
         // Load the core pack differently
         if pack.is_none() {
-            return self.load_core_pack();
+            return self
+                .load_core_pack()
+                .context("Error loading core asset pack");
         }
 
         // Load the asset packfile
         let packfile_contents = self.io.load_file(pack, Path::new("pack.yaml"))?;
         let meta: PackfileMeta = serde_yaml::from_slice(&packfile_contents)?;
+
+        // If the game version doesn't match, then don't continue loading this pack.
+        if !meta.game_version.matches(&self.game_version) {
+            return Err(IncompatibleGameVersionError {
+                game_version: self.game_version.clone(),
+                pack_dir: pack.unwrap().to_owned(),
+                pack_meta: meta,
+            }
+            .into());
+        }
 
         // Store the asset pack spec associated to the pack dir name.
         if let Some(pack_dir) = pack {
@@ -104,7 +159,7 @@ impl AssetServer {
         }
 
         // Load the asset and produce a handle
-        let root_handle = self.load_asset(&meta.root, None)?;
+        let root_handle = self.load_asset(&meta.root, pack)?;
 
         // Return the loaded asset pack.
         Ok(AssetPack {
@@ -134,20 +189,19 @@ impl AssetServer {
 
         // Load the asset and produce a handle
         let handle = self.load_asset(&meta.root, None)?;
-        let game_version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
 
         // Return the loaded asset pack.
         Ok(AssetPack {
             name: "Core".into(),
             id: *CORE_PACK_ID,
-            version: game_version.clone(),
+            version: self.game_version.clone(),
             game_version: VersionReq {
                 comparators: [semver::Comparator {
                     op: semver::Op::Exact,
-                    major: game_version.major,
-                    minor: Some(game_version.minor),
-                    patch: Some(game_version.patch),
-                    pre: game_version.pre,
+                    major: self.game_version.major,
+                    minor: Some(self.game_version.minor),
+                    patch: Some(self.game_version.patch),
+                    pre: self.game_version.pre.clone(),
                 }]
                 .to_vec(),
             },
@@ -159,7 +213,10 @@ impl AssetServer {
 
     /// Load the asset
     fn load_asset(&mut self, path: &Path, pack: Option<&str>) -> anyhow::Result<UntypedHandle> {
-        let contents = self.io.load_file(pack, path)?;
+        let contents = self
+            .io
+            .load_file(pack, path)
+            .context(format!("Could not load asset file: {path:?}"))?;
         let partial = if path_is_metadata(path) {
             self.load_metadata_asset(path, pack, contents)
         } else {
@@ -264,6 +321,11 @@ impl AssetServer {
     #[track_caller]
     pub fn core(&self) -> &AssetPack {
         self.store.core_pack.as_ref().unwrap()
+    }
+
+    /// Read the loaded asset packs.
+    pub fn packs(&self) -> &HashMap<AssetPackSpec, AssetPack> {
+        &self.store.packs
     }
 
     /// Borrow a loaded asset.
