@@ -5,6 +5,9 @@
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
 
+// This allows us to use our stable polyfills for nightly APIs under the same name.
+#![allow(unstable_name_collisions)]
+
 pub use bones_reflect_macros::*;
 
 /// The prelude.
@@ -22,6 +25,8 @@ use std::{alloc::Layout, any::TypeId, borrow::Cow};
 
 use serde::Deserialize;
 use ulid::Ulid;
+
+pub mod alloc;
 
 mod ptr;
 pub use ptr::*;
