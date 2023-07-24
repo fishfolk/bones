@@ -1,132 +1,189 @@
 //! Allocation and collection utilities.
 
-use std::{
-    alloc::{self, handle_alloc_error, Layout, LayoutError},
-    ptr::NonNull,
-};
-
-use bones_utils::PtrMut;
 pub use layout::*;
 mod layout;
 
-/// A low-level memory allocation utility for creating a resizable buffer of elements of a specific
-/// layout.
-///
-/// The allocation has a capacity measured in the number of elements with the given [`Layout`] that
-/// it has room for.
-///
-/// Dropping a [`ResizableAlloc`] will de-allocate it's memory.
-pub struct ResizableAlloc {
-    /// The pointer to the allocation. May be dangling for a capacity of zero or for a zero-sized
-    /// layout.
-    ptr: NonNull<u8>,
-    /// The layout of the items stored
-    layout: Layout,
-    /// The current capacity measured in items.
-    cap: usize,
-}
+pub use resizable::*;
+mod resizable;
 
-impl ResizableAlloc {
-    /// Create a new [`ResizableAlloc`] for the given memory layout. Does not actually allocate
-    /// anything yet.
+pub use vec::*;
+mod vec {
+    use std::borrow::Cow;
+
+    use crate::{Schema, SchemaBox, SchemaMismatchError, SchemaPtr, SchemaPtrMut};
+
+    use super::ResizableAlloc;
+
+    /// An untyped [`Vec`]-like collection.
     ///
-    /// The capacity will be 0 and the pointer will be dangling.
-    pub fn new(layout: Layout) -> Self {
-        Self {
-            ptr: Self::dangling(&layout),
-            layout,
-            cap: 0,
-        }
+    /// # Important Type Data Note
+    ///
+    /// All inserts into the vector are check to be [`Schema::equivalent()`], which significantly
+    /// _doesn't_ verify the equivalence of the schemas' [`TypeDatas`][crate::TypeDatas].
+    ///
+    /// This means that if you insert an item with a different schema, that is equivalent to the
+    /// [`SchemaVec`]'s schema, the insert will succeed, but the type data of the inserted item will
+    /// be lost, and reading the item out of the [`SchemaVec`] will assume the schema and type data
+    /// of the [`SchemaVec`].
+    pub struct SchemaVec {
+        /// The allocation for stored items.
+        buffer: ResizableAlloc,
+        /// The number of items actually stored in the vec.
+        len: usize,
+        /// The schema of the items stored in the vec.
+        schema: Cow<'static, Schema>,
     }
 
-    /// Resize the buffer, re-allocating it's memory.
-    pub fn resize(&mut self, new_capacity: usize) -> Result<(), LayoutError> {
-        // Don't do anything for an equal new_capacity
-        if self.cap == new_capacity {
-            return Ok(());
-        }
-
-        // For ZSTs, simply update the capacity, the pointer will still be dangling.
-        if self.layout.size() == 0 {
-            self.cap = new_capacity;
-            return Ok(());
-        }
-
-        // Record the old capacity.
-        let old_capacity = self.cap;
-
-        // Update our capacity to the new capacity.
-        self.cap = new_capacity;
-
-        // If we are clearing our allocation
-        if new_capacity == 0 {
-            // If we have existing memory to de-allocate
-            if old_capacity > 0 {
-                // Calculate the layout of our old allocation
-                let old_alloc_layout = self.layout.repeat(old_capacity)?.0;
-
-                // Deallocate the old memory
-                unsafe { alloc::dealloc(self.ptr.as_ptr(), old_alloc_layout) }
+    impl SchemaVec {
+        /// Initialize an empty [`SchemaVec`] for items with the given schema.
+        pub fn new<S: Into<Cow<'static, Schema>>>(schema: S) -> Self {
+            let schema = schema.into();
+            let layout = schema.layout_info().layout;
+            Self {
+                buffer: ResizableAlloc::new(layout),
+                len: 0,
+                schema,
             }
+        }
 
-            // Update our pointer to be dangling.
-            self.ptr = Self::dangling(&self.layout);
-
-        // If we are allocating/reallocating
-        } else {
-            // If we have exsting memory to re-allocate
-            if old_capacity > 0 {
-                let old_alloc_layout = self.layout.repeat(old_capacity).unwrap().0;
-                let new_alloc_layout = self.layout.repeat(new_capacity).unwrap().0;
-                self.ptr = NonNull::new(unsafe {
-                    alloc::realloc(self.ptr.as_ptr(), old_alloc_layout, new_alloc_layout.size())
-                })
-                .unwrap_or_else(|| handle_alloc_error(new_alloc_layout));
-
-            // If we need to allocate new memory
+        /// Grow the backing buffer to fit more elements.
+        fn grow(&mut self) {
+            let cap = self.buffer.capacity();
+            if cap == 0 {
+                self.buffer.resize(1).unwrap();
             } else {
-                let alloc_layout = self.layout.repeat(new_capacity).unwrap().0;
-                self.ptr = NonNull::new(unsafe { alloc::alloc(alloc_layout) })
-                    .unwrap_or_else(|| handle_alloc_error(alloc_layout));
+                self.buffer.resize(cap * 2).unwrap();
             }
         }
 
-        Ok(())
+        /// Push the item into the end of the vector.
+        pub fn try_push(&mut self, item: SchemaBox) -> Result<(), SchemaMismatchError> {
+            // Ensure matching schema
+            if !self.schema.equivalent(item.schema()) {
+                return Err(SchemaMismatchError);
+            }
+
+            // Make room for more elements if necessary
+            if self.len == self.buffer.capacity() {
+                self.grow();
+            }
+
+            // Copy the item into the vec
+            unsafe {
+                self.buffer
+                    .unchecked_idx_mut(self.len)
+                    .as_ptr()
+                    .copy_from_nonoverlapping(
+                        item.as_ref().ptr().as_ptr(),
+                        self.buffer.layout().size(),
+                    );
+            }
+
+            // Don't run the item's destructor, it's the responsibility of the vec
+            item.forget();
+
+            // Extend the length. This cannot overflow because we will run out of memory before we
+            // exhaust `usize`.
+            self.len += 1;
+
+            Ok(())
+        }
+
+        /// Push the item into the end of the vector.
+        #[track_caller]
+        pub fn push(&mut self, item: SchemaBox) {
+            self.try_push(item).unwrap()
+        }
+
+        /// Pop the last item off of the end of the vector.
+        pub fn pop(&mut self) -> Option<SchemaBox> {
+            if self.len == 0 {
+                None
+            } else {
+                // Decrement our length
+                self.len -= 1;
+
+                unsafe {
+                    // Allocate memory for the box
+                    let mut b = SchemaBox::uninitialized(self.schema.clone());
+                    // Copy the last item in our vec to the box
+                    b.as_mut().ptr().as_ptr().copy_from_nonoverlapping(
+                        self.buffer.unchecked_idx_mut(self.len).as_ptr(),
+                        self.buffer.layout().size(),
+                    );
+
+                    Some(b)
+                }
+            }
+        }
+
+        /// Get the item with the given index.
+        pub fn get(&self, idx: usize) -> Option<SchemaPtr<'_, '_>> {
+            if idx >= self.len {
+                None
+            } else {
+                let ptr = unsafe { self.buffer.unchecked_idx(idx) };
+
+                unsafe {
+                    Some(SchemaPtr::from_ptr_schema(
+                        ptr.as_ptr(),
+                        Cow::Borrowed(self.schema.as_ref()),
+                    ))
+                }
+            }
+        }
+
+        /// Get an item with the given index.
+        pub fn get_mut(&mut self, idx: usize) -> Option<SchemaPtrMut<'_, '_, '_>> {
+            if idx >= self.len {
+                None
+            } else {
+                let ptr = unsafe { self.buffer.unchecked_idx(idx) };
+
+                unsafe {
+                    Some(SchemaPtrMut::from_ptr_schema(
+                        ptr.as_ptr(),
+                        Cow::Borrowed(self.schema.as_ref()),
+                    ))
+                }
+            }
+        }
+
+        /// Get the number of items in the vector.
+        pub fn len(&self) -> usize {
+            self.len
+        }
+
+        /// Returns `true` if the vector has zero items in it.
+        pub fn is_empty(&self) -> bool {
+            self.len() == 0
+        }
+
+        /// Get the capacity of the backing buffer.
+        pub fn capacity(&self) -> usize {
+            self.buffer.capacity()
+        }
+
+        /// Get the schema of items in this [`SchemaVec`].
+        pub fn schema(&self) -> &Schema {
+            &self.schema
+        }
     }
 
-    /// Get the layout.
-    pub fn layout(&self) -> Layout {
-        self.layout
-    }
-
-    /// Get the capacity.
-    pub fn capacity(&self) -> usize {
-        self.cap
-    }
-
-    /// Get the pointer to the allocation
-    pub fn ptr(&mut self) -> PtrMut<'_> {
-        unsafe { PtrMut::new(self.ptr) }
-    }
-
-    /// Helper to create a dangling pointer that is properly aligned for our layout.
-    fn dangling(layout: &Layout) -> NonNull<u8> {
-        // SOUND: the layout ensures a non-zero alignment.
-        unsafe { NonNull::new_unchecked(sptr::invalid_mut(layout.align())) }
-    }
-}
-
-impl Drop for ResizableAlloc {
-    fn drop(&mut self) {
-        if self.cap > 0 {
-            unsafe { alloc::dealloc(self.ptr.as_ptr(), self.layout.repeat(self.cap).unwrap().0) }
+    impl Drop for SchemaVec {
+        fn drop(&mut self) {
+            for _ in 0..self.len {
+                drop(self.pop().unwrap());
+            }
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::alloc::Layout;
+
+    use crate::alloc::ResizableAlloc;
 
     #[test]
     fn resizable_allocation() {

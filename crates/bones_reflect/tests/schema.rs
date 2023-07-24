@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use bones_reflect::prelude::*;
 use bones_reflect_macros::HasSchema;
 use glam::{Vec2, Vec3};
@@ -152,4 +154,29 @@ fn ptr_fields() {
     assert_eq!(data.a.y, 6.0);
     assert_eq!(data.b.0, 9.0);
     assert_eq!(data.b.1, 12.0);
+}
+
+#[test]
+fn schema_vec() {
+    let mut v = SchemaVec::new(Cow::Borrowed(DataA::schema()));
+    assert_eq!(v.len(), 0);
+    assert_eq!(v.capacity(), 0);
+    v.push(SchemaBox::new(DataA { x: 1.0, y: 2.0 }));
+    v.push(SchemaBox::new(DataA { x: 3.0, y: 4.0 }));
+    assert_eq!(v.len(), 2);
+
+    let d0 = v.get(0).unwrap().cast::<DataA>();
+    assert_eq!(d0.x, 1.0);
+    assert_eq!(d0.y, 2.0);
+    let d1 = v.get(1).unwrap().cast::<DataA>();
+    assert_eq!(d1.x, 3.0);
+    assert_eq!(d1.y, 4.0);
+
+    assert_eq!(v.len(), 2);
+
+    let d1 = v.pop().unwrap();
+    assert_eq!(d1.cast::<DataA>().x, 3.0);
+    let d0 = v.pop().unwrap();
+    assert_eq!(d0.cast::<DataA>().x, 1.0);
+    assert!(v.pop().is_none());
 }

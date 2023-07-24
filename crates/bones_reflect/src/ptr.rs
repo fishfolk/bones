@@ -1,6 +1,6 @@
 use bones_utils::{Aligned, OwningPtr, Ptr, PtrMut};
 
-use std::{marker::PhantomData, ptr::NonNull};
+use std::{alloc::handle_alloc_error, marker::PhantomData, ptr::NonNull};
 
 use super::*;
 
@@ -47,7 +47,7 @@ impl<'pointer, 'schema> SchemaPtr<'pointer, 'schema> {
 
     /// Create a new [`SchemaPtr`] from a raw pointer and it's schema.
     #[track_caller]
-    pub fn from_ptr_schema<S>(ptr: *const u8, schema: S) -> Self
+    pub unsafe fn from_ptr_schema<S>(ptr: *const u8, schema: S) -> Self
     where
         S: Into<Cow<'schema, Schema>>,
     {
@@ -282,7 +282,7 @@ impl<'pointer, 'schema, 'parent> SchemaPtrMut<'pointer, 'schema, 'parent> {
     }
 
     /// Get the raw pointer.
-    pub fn ptr(&self) -> &PtrMut<'pointer> {
+    pub fn ptr(&mut self) -> &PtrMut<'pointer> {
         &self.ptr
     }
 
@@ -326,7 +326,7 @@ impl Clone for SchemaBox {
         };
         let new_ptr = unsafe {
             (clone_fn)(self.ptr.as_ref().as_ptr(), new_ptr);
-            OwningPtr::new(NonNull::new(new_ptr).expect("Allocation failed"))
+            OwningPtr::new(NonNull::new(new_ptr).unwrap_or_else(|| handle_alloc_error(self.layout)))
         };
         Self {
             ptr: new_ptr,
@@ -435,7 +435,8 @@ impl SchemaBox {
         };
         // SAFE: The pointer is allocated for the layout of type T.
         let ptr = unsafe {
-            let mut ptr = OwningPtr::new(NonNull::new(ptr).expect("Allocation failed"));
+            let mut ptr =
+                OwningPtr::new(NonNull::new(ptr).unwrap_or_else(|| handle_alloc_error(layout)));
             *ptr.as_mut().deref_mut() = v;
             ptr
         };
@@ -445,6 +446,43 @@ impl SchemaBox {
             schema: Cow::Borrowed(schema),
             layout,
         }
+    }
+
+    /// Allocates a [`SchemaBox`] for the given [`Schema`], but **doesn't initialize the memory**.
+    ///
+    /// # Safety
+    ///
+    /// Accessing an uninitialized [`SchemaBox`] is undefined behavior. It is up to the user to
+    /// initialize the memory pointed at by the box after creating it.
+    pub unsafe fn uninitialized<S>(schema: S) -> Self
+    where
+        S: Into<Cow<'static, Schema>>,
+    {
+        let schema = schema.into();
+        let layout = schema.layout_info().layout;
+
+        let ptr = if layout.size() == 0 {
+            NonNull::<u8>::dangling().as_ptr()
+        } else {
+            // SAFE: Non-zero size for layout
+            unsafe { std::alloc::alloc(layout) }
+        };
+        // SOUND: The pointer is allocated for the layout matching the schema.
+        let ptr = unsafe {
+            OwningPtr::new(NonNull::new(ptr).unwrap_or_else(|| handle_alloc_error(layout)))
+        };
+
+        Self {
+            ptr,
+            schema,
+            layout,
+        }
+    }
+
+    /// Deallocate the memory stored in the box, but don't run the destructor.
+    pub fn forget(self) {
+        unsafe { std::alloc::dealloc(self.ptr.as_ptr(), self.layout) }
+        std::mem::forget(self);
     }
 
     /// Create a new [`SchemaBox`] for a type with a [`Schema`] that has a [`Schema::default_fn`].
@@ -461,29 +499,11 @@ impl SchemaBox {
         let Some(default_fn) = schema.default_fn else {
             panic!("Schema doesn't have `default_fn` to create default value with.");
         };
-        let layout = schema.layout_info().layout;
-        assert!(
-            layout.size() != 0,
-            "Cannot allocate SchemaBox for zero-sized-type ( yet )"
-        );
 
-        let ptr = if layout.size() == 0 {
-            NonNull::<u8>::dangling().as_ptr()
-        } else {
-            // SAFE: Non-zero size for layout
-            unsafe { std::alloc::alloc(layout) }
-        };
-        // SAFE: The pointer is allocated for the layout matching the schema.
-        let ptr = unsafe {
-            let ptr = OwningPtr::new(NonNull::new(ptr).expect("Allocation failed"));
-            (default_fn)(ptr.as_ptr());
-            ptr
-        };
-
-        Self {
-            ptr,
-            schema,
-            layout,
+        unsafe {
+            let b = SchemaBox::uninitialized(schema);
+            (default_fn)(b.ptr.as_ptr());
+            b
         }
     }
 

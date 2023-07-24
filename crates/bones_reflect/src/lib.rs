@@ -4,7 +4,6 @@
 // This cfg_attr is needed because `rustdoc::all` includes lints not supported on stable
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
-
 // This allows us to use our stable polyfills for nightly APIs under the same name.
 #![allow(unstable_name_collisions)]
 
@@ -13,8 +12,8 @@ pub use bones_reflect_macros::*;
 /// The prelude.
 pub mod prelude {
     pub use crate::{
-        ptr::*, type_datas::*, HasSchema, NestedSchema, Primitive, RawClone, RawDefault, RawDrop,
-        Schema, SchemaKind, SchemaLayoutInfo, StructField, StructSchema,
+        alloc::SchemaVec, ptr::*, type_datas::*, HasSchema, NestedSchema, Primitive, RawClone,
+        RawDefault, RawDrop, Schema, SchemaKind, SchemaLayoutInfo, StructField, StructSchema,
     };
     #[cfg(feature = "derive")]
     pub use bones_reflect_macros::*;
@@ -356,6 +355,14 @@ impl Schema {
                     _ => false
                 }
             })
+    }
+
+    /// Returns whether or not the schema [`represents`][Self::represents] the other schema, and the
+    /// `type_id`, `clone_fn`, and `drop_fn` are the same.
+    ///
+    /// > **⚠️ Important Note:** This does not check for equivalence of the schema's [`TypeDatas`].
+    pub fn equivalent(&self, other: &Schema) -> bool {
+        self.represents(other) && self.drop_fn == other.drop_fn && self.clone_fn == other.clone_fn
     }
 }
 
