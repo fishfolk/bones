@@ -46,6 +46,13 @@ impl<'pointer, 'schema> SchemaPtr<'pointer, 'schema> {
     }
 
     /// Create a new [`SchemaPtr`] from a raw pointer and it's schema.
+    /// # Safety
+    /// - `inner` must point to valid value of whatever the pointee type is.
+    /// - If the `A` type parameter is [`Aligned`] then `inner` must be sufficiently aligned for the
+    ///   pointee type.
+    /// - `inner` must have correct provenance to allow read and writes of the pointee type.
+    /// - The lifetime `'a` must be constrained such that this [`PtrMut`] will stay valid and
+    ///   nothing else can read or mutate the pointee while this [`PtrMut`] is live.
     #[track_caller]
     pub unsafe fn from_ptr_schema<S>(ptr: *const u8, schema: S) -> Self
     where

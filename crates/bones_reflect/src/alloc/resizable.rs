@@ -158,3 +158,64 @@ impl Drop for ResizableAlloc {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std::alloc::Layout;
+
+    use crate::alloc::ResizableAlloc;
+
+    #[test]
+    fn resizable_allocation() {
+        // Create the layout of the type we want to store.
+        type Ty = (u32, u8);
+        let layout = Layout::new::<Ty>();
+
+        // This doesn't allocate yet
+        let mut a = ResizableAlloc::new(layout);
+
+        // We can now use resize() to allocate memory for 3 elements.
+        a.resize(3).unwrap();
+
+        // We write some data.
+        for i in 0..3 {
+            unsafe {
+                a.ptr().as_ptr().cast::<Ty>().add(i).write((i as _, i as _));
+            }
+        }
+        unsafe {
+            assert_eq!((0, 0), (a.ptr().as_ptr() as *mut Ty).read());
+            assert_eq!((1, 1), (a.ptr().as_ptr() as *mut Ty).add(1).read());
+            assert_eq!((2, 2), (a.ptr().as_ptr() as *mut Ty).add(2).read());
+        }
+
+        // We can grow the allocation by resizing
+        a.resize(4).unwrap();
+
+        // And write to the new data
+        unsafe {
+            a.ptr().as_ptr().cast::<Ty>().add(3).write((3, 3));
+
+            // The previous values will be there
+            assert_eq!((0, 0), (a.ptr().as_ptr() as *mut Ty).read());
+            assert_eq!((1, 1), (a.ptr().as_ptr() as *mut Ty).add(1).read());
+            assert_eq!((2, 2), (a.ptr().as_ptr() as *mut Ty).add(2).read());
+            // As well as the new one
+            assert_eq!((3, 3), (a.ptr().as_ptr() as *mut Ty).add(3).read());
+        }
+
+        // We can shrink the allocation, too, which will delete the items at the end without dropping them, keeping the
+        // items at the beginning.
+        a.resize(1).unwrap();
+        unsafe {
+            assert_eq!((0, 0), (a.ptr().as_ptr() as *mut Ty).read());
+        }
+
+        // And we can delete all the items by resizing to zero ( again, this doesn't drop item, just
+        // removes their memory ).
+        a.resize(0).unwrap();
+
+        // Now the pointer will be dangling, but aligned to our layout
+        assert_eq!(a.ptr().as_ptr() as usize, layout.align());
+    }
+}
