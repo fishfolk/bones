@@ -6,7 +6,10 @@
 #![deny(rustdoc::all)]
 
 #[doc(inline)]
-pub use {bones_asset as asset, bones_ecs as ecs, bones_input as input, bones_render as render};
+pub use {
+    bones_asset as asset, bones_ecs as ecs, bones_input as input, bones_render as render,
+    bones_utils as utils,
+};
 
 #[cfg(feature = "bevy")]
 pub use bones_bevy_utils as bevy_utils;
@@ -15,11 +18,11 @@ pub use bones_bevy_utils as bevy_utils;
 pub mod prelude {
     pub use crate::{
         animation::prelude::*, asset::prelude::*, camera::*, ecs::prelude::*, input::prelude::*,
-        render::prelude::*, FrameTime,
+        render::prelude::*, utils::prelude::*, FrameTime,
     };
 
     #[cfg(feature = "bevy")]
-    pub use crate::bevy_utils::*;
+    pub use crate::bevy_utils::prelude::*;
 }
 use prelude::*;
 

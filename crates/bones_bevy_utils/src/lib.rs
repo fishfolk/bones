@@ -9,7 +9,7 @@ use type_ulid::TypeUlid;
 
 /// The prelude.
 pub mod prelude {
-    pub use crate::*;
+    pub use crate::BevyWorld;
 }
 
 /// Helper trait for converting bones types to Bevy types.

@@ -9,7 +9,7 @@ use ulid::Ulid;
 pub struct Handle<T> {
     /// The runtime ID of the asset.
     pub id: Ulid,
-    phantom: PhantomData<*const T>,
+    phantom: PhantomData<T>,
 }
 
 // Manually implement these traits we normally derive because the derive assumes that `T` must also

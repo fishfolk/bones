@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use std::path::{Path, PathBuf};
 
 /// [`AssetIo`] is a trait that is implemented for backends capable of loading all the games assets
 /// and returning a [`LoadedAssets`].

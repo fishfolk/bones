@@ -35,8 +35,8 @@ pub mod prelude {
     };
 
     pub use crate::{
-        bitset::*, components::*, default, entities::*, error::*, resources::*, stage::*,
-        system::*, EcsData, FromWorld, TypedEcsData, UnwrapMany, World,
+        bitset::*, components::*, entities::*, error::*, resources::*, stage::*, system::*,
+        EcsData, FromWorld, TypedEcsData, UnwrapMany, World,
     };
 }
 
@@ -81,10 +81,4 @@ impl<const N: usize, T, E: std::fmt::Debug> UnwrapMany<N, T> for [Result<T, E>; 
         let mut iter = self.into_iter();
         std::array::from_fn(|_| iter.next().unwrap().unwrap())
     }
-}
-
-/// Free-standing, shorter equivalent to [`Default::default()`].
-#[inline]
-pub fn default<T: Default>() -> T {
-    std::default::Default::default()
 }

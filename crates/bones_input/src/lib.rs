@@ -5,20 +5,18 @@
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
 
-use type_ulid::TypeUlid;
+mod time;
+mod window;
 
-pub mod time;
+/// Helper to export the same types in the crate root and in the prelude.
+macro_rules! pub_use {
+    () => {
+        pub use crate::{time::*, window::*};
+    };
+}
+pub_use!();
 
 /// The prelude.
 pub mod prelude {
-    pub use crate::*;
-    pub use time::*;
-}
-
-/// Information about the window the game is running in.
-#[derive(Clone, Copy, Debug, Default, TypeUlid)]
-#[ulid = "01GP70WMVH4HV4YHZ240E0YC7X"]
-pub struct Window {
-    /// The logical size of the window's client area.
-    pub size: glam::Vec2,
+    pub_use!();
 }

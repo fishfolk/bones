@@ -20,7 +20,7 @@ impl std::fmt::Debug for LabeledId {
     }
 }
 
-/// Error creating a [`LabledId`].
+/// Error creating a [`LabeledId`].
 #[derive(Debug)]
 pub enum LabeledIdCreateError {
     /// The prefix was too long ( greater than 63 chars ).

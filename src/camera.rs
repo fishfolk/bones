@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 
-use bones_input::time::Time;
+use bones_input::Time;
 
 use crate::prelude::*;
 
@@ -148,7 +148,7 @@ fn apply_shake(
         };
     }
 
-    for (_ent, (shake, mut transform)) in entities.iter_with((&camera_shakes, &mut transforms)) {
+    for (_ent, (shake, transform)) in entities.iter_with((&camera_shakes, &mut transforms)) {
         (transform.rotation, transform.translation) = if shake.trauma > 0.0 {
             let sqr_trauma = shake.trauma * shake.trauma;
 

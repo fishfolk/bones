@@ -6,35 +6,23 @@
 #![warn(missing_docs)]
 #![warn(clippy::undocumented_unsafe_blocks)]
 
-pub use bevy_ptr::*;
-pub use bones_utils_macros::*;
-pub use hashbrown;
-use std::hash::BuildHasherDefault;
-
-use ahash::AHasher;
-
-mod names;
-pub use names::get_short_name;
-
+mod collections;
 mod default;
-pub use default::default;
-
 mod labeled_id;
-pub use labeled_id::*;
+mod names;
 
-#[allow(missing_docs)]
-pub mod prelude {
-    pub use crate::*;
+/// Helper to export the same types in the crate root and in the prelude.
+macro_rules! pub_use {
+    () => {
+        pub use crate::{collections::*, default::*, labeled_id::*, names::*};
+        pub use bevy_ptr::*;
+        pub use bones_utils_macros::*;
+        pub use hashbrown;
+    };
 }
+pub_use!();
 
-/// A [`HashMap`][hashbrown::HashMap] implementing aHash, a high
-/// speed keyed hashing algorithm intended for use in in-memory hashmaps.
-///
-/// aHash is designed for performance and is NOT cryptographically secure.
-pub type HashMap<K, V> = hashbrown::HashMap<K, V, BuildHasherDefault<AHasher>>;
-
-/// A [`HashSet`][hashbrown::HashSet] implementing aHash, a high
-/// speed keyed hashing algorithm intended for use in in-memory hashmaps.
-///
-/// aHash is designed for performance and is NOT cryptographically secure.
-pub type HashSet<K> = hashbrown::HashSet<K, BuildHasherDefault<AHasher>>;
+/// The prelude.
+pub mod prelude {
+    pub_use!();
+}
