@@ -7,36 +7,31 @@
 // This allows us to use our stable polyfills for nightly APIs under the same name.
 #![allow(unstable_name_collisions)]
 
-pub use bones_reflect_macros::*;
+use std::{alloc::Layout, any::TypeId, borrow::Cow};
 
 /// The prelude.
 pub mod prelude {
     pub use crate::{
-        alloc::SchemaVec, ptr::*, type_datas::*, HasSchema, NestedSchema, Primitive, RawClone,
+        alloc::SchemaVec, ptr::*, FromType, HasSchema, NestedSchema, Primitive, RawClone,
         RawDefault, RawDrop, Schema, SchemaKind, SchemaLayoutInfo, StructField, StructSchema,
+        TypeData, TypeDatas,
     };
     #[cfg(feature = "derive")]
     pub use bones_reflect_macros::*;
     pub use ulid::Ulid;
 }
+use bones_utils::prelude::*;
+use prelude::*;
 
-use std::{alloc::Layout, any::TypeId, borrow::Cow};
-
-use serde::Deserialize;
-use ulid::Ulid;
+pub use bones_reflect_macros::*;
 
 pub mod alloc;
+pub mod ptr;
 
-mod ptr;
-pub use ptr::*;
-
-pub use type_datas::*;
-mod type_datas;
+mod std_impls;
 
 #[cfg(feature = "serde")]
 mod ser_de;
-
-mod std_impls;
 
 /// Trait implemented for types that have a [`Schema`].
 ///
@@ -263,6 +258,28 @@ pub enum Primitive {
         /// The alignment of the data.
         align: usize,
     },
+}
+
+/// Container for storing type datas.
+#[derive(Clone, Debug, Default)]
+pub struct TypeDatas(pub HashMap<Ulid, SchemaBox>);
+impl TypeDatas {
+    /// Get a type data out of the store.
+    pub fn get<T: TypeData>(&self) -> Option<&T> {
+        self.0.get(&T::TYPE_DATA_ID).map(|x| x.cast())
+    }
+}
+
+/// Trait implemented for types that can produce an instance of themselves from a type.
+pub trait FromType<T> {
+    /// Return the data for the type.
+    fn from_type() -> Self;
+}
+
+/// Trait implemented for Rust types that are used as [`Schema::type_data`].
+pub trait TypeData: HasSchema {
+    /// The unique ID of the type data.
+    const TYPE_DATA_ID: Ulid;
 }
 
 impl Schema {

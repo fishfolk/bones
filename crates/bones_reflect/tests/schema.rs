@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 
 use bones_reflect::prelude::*;
-use bones_reflect_macros::HasSchema;
 use glam::{Vec2, Vec3};
 
 #[derive(HasSchema, Debug, Clone, Default)]

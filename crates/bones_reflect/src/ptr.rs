@@ -1,3 +1,5 @@
+//! Schema-aware smart pointers.
+
 use bones_utils::prelude::*;
 
 use std::{alloc::handle_alloc_error, marker::PhantomData, ptr::NonNull};

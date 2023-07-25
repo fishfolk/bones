@@ -1,4 +1,6 @@
-use super::*;
+use serde::Deserialize;
+
+use crate::prelude::*;
 
 impl<'de> Deserialize<'de> for NestedSchema {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
