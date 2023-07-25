@@ -3,7 +3,6 @@
 use std::{
     alloc::{self, handle_alloc_error, Layout},
     any::TypeId,
-    io::Write,
     marker::PhantomData,
     mem,
     ptr::NonNull,
