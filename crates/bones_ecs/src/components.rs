@@ -35,6 +35,11 @@ pub struct ComponentStores {
     type_ids: HashMap<Ulid, TypeId>,
 }
 
+// SOUND: all of the functions for ComponentStores requires that the types stored implement Sync +
+// Send.
+unsafe impl Sync for ComponentStores {}
+unsafe impl Send for ComponentStores {}
+
 impl Clone for ComponentStores {
     fn clone(&self) -> Self {
         Self {

@@ -1,4 +1,4 @@
-use bones_utils::{Aligned, OwningPtr, Ptr, PtrMut};
+use bones_utils::prelude::*;
 
 use std::{alloc::handle_alloc_error, marker::PhantomData, ptr::NonNull};
 
@@ -46,6 +46,7 @@ impl<'pointer, 'schema> SchemaPtr<'pointer, 'schema> {
     }
 
     /// Create a new [`SchemaPtr`] from a raw pointer and it's schema.
+    ///
     /// # Safety
     /// - `inner` must point to valid value of whatever the pointee type is.
     /// - If the `A` type parameter is [`Aligned`] then `inner` must be sufficiently aligned for the

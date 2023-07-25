@@ -3,7 +3,7 @@ use std::{
     ptr::NonNull,
 };
 
-use bones_utils::{Ptr, PtrMut};
+use bones_utils::prelude::*;
 
 use super::layout::*;
 
@@ -26,6 +26,19 @@ pub struct ResizableAlloc {
     cap: usize,
 }
 
+impl Clone for ResizableAlloc {
+    fn clone(&self) -> Self {
+        let mut copy = ResizableAlloc::new(self.layout);
+        copy.resize(self.cap).unwrap();
+        unsafe {
+            copy.ptr
+                .as_ptr()
+                .copy_from_nonoverlapping(self.ptr.as_ptr(), self.capacity());
+        }
+        copy
+    }
+}
+
 impl ResizableAlloc {
     /// Create a new [`ResizableAlloc`] for the given memory layout. Does not actually allocate
     /// anything yet.hing.
@@ -44,6 +57,14 @@ impl ResizableAlloc {
             padded: layout.pad_to_align(),
             cap: 0,
         }
+    }
+
+    /// Create a new [`ResizableAlloc`] with the given capacity.
+    #[inline]
+    pub fn with_capacity(layout: Layout, capacity: usize) -> Result<Self, LayoutError> {
+        let mut a = Self::new(layout);
+        a.resize(capacity)?;
+        Ok(a)
     }
 
     /// Resize the buffer, re-allocating it's memory.
@@ -113,10 +134,32 @@ impl ResizableAlloc {
         self.cap
     }
 
-    /// Get the pointer to the allocation
+    /// Get a mutable pointer to the allocation
     #[inline]
-    pub fn ptr(&mut self) -> PtrMut<'_> {
+    pub fn ptr_mut(&mut self) -> PtrMut<'_> {
         unsafe { PtrMut::new(self.ptr) }
+    }
+
+    /// Get a read-only pointer to the allocation
+    #[inline]
+    pub fn ptr(&self) -> Ptr<'_> {
+        unsafe { Ptr::new(self.ptr) }
+    }
+
+    /// Iterate over the allocation.
+    pub fn iter(&self) -> ResizableAllocIter<'_> {
+        ResizableAllocIter {
+            alloc: self,
+            idx: 0,
+        }
+    }
+
+    /// Iterate mutably over the allocation.
+    pub fn iter_mut(&mut self) -> ResizableAllocIterMut<'_> {
+        ResizableAllocIterMut {
+            alloc: self,
+            idx: 0,
+        }
     }
 
     /// Get a pointer to the item with the given index without performing any bounds checks.
@@ -159,6 +202,47 @@ impl Drop for ResizableAlloc {
     }
 }
 
+/// Iterator over items in a [`ResizableAlloc`].
+pub struct ResizableAllocIter<'a> {
+    alloc: &'a ResizableAlloc,
+    idx: usize,
+}
+impl<'a> Iterator for ResizableAllocIter<'a> {
+    type Item = Ptr<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.idx < self.alloc.cap {
+            // SOUND: we've checked that it is within bounds.
+            let r = unsafe { self.alloc.unchecked_idx(self.idx) };
+            self.idx += 1;
+            Some(r)
+        } else {
+            None
+        }
+    }
+}
+
+/// Iterator over items in a [`ResizableAlloc`].
+pub struct ResizableAllocIterMut<'a> {
+    alloc: &'a mut ResizableAlloc,
+    idx: usize,
+}
+impl<'a> Iterator for ResizableAllocIterMut<'a> {
+    type Item = PtrMut<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.idx < self.alloc.cap {
+            // SOUND: we've checked that it is within bounds, and we know that the pointer will be
+            // valid for the new lifetime..
+            let r = unsafe { self.alloc.unchecked_idx_mut(self.idx).transmute_lifetime() };
+            self.idx += 1;
+            Some(r)
+        } else {
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::alloc::Layout;
@@ -180,13 +264,17 @@ mod test {
         // We write some data.
         for i in 0..3 {
             unsafe {
-                a.ptr().as_ptr().cast::<Ty>().add(i).write((i as _, i as _));
+                a.ptr_mut()
+                    .as_ptr()
+                    .cast::<Ty>()
+                    .add(i)
+                    .write((i as _, i as _));
             }
         }
         unsafe {
-            assert_eq!((0, 0), (a.ptr().as_ptr() as *mut Ty).read());
-            assert_eq!((1, 1), (a.ptr().as_ptr() as *mut Ty).add(1).read());
-            assert_eq!((2, 2), (a.ptr().as_ptr() as *mut Ty).add(2).read());
+            assert_eq!((0, 0), (a.ptr_mut().as_ptr() as *mut Ty).read());
+            assert_eq!((1, 1), (a.ptr_mut().as_ptr() as *mut Ty).add(1).read());
+            assert_eq!((2, 2), (a.ptr_mut().as_ptr() as *mut Ty).add(2).read());
         }
 
         // We can grow the allocation by resizing
@@ -194,21 +282,21 @@ mod test {
 
         // And write to the new data
         unsafe {
-            a.ptr().as_ptr().cast::<Ty>().add(3).write((3, 3));
+            a.ptr_mut().as_ptr().cast::<Ty>().add(3).write((3, 3));
 
             // The previous values will be there
-            assert_eq!((0, 0), (a.ptr().as_ptr() as *mut Ty).read());
-            assert_eq!((1, 1), (a.ptr().as_ptr() as *mut Ty).add(1).read());
-            assert_eq!((2, 2), (a.ptr().as_ptr() as *mut Ty).add(2).read());
+            assert_eq!((0, 0), (a.ptr_mut().as_ptr() as *mut Ty).read());
+            assert_eq!((1, 1), (a.ptr_mut().as_ptr() as *mut Ty).add(1).read());
+            assert_eq!((2, 2), (a.ptr_mut().as_ptr() as *mut Ty).add(2).read());
             // As well as the new one
-            assert_eq!((3, 3), (a.ptr().as_ptr() as *mut Ty).add(3).read());
+            assert_eq!((3, 3), (a.ptr_mut().as_ptr() as *mut Ty).add(3).read());
         }
 
         // We can shrink the allocation, too, which will delete the items at the end without dropping them, keeping the
         // items at the beginning.
         a.resize(1).unwrap();
         unsafe {
-            assert_eq!((0, 0), (a.ptr().as_ptr() as *mut Ty).read());
+            assert_eq!((0, 0), (a.ptr_mut().as_ptr() as *mut Ty).read());
         }
 
         // And we can delete all the items by resizing to zero ( again, this doesn't drop item, just
@@ -216,6 +304,6 @@ mod test {
         a.resize(0).unwrap();
 
         // Now the pointer will be dangling, but aligned to our layout
-        assert_eq!(a.ptr().as_ptr() as usize, layout.align());
+        assert_eq!(a.ptr_mut().as_ptr() as usize, layout.align());
     }
 }

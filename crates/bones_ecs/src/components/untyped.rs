@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-use aligned_vec::AVec;
+use bones_reflect::alloc::ResizableAlloc;
 use std::{
     alloc::Layout,
     ptr::{self},
@@ -12,7 +12,7 @@ use std::{
 /// We do not check if the given entity is alive here, this should be done using `Entities`.
 pub struct UntypedComponentStore {
     pub(crate) bitset: BitSetVec,
-    pub(crate) storage: AVec<u8>,
+    pub(crate) storage: ResizableAlloc,
     pub(crate) layout: Layout,
     pub(crate) max_id: usize,
     pub(crate) drop_fn: Option<unsafe extern "C-unwind" fn(*mut u8)>,
@@ -32,9 +32,9 @@ impl Clone for UntypedComponentStore {
                 // - And our previous pointer is a valid pointer to component data
                 // - And our new pointer is a writable pointer with the same layout
                 unsafe {
-                    let prev_ptr = self.storage.as_ptr().add(i * size);
-                    let new_ptr = new_storage.as_mut_ptr().add(i * size);
-                    (self.clone_fn)(prev_ptr, new_ptr);
+                    let prev_ptr = self.storage.ptr().byte_add(i * size);
+                    let new_ptr = new_storage.ptr_mut().byte_add(i * size);
+                    (self.clone_fn)(prev_ptr.as_ptr(), new_ptr.as_ptr());
                 }
             }
         }
@@ -57,15 +57,15 @@ impl Drop for UntypedComponentStore {
             if size < 1 {
                 return;
             }
-            for i in 0..(self.storage.len() / size) {
+            for i in 0..(self.storage.capacity() / size) {
                 if self.bitset.bit_test(i) {
                     // SAFE: constructing an UntypedComponent store is unsafe, and the user affirms
                     // that clone_fn will not do anything unsound.
                     //
                     // And our pointer is valid.
                     unsafe {
-                        let ptr = self.storage.as_mut_ptr().add(i * size);
-                        drop_fn(ptr);
+                        let ptr = self.storage.ptr_mut().byte_add(i * size);
+                        drop_fn(ptr.as_ptr());
                     }
                 }
             }
@@ -91,7 +91,8 @@ impl UntypedComponentStore {
         Self {
             bitset: create_bitset(),
             // Approximation of a good default.
-            storage: AVec::with_capacity(layout.align(), (BITSET_SIZE >> 4) * layout.size()),
+            storage: ResizableAlloc::with_capacity(layout, (BITSET_SIZE >> 4) * layout.size())
+                .unwrap(),
             layout,
             max_id: 0,
             clone_fn,
@@ -105,7 +106,8 @@ impl UntypedComponentStore {
         Self {
             bitset: create_bitset(),
             // Approximation of a good default.
-            storage: AVec::with_capacity(layout.align(), (BITSET_SIZE >> 4) * layout.size()),
+            storage: ResizableAlloc::with_capacity(layout, (BITSET_SIZE >> 4) * layout.size())
+                .unwrap(),
             layout,
             max_id: 0,
             clone_fn: T::raw_clone,
@@ -131,12 +133,12 @@ impl UntypedComponentStore {
 
         let index = entity.index() as usize;
         self.allocate_enough(index * size);
-        let ptr = self.storage.as_mut_ptr().add(index * size);
 
         // If the component already exists on the entity
         if self.bitset.bit_test(entity.index() as usize) {
+            let ptr = self.storage.ptr_mut().byte_add(index * size);
             // Swap the data with the data already there
-            ptr::swap_nonoverlapping(ptr, data, size);
+            ptr::swap_nonoverlapping(ptr.as_ptr(), data, size);
 
             // There was already a component of this type
             true
@@ -144,51 +146,51 @@ impl UntypedComponentStore {
             self.max_id = self.max_id.max(index + 1);
             self.allocate_enough(index * size);
             self.bitset.bit_set(index);
-            ptr::swap_nonoverlapping(ptr, data, size);
+            let ptr = self.storage.ptr_mut().byte_add(index * size);
+            ptr::swap_nonoverlapping(ptr.as_ptr(), data, size);
 
             // There was not already a component of this type
             false
         }
     }
 
-    /// Ensures that we have the vec filled at least until the `until` variable.
+    /// Ensures that we have the storage filled at least until the `until` variable.
     ///
     /// Usually, set this to `entity.index`.
     fn allocate_enough(&mut self, until: usize) {
-        if self.storage.len() <= until {
-            let qty = ((until - self.storage.len()) + 1) * self.layout.size();
-            for _ in 0..qty {
-                self.storage.push(0);
-            }
+        if self.storage.capacity() <= until {
+            self.storage.resize(self.storage.capacity() * 2).unwrap();
         }
     }
 
     /// Get a read-only pointer to the component for the given [`Entity`] if the entity has this
     /// component.
-    pub fn get(&self, entity: Entity) -> Option<*const u8> {
-        let index = entity.index() as usize;
+    pub fn get(&self, entity: Entity) -> Option<Ptr<'_>> {
+        let idx = entity.index() as usize;
+        self.get_idx(idx)
+    }
 
-        if self.bitset.bit_test(index) {
-            let size = self.layout.size();
-            // SAFE: we've already validated that the contents of storage is valid for type T.
-            unsafe {
-                let ptr = self.storage.as_ptr().add(index * size);
-                Some(ptr)
-            }
+    fn get_idx(&self, idx: usize) -> Option<Ptr<'_>> {
+        if self.bitset.bit_test(idx) {
+            // SOUND: we ensure that there is allocated storge for entities that have their bit set.
+            Some(unsafe { self.storage.unchecked_idx(idx) })
         } else {
             None
         }
     }
 
     /// Get a mutable pointer to the component for the given [`Entity`]
-    pub fn get_mut(&mut self, entity: Entity) -> Option<*mut u8> {
-        let index = entity.index() as usize;
+    pub fn get_mut(&mut self, entity: Entity) -> Option<PtrMut<'_>> {
+        let idx = entity.index() as usize;
+        self.get_idx_mut(idx)
+    }
 
-        if self.bitset.bit_test(index) {
+    fn get_idx_mut(&mut self, idx: usize) -> Option<PtrMut<'_>> {
+        if self.bitset.bit_test(idx) {
             let size = self.layout.size();
             // SAFE: we've already validated that the contents of storage is valid for type T.
             unsafe {
-                let ptr = self.storage.as_mut_ptr().add(index * size);
+                let ptr = self.storage.ptr_mut().byte_add(idx * size);
                 Some(ptr)
             }
         } else {
@@ -203,7 +205,10 @@ impl UntypedComponentStore {
     /// This will panic if the same entity is specified multiple times. This is invalid because it
     /// would mean you would have two mutable references to the same component data at the same
     /// time.
-    pub fn get_many_mut<const N: usize>(&mut self, entities: [Entity; N]) -> [Option<*mut u8>; N] {
+    pub fn get_many_mut<const N: usize>(
+        &mut self,
+        entities: [Entity; N],
+    ) -> [Option<PtrMut<'_>>; N] {
         // Sort a copy of the passed in entities list.
         let mut sorted = entities;
         sorted.sort_unstable();
@@ -227,7 +232,11 @@ impl UntypedComponentStore {
                 // And we have verified that this entity is unique among the other entities we are
                 // borrowing at the same time.
                 unsafe {
-                    let ptr = self.storage.as_mut_ptr().add(index * size);
+                    let ptr = self
+                        .storage
+                        .ptr_mut()
+                        .byte_add(index * size)
+                        .transmute_lifetime();
                     Some(ptr)
                 }
             } else {
@@ -250,7 +259,7 @@ impl UntypedComponentStore {
         if self.bitset.bit_test(index) {
             self.bitset.bit_reset(index);
 
-            let ptr = self.storage.as_mut_ptr().add(index * size);
+            let ptr = self.storage.ptr_mut().byte_add(index * size).as_ptr();
 
             if let Some(out) = out {
                 // SAFE: user asserts `out` is non-overlapping
@@ -273,81 +282,20 @@ impl UntypedComponentStore {
     /// Iterates immutably over all components of this type.
     ///
     /// Very fast but doesn't allow joining with other component types.
-    pub fn iter(&self) -> impl Iterator<Item = &[u8]> {
-        let Self {
-            storage: components,
-            bitset,
-            layout,
-            ..
-        } = self;
-
-        if layout.size() > 0 {
-            either::Left(
-                components
-                    .chunks(layout.size())
-                    .enumerate()
-                    .filter(move |(i, _)| bitset.bit_test(*i))
-                    .map(|(_i, x)| x),
-            )
-        } else {
-            // TODO: Add more tests for the ZST component iterator.
-            let mut idx = 0usize;
-            let max_id = self.max_id;
-            let iterator = std::iter::from_fn(move || loop {
-                if idx >= max_id {
-                    break None;
-                }
-
-                if !bitset.bit_test(idx) {
-                    idx += 1;
-                    continue;
-                }
-
-                idx += 1;
-                break Some(&[] as &[u8]);
-            });
-
-            either::Right(iterator)
+    pub fn iter(&self) -> UntypedComponentStoreIter<'_> {
+        UntypedComponentStoreIter {
+            store: self,
+            idx: 0,
         }
     }
 
     /// Iterates mutably over all components of this type.
     ///
     /// Very fast but doesn't allow joining with other component types.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut [u8]> {
-        let Self {
-            storage,
-            bitset,
-            layout,
-            ..
-        } = self;
-
-        if layout.size() > 0 {
-            either::Left(
-                storage
-                    .chunks_mut(layout.size())
-                    .enumerate()
-                    .filter(move |(i, _)| bitset.bit_test(*i))
-                    .map(|(_i, x)| x),
-            )
-        } else {
-            let mut idx = 0usize;
-            let max_id = self.max_id;
-            let iterator = std::iter::from_fn(move || loop {
-                if idx >= max_id {
-                    break None;
-                }
-
-                if !bitset.bit_test(idx) {
-                    idx += 1;
-                    continue;
-                }
-
-                idx += 1;
-                break Some(&mut [] as &mut [u8]);
-            });
-
-            either::Right(iterator)
+    pub fn iter_mut(&mut self) -> UntypedComponentStoreIterMut<'_> {
+        UntypedComponentStoreIterMut {
+            store: self,
+            idx: 0,
         }
     }
 
@@ -388,5 +336,52 @@ impl UntypedComponentStore {
     /// entities that have both components.
     pub fn bitset(&self) -> &BitSetVec {
         &self.bitset
+    }
+}
+
+/// Mutable iterator over pointers in an untyped component store.
+pub struct UntypedComponentStoreIter<'a> {
+    store: &'a UntypedComponentStore,
+    idx: usize,
+}
+impl<'a> Iterator for UntypedComponentStoreIter<'a> {
+    type Item = Ptr<'a>;
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if self.idx < self.store.max_id {
+                if let Some(ptr) = self.store.get_idx(self.idx) {
+                    self.idx += 1;
+                    break Some(ptr);
+                } else {
+                    self.idx += 1;
+                }
+            } else {
+                break None;
+            }
+        }
+    }
+}
+
+/// Mutable iterator over pointers in an untyped component store.
+pub struct UntypedComponentStoreIterMut<'a> {
+    store: &'a mut UntypedComponentStore,
+    idx: usize,
+}
+impl<'a> Iterator for UntypedComponentStoreIterMut<'a> {
+    type Item = PtrMut<'a>;
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if self.idx < self.store.max_id {
+                if let Some(ptr) = self.store.get_idx_mut(self.idx) {
+                    self.idx += 1;
+                    // SOUND: We know the pointer will be valid for the lifetime of the store.
+                    break Some(unsafe { ptr.transmute_lifetime() });
+                } else {
+                    self.idx += 1;
+                }
+            } else {
+                break None;
+            }
+        }
     }
 }

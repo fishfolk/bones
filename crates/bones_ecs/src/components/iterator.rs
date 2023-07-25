@@ -27,7 +27,7 @@ impl<'a, T: 'static> Iterator for ComponentBitsetIterator<'a, T> {
             .next()
             // SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
             // is valid for type T.
-            .map(|x| unsafe { &*(x as *const T) })
+            .map(|x| unsafe { x.deref() })
     }
 }
 
@@ -56,7 +56,7 @@ impl<'a, T: 'static> Iterator for ComponentBitsetIteratorMut<'a, T> {
             .next()
             // SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
             // is valid for type T.
-            .map(|x| unsafe { &mut *(x as *mut T) })
+            .map(|x| unsafe { x.deref_mut() })
     }
 }
 
@@ -69,10 +69,9 @@ pub struct UntypedComponentBitsetIterator<'a> {
 }
 
 impl<'a> Iterator for UntypedComponentBitsetIterator<'a> {
-    type Item = *const u8;
+    type Item = Ptr<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         let max_id = self.components.max_id;
-        let size = self.components.layout.size();
         while !(self.bitset.bit_test(self.current_id)
             && self.components.bitset.bit_test(self.current_id))
             && self.current_id <= max_id
@@ -80,9 +79,8 @@ impl<'a> Iterator for UntypedComponentBitsetIterator<'a> {
             self.current_id += 1;
         }
         let ret = if self.current_id <= max_id {
-            let offset = self.current_id * size;
             // SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
-            Some(unsafe { self.components.storage.as_ptr().add(offset) })
+            Some(unsafe { self.components.storage.unchecked_idx(self.current_id) })
         } else {
             None
         };
@@ -100,10 +98,9 @@ pub struct UntypedComponentBitsetIteratorMut<'a> {
 }
 
 impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
-    type Item = *mut u8;
+    type Item = PtrMut<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         let max_id = self.components.max_id;
-        let size = self.components.layout.size();
         while !(self.bitset.bit_test(self.current_id)
             && self.components.bitset.bit_test(self.current_id))
             && self.current_id <= max_id
@@ -111,9 +108,14 @@ impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
             self.current_id += 1;
         }
         let ret = if self.current_id <= max_id {
-            let offset = self.current_id * size;
-            // SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
-            Some(unsafe { self.components.storage.as_mut_ptr().add(offset) })
+            // SAFE: We know that the index is within bounds, and we know that the pointer will be
+            // valid for the new lifetime.
+            Some(unsafe {
+                self.components
+                    .storage
+                    .unchecked_idx_mut(self.current_id)
+                    .transmute_lifetime()
+            })
         } else {
             None
         };

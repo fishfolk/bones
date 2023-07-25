@@ -140,7 +140,7 @@ macro_rules! schema_impl_for_handle {
 }
 
 // SAFE: We return a valid schema.
-unsafe impl<T: 'static> HasSchema for Handle<T> {
+unsafe impl<T: Sync + Send + 'static> HasSchema for Handle<T> {
     schema_impl_for_handle!();
 }
 // SAFE: We return a valid schema.

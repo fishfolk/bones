@@ -54,23 +54,23 @@ impl<T: Clone + 'static> TypedComponentOps<T> {
     }
 
     /// Borrow a component in the store, if it exists for the given entity.
-    pub fn get(&self, components: &UntypedComponentStore, entity: Entity) -> Option<&T> {
+    pub fn get<'a>(&'a self, components: &'a UntypedComponentStore, entity: Entity) -> Option<&T> {
         // SAFE: constructing TypedComponentOps is unsafe, and user asserts that component storage
         // is valid for type T.
-        components.get(entity).map(|x| unsafe { &*(x as *const T) })
+        components.get(entity).map(|x| unsafe { x.deref() })
     }
 
     /// Mutably borrow a component in the store, if it exists for the given entity.
-    pub fn get_mut(
-        &self,
-        components: &mut UntypedComponentStore,
+    pub fn get_mut<'a>(
+        &'a self,
+        components: &'a mut UntypedComponentStore,
         entity: Entity,
     ) -> Option<&mut T> {
         components
             .get_mut(entity)
             // SAFE: constructing TypedComponentOps is unsafe, and user asserts that component storage
             // is valid for type T.
-            .map(|x| unsafe { &mut *(x as *mut T) })
+            .map(|x| unsafe { x.deref_mut() })
     }
 
     /// Get mutable pointers to the component data for multiple entities at the same time.
@@ -80,18 +80,19 @@ impl<T: Clone + 'static> TypedComponentOps<T> {
     /// This will panic if the same entity is specified multiple times. This is invalid because it
     /// would mean you would have two mutable references to the same component data at the same
     /// time.
-    pub fn get_many_mut<const N: usize>(
-        &self,
-        components: &mut UntypedComponentStore,
+    pub fn get_many_mut<'a, const N: usize>(
+        &'a self,
+        components: &'a mut UntypedComponentStore,
         entities: [Entity; N],
     ) -> [Option<&mut T>; N] {
-        let pointers = components.get_many_mut(entities);
-        std::array::from_fn(|i| {
+        let mut pointers = components.get_many_mut(entities);
+        std::array::from_fn(move |i| {
             pointers[i]
+                .take()
                 // SAFE: constructing TypedComponentOps is unsafe, and user asserts that component
                 // storage is valid for type T. Additionally, `components.get_many_mut()` verifies
                 // that the pointers don't overlap.
-                .map(|x| unsafe { &mut *(x as *mut T) })
+                .map(|x| unsafe { x.deref_mut() })
         })
     }
 
@@ -135,7 +136,7 @@ impl<T: Clone + 'static> TypedComponentOps<T> {
             .iter_mut()
             // SAFE: constructing TypedComponentOps is unsafe, and user asserts that component
             // storage is valid for type T.
-            .map(|x| unsafe { &mut *(x.as_mut_ptr() as *mut T) })
+            .map(|x| unsafe { x.deref_mut() })
     }
 
     /// Iterate over all the components in the store that match the entities in the given bitset.

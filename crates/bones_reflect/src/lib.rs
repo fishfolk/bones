@@ -48,7 +48,7 @@ mod std_impls;
 ///
 /// If implemented manually, you must ensure that the schema accurately describes the memory layout
 /// of the type, or else accessing the type according to the schema would be unsound.
-pub unsafe trait HasSchema {
+pub unsafe trait HasSchema: Sync + Send {
     /// Get this type's [`Schema`].
     fn schema() -> &'static Schema;
 

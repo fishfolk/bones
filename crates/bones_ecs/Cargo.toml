@@ -26,7 +26,6 @@ keysize32 = []
 bones_utils = { version = "0.1.0", path = "../bones_utils" }
 bones_reflect = { version = "0.1.0", path = "../bones_reflect" }
 
-aligned-vec    = "0.5"
 anyhow         = "1.0"
 atomic_refcell = "0.1"
 bitset-core = "0.1"
