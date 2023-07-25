@@ -1,7 +1,7 @@
 //! World resource storage.
 
 use std::{
-    alloc::{self, Layout},
+    alloc::{self, handle_alloc_error, Layout},
     any::TypeId,
     io::Write,
     marker::PhantomData,
@@ -97,12 +97,7 @@ impl Clone for UntypedResource {
         };
 
         if new_ptr.is_null() {
-            writeln!(
-                std::io::stderr(),
-                "Error alloating memory while cloning resource"
-            )
-            .ok();
-            std::process::abort();
+            handle_alloc_error(self.layout)
         }
 
         // SAFE: UntypedResource can only be constructed with an unsafe function where the user
