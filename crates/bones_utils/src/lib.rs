@@ -8,6 +8,7 @@
 
 mod collections;
 mod default;
+mod key;
 mod labeled_id;
 mod names;
 

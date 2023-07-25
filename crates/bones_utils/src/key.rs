@@ -1,5 +1,3 @@
-//! Useful data types such as [`Key`].
-
 /// A small ascii byte array stored on the stack and used similarly to a string to represent things
 /// like animation keys, etc, without requring a heap allocation.
 #[derive(Eq, PartialEq, Copy, Clone, Hash)]

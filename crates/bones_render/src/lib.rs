@@ -8,7 +8,6 @@
 pub mod audio;
 pub mod camera;
 pub mod color;
-pub mod datatypes;
 pub mod line;
 pub mod sprite;
 pub mod tilemap;
@@ -19,8 +18,7 @@ pub mod prelude {
     pub use {bones_asset::prelude::*, bones_ecs::prelude::*, glam::*, type_ulid::TypeUlid};
 
     pub use crate::{
-        audio::*, camera::*, color::*, datatypes::*, key, line::*, sprite::*, tilemap::*,
-        transform::*,
+        audio::*, camera::*, color::*, key, line::*, sprite::*, tilemap::*, transform::*,
     };
 }
 
