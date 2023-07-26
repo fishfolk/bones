@@ -36,7 +36,7 @@ pub struct AssetPack {
     /// Schemas provided in the asset pack.
     pub schemas: HashMap<String, Schema>,
     /// Specify schemas to import from other asset packs.
-    pub import_schemas: HashMap<String, SchemaId>,
+    pub import_schemas: HashMap<String, SchemaPath>,
     /// The root asset for the asset pack.
     pub root: UntypedHandle,
 }
@@ -67,10 +67,10 @@ pub struct AssetPackReq {
     pub version: VersionReq,
 }
 
-/// A schema identifier, containing the ID of the pack that defined the schema, and the name of the
+/// A schema reference, containing the ID of the pack that defined the schema, and the name of the
 /// schema in the pack.
 #[derive(Clone, Debug)]
-pub struct SchemaId {
+pub struct SchemaPath {
     /// The ID of the pack, or [`None`] if it refers to the core pack.
     pub pack: Option<AssetPackReq>,
     /// The name of the schema.

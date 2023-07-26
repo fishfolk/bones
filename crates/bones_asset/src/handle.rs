@@ -109,11 +109,13 @@ macro_rules! schema_impl_for_handle {
                 "ULID memory layout is unexpected! Bad Rust compiler! 😡"
             );
             S.get_or_init(|| Schema {
+                id: None,
                 type_id: Some(TypeId::of::<Self>()),
                 kind: SchemaKind::Struct(StructSchema {
                     fields: vec![StructField {
                         name: Some("id".into()),
                         schema: Schema {
+                            id: None,
                             type_id: Some(TypeId::of::<Ulid>()),
                             kind: SchemaKind::Primitive(Primitive::U128),
                             type_data: Default::default(),

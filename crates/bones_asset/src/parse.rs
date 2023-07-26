@@ -40,18 +40,18 @@ impl FromStr for AssetPackReq {
     }
 }
 
-impl FromStr for SchemaId {
+impl FromStr for SchemaPath {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some((pack_id, schema)) = s.split_once('/') {
             let pack = AssetPackReq::from_str(pack_id)?;
 
-            Ok(SchemaId {
+            Ok(SchemaPath {
                 pack: Some(pack),
                 name: schema.into(),
             })
         } else {
-            Ok(SchemaId {
+            Ok(SchemaPath {
                 pack: None,
                 name: s.into(),
             })
@@ -59,13 +59,13 @@ impl FromStr for SchemaId {
     }
 }
 
-impl<'de> Deserialize<'de> for SchemaId {
+impl<'de> Deserialize<'de> for SchemaPath {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         use serde::de::Error;
         let s = String::deserialize(deserializer)?;
-        s.parse::<SchemaId>().map_err(D::Error::custom)
+        s.parse::<SchemaPath>().map_err(D::Error::custom)
     }
 }
