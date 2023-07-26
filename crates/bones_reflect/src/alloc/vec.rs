@@ -4,17 +4,7 @@ use crate::{Schema, SchemaBox, SchemaMismatchError, SchemaPtr, SchemaPtrMut};
 
 use super::ResizableAlloc;
 
-/// An untyped [`Vec`]-like collection.
-///
-/// # Important Type Data Note
-///
-/// All inserts into the vector are check to be [`Schema::equivalent()`], which significantly
-/// _doesn't_ verify the equivalence of the schemas' [`TypeDatas`][crate::TypeDatas].
-///
-/// This means that if you insert an item with a different schema, that is equivalent to the
-/// [`SchemaVec`]'s schema, the insert will succeed, but the type data of the inserted item will
-/// be lost, and reading the item out of the [`SchemaVec`] will assume the schema and type data
-/// of the [`SchemaVec`].
+/// A type-erased [`Vec`]-like collection that for items with the same [`Schema`].
 pub struct SchemaVec {
     /// The allocation for stored items.
     buffer: ResizableAlloc,
