@@ -12,8 +12,9 @@ serde = ["dep:serde", "hashbrown/serde"]
 
 [dependencies]
 bones_utils_macros = { version = "0.2", path = "./macros" }
-ahash     = "0.8.3"
-hashbrown = { version = "0.14" }
-ulid      = "1.0"
-bevy_ptr  = "0.11.0"
-serde     = { version = "1.0", optional = true }
+ahash       = "0.8.3"
+hashbrown   = { version = "0.14" }
+ulid        = "1.0"
+bevy_ptr    = "0.11.0"
+parking_lot = "0.12"
+serde       = { version = "1.0", optional = true }

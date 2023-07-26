@@ -91,10 +91,11 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         return quote! {
             unsafe impl #schema_mod::HasSchema for #name {
                 fn schema() -> &'static #schema_mod::Schema {
-                    static S: ::std::sync::OnceLock<#schema_mod::Schema> = ::std::sync::OnceLock::new();
+                    static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();
                     S.get_or_init(|| {
                         let layout = std::alloc::Layout::new::<Self>();
-                        #schema_mod::Schema {
+                        #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::Schema {
+                            id: None,
                             type_id: Some(std::any::TypeId::of::<Self>()),
                             clone_fn: #clone_fn,
                             default_fn: #default_fn,
@@ -104,7 +105,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                 align: layout.align(),
                             }),
                             type_data: #type_datas,
-                        }
+                        }).1
                     })
                 }
             }
@@ -157,6 +158,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                     schema: {
                                         let layout = ::std::alloc::Layout::new::<#ty>();
                                         #schema_mod::Schema {
+                                            id: None,
                                             kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
                                                 size: layout.size(),
                                                 align: layout.align(),
@@ -205,16 +207,17 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     quote! {
         unsafe impl #schema_mod::HasSchema for #name {
             fn schema() -> &'static #schema_mod::Schema {
-                static S: ::std::sync::OnceLock<#schema_mod::Schema> = ::std::sync::OnceLock::new();
+                static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();
                 S.get_or_init(|| {
-                    #schema_mod::Schema {
+                    #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::Schema {
+                        id: None,
                         type_id: Some(std::any::TypeId::of::<Self>()),
                         kind: #schema_kind,
                         type_data: #type_datas,
                         default_fn: #default_fn,
                         clone_fn: #clone_fn,
                         drop_fn: Some(<Self as #schema_mod::RawDrop>::raw_drop),
-                    }
+                    }).1
                 })
             }
         }

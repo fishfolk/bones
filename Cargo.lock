@@ -1128,6 +1128,7 @@ dependencies = [
  "bevy_ptr 0.11.0",
  "bones_utils_macros",
  "hashbrown 0.14.0",
+ "parking_lot",
  "serde",
  "ulid",
 ]

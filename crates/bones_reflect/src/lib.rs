@@ -12,9 +12,9 @@ use std::{alloc::Layout, any::TypeId, borrow::Cow};
 /// The prelude.
 pub mod prelude {
     pub use crate::{
-        alloc::SchemaVec, ptr::*, FromType, HasSchema, NestedSchema, Primitive, RawClone,
-        RawDefault, RawDrop, Schema, SchemaKind, SchemaLayoutInfo, StructField, StructSchema,
-        TypeData, TypeDatas,
+        alloc::SchemaVec, ptr::*, registry::*, FromType, HasSchema, NestedSchema, Primitive,
+        RawClone, RawDefault, RawDrop, Schema, SchemaKind, SchemaLayoutInfo, StructField,
+        StructSchema, TypeData, TypeDatas,
     };
     #[cfg(feature = "derive")]
     pub use bones_reflect_macros::*;
@@ -23,10 +23,12 @@ pub mod prelude {
 use bones_utils::prelude::*;
 use prelude::*;
 
+#[cfg(feature = "derive")]
 pub use bones_reflect_macros::*;
 
 pub mod alloc;
 pub mod ptr;
+pub mod registry;
 
 mod std_impls;
 
@@ -110,6 +112,9 @@ pub unsafe trait HasSchema: Sync + Send {
 pub struct Schema {
     /// The kind of schema.
     pub kind: SchemaKind,
+    /// The ID of the schema in the [`SCHEMA_REGISTRY`], if it has been registered.
+    #[serde(skip)]
+    pub id: Option<SchemaId>,
     #[serde(skip)]
     /// Arbitrary type data assocated to the schema.
     ///
@@ -386,6 +391,7 @@ impl Schema {
 impl From<SchemaKind> for Schema {
     fn from(kind: SchemaKind) -> Self {
         Self {
+            id: None,
             type_id: None,
             clone_fn: None,
             drop_fn: None,

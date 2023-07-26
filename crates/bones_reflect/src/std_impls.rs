@@ -11,14 +11,19 @@ macro_rules! impl_primitive {
     ($t:ty, $prim:ident) => {
         unsafe impl HasSchema for $t {
             fn schema() -> &'static Schema {
-                static S: OnceLock<Schema> = OnceLock::new();
-                S.get_or_init(|| Schema {
-                    kind: SchemaKind::Primitive(Primitive::$prim),
-                    type_id: Some(TypeId::of::<$t>()),
-                    clone_fn: Some(<$t as RawClone>::raw_clone),
-                    drop_fn: Some(<$t as RawDrop>::raw_drop),
-                    default_fn: Some(<$t as RawDefault>::raw_default),
-                    type_data: Default::default(),
+                static S: OnceLock<&'static Schema> = OnceLock::new();
+                S.get_or_init(|| {
+                    SCHEMA_REGISTRY
+                        .register(Schema {
+                            id: None,
+                            kind: SchemaKind::Primitive(Primitive::$prim),
+                            type_id: Some(TypeId::of::<$t>()),
+                            clone_fn: Some(<$t as RawClone>::raw_clone),
+                            drop_fn: Some(<$t as RawDrop>::raw_drop),
+                            default_fn: Some(<$t as RawDefault>::raw_default),
+                            type_data: Default::default(),
+                        })
+                        .1
                 })
             }
         }
@@ -55,15 +60,17 @@ unsafe impl<T: Clone + HasSchema + 'static> HasSchema for Vec<T> {
         } else {
             drop(read);
             let kind = SchemaKind::Vec(T::schema().into());
-            let schema = Schema {
-                kind,
-                type_data: Default::default(),
-                type_id: Some(type_id),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
-                drop_fn: Some(<Self as RawDrop>::raw_drop),
-                default_fn: Some(<Self as RawDefault>::raw_default),
-            };
-            let schema: &'static Schema = Box::leak(Box::new(schema));
+            let schema = SCHEMA_REGISTRY
+                .register(Schema {
+                    id: None,
+                    kind,
+                    type_data: Default::default(),
+                    type_id: Some(type_id),
+                    clone_fn: Some(<Self as RawClone>::raw_clone),
+                    drop_fn: Some(<Self as RawDrop>::raw_drop),
+                    default_fn: Some(<Self as RawDefault>::raw_default),
+                })
+                .1;
             let mut write = store.write().unwrap();
             write.insert(type_id, schema);
             schema
@@ -90,6 +97,7 @@ mod impl_glam {
                                     StructField {
                                         name: Some(stringify!($field).into()),
                                         schema: Schema {
+                                            id: None,
                                             kind: SchemaKind::Primitive(Primitive::$prim),
                                             type_id: Some(TypeId::of::<$t>()),
                                             type_data: Default::default(),
@@ -102,6 +110,7 @@ mod impl_glam {
                             ],
                         });
                         Schema {
+                            id: None,
                             type_id,
                             kind,
                             type_data: Default::default(),
