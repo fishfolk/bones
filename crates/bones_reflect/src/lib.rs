@@ -360,8 +360,8 @@ impl Schema {
     /// Returns whether or not this schema represents the same memory layout as the other schema,
     /// and you can safely cast a pointer to one to a pointer to the other.
     pub fn represents(&self, other: &Schema) -> bool {
-        // If these have equal Rust type IDs, then they are the same.
-        (self.type_id.is_some() && other.type_id.is_some() && self.type_id == other.type_id)
+        // If these have equal type/schema ids.
+        self.equivalent(other)
             // If the schemas don't have any opaque fields, and are equal to each-other, then they
             // have the same representation.
             || (!self.has_opaque() && !other.has_opaque() && {
@@ -379,12 +379,13 @@ impl Schema {
             })
     }
 
-    /// Returns whether or not the schema [`represents`][Self::represents] the other schema, and the
-    /// `type_id`, `clone_fn`, and `drop_fn` are the same.
+    /// Returns whether or not this schema is the same schema as another.
     ///
-    /// > **⚠️ Important Note:** This does not check for equivalence of the schema's [`TypeDatas`].
+    /// This check is made by checking the ID of both schemas to see if they have a matching Rust
+    /// [`TypeId`], or if they have a matching [`SchemaId`].
     pub fn equivalent(&self, other: &Schema) -> bool {
-        self.represents(other) && self.drop_fn == other.drop_fn && self.clone_fn == other.clone_fn
+        matches!((self.type_id, other.type_id), (Some(id1), Some(id2)) if id1 == id2)
+            || matches!((self.id, other.id), (Some(id1), Some(id2)) if id1 == id2)
     }
 }
 
