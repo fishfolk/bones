@@ -13,8 +13,8 @@ use std::{alloc::Layout, any::TypeId, borrow::Cow};
 pub mod prelude {
     pub use crate::{
         alloc::SchemaVec, ptr::*, registry::*, FromType, HasSchema, NestedSchema, Primitive,
-        RawClone, RawDefault, RawDrop, Schema, SchemaKind, SchemaLayoutInfo, StructField,
-        StructSchema, TypeDatas,
+        RawClone, RawDefault, RawDrop, Schema, SchemaData, SchemaKind, SchemaLayoutInfo,
+        StructField, StructSchema, TypeDatas,
     };
     #[cfg(feature = "derive")]
     pub use bones_reflect_macros::*;
@@ -104,17 +104,72 @@ pub unsafe trait HasSchema: Sync + Send + 'static {
     }
 }
 
-/// A schema describing the memory layout of a type.
+/// A schema registered with the [`SCHEMA_REGISTRY`].
+#[derive(Deref, Clone, Debug)]
+pub struct Schema {
+    id: SchemaId,
+    #[deref]
+    data: SchemaData,
+}
 
+impl Schema {
+    /// Get the registered, unique ID of the schema.
+    pub fn id(&self) -> SchemaId {
+        self.id
+    }
+
+    /// Get a static reference to the schema that was registered.
+    pub fn schema(&self) -> &SchemaData {
+        &self.data
+    }
+}
+
+impl SchemaId {
+    /// Get the schema associated to the ID.
+    pub fn get(&self) -> &'static Schema {
+        SCHEMA_REGISTRY.get(*self)
+    }
+}
+
+impl Schema {
+    /// Returns whether or not this schema represents the same memory layout as the other schema,
+    /// and you can safely cast a pointer to one to a pointer to the other.
+    pub fn represents(&self, other: &Schema) -> bool {
+        // If these have equal type/schema ids.
+        self.equivalent(other)
+            // If the schemas don't have any opaque fields, and are equal to each-other, then they
+            // have the same representation.
+            || (!self.has_opaque() && !other.has_opaque() && {
+                // FIXME: do we need to compare clone_fn and drop_fn!?
+                match (&self.kind, &other.kind) {
+                    (SchemaKind::Struct(s1), SchemaKind::Struct(s2)) => {
+                        s1.fields.len() == s2.fields.len() &&
+                            s1.fields.iter().zip(s2.fields.iter())
+                            .all(|(f1, f2)| f1.schema.represents(f2.schema))
+                    },
+                    (SchemaKind::Vec(v1), SchemaKind::Vec(v2)) => v1.represents(v2),
+                    (SchemaKind::Primitive(p1), SchemaKind::Primitive(p2)) => p1 == p2,
+                    _ => false
+                }
+            })
+    }
+
+    /// Returns whether or not this schema is the same schema as another.
+    ///
+    /// This check is made by checking the ID of both schemas to see if they have a matching Rust
+    /// [`TypeId`], or if they have a matching [`SchemaId`].
+    pub fn equivalent(&self, other: &Schema) -> bool {
+        self.id() == other.id()
+    }
+}
+
+/// A schema information describing the memory layout of a type.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
-pub struct Schema {
+pub struct SchemaData {
     /// The kind of schema.
     pub kind: SchemaKind,
-    /// The ID of the schema in the [`SCHEMA_REGISTRY`], if it has been registered.
-    #[serde(skip)]
-    pub id: Option<SchemaId>,
     #[serde(skip)]
     /// Arbitrary type data assocated to the schema.
     ///
@@ -219,7 +274,7 @@ pub struct StructField {
     /// The name of the field. Will be [`None`] if this is a field of a tuple struct.
     pub name: Option<Cow<'static, str>>,
     /// The schema of the field.
-    pub schema: Schema,
+    pub schema: &'static Schema,
 }
 
 /// The type of primitive. In the case of the number types, the size can be determined from the
@@ -268,20 +323,17 @@ pub enum Primitive {
 /// Container for storing type datas.
 #[derive(Clone, Debug, Default)]
 pub struct TypeDatas(HashMap<SchemaId, SchemaBox>);
-const SCHEMA_NOT_REGISTERED: &str = "Schema not registered with schema registry";
 impl TypeDatas {
     /// Get a type data out of the store.
     #[track_caller]
     pub fn get<T: HasSchema>(&self) -> Option<&T> {
         let schema = T::schema();
-        let id = schema.id.expect(SCHEMA_NOT_REGISTERED);
-        self.0.get(&id).map(|x| x.cast())
+        self.0.get(&schema.id()).map(|x| x.cast())
     }
 
     /// Insert a type data into the store
     pub fn insert<T: HasSchema>(&mut self, data: T) {
-        let id = T::schema().id.expect(SCHEMA_NOT_REGISTERED);
-        self.0.insert(id, SchemaBox::new(data));
+        self.0.insert(T::schema().id(), SchemaBox::new(data));
     }
 }
 
@@ -360,43 +412,11 @@ impl Schema {
             SchemaKind::Primitive(p) => matches!(p, Primitive::Opaque { .. }),
         }
     }
-
-    /// Returns whether or not this schema represents the same memory layout as the other schema,
-    /// and you can safely cast a pointer to one to a pointer to the other.
-    pub fn represents(&self, other: &Schema) -> bool {
-        // If these have equal type/schema ids.
-        self.equivalent(other)
-            // If the schemas don't have any opaque fields, and are equal to each-other, then they
-            // have the same representation.
-            || (!self.has_opaque() && !other.has_opaque() && {
-                // FIXME: do we need to compare clone_fn and drop_fn!?
-                match (&self.kind, &other.kind) {
-                    (SchemaKind::Struct(s1), SchemaKind::Struct(s2)) => {
-                        s1.fields.len() == s2.fields.len() &&
-                            s1.fields.iter().zip(s2.fields.iter())
-                            .all(|(f1, f2)| f1.schema.represents(&f2.schema))
-                    },
-                    (SchemaKind::Vec(v1), SchemaKind::Vec(v2)) => v1.represents(v2),
-                    (SchemaKind::Primitive(p1), SchemaKind::Primitive(p2)) => p1 == p2,
-                    _ => false
-                }
-            })
-    }
-
-    /// Returns whether or not this schema is the same schema as another.
-    ///
-    /// This check is made by checking the ID of both schemas to see if they have a matching Rust
-    /// [`TypeId`], or if they have a matching [`SchemaId`].
-    pub fn equivalent(&self, other: &Schema) -> bool {
-        matches!((self.type_id, other.type_id), (Some(id1), Some(id2)) if id1 == id2)
-            || matches!((self.id, other.id), (Some(id1), Some(id2)) if id1 == id2)
-    }
 }
 
-impl From<SchemaKind> for Schema {
+impl From<SchemaKind> for SchemaData {
     fn from(kind: SchemaKind) -> Self {
         Self {
-            id: None,
             type_id: None,
             clone_fn: None,
             drop_fn: None,

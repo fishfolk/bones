@@ -93,8 +93,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                     static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();
                     S.get_or_init(|| {
                         let layout = std::alloc::Layout::new::<Self>();
-                        #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::Schema {
-                            id: None,
+                        #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
                             type_id: Some(std::any::TypeId::of::<Self>()),
                             clone_fn: #clone_fn,
                             default_fn: #default_fn,
@@ -104,7 +103,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                 align: layout.align(),
                             }),
                             type_data: #type_datas,
-                        }).1
+                        })
                     })
                 }
             }
@@ -134,7 +133,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                         quote_spanned! {field.ty.__span() =>
                             #schema_mod::StructField {
                                 name: None,
-                                schema: <#ty as #schema_mod::HasSchema>::schema().clone(),
+                                schema: <#ty as #schema_mod::HasSchema>::schema(),
                             }
                         }
                     })
@@ -156,8 +155,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                     name: Some(stringify!(#name).into()),
                                     schema: {
                                         let layout = ::std::alloc::Layout::new::<#ty>();
-                                        #schema_mod::Schema {
-                                            id: None,
+                                        #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
                                             kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
                                                 size: layout.size(),
                                                 align: layout.align(),
@@ -167,7 +165,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                             clone_fn: #clone_fn,
                                             default_fn: #default_fn,
                                             drop_fn: Some(<Self as #schema_mod::RawDrop>::raw_drop),
-                                        }
+                                        })
                                     },
                                 }
                             }
@@ -175,7 +173,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                             quote_spanned! {field.ty.__span() =>
                                 #schema_mod::StructField {
                                     name: Some(stringify!(#name).into()),
-                                    schema: <#ty as #schema_mod::HasSchema>::schema().clone(),
+                                    schema: <#ty as #schema_mod::HasSchema>::schema(),
                                 }
                             }
                         }
@@ -208,15 +206,14 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
             fn schema() -> &'static #schema_mod::Schema {
                 static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();
                 S.get_or_init(|| {
-                    #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::Schema {
-                        id: None,
+                    #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
                         type_id: Some(std::any::TypeId::of::<Self>()),
                         kind: #schema_kind,
                         type_data: #type_datas,
                         default_fn: #default_fn,
                         clone_fn: #clone_fn,
                         drop_fn: Some(<Self as #schema_mod::RawDrop>::raw_drop),
-                    }).1
+                    })
                 })
             }
         }

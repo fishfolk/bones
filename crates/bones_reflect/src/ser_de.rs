@@ -2,13 +2,23 @@ use serde::Deserialize;
 
 use crate::prelude::*;
 
+impl<'de> Deserialize<'de> for &'static Schema {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let data = SchemaData::deserialize(deserializer)?;
+        Ok(SCHEMA_REGISTRY.register(data))
+    }
+}
+
 impl<'de> Deserialize<'de> for NestedSchema {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        let s = Schema::deserialize(deserializer)?;
-        Ok(NestedSchema::Boxed(Box::new(s)))
+        let s = <&'static Schema>::deserialize(deserializer)?;
+        Ok(s.into())
     }
 }
 

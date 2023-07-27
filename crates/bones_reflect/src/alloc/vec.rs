@@ -1,7 +1,3 @@
-use std::borrow::Cow;
-
-use bones_utils::MaybeOwned;
-
 use crate::{Schema, SchemaBox, SchemaMismatchError, SchemaPtr, SchemaPtrMut};
 
 use super::ResizableAlloc;
@@ -13,13 +9,12 @@ pub struct SchemaVec {
     /// The number of items actually stored in the vec.
     len: usize,
     /// The schema of the items stored in the vec.
-    schema: MaybeOwned<'static, Schema>,
+    schema: &'static Schema,
 }
 
 impl SchemaVec {
     /// Initialize an empty [`SchemaVec`] for items with the given schema.
-    pub fn new<S: Into<MaybeOwned<'static, Schema>>>(schema: S) -> Self {
-        let schema = schema.into();
+    pub fn new(schema: &'static Schema) -> Self {
         let layout = schema.layout_info().layout;
         Self {
             buffer: ResizableAlloc::new(layout),
@@ -87,7 +82,7 @@ impl SchemaVec {
 
             unsafe {
                 // Allocate memory for the box
-                let mut b = SchemaBox::uninitialized(self.schema.clone());
+                let mut b = SchemaBox::uninitialized(self.schema);
                 // Copy the last item in our vec to the box
                 b.as_mut().ptr().as_ptr().copy_from_nonoverlapping(
                     self.buffer.unchecked_idx_mut(self.len).as_ptr(),
@@ -100,34 +95,24 @@ impl SchemaVec {
     }
 
     /// Get the item with the given index.
-    pub fn get(&self, idx: usize) -> Option<SchemaPtr<'_, '_>> {
+    pub fn get(&self, idx: usize) -> Option<SchemaPtr<'_>> {
         if idx >= self.len {
             None
         } else {
             let ptr = unsafe { self.buffer.unchecked_idx(idx) };
 
-            unsafe {
-                Some(SchemaPtr::from_ptr_schema(
-                    ptr.as_ptr(),
-                    Cow::Borrowed(self.schema.as_ref()),
-                ))
-            }
+            unsafe { Some(SchemaPtr::from_ptr_schema(ptr.as_ptr(), self.schema)) }
         }
     }
 
     /// Get an item with the given index.
-    pub fn get_mut(&mut self, idx: usize) -> Option<SchemaPtrMut<'_, '_, '_>> {
+    pub fn get_mut(&mut self, idx: usize) -> Option<SchemaPtrMut<'_, '_>> {
         if idx >= self.len {
             None
         } else {
             let ptr = unsafe { self.buffer.unchecked_idx(idx) };
 
-            unsafe {
-                Some(SchemaPtrMut::from_ptr_schema(
-                    ptr.as_ptr(),
-                    Cow::Borrowed(self.schema.as_ref()),
-                ))
-            }
+            unsafe { Some(SchemaPtrMut::from_ptr_schema(ptr.as_ptr(), self.schema)) }
         }
     }
 
@@ -148,7 +133,7 @@ impl SchemaVec {
 
     /// Get the schema of items in this [`SchemaVec`].
     pub fn schema(&self) -> &Schema {
-        &self.schema
+        self.schema
     }
 }
 

@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use bones_reflect::prelude::*;
 use glam::{Vec2, Vec3};
 
@@ -157,7 +155,7 @@ fn ptr_fields() {
 
 #[test]
 fn schema_vec() {
-    let mut v = SchemaVec::new(Cow::Borrowed(DataA::schema()));
+    let mut v = SchemaVec::new(DataA::schema());
     assert_eq!(v.len(), 0);
     assert_eq!(v.capacity(), 0);
     v.push(SchemaBox::new(DataA { x: 1.0, y: 2.0 }));

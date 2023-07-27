@@ -7,7 +7,7 @@ use std::sync::{
 
 use bones_utils::{parking_lot::RwLock, *};
 
-use crate::Schema;
+use crate::{SchemaData, Schema};
 
 /// A unique identifier for a schema registered in the [`SCHEMA_REGISTRY`].
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
@@ -23,7 +23,7 @@ pub struct SchemaRegistry {
 
 impl SchemaRegistry {
     /// Register a schema with the registry.
-    pub fn register(&self, mut schema: Schema) -> (SchemaId, &'static Schema) {
+    pub fn register(&self, schema_data: SchemaData) -> &'static Schema {
         let schemas = self.schemas.get_or_init(default);
 
         // Allocate a new schema ID
@@ -32,18 +32,27 @@ impl SchemaRegistry {
         };
         assert_ne!(id.id, u32::MAX, "Exhausted all {} schema IDs", u32::MAX);
 
-        // Update the schema ID
-        schema.id = Some(id);
-
-        // Leak the schema to create a static reference.
-        let schema = Box::leak(Box::new(schema));
+        // Leak the registered schema to produce a static reference
+        let schema = Box::leak(Box::new(Schema {
+            id,
+            data: schema_data,
+        }));
 
         // Inser the schema into the registry.
         let entry = schemas.write().insert(id, schema);
         debug_assert!(entry.is_none(), "SchemaId already used!");
 
-        // Return the ID and reference
-        (id, schema)
+        schema
+    }
+
+    /// Get a `'static` reference to the schema associated to the given schema ID.
+    pub fn get(&self, id: SchemaId) -> &'static Schema {
+        let schemas = self.schemas.get_or_init(default);
+
+        schemas
+            .read()
+            .get(&id)
+            .expect("Reflection bug, schema Id created without associated registration")
     }
 }
 
