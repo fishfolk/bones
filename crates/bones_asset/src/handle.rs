@@ -93,7 +93,7 @@ pub struct SchemaAssetHandle;
 macro_rules! schema_impl_for_handle {
     () => {
         fn schema() -> &'static bones_reflect::Schema {
-            static S: OnceLock<Schema> = OnceLock::new();
+            static S: OnceLock<&'static Schema> = OnceLock::new();
             // This is a hack to make sure that `Ulid` has the memory representation we
             // expect. It is extremely unlike, but possible that this would otherwise be
             // unsound in the event that Rust picks a weird representation for the
@@ -104,31 +104,31 @@ macro_rules! schema_impl_for_handle {
                 Layout::new::<u128>(),
                 "ULID memory layout is unexpected! Bad Rust compiler! 😡"
             );
-            S.get_or_init(|| Schema {
-                id: None,
-                type_id: Some(TypeId::of::<Self>()),
-                kind: SchemaKind::Struct(StructSchema {
-                    fields: vec![StructField {
-                        name: Some("id".into()),
-                        schema: Schema {
-                            id: None,
-                            type_id: Some(TypeId::of::<Ulid>()),
-                            kind: SchemaKind::Primitive(Primitive::U128),
-                            type_data: Default::default(),
-                            clone_fn: Some(<u128 as RawClone>::raw_clone),
-                            drop_fn: None,
-                            default_fn: Some(<u128 as RawDefault>::raw_default),
-                        },
-                    }],
-                }),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
-                drop_fn: None,
-                default_fn: Some(<Self as RawDefault>::raw_default),
-                type_data: {
-                    let mut td = TypeDatas::default();
-                    td.insert(SchemaAssetHandle);
-                    td
-                },
+            S.get_or_init(|| {
+                SCHEMA_REGISTRY.register(SchemaData {
+                    type_id: Some(TypeId::of::<Self>()),
+                    kind: SchemaKind::Struct(StructSchema {
+                        fields: vec![StructField {
+                            name: Some("id".into()),
+                            schema: SCHEMA_REGISTRY.register(SchemaData {
+                                type_id: Some(TypeId::of::<Ulid>()),
+                                kind: SchemaKind::Primitive(Primitive::U128),
+                                type_data: Default::default(),
+                                clone_fn: Some(<u128 as RawClone>::raw_clone),
+                                drop_fn: None,
+                                default_fn: Some(<u128 as RawDefault>::raw_default),
+                            }),
+                        }],
+                    }),
+                    clone_fn: Some(<Self as RawClone>::raw_clone),
+                    drop_fn: None,
+                    default_fn: Some(<Self as RawDefault>::raw_default),
+                    type_data: {
+                        let mut td = TypeDatas::default();
+                        td.insert(SchemaAssetHandle);
+                        td
+                    },
+                })
             })
         }
     };

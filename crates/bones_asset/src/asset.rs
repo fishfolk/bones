@@ -9,7 +9,7 @@ use crate::prelude::*;
 ///
 /// Asset pack IDs are made up of a human-readable label, and a unique identifier. For example:
 ///
-///     awesome-pack_01h502c309fddv1vq1gwa918e8
+/// > awesome-pack_01h502c309fddv1vq1gwa918e8
 ///
 /// These IDs can be generated with the [TypeID gen][gen] utility.
 ///
@@ -90,7 +90,7 @@ pub struct AssetServer {
     ///
     /// The string key may be used in asset file extensions like `some_name.key.yaml` or
     /// `some_name.key.json`.
-    pub core_schemas: HashMap<String, MaybeOwned<'static, Schema>>,
+    pub core_schemas: HashMap<String, &'static Schema>,
     /// Lists the packs that have not been loaded due to an incompatible game version.
     pub incompabile_packs: HashMap<String, PackfileMeta>,
 }

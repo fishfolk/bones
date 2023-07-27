@@ -75,7 +75,7 @@ impl AssetServer {
     ///
     /// TODO: better docs.
     pub fn register_core_schema<T: HasSchema>(&mut self, name: &str) {
-        self.core_schemas.insert(name.into(), T::schema().into());
+        self.core_schemas.insert(name.into(), T::schema());
     }
 
     /// Load the assets.
@@ -264,11 +264,10 @@ impl AssetServer {
             .0
             .rsplit_once('.')
             .ok_or_else(|| anyhow::format_err!("Missing schema name in asset filename"))?;
-        let schema = self
+        let schema = *self
             .core_schemas
             .get(schema_name)
-            .ok_or_else(|| anyhow::format_err!("Schema not found: {schema_name}"))?
-            .clone();
+            .ok_or_else(|| anyhow::format_err!("Schema not found: {schema_name}"))?;
         let mut dependencies = Vec::new();
 
         let mut cid = Cid::default();
@@ -394,7 +393,7 @@ mod metadata {
         pub dependencies: &'srv mut Vec<Cid>,
         pub path: &'srv Path,
         pub pack: Option<&'srv str>,
-        pub schema: MaybeOwned<'static, Schema>,
+        pub schema: &'static Schema,
     }
 
     impl<'asset, 'de> DeserializeSeed<'de> for MetaAssetLoadCtx<'asset> {
@@ -411,7 +410,7 @@ mod metadata {
             }
 
             // Allocate the object.
-            let mut ptr = SchemaBox::default(self.schema.clone());
+            let mut ptr = SchemaBox::default(self.schema);
 
             SchemaPtrLoadCtx {
                 ctx: &mut self,
@@ -423,14 +422,12 @@ mod metadata {
         }
     }
 
-    struct SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'schm, 'prnt> {
+    struct SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'prnt> {
         ctx: &'a mut MetaAssetLoadCtx<'srv>,
-        ptr: SchemaPtrMut<'ptr, 'schm, 'prnt>,
+        ptr: SchemaPtrMut<'ptr, 'prnt>,
     }
 
-    impl<'a, 'srv, 'ptr, 'schm, 'prnt, 'de> DeserializeSeed<'de>
-        for SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'schm, 'prnt>
-    {
+    impl<'a, 'srv, 'ptr, 'prnt, 'de> DeserializeSeed<'de> for SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'prnt> {
         type Value = ();
 
         fn deserialize<D>(mut self, deserializer: D) -> Result<Self::Value, D::Error>
@@ -495,14 +492,12 @@ mod metadata {
         }
     }
 
-    struct StructVisitor<'a, 'srv, 'ptr, 'schm, 'prnt> {
+    struct StructVisitor<'a, 'srv, 'ptr, 'prnt> {
         ctx: &'a mut MetaAssetLoadCtx<'srv>,
-        ptr: SchemaPtrMut<'ptr, 'schm, 'prnt>,
+        ptr: SchemaPtrMut<'ptr, 'prnt>,
     }
 
-    impl<'a, 'srv, 'ptr, 'schm, 'prnt, 'de> Visitor<'de>
-        for StructVisitor<'a, 'srv, 'ptr, 'schm, 'prnt>
-    {
+    impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for StructVisitor<'a, 'srv, 'ptr, 'prnt> {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
