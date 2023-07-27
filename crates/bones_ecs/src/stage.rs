@@ -231,8 +231,8 @@ impl StageLabel for CoreStage {
 /// A resource containing the [`Commands`] command queue.
 ///
 /// You can use [`Commands`] as a [`SystemParam`] as a shortcut to [`ResMut<CommandQueue>`].
-#[derive(Debug, TypeUlid, Default)]
-#[ulid = "01GPY3KPT0CDNCM23HTKAKN0NJ"]
+#[derive(Debug, HasSchema, Default)]
+#[schema(opaque)]
 pub struct CommandQueue {
     /// The system queue that will be run at the end of the stage
     pub queue: VecDeque<System>,

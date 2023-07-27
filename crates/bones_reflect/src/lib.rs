@@ -14,7 +14,7 @@ pub mod prelude {
     pub use crate::{
         alloc::SchemaVec, ptr::*, registry::*, FromType, HasSchema, NestedSchema, Primitive,
         RawClone, RawDefault, RawDrop, Schema, SchemaKind, SchemaLayoutInfo, StructField,
-        StructSchema, TypeData, TypeDatas,
+        StructSchema, TypeDatas,
     };
     #[cfg(feature = "derive")]
     pub use bones_reflect_macros::*;
@@ -45,7 +45,7 @@ mod ser_de;
 ///
 /// If implemented manually, you must ensure that the schema accurately describes the memory layout
 /// of the type, or else accessing the type according to the schema would be unsound.
-pub unsafe trait HasSchema: Sync + Send {
+pub unsafe trait HasSchema: Sync + Send + 'static {
     /// Get this type's [`Schema`].
     fn schema() -> &'static Schema;
 
@@ -267,11 +267,21 @@ pub enum Primitive {
 
 /// Container for storing type datas.
 #[derive(Clone, Debug, Default)]
-pub struct TypeDatas(pub HashMap<Ulid, SchemaBox>);
+pub struct TypeDatas(HashMap<SchemaId, SchemaBox>);
+const SCHEMA_NOT_REGISTERED: &str = "Schema not registered with schema registry";
 impl TypeDatas {
     /// Get a type data out of the store.
-    pub fn get<T: TypeData>(&self) -> Option<&T> {
-        self.0.get(&T::TYPE_DATA_ID).map(|x| x.cast())
+    #[track_caller]
+    pub fn get<T: HasSchema>(&self) -> Option<&T> {
+        let schema = T::schema();
+        let id = schema.id.expect(SCHEMA_NOT_REGISTERED);
+        self.0.get(&id).map(|x| x.cast())
+    }
+
+    /// Insert a type data into the store
+    pub fn insert<T: HasSchema>(&mut self, data: T) {
+        let id = T::schema().id.expect(SCHEMA_NOT_REGISTERED);
+        self.0.insert(id, SchemaBox::new(data));
     }
 }
 
@@ -279,12 +289,6 @@ impl TypeDatas {
 pub trait FromType<T> {
     /// Return the data for the type.
     fn from_type() -> Self;
-}
-
-/// Trait implemented for Rust types that are used as [`Schema::type_data`].
-pub trait TypeData: HasSchema {
-    /// The unique ID of the type data.
-    const TYPE_DATA_ID: Ulid;
 }
 
 impl Schema {

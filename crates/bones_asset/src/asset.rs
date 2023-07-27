@@ -1,6 +1,5 @@
-use std::{borrow::Cow, path::PathBuf};
+use std::path::PathBuf;
 
-use bones_ecs::prelude::{Deref, DerefMut};
 use bones_utils::prelude::*;
 use semver::VersionReq;
 
@@ -91,7 +90,7 @@ pub struct AssetServer {
     ///
     /// The string key may be used in asset file extensions like `some_name.key.yaml` or
     /// `some_name.key.json`.
-    pub core_schemas: HashMap<String, Cow<'static, Schema>>,
+    pub core_schemas: HashMap<String, MaybeOwned<'static, Schema>>,
     /// Lists the packs that have not been loaded due to an incompatible game version.
     pub incompabile_packs: HashMap<String, PackfileMeta>,
 }

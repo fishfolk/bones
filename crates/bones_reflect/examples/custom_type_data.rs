@@ -16,11 +16,6 @@ impl<T> FromType<T> for TypeName {
     }
 }
 
-/// We must also implement [`TypeData`] and associate a unique ID to our type data.
-impl TypeData for TypeName {
-    const TYPE_DATA_ID: ulid::Ulid = Ulid(2042822440874910572532850263467841496);
-}
-
 /// Finally we can derive our type data on other types that implement [`HasSchema`] by using the
 /// `#[type_datas()]` attribute with one or more type datas to derive.
 #[derive(HasSchema, Debug, Default, Clone)]

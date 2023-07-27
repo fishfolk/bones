@@ -15,8 +15,7 @@ pub struct UntypedComponentStore {
     pub(crate) storage: ResizableAlloc,
     pub(crate) layout: Layout,
     pub(crate) max_id: usize,
-    pub(crate) drop_fn: Option<unsafe extern "C-unwind" fn(*mut u8)>,
-    pub(crate) clone_fn: unsafe extern "C-unwind" fn(*const u8, *mut u8),
+    pub(crate) schema: MaybeOwned<'static, Schema>,
 }
 
 impl Clone for UntypedComponentStore {
@@ -34,7 +33,10 @@ impl Clone for UntypedComponentStore {
                 unsafe {
                     let prev_ptr = self.storage.ptr().byte_add(i * size);
                     let new_ptr = new_storage.ptr_mut().byte_add(i * size);
-                    (self.clone_fn)(prev_ptr.as_ptr(), new_ptr.as_ptr());
+                    (self.schema.clone_fn.expect("Cannot clone component"))(
+                        prev_ptr.as_ptr(),
+                        new_ptr.as_ptr(),
+                    );
                 }
             }
         }
@@ -42,17 +44,16 @@ impl Clone for UntypedComponentStore {
         Self {
             bitset: self.bitset.clone(),
             storage: new_storage,
-            layout: self.layout,
             max_id: self.max_id,
-            drop_fn: self.drop_fn,
-            clone_fn: self.clone_fn,
+            layout: self.schema.layout_info().layout,
+            schema: self.schema,
         }
     }
 }
 
 impl Drop for UntypedComponentStore {
     fn drop(&mut self) {
-        if let Some(drop_fn) = self.drop_fn {
+        if let Some(drop_fn) = self.schema.drop_fn {
             let size = self.layout().size();
             if size < 1 {
                 return;
@@ -83,25 +84,21 @@ impl UntypedComponentStore {
     ///
     /// The `clone_fn` and `drop_fn`, if specified, must not do anything unsound, when given valid
     /// pointers to clone or drop.
-    pub unsafe fn new(
-        layout: Layout,
-        clone_fn: unsafe extern "C-unwind" fn(*const u8, *mut u8),
-        drop_fn: Option<unsafe extern "C-unwind" fn(*mut u8)>,
-    ) -> Self {
+    pub unsafe fn new(schema: &'static Schema) -> Self {
+        let layout = schema.layout_info().layout;
         Self {
             bitset: create_bitset(),
             // Approximation of a good default.
             storage: ResizableAlloc::with_capacity(layout, (BITSET_SIZE >> 4) * layout.size())
                 .unwrap(),
-            layout,
             max_id: 0,
-            clone_fn,
-            drop_fn,
+            layout: schema.layout_info().layout,
+            schema: schema.into(),
         }
     }
 
     /// Create an [`UntypedComponentStore`] that is valid for the given type `T`.
-    pub fn for_type<T: Clone + 'static>() -> Self {
+    pub fn for_type<T: HasSchema>() -> Self {
         let layout = Layout::new::<T>();
         Self {
             bitset: create_bitset(),
@@ -110,8 +107,7 @@ impl UntypedComponentStore {
                 .unwrap(),
             layout,
             max_id: 0,
-            clone_fn: T::raw_clone,
-            drop_fn: Some(T::raw_drop),
+            schema: T::schema().into(),
         }
     }
 
@@ -264,7 +260,7 @@ impl UntypedComponentStore {
             if let Some(out) = out {
                 // SAFE: user asserts `out` is non-overlapping
                 ptr::copy_nonoverlapping(ptr, out, size);
-            } else if let Some(drop_fn) = self.drop_fn {
+            } else if let Some(drop_fn) = self.schema.drop_fn {
                 // SAFE: construcing `UntypedComponentStore` asserts the soundess of the drop_fn
                 //
                 // And ptr is a valid pointer to the component type.

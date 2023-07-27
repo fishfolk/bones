@@ -21,7 +21,7 @@ use crate::prelude::*;
 /// > you have an opinion, @zicklag would be happy to discuss on GitHub!
 pub struct TypedComponentOps<T>(PhantomData<T>);
 
-impl<T: Clone + 'static> TypedComponentOps<T> {
+impl<T: HasSchema> TypedComponentOps<T> {
     /// # Safety
     /// Creating `TypedComponentOps` must only be used on an [`UntypedComponentStore`] where the
     /// underlying, untyped component data is valid for `T`.

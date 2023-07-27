@@ -959,7 +959,6 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-channel",
- "bones_ecs",
  "bones_reflect",
  "bones_utils",
  "bs58",
@@ -1016,7 +1015,6 @@ dependencies = [
  "serde",
  "serde_yaml",
  "thiserror",
- "type_ulid",
 ]
 
 [[package]]
@@ -1128,6 +1126,7 @@ dependencies = [
  "bevy_ptr 0.11.0",
  "bones_utils_macros",
  "hashbrown 0.14.0",
+ "maybe-owned",
  "parking_lot",
  "serde",
  "ulid",
@@ -2106,6 +2105,12 @@ checksum = "8263075bb86c5a1b1427b5ae862e8889656f126e9f77c484496e8b47cf5c5558"
 dependencies = [
  "regex-automata 0.1.10",
 ]
+
+[[package]]
+name = "maybe-owned"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4facc753ae494aeb6e3c22f839b158aebd4f9270f55cd3c79906c45476c47ab4"
 
 [[package]]
 name = "memchr"

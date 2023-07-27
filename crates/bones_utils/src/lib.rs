@@ -21,6 +21,7 @@ macro_rules! pub_use {
         pub use bones_utils_macros::*;
         pub use hashbrown;
         pub use parking_lot;
+        pub use maybe_owned::*;
     };
 }
 pub_use!();

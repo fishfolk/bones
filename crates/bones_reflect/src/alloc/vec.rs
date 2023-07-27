@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use bones_utils::MaybeOwned;
+
 use crate::{Schema, SchemaBox, SchemaMismatchError, SchemaPtr, SchemaPtrMut};
 
 use super::ResizableAlloc;
@@ -11,12 +13,12 @@ pub struct SchemaVec {
     /// The number of items actually stored in the vec.
     len: usize,
     /// The schema of the items stored in the vec.
-    schema: Cow<'static, Schema>,
+    schema: MaybeOwned<'static, Schema>,
 }
 
 impl SchemaVec {
     /// Initialize an empty [`SchemaVec`] for items with the given schema.
-    pub fn new<S: Into<Cow<'static, Schema>>>(schema: S) -> Self {
+    pub fn new<S: Into<MaybeOwned<'static, Schema>>>(schema: S) -> Self {
         let schema = schema.into();
         let layout = schema.layout_info().layout;
         Self {

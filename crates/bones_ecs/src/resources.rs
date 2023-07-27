@@ -1,17 +1,8 @@
 //! World resource storage.
 
-use std::{
-    alloc::{self, handle_alloc_error, Layout},
-    any::TypeId,
-    marker::PhantomData,
-    mem,
-    ptr::NonNull,
-    sync::Arc,
-};
+use std::{any::TypeId, marker::PhantomData, sync::Arc};
 
-use bones_utils::hashbrown::hash_map::Entry;
-
-use crate::prelude::*;
+use crate::{prelude::*, SCHEMA_NOT_REGISTERED};
 
 /// Storage for un-typed resources.
 ///
@@ -21,124 +12,38 @@ use crate::prelude::*;
 /// should use [`Resources`] instead.
 #[derive(Clone, Default)]
 pub struct UntypedResources {
-    resources: HashMap<Ulid, UntypedResource>,
-}
-
-/// Used to construct an [`UntypedResource`].
-pub struct UntypedResourceInfo {
-    /// The memory layout of the resource
-    pub layout: Layout,
-    /// Cell containing the raw pointer to the resource's data
-    // TODO: Evaluate possibility of avoiding an `Arc` clone.
-    // We might be able to just just pass references with a lifetime for acessing it,
-    // instead of cloning the Arc like we do here.
-    pub cell: Arc<AtomicRefCell<*mut u8>>,
-    /// A function that may be called to clone the resource from one pointer to another.
-    pub clone_fn: unsafe extern "C-unwind" fn(*const u8, *mut u8),
-    /// An optional function that will be called to drop the resource.
-    pub drop_fn: Option<unsafe extern "C-unwind" fn(*mut u8)>,
+    resources: HashMap<SchemaId, UntypedResource>,
 }
 
 /// An untyped resource that may be inserted into [`UntypedResources`].
 pub struct UntypedResource {
-    layout: Layout,
-    cell: Arc<AtomicRefCell<*mut u8>>,
-    clone_fn: unsafe extern "C-unwind" fn(*const u8, *mut u8),
-    drop_fn: Option<unsafe extern "C-unwind" fn(*mut u8)>,
+    cell: Arc<AtomicRefCell<SchemaBox>>,
 }
 
 impl UntypedResource {
-    /// Create a new [`UntypedResource`] from raw [`UntypedResourceInfo`].
-    ///
-    /// # Safety
-    ///
-    /// - The implementations for `info.clone_fn` and `info.drop_fn` must not do anything unsound
-    ///   when given valid pointers to clone or drop.
-    /// - The `info.cell` must contain a pointer that is writable and points to data with a layout
-    ///   matching `info.layout`.
-    pub unsafe fn new_raw(info: UntypedResourceInfo) -> Self {
-        UntypedResource {
-            layout: info.layout,
-            cell: info.cell,
-            clone_fn: info.clone_fn,
-            drop_fn: info.drop_fn,
-        }
-    }
-
-    /// Creates a new [`UntypedResource`] from an instance of a Rust type.
-    ///
-    /// This is the safest way to construct a valid [`UntypedResource`].
-    pub fn new<T: Clone + Sync + Send>(resource: T) -> Self {
-        let layout = Layout::new::<T>();
-
-        let ptr = Box::into_raw(Box::new(resource)) as *mut u8;
-
+    /// Creates a new [`UntypedResource`] storing the given data.
+    pub fn new<T: HasSchema>(resource: T) -> Self {
         Self {
-            cell: Arc::new(AtomicRefCell::new(ptr)),
-            clone_fn: T::raw_clone,
-            drop_fn: Some(T::raw_drop),
-            layout,
+            cell: Arc::new(AtomicRefCell::new(SchemaBox::new(resource))),
         }
     }
-}
 
-unsafe impl Sync for UntypedResource {}
-unsafe impl Send for UntypedResource {}
+    /// Create a new [`UntypedResource`] for the given schema, initially populated with the default
+    /// value for the schema.
+    pub fn from_schema<S: Into<MaybeOwned<'static, Schema>>>(schema: S) -> Self {
+        Self {
+            cell: Arc::new(AtomicRefCell::new(SchemaBox::default(schema.into()))),
+        }
+    }
+
+    /// Get another [`UntypedResource`] that points to the same data,
+    pub fn clone_cell(&self) -> UntypedResource {}
+}
 
 impl Clone for UntypedResource {
     fn clone(&self) -> Self {
-        let prev_ptr = self.cell.borrow();
-        let new_ptr = if self.layout.size() == 0 {
-            NonNull::<u8>::dangling().as_ptr()
-        } else {
-            // SAFE: Non-zero size for layout
-            unsafe { std::alloc::alloc(self.layout) }
-        };
-
-        if new_ptr.is_null() {
-            handle_alloc_error(self.layout)
-        }
-
-        // SAFE: UntypedResource can only be constructed with an unsafe function where the user
-        // promises not to do anything unsound while dropping.
-        //
-        // And our source prev_ptr is valid, and the new_ptr is properly aligned and writable.
-        unsafe {
-            (self.clone_fn)(*prev_ptr, new_ptr);
-        }
-
         Self {
-            cell: Arc::new(AtomicRefCell::new(new_ptr)),
-            clone_fn: self.clone_fn,
-            drop_fn: self.drop_fn,
-            layout: self.layout,
-        }
-    }
-}
-
-impl Drop for UntypedResource {
-    fn drop(&mut self) {
-        if let Some(drop_fn) = self.drop_fn {
-            let null_cell = Arc::new(AtomicRefCell::new(std::ptr::null_mut()));
-            let cell = mem::replace(&mut self.cell, null_cell);
-
-            let ptr = Arc::try_unwrap(cell)
-                .expect(
-                    "You must drop all references to Resoruces before dropping `UntypedResources`",
-                )
-                .into_inner();
-
-            // SAFE: UntypedResource can only be constructed with an unsafe function where the user
-            // promises not to do anything unsound while dropping.
-            //
-            // And our ptr is valid.
-            unsafe {
-                drop_fn(ptr);
-
-                if self.layout.size() != 0 {
-                    alloc::dealloc(ptr, self.layout);
-                }
-            }
+            cell: Arc::new(AtomicRefCell::new(self.cell.borrow().clone())),
         }
     }
 }
@@ -150,13 +55,14 @@ impl UntypedResources {
     }
 
     /// Insert a new resource
-    pub fn insert(&mut self, uuid: Ulid, resource: UntypedResource) -> Option<UntypedResource> {
-        self.resources.insert(uuid, resource)
+    pub fn insert(&mut self, resource: UntypedResource) -> Option<UntypedResource> {
+        self.resources
+            .insert(resource.cell.borrow().schema().id.unwrap(), resource)
     }
 
     /// Get a cell containing the resource data pointer for the given ID
-    pub fn get(&self, uuid: Ulid) -> Option<Arc<AtomicRefCell<*mut u8>>> {
-        self.resources.get(&uuid).map(|x| x.cell.clone())
+    pub fn get(&self, schema_id: SchemaId) -> Option<Arc<AtomicRefCell<*mut u8>>> {
+        self.resources.get(&schema_id).map(|x| x.cell.clone())
     }
 
     /// Remove a resource
@@ -171,7 +77,6 @@ impl UntypedResources {
 #[derive(Clone, Default)]
 pub struct Resources {
     untyped: UntypedResources,
-    type_ids: HashMap<Ulid, TypeId>,
 }
 
 impl Resources {
@@ -181,41 +86,11 @@ impl Resources {
     }
 
     /// Insert a resource.
-    ///
-    /// # Panics
-    ///
-    /// Panics if you try to insert a Rust type with a different [`TypeId`], but the same
-    /// [`TypeUlid`] as another resource in the store.
-    #[track_caller]
-    pub fn insert<T: TypedEcsData>(&mut self, resource: T) {
-        self.try_insert(resource).unwrap();
-    }
-
-    /// Try to insert a resource.
-    ///
-    /// # Errors
-    ///
-    /// Errors if you try to insert a Rust type with a different [`TypeId`], but the same
-    /// [`TypeUlid`] as another resource in the store.
-    pub fn try_insert<T: TypedEcsData>(&mut self, resource: T) -> Result<(), EcsError> {
-        let uuid = T::ULID;
+    pub fn insert<T: HasSchema>(&mut self, resource: T) {
+        let schema = T::schema();
         let type_id = TypeId::of::<T>();
 
-        match self.type_ids.entry(uuid) {
-            Entry::Occupied(entry) => {
-                if entry.get() != &type_id {
-                    return Err(EcsError::TypeUlidCollision);
-                }
-
-                self.untyped.insert(uuid, UntypedResource::new(resource));
-            }
-            Entry::Vacant(entry) => {
-                entry.insert(type_id);
-                self.untyped.insert(uuid, UntypedResource::new(resource));
-            }
-        }
-
-        Ok(())
+        self.untyped.insert(UntypedResource::new(resource));
     }
 
     /// Get a resource handle from the store.
@@ -229,20 +104,25 @@ impl Resources {
     ///
     /// Panics if the resource does not exist in the store.
     #[track_caller]
-    pub fn get<T: TypedEcsData>(&self) -> AtomicResource<T> {
+    pub fn get<T: HasSchema>(&self) -> AtomicResource<T> {
         self.try_get().unwrap()
     }
 
     /// Check whether or not a resource is in the store.
     ///
     /// See [get()][Self::get]
-    pub fn contains<T: TypedEcsData>(&self) -> bool {
-        self.untyped.resources.contains_key(&T::ULID)
+    pub fn contains<T: HasSchema>(&self) -> bool {
+        T::schema()
+            .id
+            .map(|id| self.untyped.resources.contains_key(&id))
+            .unwrap_or(false)
     }
 
     /// Gets a resource handle from the store if it exists.
-    pub fn try_get<T: TypedEcsData>(&self) -> Option<AtomicResource<T>> {
-        let untyped = self.untyped.get(T::ULID)?;
+    pub fn try_get<T: HasSchema>(&self) -> Option<AtomicResource<T>> {
+        let untyped = self
+            .untyped
+            .get(T::schema().id.expect(SCHEMA_NOT_REGISTERED))?;
 
         Some(AtomicResource {
             untyped,
@@ -270,12 +150,12 @@ impl Resources {
 ///
 /// To access the resource you must borrow it with either [`borrow()`][Self::borrow] or
 /// [`borrow_mut()`][Self::borrow_mut].
-pub struct AtomicResource<T: TypedEcsData> {
+pub struct AtomicResource<T: HasSchema> {
     untyped: Arc<AtomicRefCell<*mut u8>>,
     _phantom: PhantomData<T>,
 }
 
-impl<T: TypedEcsData> AtomicResource<T> {
+impl<T: HasSchema> AtomicResource<T> {
     /// Lock the resource for reading.
     ///
     /// This returns a read guard, very similar to an [`RwLock`][std::sync::RwLock].
@@ -301,12 +181,12 @@ mod test {
 
     #[test]
     fn sanity_check() {
-        #[derive(TypeUlid, Clone, Debug)]
-        #[ulid = "01GNDJJ42DY5GSP9PGXPGF65GE"]
+        #[derive(HasSchema, Clone, Debug, Default)]
+        #[repr(C)]
         struct A(Vec<u32>);
 
-        #[derive(TypeUlid, Clone, Debug)]
-        #[ulid = "01GNDJJDS0JRRN6TP3S89R4FQB"]
+        #[derive(HasSchema, Clone, Debug, Default)]
+        #[repr(C)]
         struct B(u32);
 
         let mut resources = Resources::new();

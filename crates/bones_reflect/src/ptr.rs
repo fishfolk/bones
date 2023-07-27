@@ -305,7 +305,7 @@ impl<'pointer, 'schema, 'parent> SchemaPtrMut<'pointer, 'schema, 'parent> {
 /// A owning, type-erased [`Box`]-like container.
 pub struct SchemaBox {
     ptr: OwningPtr<'static>,
-    schema: Cow<'static, Schema>,
+    schema: MaybeOwned<'static, Schema>,
     layout: Layout,
 }
 unsafe impl Sync for SchemaBox {}
@@ -453,7 +453,7 @@ impl SchemaBox {
 
         Self {
             ptr,
-            schema: Cow::Borrowed(schema),
+            schema: schema.into(),
             layout,
         }
     }
@@ -466,7 +466,7 @@ impl SchemaBox {
     /// initialize the memory pointed at by the box after creating it.
     pub unsafe fn uninitialized<S>(schema: S) -> Self
     where
-        S: Into<Cow<'static, Schema>>,
+        S: Into<MaybeOwned<'static, Schema>>,
     {
         let schema = schema.into();
         let layout = schema.layout_info().layout;
@@ -503,7 +503,7 @@ impl SchemaBox {
     #[track_caller]
     pub fn default<S>(schema: S) -> Self
     where
-        S: Into<Cow<'static, Schema>>,
+        S: Into<MaybeOwned<'static, Schema>>,
     {
         let schema = schema.into();
         let Some(default_fn) = schema.default_fn else {
@@ -528,7 +528,7 @@ impl SchemaBox {
     /// `clone_fn`.
     pub unsafe fn from_raw_parts<S>(ptr: OwningPtr<'static>, schema: S) -> Self
     where
-        S: Into<Cow<'static, Schema>>,
+        S: Into<MaybeOwned<'static, Schema>>,
     {
         let schema = schema.into();
         Self {

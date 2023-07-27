@@ -137,8 +137,8 @@ pub trait SystemParam: Sized {
 }
 
 /// [`SystemParam`] for getting read access to a resource.
-pub struct Res<'a, T: TypedEcsData + FromWorld>(AtomicRef<'a, T>);
-impl<'a, T: TypedEcsData + FromWorld> std::ops::Deref for Res<'a, T> {
+pub struct Res<'a, T: HasSchema + FromWorld>(AtomicRef<'a, T>);
+impl<'a, T: HasSchema + FromWorld> std::ops::Deref for Res<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -146,20 +146,20 @@ impl<'a, T: TypedEcsData + FromWorld> std::ops::Deref for Res<'a, T> {
 }
 
 /// [`SystemParam`] for getting mutable access to a resource.
-pub struct ResMut<'a, T: TypedEcsData + FromWorld>(AtomicRefMut<'a, T>);
-impl<'a, T: TypedEcsData + FromWorld> std::ops::Deref for ResMut<'a, T> {
+pub struct ResMut<'a, T: HasSchema + FromWorld>(AtomicRefMut<'a, T>);
+impl<'a, T: HasSchema + FromWorld> std::ops::Deref for ResMut<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<'a, T: TypedEcsData + FromWorld> std::ops::DerefMut for ResMut<'a, T> {
+impl<'a, T: HasSchema + FromWorld> std::ops::DerefMut for ResMut<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl<'a, T: TypedEcsData + FromWorld> SystemParam for Res<'a, T> {
+impl<'a, T: HasSchema + FromWorld> SystemParam for Res<'a, T> {
     type State = AtomicResource<T>;
     type Param<'p> = Res<'p, T>;
 
@@ -176,7 +176,7 @@ impl<'a, T: TypedEcsData + FromWorld> SystemParam for Res<'a, T> {
     }
 }
 
-impl<'a, T: TypedEcsData + FromWorld> SystemParam for ResMut<'a, T> {
+impl<'a, T: HasSchema + FromWorld> SystemParam for ResMut<'a, T> {
     type State = AtomicResource<T>;
     type Param<'p> = ResMut<'p, T>;
 
@@ -198,7 +198,7 @@ pub type Comp<'a, T> = AtomicComponentStoreRef<'a, T>;
 /// [`SystemParam`] for getting mutable access to a [`ComponentStore`].
 pub type CompMut<'a, T> = AtomicComponentStoreRefMut<'a, T>;
 
-impl<'a, T: TypedEcsData> SystemParam for Comp<'a, T> {
+impl<'a, T: HasSchema> SystemParam for Comp<'a, T> {
     type State = AtomicComponentStore<T>;
     type Param<'p> = Comp<'p, T>;
 
@@ -215,7 +215,7 @@ impl<'a, T: TypedEcsData> SystemParam for Comp<'a, T> {
     }
 }
 
-impl<'a, T: TypedEcsData> SystemParam for CompMut<'a, T> {
+impl<'a, T: HasSchema> SystemParam for CompMut<'a, T> {
     type State = AtomicComponentStore<T>;
     type Param<'p> = CompMut<'p, T>;
 
@@ -408,11 +408,11 @@ mod tests {
 
     #[test]
     fn system_replace_resource() {
-        #[derive(Default, TypeUlid, Clone, PartialEq, Eq, Debug)]
-        #[ulid = "01GNDP03R29SDA1S009KTQF18Y"]
+        #[derive(Default, HasSchema, Clone, PartialEq, Eq, Debug)]
+        #[schema(opaque)]
         pub struct A;
-        #[derive(Default, TypeUlid, Clone, Debug)]
-        #[ulid = "01GNDP0C73TAV0TDKZZB39NQ8C"]
+        #[derive(Default, HasSchema, Clone, Debug)]
+        #[schema(opaque)]
         pub struct B {
             x: u32,
         }

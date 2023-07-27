@@ -46,8 +46,8 @@ impl Entity {
 ///
 /// It also holds a list of entities that were recently killed, which allows to remove components of
 /// deleted entities at the end of a game frame.
-#[derive(TypeUlid, Clone)]
-#[ulid = "01GNDN1CYXP2XVQKQFK3RNSGGD"]
+#[derive(Clone, HasSchema)]
+#[schema(opaque)]
 pub struct Entities {
     /// Bitset containing all living entities
     alive: BitSetVec,
@@ -83,7 +83,7 @@ pub trait QueryItem {
 
 // TODO: Implement optional component query iterators.
 
-impl<'a, 'q, T: TypedEcsData> QueryItem for &'a Comp<'q, T> {
+impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
     type Iter = ComponentBitsetIterator<'a, T>;
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
         bitset.bit_and(self.bitset());
@@ -93,7 +93,7 @@ impl<'a, 'q, T: TypedEcsData> QueryItem for &'a Comp<'q, T> {
         Comp::iter_with_bitset(self, bitset)
     }
 }
-impl<'a, 'q, T: TypedEcsData> QueryItem for &'a CompMut<'q, T> {
+impl<'a, 'q, T: HasSchema> QueryItem for &'a CompMut<'q, T> {
     type Iter = ComponentBitsetIterator<'a, T>;
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
         bitset.bit_and(self.bitset());
@@ -103,7 +103,7 @@ impl<'a, 'q, T: TypedEcsData> QueryItem for &'a CompMut<'q, T> {
         CompMut::iter_with_bitset(self, bitset)
     }
 }
-impl<'a, 'q, T: TypedEcsData> QueryItem for &'a mut CompMut<'q, T> {
+impl<'a, 'q, T: HasSchema> QueryItem for &'a mut CompMut<'q, T> {
     type Iter = ComponentBitsetIteratorMut<'a, T>;
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
         bitset.bit_and(self.bitset());

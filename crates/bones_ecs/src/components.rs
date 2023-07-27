@@ -1,29 +1,16 @@
 //! ECS component storage.
 
-use std::{any::TypeId, sync::Arc};
+use std::sync::Arc;
 
-use crate::prelude::*;
+use crate::{prelude::*, SCHEMA_NOT_REGISTERED};
 
 mod iterator;
 mod typed;
 mod untyped;
 
-use bones_utils::hashbrown::hash_map::Entry;
 pub use iterator::*;
 pub use typed::*;
 pub use untyped::*;
-
-/// Makes sure that the component type `T` matches the component type previously registered with
-/// the same UUID.
-fn validate_type_uuid_match<T: TypeUlid + 'static>(
-    type_ids: &HashMap<Ulid, TypeId>,
-) -> Result<(), EcsError> {
-    if type_ids.get(&T::ULID).ok_or(EcsError::NotInitialized)? != &TypeId::of::<T>() {
-        Err(EcsError::TypeUlidCollision)
-    } else {
-        Ok(())
-    }
-}
 
 /// A collection of [`ComponentStore<T>`].
 ///
@@ -31,8 +18,7 @@ fn validate_type_uuid_match<T: TypeUlid + 'static>(
 /// initialized for that world.
 #[derive(Default)]
 pub struct ComponentStores {
-    pub(crate) components: HashMap<Ulid, Arc<AtomicRefCell<UntypedComponentStore>>>,
-    type_ids: HashMap<Ulid, TypeId>,
+    pub(crate) components: HashMap<SchemaId, Arc<AtomicRefCell<UntypedComponentStore>>>,
 }
 
 // SOUND: all of the functions for ComponentStores requires that the types stored implement Sync +
@@ -50,32 +36,18 @@ impl Clone for ComponentStores {
                 // new `Arc`s pointing to the same data.
                 .map(|(&k, v)| (k, Arc::new((**v).clone())))
                 .collect(),
-            type_ids: self.type_ids.clone(),
         }
     }
 }
 
 impl ComponentStores {
     /// Initialize component storage for type `T`.
-    pub fn init<T: Clone + TypeUlid + Send + Sync + 'static>(&mut self) {
-        self.try_init::<T>().unwrap();
-    }
-
-    /// Initialize component storage for type `T`.
-    pub fn try_init<T: Clone + TypeUlid + Send + Sync + 'static>(
-        &mut self,
-    ) -> Result<(), EcsError> {
-        match self.components.entry(T::ULID) {
-            Entry::Occupied(_) => validate_type_uuid_match::<T>(&self.type_ids),
-            Entry::Vacant(entry) => {
-                entry.insert(Arc::new(AtomicRefCell::new(
-                    UntypedComponentStore::for_type::<T>(),
-                )));
-                self.type_ids.insert(T::ULID, TypeId::of::<T>());
-
-                Ok(())
-            }
-        }
+    pub fn init<T: HasSchema>(&mut self) {
+        let schema = T::schema();
+        let schema_id = schema.id.expect(SCHEMA_NOT_REGISTERED);
+        self.components.entry(schema_id).or_insert_with(|| {
+            Arc::new(AtomicRefCell::new(UntypedComponentStore::for_type::<T>()))
+        });
     }
 
     /// Get the components of a certain type
@@ -83,37 +55,34 @@ impl ComponentStores {
     /// # Panics
     ///
     /// Panics if the component type has not been initialized.
-    pub fn get<T: Clone + TypeUlid + Send + Sync + 'static>(&self) -> AtomicComponentStore<T> {
+    pub fn get<T: HasSchema>(&self) -> AtomicComponentStore<T> {
         self.try_get::<T>().unwrap()
     }
 
     /// Get the components of a certain type
-    pub fn try_get<T: Clone + TypeUlid + Send + Sync + 'static>(
-        &self,
-    ) -> Result<AtomicComponentStore<T>, EcsError> {
-        validate_type_uuid_match::<T>(&self.type_ids)?;
-        let untyped = self.try_get_by_uuid(T::ULID)?;
+    pub fn try_get<T: HasSchema>(&self) -> Result<AtomicComponentStore<T>, EcsError> {
+        let untyped = self.try_get_by_schema_id(T::schema().id.expect(SCHEMA_NOT_REGISTERED))?;
 
         // Safe: We've made sure that the data initialized in the untyped components matches T
         unsafe { Ok(AtomicComponentStore::from_components_unsafe(untyped)) }
     }
 
-    /// Get the untyped component storage by the component's UUID
+    /// Get the untyped component storage by the component's [`SchemaId`].
     ///
     /// # Panics
     ///
     /// Panics if the component type has not been initialized.
-    pub fn get_by_uuid(&self, uuid: Ulid) -> Arc<AtomicRefCell<UntypedComponentStore>> {
-        self.try_get_by_uuid(uuid).unwrap()
+    pub fn get_by_uuid(&self, id: SchemaId) -> Arc<AtomicRefCell<UntypedComponentStore>> {
+        self.try_get_by_schema_id(id).unwrap()
     }
 
-    /// Get the untyped component storage by the component's UUID
-    pub fn try_get_by_uuid(
+    /// Get the untyped component storage by the component's [`SchemaId`].
+    pub fn try_get_by_schema_id(
         &self,
-        uuid: Ulid,
+        id: SchemaId,
     ) -> Result<Arc<AtomicRefCell<UntypedComponentStore>>, EcsError> {
         self.components
-            .get(&uuid)
+            .get(&id)
             .cloned()
             .ok_or(EcsError::NotInitialized)
     }
@@ -123,8 +92,8 @@ impl ComponentStores {
 mod test {
     use crate::prelude::*;
 
-    #[derive(Clone, Copy, TypeUlid)]
-    #[ulid = "01GQNWZKBT0SN37QKJQNKPF5RR"]
+    #[derive(Clone, Copy, HasSchema, Default)]
+    #[repr(C)]
     struct MyData(pub i32);
 
     #[test]

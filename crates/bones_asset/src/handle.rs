@@ -1,7 +1,6 @@
 use std::{alloc::Layout, any::TypeId, marker::PhantomData, sync::OnceLock};
 
 use bones_reflect::prelude::*;
-use bones_utils::HashMap;
 use ulid::Ulid;
 
 /// A typed handle to an asset.
@@ -88,9 +87,6 @@ impl UntypedHandle {
 #[derive(HasSchema, Clone, Copy, Default, Debug)]
 #[schema(opaque)]
 pub struct SchemaAssetHandle;
-impl TypeData for SchemaAssetHandle {
-    const TYPE_DATA_ID: Ulid = Ulid(2042034270141692702617108034127624904);
-}
 
 /// Helper to avoid typing the duplicate implementations of [`HasSchema`] for typed and untyped
 /// handles.
@@ -129,11 +125,8 @@ macro_rules! schema_impl_for_handle {
                 drop_fn: None,
                 default_fn: Some(<Self as RawDefault>::raw_default),
                 type_data: {
-                    let mut td = TypeDatas(HashMap::with_capacity(1));
-                    td.0.insert(
-                        SchemaAssetHandle::TYPE_DATA_ID,
-                        SchemaBox::new(SchemaAssetHandle),
-                    );
+                    let mut td = TypeDatas::default();
+                    td.insert(SchemaAssetHandle);
                     td
                 },
             })

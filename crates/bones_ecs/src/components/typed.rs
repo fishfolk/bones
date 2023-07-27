@@ -13,12 +13,12 @@ use super::{
 };
 
 /// A typed wrapper around [`UntypedComponentStore`].
-pub struct ComponentStore<T: TypedEcsData> {
+pub struct ComponentStore<T: HasSchema> {
     components: UntypedComponentStore,
     ops: TypedComponentOps<T>,
 }
 
-impl<T: TypedEcsData> Default for ComponentStore<T> {
+impl<T: HasSchema> Default for ComponentStore<T> {
     fn default() -> Self {
         Self {
             components: UntypedComponentStore::for_type::<T>(),
@@ -29,7 +29,7 @@ impl<T: TypedEcsData> Default for ComponentStore<T> {
     }
 }
 
-impl<T: TypedEcsData + Pod> ComponentStore<T> {
+impl<T: HasSchema + Pod> ComponentStore<T> {
     /// Create a new [`ComponentStore<T>`] by wrapping an [`UntypedComponentStore`].
     ///
     /// This method is safe because `T` is required to implement [`Pod`], which means `T` is valid
@@ -56,7 +56,7 @@ impl<T: TypedEcsData + Pod> ComponentStore<T> {
     }
 }
 
-impl<T: TypedEcsData> ComponentStore<T> {
+impl<T: HasSchema> ComponentStore<T> {
     /// Create a new [`ComponentStore<T>`] by wrapping an [`UntypedComponentStore`].
     ///
     /// # Safety
@@ -147,12 +147,12 @@ impl<T: TypedEcsData> ComponentStore<T> {
 /// A typed, wrapper handle around [`UntypedComponentStore`] that is runtime borrow checked and can
 /// be cheaply cloned. Think can think of it like an `Arc<RwLock<ComponentStore>>`.
 #[derive(Clone)]
-pub struct AtomicComponentStore<T: Clone + 'static> {
+pub struct AtomicComponentStore<T: HasSchema> {
     components: Arc<AtomicRefCell<UntypedComponentStore>>,
     _phantom: PhantomData<T>,
 }
 
-impl<T: Clone + 'static> Default for AtomicComponentStore<T> {
+impl<T: HasSchema> Default for AtomicComponentStore<T> {
     fn default() -> Self {
         Self {
             components: Arc::new(AtomicRefCell::new(UntypedComponentStore::for_type::<T>())),
@@ -161,7 +161,7 @@ impl<T: Clone + 'static> Default for AtomicComponentStore<T> {
     }
 }
 
-impl<T: TypedEcsData> AtomicComponentStore<T> {
+impl<T: HasSchema> AtomicComponentStore<T> {
     /// # Safety
     ///
     /// The [`UntypedComponentStore`] underlying data must be valid for type `T`.
@@ -195,12 +195,12 @@ impl<T: TypedEcsData> AtomicComponentStore<T> {
 }
 
 /// A read-only borrow of [`AtomicComponentStore`].
-pub struct AtomicComponentStoreRef<'a, T: TypedEcsData> {
+pub struct AtomicComponentStoreRef<'a, T: HasSchema> {
     components: AtomicRef<'a, UntypedComponentStore>,
     ops: TypedComponentOps<T>,
 }
 
-impl<'a, T: TypedEcsData> AtomicComponentStoreRef<'a, T> {
+impl<'a, T: HasSchema> AtomicComponentStoreRef<'a, T> {
     /// Gets an immutable reference to the component of `Entity`.
     pub fn get(&self, entity: Entity) -> Option<&T> {
         self.ops.get(&self.components, entity)
@@ -232,12 +232,12 @@ impl<'a, T: TypedEcsData> AtomicComponentStoreRef<'a, T> {
 }
 
 /// A mutable borrow of [`AtomicComponentStore`].
-pub struct AtomicComponentStoreRefMut<'a, T: TypedEcsData> {
+pub struct AtomicComponentStoreRefMut<'a, T: HasSchema> {
     components: AtomicRefMut<'a, UntypedComponentStore>,
     ops: TypedComponentOps<T>,
 }
 
-impl<'a, T: TypedEcsData> AtomicComponentStoreRefMut<'a, T> {
+impl<'a, T: HasSchema> AtomicComponentStoreRefMut<'a, T> {
     /// Inserts a component for the given [`Entity`] index.
     ///
     /// Returns the previous component, if any.
@@ -321,8 +321,8 @@ mod tests {
 
     #[test]
     fn create_remove_components() {
-        #[derive(Debug, Clone, PartialEq, Eq, TypeUlid)]
-        #[ulid = "01GNDP2GNMKQZF9V4JTC88CQ7X"]
+        #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
+        #[repr(C)]
         struct A(String);
 
         let mut entities = Entities::default();

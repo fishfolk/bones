@@ -1,7 +1,4 @@
-use std::{
-    borrow::Cow,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 use once_cell::sync::Lazy;
@@ -78,8 +75,7 @@ impl AssetServer {
     ///
     /// TODO: better docs.
     pub fn register_core_schema<T: HasSchema>(&mut self, name: &str) {
-        self.core_schemas
-            .insert(name.into(), Cow::Borrowed(T::schema()));
+        self.core_schemas.insert(name.into(), T::schema().into());
     }
 
     /// Load the assets.
@@ -398,7 +394,7 @@ mod metadata {
         pub dependencies: &'srv mut Vec<Cid>,
         pub path: &'srv Path,
         pub pack: Option<&'srv str>,
-        pub schema: Cow<'static, Schema>,
+        pub schema: MaybeOwned<'static, Schema>,
     }
 
     impl<'asset, 'de> DeserializeSeed<'de> for MetaAssetLoadCtx<'asset> {

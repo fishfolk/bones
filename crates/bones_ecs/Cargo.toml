@@ -35,7 +35,6 @@ fxhash      = "0.2"
 itertools   = "0.10"
 serde       = { version = "1.0", features = ["derive"], optional = true }
 thiserror   = "1.0"
-type_ulid   = { version = "^0.2.0", path = "../type_ulid" }
 serde_yaml  = { version = "0.9", optional = true }
 glam        = { version = "0.23", optional = true }
 paste       = { version = "1.0", optional = true }

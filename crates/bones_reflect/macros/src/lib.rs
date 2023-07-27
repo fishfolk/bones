@@ -56,8 +56,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         let add_type_datas = type_datas_flags.into_iter().map(|ty| {
             let ty = format_ident!("{ty}");
             quote! {
-                let id = <#ty as #schema_mod::TypeData>::TYPE_DATA_ID;
-                tds.0.insert(id, #schema_mod::ptr::SchemaBox::new(<#ty as #schema_mod::FromType<#name>>::from_type()));
+                tds.insert(<#ty as #schema_mod::FromType<#name>>::from_type());
             }
         });
 

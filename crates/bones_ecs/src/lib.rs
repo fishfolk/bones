@@ -27,34 +27,17 @@ pub use world::{FromWorld, World};
 /// The prelude.
 pub mod prelude {
     pub use {
-        atomic_refcell::*,
-        bitset_core::BitSet,
-        bones_reflect::prelude::*,
-        bones_utils::prelude::*,
-        type_ulid::{TypeUlid, Ulid},
+        atomic_refcell::*, bitset_core::BitSet, bones_reflect::prelude::*, bones_utils::prelude::*,
     };
 
     pub use crate::{
         bitset::*, components::*, entities::*, error::*, resources::*, stage::*, system::*,
-        EcsData, FromWorld, TypedEcsData, UnwrapMany, World,
+        FromWorld, UnwrapMany, World,
     };
 }
 
-/// Helper trait that is auto-implemented for anything that may be stored in the ECS's untyped
-/// storage.
-///
-/// Examples of untyped storage are [`UntypedResources`][crate::resources::UntypedResources] and
-/// [`UntypedComponentStore`][crate::components::UntypedComponentStore].
-pub trait EcsData: Clone + Sync + Send + 'static {}
-impl<T: Clone + Sync + Send + 'static> EcsData for T {}
-
-/// Helper trait that is auto-implemented for anything that may be stored in the ECS's typed
-/// storage.
-///
-/// Examples of typed storage are [`Resources<T>`][crate::resources::Resources] and
-/// [`ComponentStore<T>`][crate::components::ComponentStore].
-pub trait TypedEcsData: type_ulid::TypeUlid + EcsData {}
-impl<T: type_ulid::TypeUlid + EcsData> TypedEcsData for T {}
+/// Panic message for un-registered schema.
+const SCHEMA_NOT_REGISTERED: &str = "Schema not registered with schema registry";
 
 /// Helper trait for unwraping each item in an array.
 ///

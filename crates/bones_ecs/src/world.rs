@@ -93,7 +93,7 @@ impl World {
     }
 
     /// Initialize a resource of type `T` by inserting it's default value.
-    pub fn init_resource<R: TypedEcsData + FromWorld>(&mut self) {
+    pub fn init_resource<R: HasSchema + FromWorld>(&mut self) {
         if !self.resources.contains::<R>() {
             let value = R::from_world(self);
             self.resources.insert(value)
@@ -106,7 +106,7 @@ impl World {
     ///
     /// Panics if you try to insert a Rust type with a different [`std::any::TypeId`], but the same
     /// [`TypeUlid`] as another resource in the store.
-    pub fn insert_resource<R: TypedEcsData>(&mut self, resource: R) {
+    pub fn insert_resource<R: HasSchema>(&mut self, resource: R) {
         self.resources.insert(resource)
     }
 
@@ -120,7 +120,7 @@ impl World {
     /// # Panics
     ///
     /// Panics if the resource does not exist in the store.
-    pub fn resource<R: TypedEcsData>(&self) -> AtomicResource<R> {
+    pub fn resource<R: HasSchema>(&self) -> AtomicResource<R> {
         match self.resources.try_get::<R>() {
             Some(r) => r,
             None => panic!(
@@ -132,7 +132,7 @@ impl World {
     }
 
     /// Gets a resource handle from the store if it exists.
-    pub fn get_resource<R: TypedEcsData>(&self) -> Option<AtomicResource<R>> {
+    pub fn get_resource<R: HasSchema>(&self) -> Option<AtomicResource<R>> {
         self.resources.try_get::<R>()
     }
 }
@@ -158,16 +158,16 @@ mod tests {
 
     use super::FromWorld;
 
-    #[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
-    #[ulid = "01GNDN2QYC1TRE763R54HVWZ0W"]
+    #[derive(Clone, HasSchema, Debug, Eq, PartialEq, Default)]
+    #[repr(C)]
     struct Pos(i32, i32);
 
-    #[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
-    #[ulid = "01GNDN3HCY2F1SGYE8Z0GGDMXB"]
+    #[derive(Clone, HasSchema, Debug, Eq, PartialEq, Default)]
+    #[repr(C)]
     struct Vel(i32, i32);
 
-    #[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
-    #[ulid = "01GNDN3QJD1SP7ANTZ0TG6Q804"]
+    #[derive(Clone, HasSchema, Debug, Eq, PartialEq, Default)]
+    #[schema(opaque)]
     struct Marker;
 
     // Sets up the world with a couple entities.
@@ -282,13 +282,13 @@ mod tests {
     #[test]
     #[should_panic(expected = "TypeUlidCollision")]
     fn no_duplicate_component_uuids() {
-        #[derive(Clone, TypeUlid)]
-        #[ulid = "01GNDN440Q4FYH34TY8MV8CTTB"]
+        #[derive(Clone, HasSchema, Default)]
+        #[schema(opaque)]
         struct A;
 
         /// This struct has the same UUID as struct [`A`]. Big no no!!
-        #[derive(Clone, TypeUlid)]
-        #[ulid = "01GNDN440Q4FYH34TY8MV8CTTB"]
+        #[derive(Clone, HasSchema, Default)]
+        #[schema(opaque)]
         struct B;
 
         let mut w = World::default();
@@ -307,12 +307,12 @@ mod tests {
     //  From World
     // ============
 
-    #[derive(Clone, TypeUlid)]
-    #[ulid = "01GRWJV4NRXY9NJBBDMD2D9QK3"]
+    #[derive(Clone, HasSchema, Default)]
+    #[schema(opaque)]
     struct TestResource(u32);
 
-    #[derive(Clone, TypeUlid)]
-    #[ulid = "01GRWJW44YGNSXQ81W395J0D52"]
+    #[derive(Clone, HasSchema)]
+    #[schema(opaque, no_default)]
     struct TestFromWorld(u32);
     impl FromWorld for TestFromWorld {
         fn from_world(world: &mut World) -> Self {

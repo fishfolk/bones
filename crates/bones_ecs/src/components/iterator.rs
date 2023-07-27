@@ -128,8 +128,8 @@ impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
 mod test {
     use super::*;
 
-    #[derive(Clone, TypeUlid)]
-    #[ulid = "01GNZ7A42K6KTPTFEQ3T445DNZ"]
+    #[derive(Clone, HasSchema, Default)]
+    #[schema(opaque)]
     struct A;
 
     #[test]
