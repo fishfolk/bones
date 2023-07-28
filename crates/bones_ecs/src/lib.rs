@@ -17,6 +17,7 @@ pub mod entities;
 pub mod resources;
 pub mod stage;
 pub mod system;
+pub use bones_reflect as reflect;
 
 mod error;
 pub use error::EcsError;
@@ -34,6 +35,9 @@ pub mod prelude {
         bitset::*, components::*, entities::*, error::*, resources::*, stage::*, system::*,
         FromWorld, UnwrapMany, World,
     };
+
+    // Make bones_reflect available for derive macros
+    pub use bones_reflect;
 }
 
 /// Helper trait for unwraping each item in an array.
