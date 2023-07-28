@@ -15,8 +15,8 @@ pub fn plugin(core: &mut BonesCore) {
 }
 
 /// Resource providing a noise source for [`CameraShake`] entities to use.
-#[derive(Clone, TypeUlid)]
-#[ulid = "01GPPYCY6132940HAQ38J1QM70"]
+#[derive(Clone, HasSchema)]
+#[schema(opaque)]
 pub struct ShakeNoise(pub noise::permutationtable::PermutationTable);
 
 impl Default for ShakeNoise {
@@ -26,8 +26,8 @@ impl Default for ShakeNoise {
 }
 
 /// Component for an entity with camera shake.
-#[derive(Clone, TypeUlid, Debug, Copy)]
-#[ulid = "01GPPYERDFZKZS1EGV5G0XF3ME"]
+#[derive(Clone, HasSchema, Debug, Copy)]
+#[repr(C)]
 pub struct CameraShake {
     /// Value from 0-1 that indicates the intensity of the shake. Should usually be set with
     /// `CameraShake::add_trauma` and not manually decayed.
@@ -94,8 +94,8 @@ impl CameraShake {
 }
 
 /// Queue that can be used to send camera trauma events.
-#[derive(Default, Clone, TypeUlid)]
-#[ulid = "01GPREAP8HCT5JJ29CX19HT8FC"]
+#[derive(Default, Clone, HasSchema)]
+#[schema(opaque)]
 pub struct CameraTraumaEvents {
     /// The event queue.
     pub queue: VecDeque<f32>,

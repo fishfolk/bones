@@ -37,8 +37,8 @@ pub mod camera;
 ///
 /// This resource is used by animation or other timing-sensitive code when running code that should
 /// run the same, regardless of the games fixed updates-per-second.
-#[derive(Clone, TypeUlid, Deref, DerefMut)]
-#[ulid = "01GP1VWPKF2H7CKDCD987PHBWV"]
+#[derive(Clone, HasSchema, Deref, DerefMut)]
+#[repr(C)]
 pub struct FrameTime(pub f32);
 
 impl Default for FrameTime {

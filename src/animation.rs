@@ -19,9 +19,9 @@ pub fn plugin(core: &mut BonesCore) {
 }
 
 /// Component that may be added to entities with an [`AtlasSprite`] to animate them.
-#[derive(Clone, TypeUlid, Debug)]
+#[derive(Clone, HasSchema, Debug)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[ulid = "01GNZRPWKAHKP33V1KKRVAMVS7"]
+#[schema(opaque)]
 pub struct AnimatedSprite {
     /// The current frame in the animation.
     #[cfg_attr(feature = "serde", serde(default))]
@@ -52,9 +52,9 @@ fn default_true() -> bool {
 ///
 /// This is great for players or other sprites that will change through different, named animations
 /// at different times.
-#[derive(Clone, TypeUlid, Debug)]
+#[derive(Clone, HasSchema, Debug, Default)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[ulid = "01GP4EM4BGJPX22HYAMGYKKSAV"]
+#[schema(opaque)]
 pub struct AnimationBankSprite {
     #[cfg_attr(feature = "serde", serde(default))]
     /// The current animation.
