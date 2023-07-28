@@ -1019,8 +1019,6 @@ dependencies = [
 name = "bones_input"
 version = "0.2.0"
 dependencies = [
- "bevy",
- "bones_bevy_utils",
  "bones_reflect",
  "glam",
  "instant",
@@ -1103,10 +1101,7 @@ dependencies = [
 name = "bones_render"
 version = "0.2.0"
 dependencies = [
- "bevy_render",
- "bevy_transform",
  "bones_asset",
- "bones_bevy_utils",
  "bones_ecs",
  "glam",
  "hex",

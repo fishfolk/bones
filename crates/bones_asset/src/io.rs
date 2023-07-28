@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 /// [`AssetIo`] is a trait that is implemented for backends capable of loading all the games assets
-/// and returning a [`LoadedAssets`].
+/// and returning the raw bytes stored in asset files.
 pub trait AssetIo {
     /// List the names of the non-core asset pack folders that are installed.
     ///
@@ -11,7 +11,7 @@ pub trait AssetIo {
     fn enumerate_packs(&self) -> anyhow::Result<Vec<String>>;
     /// Get the binary contents of an asset.
     ///
-    /// The [`pack_folder`] is the name of a folder returned by
+    /// The `pack_folder` is the name of a folder returned by
     /// [`enumerate_packs()`][Self::enumerate_packs], or [`None`] to refer to the core pack.
     fn load_file(&self, pack_folder: Option<&str>, path: &Path) -> anyhow::Result<Vec<u8>>;
 

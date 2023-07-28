@@ -15,7 +15,8 @@ pub struct SchemaId {
     id: u32,
 }
 
-/// An ID registry that simply allows you to obtain unique, non-clonable [`RegistryId`]s.
+/// A schema registry that alloates [`SchemaId`] for [`SchemaData`] and returns a registered
+/// [`&'static Schema`][Schema].
 pub struct SchemaRegistry {
     next_id: AtomicU32,
     schemas: OnceLock<RwLock<HashMap<SchemaId, &'static Schema>>>,

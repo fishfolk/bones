@@ -485,7 +485,8 @@ impl SchemaBox {
         std::mem::forget(self);
     }
 
-    /// Create a new [`SchemaBox`] for a type with a [`Schema`] that has a [`Schema::default_fn`].
+    /// Create a new [`SchemaBox`] for a type with a [`Schema`] that has a
+    /// [`SchemaData::default_fn`].
     ///
     /// # Panics
     ///

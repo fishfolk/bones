@@ -8,7 +8,7 @@
 
 mod collections;
 mod default;
-mod key;
+mod key_mod;
 mod labeled_id;
 mod names;
 mod ptr;
@@ -16,12 +16,12 @@ mod ptr;
 /// Helper to export the same types in the crate root and in the prelude.
 macro_rules! pub_use {
     () => {
-        pub use crate::{collections::*, default::*, key::*, labeled_id::*, names::*, ptr::*};
+        pub use crate::{collections::*, default::*, key_mod::*, labeled_id::*, names::*, ptr::*};
         pub use bevy_ptr::*;
         pub use bones_utils_macros::*;
         pub use hashbrown;
-        pub use parking_lot;
         pub use maybe_owned::*;
+        pub use parking_lot;
     };
 }
 pub_use!();
@@ -29,4 +29,18 @@ pub_use!();
 /// The prelude.
 pub mod prelude {
     pub_use!();
+    pub use crate::key;
+}
+
+/// Create a new const [`Key`][key_mod::Key] parsed at compile time.
+#[macro_export]
+macro_rules! key {
+    ($s:literal) => {{
+        const KEY: Key = match Key::new($s) {
+            Ok(key) => key,
+            Err(KeyError::TooLong) => panic!("Key too long"),
+            Err(KeyError::NotAscii) => panic!("Key not ascii"),
+        };
+        KEY
+    }};
 }

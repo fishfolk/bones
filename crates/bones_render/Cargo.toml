@@ -9,11 +9,7 @@ version     = "0.2.0"
 
 [dependencies]
 bones_asset      = { version = "^0.2.0", path = "../bones_asset" }
-bones_bevy_utils = { version = "^0.2.0", path = "../bones_bevy_utils", optional = true }
 bones_ecs        = { version = "^0.2.0", path = "../bones_ecs" }
-
-bevy_render    = { version = "0.10", optional = true }
-bevy_transform = { version = "0.10", optional = true }
 
 glam      = "0.23"
 hex       = "0.4"
@@ -21,6 +17,5 @@ serde     = { version = "1.0", optional = true }
 thiserror = "1.0"
 
 [features]
-bevy    = ["dep:bones_bevy_utils", "dep:bevy_transform", "dep:bevy_render"]
 default = []
 serde   = ["dep:serde"]

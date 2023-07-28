@@ -8,9 +8,7 @@ repository  = "https://github.com/fishfolk/bones"
 version     = "0.2.0"
 
 [dependencies]
-bones_bevy_utils = { version = "^0.2.0", path = "../bones_bevy_utils" }
 bones_reflect = { version = "0.1", path = "../bones_reflect" }
 
-bevy    = { version = "0.10", default-features = false }
 glam    = "0.23"
 instant = "0.1"
