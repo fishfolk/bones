@@ -5,8 +5,7 @@ use crate::prelude::*;
 /// The main transform component.
 ///
 /// Currently we don't have a hierarchy, and this is therefore a global transform.
-#[derive(Clone, Copy, Debug, TypeUlid)]
-#[ulid = "01GNFQWJWWXJJEXZQEDQJWZQWP"]
+#[derive(Clone, Copy, Debug, HasSchema)]
 #[repr(C)]
 pub struct Transform {
     /// The position of the entity in the world.

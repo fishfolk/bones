@@ -4,19 +4,19 @@ use crate::prelude::*;
 
 /// Image asset type, contains no data, but [`Handle<Image>`] is still useful because it uniquely
 /// represents an image that may be rendered outside of the core.
-#[derive(Copy, Clone, TypeUlid, Debug, Default)]
-#[ulid = "01GNJGPQ8TKA234G1EA510BD96"]
+#[derive(Copy, Clone, HasSchema, Debug, Default)]
+#[repr(C)]
 pub struct Image;
 
 /// An atlas image asset type, contains no data, but [`Handle<Atlas>`] is still useful becaause it
 /// uniquely represents an atlas asset that may be rendered outside of the core.
-#[derive(Copy, Clone, TypeUlid, Debug, Default)]
-#[ulid = "01GNYXD7FVC46C7A3273HMEBRA"]
+#[derive(Copy, Clone, HasSchema, Debug, Default)]
+#[repr(C)]
 pub struct Atlas;
 
 /// A 2D sprite component
-#[derive(Clone, TypeUlid, Debug, Default)]
-#[ulid = "01GNJXPWZKS6BHJEG1SX5B93DA"]
+#[derive(Clone, HasSchema, Debug, Default)]
+#[repr(C)]
 pub struct Sprite {
     /// The sprite's color tint
     pub color: Color,
@@ -32,8 +32,8 @@ pub struct Sprite {
 ///
 /// Represents one or more [`Atlas`]s stacked on top of each other, and possibly animated through a
 /// range of frames out of the atlas.
-#[derive(Debug, Default, Clone, TypeUlid)]
-#[ulid = "01GNYXFHC6T3NS061GMVFBXFYE"]
+#[derive(Debug, Default, Clone, HasSchema)]
+#[repr(C)]
 pub struct AtlasSprite {
     /// The sprite's color tint
     pub color: Color,

@@ -42,6 +42,49 @@ impl_primitive!(i128, I128);
 impl_primitive!(f32, F32);
 impl_primitive!(f64, F64);
 
+unsafe impl HasSchema for usize {
+    fn schema() -> &'static Schema {
+        static S: OnceLock<&'static Schema> = OnceLock::new();
+        S.get_or_init(|| {
+            SCHEMA_REGISTRY.register(SchemaData {
+                kind: SchemaKind::Primitive({
+                    #[cfg(target_pointer_width = "32")]
+                    let p = Primitive::U32;
+                    #[cfg(target_pointer_width = "64")]
+                    let p = Primitive::U64;
+                    p
+                }),
+                type_id: Some(TypeId::of::<usize>()),
+                clone_fn: Some(<usize as RawClone>::raw_clone),
+                drop_fn: Some(<usize as RawDrop>::raw_drop),
+                default_fn: Some(<usize as RawDefault>::raw_default),
+                type_data: Default::default(),
+            })
+        })
+    }
+}
+unsafe impl HasSchema for isize {
+    fn schema() -> &'static Schema {
+        static S: OnceLock<&'static Schema> = OnceLock::new();
+        S.get_or_init(|| {
+            SCHEMA_REGISTRY.register(SchemaData {
+                kind: SchemaKind::Primitive({
+                    #[cfg(target_pointer_width = "32")]
+                    let p = Primitive::I32;
+                    #[cfg(target_pointer_width = "64")]
+                    let p = Primitive::I64;
+                    p
+                }),
+                type_id: Some(TypeId::of::<usize>()),
+                clone_fn: Some(<usize as RawClone>::raw_clone),
+                drop_fn: Some(<usize as RawDrop>::raw_drop),
+                default_fn: Some(<usize as RawDefault>::raw_default),
+                type_data: Default::default(),
+            })
+        })
+    }
+}
+
 // TODO: since we don't have specialization, we have to require this `Clone` bound. :/ :/ :/ Figure
 // out if there is some tricky way we can get around this limitation, and have a separate impl for
 // `Vec<T: Clone>` and `Vec<T: !Clone>`.
@@ -131,6 +174,7 @@ mod impl_glam {
     impl_glam_vecs!(I32, IVec);
     impl_glam_vecs!(F32, Vec);
     impl_glam_vecs!(F64, DVec);
+    impl_glam!(Quat, F32, x, y, z, w);
 
     // TODO: matrix types.
 }

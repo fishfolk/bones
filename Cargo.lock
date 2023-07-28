@@ -970,7 +970,6 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha2",
- "type_ulid",
  "ulid",
 ]
 
@@ -986,7 +985,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "type_ulid",
 ]
 
 [[package]]
@@ -994,7 +992,7 @@ name = "bones_bevy_utils"
 version = "0.2.0"
 dependencies = [
  "bevy_ecs",
- "type_ulid",
+ "bones_reflect",
 ]
 
 [[package]]
@@ -1023,9 +1021,9 @@ version = "0.2.0"
 dependencies = [
  "bevy",
  "bones_bevy_utils",
+ "bones_reflect",
  "glam",
  "instant",
- "type_ulid",
 ]
 
 [[package]]
@@ -1041,7 +1039,6 @@ dependencies = [
  "noise",
  "once_cell",
  "serde",
- "type_ulid",
 ]
 
 [[package]]
@@ -1115,7 +1112,6 @@ dependencies = [
  "hex",
  "serde",
  "thiserror",
- "type_ulid",
 ]
 
 [[package]]

@@ -24,7 +24,7 @@ pub struct UntypedAtomicResource {
 }
 
 impl UntypedAtomicResource {
-    /// Creates a new [`UntypedResource`] storing the given data.
+    /// Creates a new [`UntypedAtomicResource`] storing the given data.
     pub fn new<T: HasSchema>(resource: T) -> Self {
         Self {
             cell: Arc::new(AtomicRefCell::new(SchemaBox::new(resource))),
@@ -32,8 +32,8 @@ impl UntypedAtomicResource {
         }
     }
 
-    /// Create a new [`UntypedResource`] for the given schema, initially populated with the default
-    /// value for the schema.
+    /// Create a new [`UntypedAtomicResource`] for the given schema, initially populated with the
+    /// default value for the schema.
     pub fn from_schema(schema: &'static Schema) -> Self {
         Self {
             cell: Arc::new(AtomicRefCell::new(SchemaBox::default(schema))),

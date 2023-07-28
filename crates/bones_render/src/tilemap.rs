@@ -3,8 +3,8 @@
 use crate::prelude::*;
 
 /// A tilemap layer component.
-#[derive(Clone, Debug, TypeUlid)]
-#[ulid = "01GNF7SRDRN4K8HPW32JAHKMX1"]
+#[derive(Clone, Debug, HasSchema, Default)]
+#[schema(opaque)]
 pub struct TileLayer {
     /// The vector of tile slots in this layer.
     pub tiles: Vec<Option<Entity>>,
@@ -17,8 +17,8 @@ pub struct TileLayer {
 }
 
 /// A tilemap tile component.
-#[derive(Clone, Debug, TypeUlid, Default)]
-#[ulid = "01GNZHDZV61TFPEE4GDJY4SRAM"]
+#[derive(Clone, Debug, HasSchema, Default)]
+#[schema(opaque)]
 pub struct Tile {
     /// The tile index in the tilemap texture.
     pub idx: usize,

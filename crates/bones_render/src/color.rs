@@ -3,12 +3,13 @@
 use glam::{Vec3, Vec4};
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 use thiserror::Error;
-use type_ulid::TypeUlid;
+
+use crate::prelude::*;
 
 /// Color type.
-#[derive(Clone, Copy, Debug, TypeUlid)]
+#[derive(Clone, Copy, Debug, HasSchema)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[ulid = "01GW2T0C0Q97B17MFARADVTZG5"]
+#[schema(opaque)]
 #[repr(C)]
 pub enum Color {
     /// sRGBA color

@@ -15,7 +15,7 @@ pub mod transform;
 
 /// The prelude
 pub mod prelude {
-    pub use {bones_asset::prelude::*, bones_ecs::prelude::*, glam::*, type_ulid::TypeUlid};
+    pub use {bones_asset::prelude::*, bones_ecs::prelude::*, glam::*};
 
     pub use crate::{
         audio::*, camera::*, color::*, key, line::*, sprite::*, tilemap::*, transform::*,

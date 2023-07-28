@@ -5,8 +5,6 @@
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
 
-use type_ulid::TypeUlid;
-
 /// The prelude.
 pub mod prelude {
     pub use crate::BevyWorld;
@@ -25,8 +23,8 @@ pub trait IntoBevy<To> {
 /// One way to do this is to [`std::mem::swap`] an empty world in the [`BevyWorld`]` resource, with
 /// the actual Bevy world, immediatley before running the bones ECS systems. Then you can swap it
 /// back once the bones systems finish.
-#[derive(TypeUlid, Default)]
-#[ulid = "01GNX5CJAAHS31DA9HXZ2CF74B"]
+#[derive(bones_reflect::HasSchema, Default)]
+#[schema(opaque)]
 pub struct BevyWorld(pub Option<bevy_ecs::world::World>);
 
 impl Clone for BevyWorld {

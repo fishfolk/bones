@@ -8,7 +8,7 @@
 
 use instant::{Duration, Instant};
 
-use type_ulid::TypeUlid;
+use bones_reflect::HasSchema;
 
 mod stopwatch;
 pub use stopwatch::*;
@@ -17,8 +17,8 @@ pub use timer::*;
 
 /// A clock that tracks how much it has advanced (and how much real time has elapsed) since
 /// its previous update and since its creation.
-#[derive(Clone, Copy, Debug, TypeUlid)]
-#[ulid = "01GNR4DNDZRH0E9XCSV79WRGXH"]
+#[derive(Clone, Copy, Debug, HasSchema)]
+#[schema(opaque)]
 pub struct Time {
     startup: Instant,
     last_update: Option<Instant>,

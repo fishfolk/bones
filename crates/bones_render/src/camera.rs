@@ -5,9 +5,8 @@ use crate::prelude::*;
 /// Makes an entity behave like a camera.
 ///
 /// The entity must also have a [`Transform`] component for the camera to render anything.
-#[derive(Clone, Copy, Debug, TypeUlid)]
-#[ulid = "01GNR2978NRN7PH5XWBXP3KMD7"]
-#[repr(C)]
+#[derive(Clone, Copy, Debug, HasSchema)]
+#[schema(opaque)] // TODO: make repr(C) when option is supported.
 pub struct Camera {
     /// The height of the camera in in-game pixels.
     ///
@@ -23,7 +22,7 @@ pub struct Camera {
 }
 
 /// A custom viewport specification for a [`Camera`].
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, HasSchema, Default)]
 #[repr(C)]
 pub struct Viewport {
     /// The physical position to render this viewport to within the RenderTarget of this Camera.
@@ -49,6 +48,6 @@ impl Default for Camera {
 }
 
 /// Resource for controlling the clear color.
-#[derive(Deref, DerefMut, Clone, Copy, TypeUlid, Default)]
-#[ulid = "01GP4XRQYRPQNX4J22E513975M"]
+#[derive(Deref, DerefMut, Clone, Copy, HasSchema, Default)]
+#[schema(opaque)]
 pub struct ClearColor(pub Color);

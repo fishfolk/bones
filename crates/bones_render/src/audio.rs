@@ -6,13 +6,13 @@ use crate::prelude::*;
 
 /// The audio source asset type, contains no data, but [`Handle<AudioSource>`] is still useful
 /// because it uniquely represents a sound/music that may be played outside of bones.
-#[derive(Copy, Clone, TypeUlid, Debug)]
-#[ulid = "01GP2E03WS03EE9H65E90GZW2D"]
+#[derive(Copy, Clone, HasSchema, Debug, Default)]
+#[repr(C)]
 pub struct AudioSource;
 
 /// Resource containing the audio event queue.
-#[derive(Default, TypeUlid, Clone, Debug)]
-#[ulid = "01GP7HESF20YKNKVNVCYDJS9DR"]
+#[derive(Default, HasSchema, Clone, Debug)]
+#[schema(opaque)]
 pub struct AudioEvents {
     /// List of audio events that haven't been handled by the audio system yet.
     pub queue: VecDeque<AudioEvent>,
