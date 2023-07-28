@@ -1,8 +1,8 @@
 //! World resource storage.
 
-use std::{any::TypeId, marker::PhantomData, sync::Arc};
+use std::{marker::PhantomData, sync::Arc};
 
-use crate::{prelude::*, SCHEMA_NOT_REGISTERED};
+use crate::prelude::*;
 
 /// Storage for un-typed resources.
 ///
@@ -12,38 +12,54 @@ use crate::{prelude::*, SCHEMA_NOT_REGISTERED};
 /// should use [`Resources`] instead.
 #[derive(Clone, Default)]
 pub struct UntypedResources {
-    resources: HashMap<SchemaId, UntypedResource>,
+    resources: HashMap<SchemaId, UntypedAtomicResource>,
 }
 
 /// An untyped resource that may be inserted into [`UntypedResources`].
-pub struct UntypedResource {
+#[derive(Deref, DerefMut)]
+pub struct UntypedAtomicResource {
+    #[deref]
     cell: Arc<AtomicRefCell<SchemaBox>>,
+    schema: &'static Schema,
 }
 
-impl UntypedResource {
+impl UntypedAtomicResource {
     /// Creates a new [`UntypedResource`] storing the given data.
     pub fn new<T: HasSchema>(resource: T) -> Self {
         Self {
             cell: Arc::new(AtomicRefCell::new(SchemaBox::new(resource))),
+            schema: T::schema(),
         }
     }
 
     /// Create a new [`UntypedResource`] for the given schema, initially populated with the default
     /// value for the schema.
-    pub fn from_schema<S: Into<MaybeOwned<'static, Schema>>>(schema: S) -> Self {
+    pub fn from_schema(schema: &'static Schema) -> Self {
         Self {
-            cell: Arc::new(AtomicRefCell::new(SchemaBox::default(schema.into()))),
+            cell: Arc::new(AtomicRefCell::new(SchemaBox::default(schema))),
+            schema,
         }
     }
 
-    /// Get another [`UntypedResource`] that points to the same data,
-    pub fn clone_cell(&self) -> UntypedResource {}
+    /// Get another [`UntypedAtomicResource`] that points to the same data.
+    pub fn clone_cell(&self) -> UntypedAtomicResource {
+        Self {
+            cell: self.cell.clone(),
+            schema: self.schema,
+        }
+    }
+
+    /// Get the schema of the resource.
+    pub fn schema(&self) -> &'static Schema {
+        self.schema
+    }
 }
 
-impl Clone for UntypedResource {
+impl Clone for UntypedAtomicResource {
     fn clone(&self) -> Self {
         Self {
             cell: Arc::new(AtomicRefCell::new(self.cell.borrow().clone())),
+            schema: self.schema,
         }
     }
 }
@@ -55,19 +71,19 @@ impl UntypedResources {
     }
 
     /// Insert a new resource
-    pub fn insert(&mut self, resource: UntypedResource) -> Option<UntypedResource> {
-        self.resources
-            .insert(resource.cell.borrow().schema().id.unwrap(), resource)
+    pub fn insert(&mut self, resource: UntypedAtomicResource) -> Option<UntypedAtomicResource> {
+        let id = resource.cell.borrow().schema().id();
+        self.resources.insert(id, resource)
     }
 
     /// Get a cell containing the resource data pointer for the given ID
-    pub fn get(&self, schema_id: SchemaId) -> Option<Arc<AtomicRefCell<*mut u8>>> {
-        self.resources.get(&schema_id).map(|x| x.cell.clone())
+    pub fn get(&self, schema_id: SchemaId) -> Option<UntypedAtomicResource> {
+        self.resources.get(&schema_id).map(|x| x.clone_cell())
     }
 
     /// Remove a resource
-    pub fn remove(&mut self, uuid: Ulid) -> Option<UntypedResource> {
-        self.resources.remove(&uuid)
+    pub fn remove(&mut self, id: SchemaId) -> Option<UntypedAtomicResource> {
+        self.resources.remove(&id)
     }
 }
 
@@ -87,10 +103,7 @@ impl Resources {
 
     /// Insert a resource.
     pub fn insert<T: HasSchema>(&mut self, resource: T) {
-        let schema = T::schema();
-        let type_id = TypeId::of::<T>();
-
-        self.untyped.insert(UntypedResource::new(resource));
+        self.untyped.insert(UntypedAtomicResource::new(resource));
     }
 
     /// Get a resource handle from the store.
@@ -112,17 +125,12 @@ impl Resources {
     ///
     /// See [get()][Self::get]
     pub fn contains<T: HasSchema>(&self) -> bool {
-        T::schema()
-            .id
-            .map(|id| self.untyped.resources.contains_key(&id))
-            .unwrap_or(false)
+        self.untyped.resources.contains_key(&T::schema().id())
     }
 
     /// Gets a resource handle from the store if it exists.
     pub fn try_get<T: HasSchema>(&self) -> Option<AtomicResource<T>> {
-        let untyped = self
-            .untyped
-            .get(T::schema().id.expect(SCHEMA_NOT_REGISTERED))?;
+        let untyped = self.untyped.get(T::schema().id())?;
 
         Some(AtomicResource {
             untyped,
@@ -151,7 +159,7 @@ impl Resources {
 /// To access the resource you must borrow it with either [`borrow()`][Self::borrow] or
 /// [`borrow_mut()`][Self::borrow_mut].
 pub struct AtomicResource<T: HasSchema> {
-    untyped: Arc<AtomicRefCell<*mut u8>>,
+    untyped: UntypedAtomicResource,
     _phantom: PhantomData<T>,
 }
 
@@ -162,7 +170,7 @@ impl<T: HasSchema> AtomicResource<T> {
     pub fn borrow(&self) -> AtomicRef<T> {
         let borrow = self.untyped.borrow();
         // SAFE: We know that the data pointer is valid for type T.
-        AtomicRef::map(borrow, |data| unsafe { &*data.cast::<T>() })
+        AtomicRef::map(borrow, |data| data.cast::<T>())
     }
 
     /// Lock the resource for read-writing.
@@ -171,7 +179,7 @@ impl<T: HasSchema> AtomicResource<T> {
     pub fn borrow_mut(&self) -> AtomicRefMut<T> {
         let borrow = self.untyped.borrow_mut();
         // SAFE: We know that the data pointer is valid for type T.
-        AtomicRefMut::map(borrow, |data| unsafe { &mut *data.cast::<T>() })
+        AtomicRefMut::map(borrow, |data| data.cast_mut::<T>())
     }
 }
 
@@ -183,15 +191,16 @@ mod test {
     fn sanity_check() {
         #[derive(HasSchema, Clone, Debug, Default)]
         #[repr(C)]
-        struct A(Vec<u32>);
+        struct A(String);
 
         #[derive(HasSchema, Clone, Debug, Default)]
         #[repr(C)]
         struct B(u32);
 
         let mut resources = Resources::new();
+        UntypedAtomicResource::new(A("hi".into()));
 
-        resources.insert(A(vec![3, 2, 1]));
+        resources.insert(A("hi".into()));
         assert_eq!(resources.get::<A>().borrow_mut().0, vec![3, 2, 1]);
 
         let r2 = resources.clone();
@@ -200,7 +209,6 @@ mod test {
         resources.insert(A(vec![7, 8, 9]));
         assert_eq!(resources.get::<A>().borrow().0, vec![7, 8, 9]);
 
-        // TODO: Create more focused test for cloning resources.
         assert_eq!(r2.get::<A>().borrow().0, vec![3, 2, 1]);
 
         resources.insert(B(1));

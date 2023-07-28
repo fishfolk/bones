@@ -4,15 +4,15 @@ use bones_ecs::prelude::*;
 //
 // Each component must be Clone + Sync + Send + TypeUlid.
 
-#[derive(Clone, Debug, TypeUlid)]
-#[ulid = "01GNDP2WAAN8C6C8XA5ZBXGHFR"]
+#[derive(Clone, Debug, HasSchema, Default)]
+#[repr(C)]
 pub struct Vel {
     x: f32,
     y: f32,
 }
 
-#[derive(Clone, Debug, TypeUlid)]
-#[ulid = "01GNDP34A7TMS8PFZAGSQJ5DDX"]
+#[derive(Clone, Debug, HasSchema, Default)]
+#[repr(C)]
 pub struct Pos {
     x: f32,
     y: f32,

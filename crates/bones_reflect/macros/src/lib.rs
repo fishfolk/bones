@@ -180,7 +180,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                     })
                     .collect::<Vec<_>>(),
                 venial::StructFields::Unit => {
-                    throw!(s.name, "Cannot derive HasSchema for unit structs.");
+                    Vec::new()
                 }
             };
 

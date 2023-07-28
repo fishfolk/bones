@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::{prelude::*, SCHEMA_NOT_REGISTERED};
+use crate::prelude::*;
 
 mod iterator;
 mod typed;
@@ -44,8 +44,7 @@ impl ComponentStores {
     /// Initialize component storage for type `T`.
     pub fn init<T: HasSchema>(&mut self) {
         let schema = T::schema();
-        let schema_id = schema.id.expect(SCHEMA_NOT_REGISTERED);
-        self.components.entry(schema_id).or_insert_with(|| {
+        self.components.entry(schema.id()).or_insert_with(|| {
             Arc::new(AtomicRefCell::new(UntypedComponentStore::for_type::<T>()))
         });
     }
@@ -61,7 +60,7 @@ impl ComponentStores {
 
     /// Get the components of a certain type
     pub fn try_get<T: HasSchema>(&self) -> Result<AtomicComponentStore<T>, EcsError> {
-        let untyped = self.try_get_by_schema_id(T::schema().id.expect(SCHEMA_NOT_REGISTERED))?;
+        let untyped = self.try_get_by_schema_id(T::schema().id())?;
 
         // Safe: We've made sure that the data initialized in the untyped components matches T
         unsafe { Ok(AtomicComponentStore::from_components_unsafe(untyped)) }

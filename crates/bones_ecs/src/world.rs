@@ -280,23 +280,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "TypeUlidCollision")]
-    fn no_duplicate_component_uuids() {
-        #[derive(Clone, HasSchema, Default)]
-        #[schema(opaque)]
-        struct A;
-
-        /// This struct has the same UUID as struct [`A`]. Big no no!!
-        #[derive(Clone, HasSchema, Default)]
-        #[schema(opaque)]
-        struct B;
-
-        let mut w = World::default();
-        w.components.init::<A>();
-        w.components.init::<B>();
-    }
-
-    #[test]
     fn world_is_send() {
         send(World::new())
     }

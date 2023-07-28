@@ -36,9 +36,6 @@ pub mod prelude {
     };
 }
 
-/// Panic message for un-registered schema.
-const SCHEMA_NOT_REGISTERED: &str = "Schema not registered with schema registry";
-
 /// Helper trait for unwraping each item in an array.
 ///
 /// # Example

@@ -497,6 +497,7 @@ mod tests {
         entities.create();
     }
 
+    #[cfg(not(miri))] // This test is very slow on miri and not critical to test for.
     #[test]
     #[should_panic(expected = "Exceeded maximum amount")]
     fn force_max_entity_panic() {
@@ -506,6 +507,7 @@ mod tests {
         }
     }
 
+    #[cfg(not(miri))] // This test is very slow on miri and not critical to test for.
     #[test]
     #[should_panic(expected = "Exceeded maximum amount")]
     fn force_max_entity_panic2() {

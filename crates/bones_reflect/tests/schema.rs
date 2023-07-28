@@ -19,6 +19,14 @@ struct DataC {
     b: DataB,
 }
 
+#[derive(HasSchema, Debug, Clone, Default)]
+#[repr(C)]
+struct Zst;
+
+#[derive(HasSchema, Debug, Clone, Default)]
+#[schema(opaque)]
+struct OpaqueZst;
+
 #[test]
 fn cast_glam() {
     // Create a glam vector
@@ -176,4 +184,12 @@ fn schema_vec() {
     let d0 = v.pop().unwrap();
     assert_eq!(d0.cast::<DataA>().x, 1.0);
     assert!(v.pop().is_none());
+}
+
+#[test]
+fn zst() {
+    let b = SchemaBox::new(Zst);
+    assert!(matches!(b.cast(), Zst));
+    let b = SchemaBox::new(OpaqueZst);
+    assert!(matches!(b.cast(), OpaqueZst));
 }

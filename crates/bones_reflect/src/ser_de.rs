@@ -12,16 +12,6 @@ impl<'de> Deserialize<'de> for &'static Schema {
     }
 }
 
-impl<'de> Deserialize<'de> for NestedSchema {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = <&'static Schema>::deserialize(deserializer)?;
-        Ok(s.into())
-    }
-}
-
 impl<'de> serde::Deserialize<'de> for StructSchema {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

@@ -15,7 +15,7 @@ pub struct UntypedComponentStore {
     pub(crate) storage: ResizableAlloc,
     pub(crate) layout: Layout,
     pub(crate) max_id: usize,
-    pub(crate) schema: MaybeOwned<'static, Schema>,
+    pub(crate) schema: &'static Schema,
 }
 
 impl Clone for UntypedComponentStore {
@@ -93,7 +93,7 @@ impl UntypedComponentStore {
                 .unwrap(),
             max_id: 0,
             layout: schema.layout_info().layout,
-            schema: schema.into(),
+            schema,
         }
     }
 
@@ -107,13 +107,18 @@ impl UntypedComponentStore {
                 .unwrap(),
             layout,
             max_id: 0,
-            schema: T::schema().into(),
+            schema: T::schema(),
         }
     }
 
     /// Get the layout of the components stored.
     pub fn layout(&self) -> Layout {
         self.layout
+    }
+
+    /// Get the schema of the components stored.
+    pub fn schema(&self) -> &'static Schema {
+        self.schema
     }
 
     /// Returns true if the entity already had a component of this type.

@@ -12,9 +12,9 @@ use std::{alloc::Layout, any::TypeId, borrow::Cow};
 /// The prelude.
 pub mod prelude {
     pub use crate::{
-        alloc::SchemaVec, ptr::*, registry::*, FromType, HasSchema, NestedSchema, Primitive,
-        RawClone, RawDefault, RawDrop, Schema, SchemaData, SchemaKind, SchemaLayoutInfo,
-        StructField, StructSchema, TypeDatas,
+        alloc::SchemaVec, ptr::*, registry::*, FromType, HasSchema, Primitive, RawClone,
+        RawDefault, RawDrop, Schema, SchemaData, SchemaKind, SchemaLayoutInfo, StructField,
+        StructSchema, TypeDatas,
     };
     #[cfg(feature = "derive")]
     pub use bones_reflect_macros::*;
@@ -211,7 +211,7 @@ pub enum SchemaKind {
     ///
     /// The scripting solution must facilitate a way for scripts to access data in the [`Vec`] if it
     /// is to be readable/modifyable from scripts.
-    Vec(NestedSchema),
+    Vec(&'static Schema),
     /// The type represents a primitive value.
     Primitive(Primitive),
 }
@@ -233,23 +233,14 @@ impl SchemaKind {
             None
         }
     }
-    /// Get the vector's [`NestedSchema`], if this is a vector.
-    pub fn as_vec(&self) -> Option<&NestedSchema> {
+    /// Get the schema of the items in the vector, if this is a vector.
+    pub fn as_vec(&self) -> Option<&'static Schema> {
         if let Self::Vec(v) = self {
             Some(v)
         } else {
             None
         }
     }
-}
-
-/// Container for a schema that is nested in another schema.
-#[derive(Debug, Clone)]
-pub enum NestedSchema {
-    /// The nested schema is a static reference to a schema.
-    Static(&'static Schema),
-    /// The nested schema is an owned box of a schema.
-    Boxed(Box<Schema>),
 }
 
 /// Layout information about the schema.
@@ -399,7 +390,10 @@ impl Schema {
         }
 
         SchemaLayoutInfo {
-            layout: layout.unwrap().pad_to_align(),
+            layout: layout
+                // Handle ZST
+                .unwrap_or_else(|| Layout::from_size_align(0, 1).unwrap())
+                .pad_to_align(),
             field_offsets,
         }
     }
@@ -423,27 +417,6 @@ impl From<SchemaKind> for SchemaData {
             default_fn: None,
             kind,
             type_data: Default::default(),
-        }
-    }
-}
-
-impl From<&'static Schema> for NestedSchema {
-    fn from(s: &'static Schema) -> Self {
-        Self::Static(s)
-    }
-}
-impl From<Schema> for NestedSchema {
-    fn from(s: Schema) -> Self {
-        Self::Boxed(Box::new(s))
-    }
-}
-impl std::ops::Deref for NestedSchema {
-    type Target = Schema;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            NestedSchema::Static(s) => s,
-            NestedSchema::Boxed(s) => s,
         }
     }
 }

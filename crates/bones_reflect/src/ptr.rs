@@ -349,7 +349,9 @@ impl Drop for SchemaBox {
             }
 
             // De-allocate the memory
-            std::alloc::dealloc(self.ptr.as_mut().as_ptr(), self.layout)
+            if self.layout.size() > 0 {
+                std::alloc::dealloc(self.ptr.as_mut().as_ptr(), self.layout)
+            }
         }
     }
 }
@@ -439,10 +441,8 @@ impl SchemaBox {
         };
         // SAFE: The pointer is allocated for the layout of type T.
         let ptr = unsafe {
-            let mut ptr =
-                OwningPtr::new(NonNull::new(ptr).unwrap_or_else(|| handle_alloc_error(layout)));
-            *ptr.as_mut().deref_mut() = v;
-            ptr
+            (ptr as *mut T).write(v);
+            OwningPtr::new(NonNull::new(ptr).unwrap_or_else(|| handle_alloc_error(layout)))
         };
 
         Self {

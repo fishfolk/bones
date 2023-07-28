@@ -56,7 +56,7 @@ unsafe impl<T: Clone + HasSchema + 'static> HasSchema for Vec<T> {
             schema
         } else {
             drop(read);
-            let kind = SchemaKind::Vec(T::schema().into());
+            let kind = SchemaKind::Vec(T::schema());
             let schema = SCHEMA_REGISTRY.register(SchemaData {
                 kind,
                 type_data: Default::default(),
