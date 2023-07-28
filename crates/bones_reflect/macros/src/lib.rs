@@ -118,7 +118,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     {
         throw!(
             input.name(),
-            "You must have a `#[repr(C)]` annotation on your struct to derive `HasSchema`"
+            "Type must be either #[repr(C)] or have a #[schema(opaque)] annotation."
         );
     }
 

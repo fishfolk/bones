@@ -2,7 +2,7 @@ use bones_ecs::prelude::*;
 
 // Define our component types.
 //
-// Each component must be Clone + Sync + Send + TypeUlid.
+// Each component must derive `HasSchema`.
 
 #[derive(Clone, Debug, HasSchema, Default)]
 #[repr(C)]
