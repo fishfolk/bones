@@ -244,7 +244,7 @@ impl<'a> Iterator for ResizableAllocIterMut<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         if self.idx < self.alloc.cap {
             // SOUND: we've checked that it is within bounds, and we know that the pointer will be
-            // valid for the new lifetime..
+            // valid for the new lifetime.
             let r = unsafe { self.alloc.unchecked_idx_mut(self.idx).transmute_lifetime() };
             self.idx += 1;
             Some(r)

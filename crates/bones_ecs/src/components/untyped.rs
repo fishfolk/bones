@@ -2,7 +2,6 @@ use crate::prelude::*;
 
 use bones_schema::alloc::ResizableAlloc;
 use std::{
-    alloc::Layout,
     ptr::{self},
     rc::Rc,
 };
@@ -79,11 +78,9 @@ impl UntypedComponentStore {
     /// The `clone_fn` and `drop_fn`, if specified, must not do anything unsound, when given valid
     /// pointers to clone or drop.
     pub unsafe fn new(schema: &'static Schema) -> Self {
-        let layout = schema.layout();
         Self {
             bitset: create_bitset(),
-            // Approximation of a good default.
-            storage: ResizableAlloc::with_capacity(layout, BITSET_SIZE >> 4).unwrap(),
+            storage: ResizableAlloc::new(schema.layout()),
             max_id: 0,
             schema,
         }
@@ -91,11 +88,9 @@ impl UntypedComponentStore {
 
     /// Create an [`UntypedComponentStore`] that is valid for the given type `T`.
     pub fn for_type<T: HasSchema>() -> Self {
-        let layout = Layout::new::<T>();
         Self {
             bitset: create_bitset(),
-            // Approximation of a good default.
-            storage: ResizableAlloc::with_capacity(layout, BITSET_SIZE >> 4).unwrap(),
+            storage: ResizableAlloc::new(T::schema().layout()),
             max_id: 0,
             schema: T::schema(),
         }
