@@ -959,7 +959,7 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-channel",
- "bones_reflect",
+ "bones_schema",
  "bones_utils",
  "bs58",
  "glam",
@@ -992,7 +992,7 @@ name = "bones_bevy_utils"
 version = "0.2.0"
 dependencies = [
  "bevy_ecs",
- "bones_reflect",
+ "bones_schema",
 ]
 
 [[package]]
@@ -1002,7 +1002,7 @@ dependencies = [
  "anyhow",
  "atomic_refcell",
  "bitset-core",
- "bones_reflect",
+ "bones_schema",
  "bones_utils",
  "bytemuck",
  "either",
@@ -1019,7 +1019,7 @@ dependencies = [
 name = "bones_input"
 version = "0.2.0"
 dependencies = [
- "bones_reflect",
+ "bones_schema",
  "glam",
  "instant",
 ]
@@ -1073,10 +1073,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "bones_reflect"
+name = "bones_render"
+version = "0.2.0"
+dependencies = [
+ "bones_asset",
+ "bones_ecs",
+ "glam",
+ "hex",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "bones_schema"
 version = "0.1.0"
 dependencies = [
- "bones_reflect_macros",
+ "bones_schema_macros",
  "bones_utils",
  "glam",
  "paste",
@@ -1088,25 +1100,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "bones_reflect_macros"
+name = "bones_schema_macros"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
  "regex",
  "venial",
-]
-
-[[package]]
-name = "bones_render"
-version = "0.2.0"
-dependencies = [
- "bones_asset",
- "bones_ecs",
- "glam",
- "hex",
- "serde",
- "thiserror",
 ]
 
 [[package]]

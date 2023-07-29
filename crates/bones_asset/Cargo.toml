@@ -12,7 +12,7 @@ default = []
 
 [dependencies]
 bones_utils = { version = "0.1", path = "../bones_utils", features = ["serde"] }
-bones_reflect = { version = "0.1", path = "../bones_reflect" }
+bones_schema = { version = "0.1", path = "../bones_schema" }
 
 serde      = "1.0"
 sha2 = "0.10"

@@ -28,13 +28,24 @@ pub struct ResizableAlloc {
 
 impl Clone for ResizableAlloc {
     fn clone(&self) -> Self {
+        // Create a new resizable allocation
         let mut copy = ResizableAlloc::new(self.layout);
+        // Make sure it has the same capacity as this one
         copy.resize(self.cap).unwrap();
-        unsafe {
-            copy.ptr
-                .as_ptr()
-                .copy_from_nonoverlapping(self.ptr.as_ptr(), self.capacity());
+
+        // If this is a sized type
+        if self.layout.size() > 0 {
+            // Copy the data from this allocation into the copy.
+            unsafe {
+                // SOUND: we have just allocated the copy so we know it's pointer doesn't overlap with
+                // our own.
+                copy.ptr
+                    .as_ptr()
+                    .copy_from_nonoverlapping(self.ptr.as_ptr(), self.capacity());
+            }
         }
+
+        // Return the copy
         copy
     }
 }
@@ -196,7 +207,7 @@ impl ResizableAlloc {
 
 impl Drop for ResizableAlloc {
     fn drop(&mut self) {
-        if self.cap > 0 {
+        if self.cap > 0 && self.layout.size() > 0 {
             unsafe { alloc::dealloc(self.ptr.as_ptr(), self.layout.repeat(self.cap).unwrap().0) }
         }
     }

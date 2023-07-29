@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-use bones_reflect::alloc::ResizableAlloc;
+use bones_schema::alloc::ResizableAlloc;
 use std::{
     alloc::Layout,
     ptr::{self},
@@ -13,14 +13,13 @@ use std::{
 pub struct UntypedComponentStore {
     pub(crate) bitset: BitSetVec,
     pub(crate) storage: ResizableAlloc,
-    pub(crate) layout: Layout,
     pub(crate) max_id: usize,
     pub(crate) schema: &'static Schema,
 }
 
 impl Clone for UntypedComponentStore {
     fn clone(&self) -> Self {
-        let size = self.layout.size();
+        let size = self.schema.layout().size();
         let mut new_storage = self.storage.clone();
 
         for i in 0..self.max_id {
@@ -45,7 +44,6 @@ impl Clone for UntypedComponentStore {
             bitset: self.bitset.clone(),
             storage: new_storage,
             max_id: self.max_id,
-            layout: self.schema.layout_info().layout,
             schema: self.schema,
         }
     }
@@ -54,18 +52,14 @@ impl Clone for UntypedComponentStore {
 impl Drop for UntypedComponentStore {
     fn drop(&mut self) {
         if let Some(drop_fn) = self.schema.drop_fn {
-            let size = self.layout().size();
-            if size < 1 {
-                return;
-            }
-            for i in 0..(self.storage.capacity() / size) {
+            for i in 0..self.storage.capacity() {
                 if self.bitset.bit_test(i) {
                     // SAFE: constructing an UntypedComponent store is unsafe, and the user affirms
-                    // that clone_fn will not do anything unsound.
+                    // that drop_fn will not do anything unsound.
                     //
                     // And our pointer is valid.
                     unsafe {
-                        let ptr = self.storage.ptr_mut().byte_add(i * size);
+                        let ptr = self.storage.unchecked_idx_mut(i);
                         drop_fn(ptr.as_ptr());
                     }
                 }
@@ -85,14 +79,12 @@ impl UntypedComponentStore {
     /// The `clone_fn` and `drop_fn`, if specified, must not do anything unsound, when given valid
     /// pointers to clone or drop.
     pub unsafe fn new(schema: &'static Schema) -> Self {
-        let layout = schema.layout_info().layout;
+        let layout = schema.layout();
         Self {
             bitset: create_bitset(),
             // Approximation of a good default.
-            storage: ResizableAlloc::with_capacity(layout, (BITSET_SIZE >> 4) * layout.size())
-                .unwrap(),
+            storage: ResizableAlloc::with_capacity(layout, BITSET_SIZE >> 4).unwrap(),
             max_id: 0,
-            layout: schema.layout_info().layout,
             schema,
         }
     }
@@ -103,17 +95,10 @@ impl UntypedComponentStore {
         Self {
             bitset: create_bitset(),
             // Approximation of a good default.
-            storage: ResizableAlloc::with_capacity(layout, (BITSET_SIZE >> 4) * layout.size())
-                .unwrap(),
-            layout,
+            storage: ResizableAlloc::with_capacity(layout, BITSET_SIZE >> 4).unwrap(),
             max_id: 0,
             schema: T::schema(),
         }
-    }
-
-    /// Get the layout of the components stored.
-    pub fn layout(&self) -> Layout {
-        self.layout
     }
 
     /// Get the schema of the components stored.
@@ -127,28 +112,39 @@ impl UntypedComponentStore {
     ///
     /// # Safety
     ///
-    /// The data pointer must be valid for reading and writing objects with the layout that the
+    /// - The data pointer must be valid for reading and writing objects with the layout that the
     /// [`UntypedComponentStore`] was created with.
+    /// - The data pointer must not overlap with the [`UntypedComponentStore`]'s internal storage.
     pub unsafe fn insert(&mut self, entity: Entity, data: *mut u8) -> bool {
-        let size = self.layout.size();
-
         let index = entity.index() as usize;
-        self.allocate_enough(index * size);
+        let size = self.schema.layout().size();
 
         // If the component already exists on the entity
         if self.bitset.bit_test(entity.index() as usize) {
-            let ptr = self.storage.ptr_mut().byte_add(index * size);
+            let ptr = self.storage.unchecked_idx_mut(index);
+
             // Swap the data with the data already there
             ptr::swap_nonoverlapping(ptr.as_ptr(), data, size);
 
             // There was already a component of this type
             true
+
+        // If the component does not already exist for this entity.
         } else {
+            // Update our maximum enitity id.
             self.max_id = self.max_id.max(index + 1);
-            self.allocate_enough(index * size);
+
+            // Make sure we have enough memory allocated for storage.
+            self.allocate_enough(index);
+
+            // Set the bit indicating that this entity has this component data stored.
             self.bitset.bit_set(index);
-            let ptr = self.storage.ptr_mut().byte_add(index * size);
-            ptr::swap_nonoverlapping(ptr.as_ptr(), data, size);
+
+            // Copy the data from the data pointer into our storage
+            self.storage
+                .unchecked_idx_mut(index)
+                .as_ptr()
+                .copy_from_nonoverlapping(data, size);
 
             // There was not already a component of this type
             false
@@ -160,7 +156,9 @@ impl UntypedComponentStore {
     /// Usually, set this to `entity.index`.
     fn allocate_enough(&mut self, until: usize) {
         if self.storage.capacity() <= until {
-            self.storage.resize(self.storage.capacity() * 2).unwrap();
+            self.storage
+                .resize(self.storage.capacity().max(1) * 2)
+                .unwrap();
         }
     }
 
@@ -188,10 +186,9 @@ impl UntypedComponentStore {
 
     fn get_idx_mut(&mut self, idx: usize) -> Option<PtrMut<'_>> {
         if self.bitset.bit_test(idx) {
-            let size = self.layout.size();
             // SAFE: we've already validated that the contents of storage is valid for type T.
             unsafe {
-                let ptr = self.storage.ptr_mut().byte_add(idx * size);
+                let ptr = self.storage.unchecked_idx_mut(idx);
                 Some(ptr)
             }
         } else {
@@ -228,16 +225,11 @@ impl UntypedComponentStore {
             let index = entities[i].index() as usize;
 
             if self.bitset.bit_test(index) {
-                let size = self.layout.size();
                 // SAFE: we've already validated that the contents of storage is valid for type T.
-                // And we have verified that this entity is unique among the other entities we are
-                // borrowing at the same time.
+                // The transmut is safe because we validate that all of these borrows don't overlap
+                // and their lifetimes are that of the &mut self borrow.
                 unsafe {
-                    let ptr = self
-                        .storage
-                        .ptr_mut()
-                        .byte_add(index * size)
-                        .transmute_lifetime();
+                    let ptr = self.storage.unchecked_idx_mut(index).transmute_lifetime();
                     Some(ptr)
                 }
             } else {
@@ -248,23 +240,23 @@ impl UntypedComponentStore {
 
     /// If there is a previous value, `true` will be returned.
     ///
-    /// If `out` is set, the previous value will be written to it.
+    /// If `out` is set and true is returned, the previous value will be written to it.
     ///
     /// # Safety
     ///
     /// If set, the `out` pointer, must not overlap the internal component storage.
     pub unsafe fn remove(&mut self, entity: Entity, out: Option<*mut u8>) -> bool {
         let index = entity.index() as usize;
-        let size = self.layout.size();
+        let size = self.schema.layout().size();
 
         if self.bitset.bit_test(index) {
             self.bitset.bit_reset(index);
 
-            let ptr = self.storage.ptr_mut().byte_add(index * size).as_ptr();
+            let ptr = self.storage.unchecked_idx_mut(index).as_ptr();
 
             if let Some(out) = out {
                 // SAFE: user asserts `out` is non-overlapping
-                ptr::copy_nonoverlapping(ptr, out, size);
+                out.copy_from_nonoverlapping(ptr, size);
             } else if let Some(drop_fn) = self.schema.drop_fn {
                 // SAFE: construcing `UntypedComponentStore` asserts the soundess of the drop_fn
                 //

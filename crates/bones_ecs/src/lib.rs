@@ -17,7 +17,7 @@ pub mod entities;
 pub mod resources;
 pub mod stage;
 pub mod system;
-pub use bones_reflect as reflect;
+pub use bones_schema as reflect;
 
 mod error;
 pub use error::EcsError;
@@ -28,7 +28,7 @@ pub use world::{FromWorld, World};
 /// The prelude.
 pub mod prelude {
     pub use {
-        atomic_refcell::*, bitset_core::BitSet, bones_reflect::prelude::*, bones_utils::prelude::*,
+        atomic_refcell::*, bitset_core::BitSet, bones_schema::prelude::*, bones_utils::prelude::*,
     };
 
     pub use crate::{
@@ -36,8 +36,8 @@ pub mod prelude {
         FromWorld, UnwrapMany, World,
     };
 
-    // Make bones_reflect available for derive macros
-    pub use bones_reflect;
+    // Make bones_schema available for derive macros
+    pub use bones_schema;
 }
 
 /// Helper trait for unwraping each item in an array.

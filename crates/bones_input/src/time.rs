@@ -8,7 +8,7 @@
 
 use instant::{Duration, Instant};
 
-use bones_reflect::HasSchema;
+use bones_schema::HasSchema;
 
 mod stopwatch;
 pub use stopwatch::*;

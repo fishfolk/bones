@@ -1,5 +1,5 @@
 /// Information about the window the game is running in.
-#[derive(Clone, Copy, Debug, Default, bones_reflect::HasSchema)]
+#[derive(Clone, Copy, Debug, Default, bones_schema::HasSchema)]
 #[repr(C)]
 pub struct Window {
     /// The logical size of the window's client area.

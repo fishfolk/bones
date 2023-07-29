@@ -23,7 +23,7 @@ pub trait IntoBevy<To> {
 /// One way to do this is to [`std::mem::swap`] an empty world in the [`BevyWorld`]` resource, with
 /// the actual Bevy world, immediatley before running the bones ECS systems. Then you can swap it
 /// back once the bones systems finish.
-#[derive(bones_reflect::HasSchema, Default)]
+#[derive(bones_schema::HasSchema, Default)]
 #[schema(opaque)]
 pub struct BevyWorld(pub Option<bevy_ecs::world::World>);
 

@@ -9,4 +9,4 @@ version     = "0.2.0"
 
 [dependencies]
 bevy_ecs  = "0.10"
-bones_reflect = { version = "0.1", path = "../bones_reflect" }
+bones_schema = { version = "0.1", path = "../bones_schema" }

@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use bones_reflect::prelude::*;
+use bones_schema::prelude::*;
 use glam::UVec2;
 
 // The `Clone` and `Default` implementations are required by default.

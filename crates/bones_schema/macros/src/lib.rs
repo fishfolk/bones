@@ -17,7 +17,7 @@ macro_rules! throw {
 pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     let input = venial::parse_declaration(input.into()).unwrap();
     let name = input.name().expect("Type must have a name");
-    let schema_mod = quote!(bones_reflect);
+    let schema_mod = quote!(bones_schema);
 
     let get_flags_for_attr = |attr_name: &str| {
         let attr = input

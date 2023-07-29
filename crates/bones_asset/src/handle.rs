@@ -1,6 +1,6 @@
 use std::{alloc::Layout, any::TypeId, marker::PhantomData, sync::OnceLock};
 
-use bones_reflect::prelude::*;
+use bones_schema::prelude::*;
 use ulid::Ulid;
 
 /// A typed handle to an asset.
@@ -92,7 +92,7 @@ pub struct SchemaAssetHandle;
 /// handles.
 macro_rules! schema_impl_for_handle {
     () => {
-        fn schema() -> &'static bones_reflect::Schema {
+        fn schema() -> &'static bones_schema::Schema {
             static S: OnceLock<&'static Schema> = OnceLock::new();
             // This is a hack to make sure that `Ulid` has the memory representation we
             // expect. It is extremely unlike, but possible that this would otherwise be

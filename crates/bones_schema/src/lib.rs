@@ -17,14 +17,14 @@ pub mod prelude {
         StructSchema, TypeDatas,
     };
     #[cfg(feature = "derive")]
-    pub use bones_reflect_macros::*;
+    pub use bones_schema_macros::*;
     pub use ulid::Ulid;
 }
 use bones_utils::prelude::*;
 use prelude::*;
 
 #[cfg(feature = "derive")]
-pub use bones_reflect_macros::*;
+pub use bones_schema_macros::*;
 
 pub mod alloc;
 pub mod ptr;

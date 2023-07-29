@@ -1,4 +1,4 @@
-use bones_reflect::prelude::*;
+use bones_schema::prelude::*;
 use glam::{Vec2, Vec3};
 
 #[derive(HasSchema, Debug, Clone, Default)]

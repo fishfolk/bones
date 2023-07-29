@@ -1,4 +1,4 @@
-use bones_reflect::prelude::*;
+use bones_schema::prelude::*;
 
 /// This is a custom type data.
 ///

@@ -40,7 +40,7 @@ impl<T: HasSchema + Pod> ComponentStore<T> {
     /// This will panic if the layout of `T` does not match the layout of `components`.
     pub fn from_components(components: UntypedComponentStore) -> Self {
         assert_eq!(
-            components.layout(),
+            components.schema.layout(),
             Layout::new::<T>(),
             "Layout mismatch creating `TypedComponents<T>`"
         );
@@ -67,7 +67,7 @@ impl<T: HasSchema> ComponentStore<T> {
     /// > [`ComponentStore`] with [`from_components`][Self::from_components].
     pub unsafe fn from_components_unsafe(components: UntypedComponentStore) -> Self {
         assert_eq!(
-            components.layout(),
+            components.schema.layout(),
             Layout::new::<T>(),
             "Layout mismatch creating `TypedComponents<T>`"
         );
