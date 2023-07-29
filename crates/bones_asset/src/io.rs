@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 /// [`AssetIo`] is a trait that is implemented for backends capable of loading all the games assets
 /// and returning the raw bytes stored in asset files.
-pub trait AssetIo {
+pub trait AssetIo: Sync + Send {
     /// List the names of the non-core asset pack folders that are installed.
     ///
     /// These names, are not necessarily the names of the pack, but the names of the folders that

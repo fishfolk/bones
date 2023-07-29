@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// A bones [`World`] along with it's [`SystemStages`].
+#[derive(Default)]
 pub struct BonesCore {
     /// The ECS world for the core.
     pub world: World,
@@ -11,6 +12,11 @@ pub struct BonesCore {
 }
 
 impl BonesCore {
+    /// Create an empty [`BonesCore`].
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     /// Install a plugin.
     pub fn install_plugin(&mut self, plugin: impl BonesPlugin) -> &mut Self {
         plugin.install(self);

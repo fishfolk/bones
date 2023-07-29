@@ -10,6 +10,12 @@ pub struct SystemStages {
     pub stages: Vec<Box<dyn SystemStage>>,
 }
 
+impl Default for SystemStages {
+    fn default() -> Self {
+        Self::with_core_stages()
+    }
+}
+
 impl SystemStages {
     /// Initialize the systems in the stages agains the [`World`].
     ///

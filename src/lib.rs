@@ -6,13 +6,7 @@
 #![deny(rustdoc::all)]
 
 #[doc(inline)]
-pub use {
-    bones_asset as asset, bones_ecs as ecs, bones_input as input, bones_render as render,
-    bones_utils as utils,
-};
-
-#[cfg(feature = "bevy")]
-pub use bones_bevy_utils as bevy_utils;
+pub use {bones_ecs as ecs, bones_input as input, bones_render as render, bones_utils as utils};
 
 /// Bones lib prelude
 pub mod prelude {
@@ -20,15 +14,13 @@ pub mod prelude {
         animation::prelude::*, asset::prelude::*, bones_core::*, camera::*, ecs::prelude::*,
         input::prelude::*, render::prelude::*, utils::prelude::*, FrameTime,
     };
-
-    #[cfg(feature = "bevy")]
-    pub use crate::bevy_utils::prelude::*;
 }
 use prelude::*;
 
 pub mod animation;
 pub mod bones_core;
 pub mod camera;
+pub mod asset;
 
 /// This is a resource that stores the game's fixed frame time.
 ///
@@ -50,5 +42,6 @@ impl Default for FrameTime {
 /// [`BonesPlugin`] that installs the `bones_lib` systems for things such as animation etc.
 pub fn plugin(core: &mut BonesCore) {
     core.install_plugin(animation::plugin)
-        .install_plugin(camera::plugin);
+        .install_plugin(camera::plugin)
+        .install_plugin(asset::plugin);
 }

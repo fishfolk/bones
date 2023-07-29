@@ -78,6 +78,8 @@ pub struct SchemaPath {
 
 /// Struct responsible for loading assets into it's contained [`AssetStore`], using an [`AssetIo`]
 /// implementation.
+#[derive(HasSchema)]
+#[schema(opaque, no_clone, no_default)]
 pub struct AssetServer {
     /// The version of the game. This is used to evaluate whether asset packs are compatible with
     /// the game.
