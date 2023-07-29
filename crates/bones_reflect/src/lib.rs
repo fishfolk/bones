@@ -110,17 +110,34 @@ pub struct Schema {
     id: SchemaId,
     #[deref]
     data: SchemaData,
+    layout: Layout,
+    field_offsets: &'static [(Option<&'static str>, usize)],
 }
 
 impl Schema {
-    /// Get the registered, unique ID of the schema.
+    /// Get the registered, unique ID of the [`Schema`].
+    #[inline]
     pub fn id(&self) -> SchemaId {
         self.id
     }
 
-    /// Get a static reference to the schema that was registered.
+    /// Get a static reference to the [`Schema`] that was registered.
+    #[inline]
     pub fn schema(&self) -> &SchemaData {
         &self.data
+    }
+
+    /// Get the [`Layout`] of the [`Schema`].
+    #[inline]
+    pub fn layout(&self) -> Layout {
+        self.layout
+    }
+
+    /// If this schema represents a struct, this returns the list of fields, with the names of the
+    /// fields, and their byte offsets from the beginning of the struct.
+    #[inline]
+    pub fn field_offsets(&self) -> &'static [(Option<&'static str>, usize)] {
+        self.field_offsets
     }
 }
 
@@ -334,9 +351,12 @@ pub trait FromType<T> {
     fn from_type() -> Self;
 }
 
-impl Schema {
-    /// Get the layout of the type represented by the schema.
-    pub fn layout_info(&self) -> SchemaLayoutInfo<'_> {
+impl SchemaData {
+    /// Calculate the layout of the type represented by the schema.
+    ///
+    /// Usually you don't need to call this and should use the static, cached layout and field
+    /// offsets from [`Schema::layout()`] and [`Schema::field_offsets()`].
+    pub fn compute_layout_info(&self) -> SchemaLayoutInfo<'_> {
         let mut layout: Option<Layout> = None;
         let mut field_offsets = Vec::new();
         let mut offset;
@@ -355,7 +375,7 @@ impl Schema {
         match &self.kind {
             SchemaKind::Struct(s) => {
                 for field in &s.fields {
-                    let field_layout_info = field.schema.layout_info();
+                    let field_layout_info = field.schema.compute_layout_info();
                     offset = extend_layout(&mut layout, field_layout_info.layout);
                     field_offsets.push((field.name.as_deref(), offset));
                 }

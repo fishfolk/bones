@@ -7,7 +7,7 @@ use std::sync::{
 
 use bones_utils::{parking_lot::RwLock, *};
 
-use crate::{SchemaData, Schema};
+use crate::{Schema, SchemaData, SchemaLayoutInfo};
 
 /// A unique identifier for a schema registered in the [`SCHEMA_REGISTRY`].
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
@@ -33,10 +33,30 @@ impl SchemaRegistry {
         };
         assert_ne!(id.id, u32::MAX, "Exhausted all {} schema IDs", u32::MAX);
 
-        // Leak the registered schema to produce a static reference
+        // Compute the schema layout info so we can cache it with the Schema.
+        let SchemaLayoutInfo {
+            layout,
+            field_offsets,
+        } = schema_data.compute_layout_info();
+
+        // Leak the field offsets to get static references
+        let field_offsets: Box<_> = field_offsets
+            .into_iter()
+            .map(|(name, offset)| {
+                (
+                    name.map(|n| Box::leak(Box::new(n.to_string())).as_str()),
+                    offset,
+                )
+            })
+            .collect();
+        let field_offsets = Box::leak(field_offsets);
+
+        // Leak the schema to get a static reference
         let schema = Box::leak(Box::new(Schema {
             id,
             data: schema_data,
+            layout,
+            field_offsets,
         }));
 
         // Inser the schema into the registry.

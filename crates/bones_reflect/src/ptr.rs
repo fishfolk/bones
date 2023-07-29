@@ -89,8 +89,8 @@ impl<'pointer> SchemaPtr<'pointer> {
         let idx = idx.into();
         match &self.schema.kind {
             SchemaKind::Struct(s) => {
-                let info = self.schema.layout_info();
-                let Some((idx, offset)) = info.field_offsets.iter().enumerate().find_map(|(i, (name, offset))| {
+                let field_offsets = self.schema.field_offsets;
+                let Some((idx, offset)) = field_offsets.iter().enumerate().find_map(|(i, (name, offset))| {
                         let matches = match idx {
                             FieldIdx::Idx(n) => n == i,
                             FieldIdx::Name(n) => name == &Some(n),
@@ -245,8 +245,8 @@ impl<'pointer, 'parent> SchemaPtrMut<'pointer, 'parent> {
         let idx = idx.into();
         match &self.schema.kind {
             SchemaKind::Struct(s) => {
-                let info = self.schema.layout_info();
-                let Some((idx, offset)) = info.field_offsets.iter().enumerate().find_map(|(i, (name, offset))| {
+                let field_offsets = self.schema.field_offsets;
+                let Some((idx, offset)) = field_offsets.iter().enumerate().find_map(|(i, (name, offset))| {
                         let matches = match idx {
                             FieldIdx::Idx(n) => n == i,
                             FieldIdx::Name(n) => name == &Some(n),
@@ -428,8 +428,7 @@ impl SchemaBox {
         let schema = T::schema();
         let layout = std::alloc::Layout::new::<T>();
         debug_assert_eq!(
-            layout,
-            schema.layout_info().layout,
+            layout, schema.layout,
             "BIG BUG: Schema layout doesn't match type layout!!"
         );
 
@@ -459,7 +458,7 @@ impl SchemaBox {
     /// Accessing an uninitialized [`SchemaBox`] is undefined behavior. It is up to the user to
     /// initialize the memory pointed at by the box after creating it.
     pub unsafe fn uninitialized(schema: &'static Schema) -> Self {
-        let layout = schema.layout_info().layout;
+        let layout = schema.layout;
 
         let ptr = if layout.size() == 0 {
             NonNull::<u8>::dangling().as_ptr()
@@ -516,7 +515,7 @@ impl SchemaBox {
     pub unsafe fn from_raw_parts(ptr: OwningPtr<'static>, schema: &'static Schema) -> Self {
         Self {
             ptr,
-            layout: schema.layout_info().layout,
+            layout: schema.layout,
             schema,
         }
     }

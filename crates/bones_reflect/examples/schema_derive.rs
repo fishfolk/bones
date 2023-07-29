@@ -41,6 +41,6 @@ struct OpaqueType {
 fn main() {
     dbg!(TupleExample::schema());
     dbg!(Player::schema());
-    dbg!(Player::schema().layout_info());
+    dbg!(Player::schema().layout());
     dbg!(OpaqueType::schema());
 }

@@ -15,9 +15,8 @@ pub struct SchemaVec {
 impl SchemaVec {
     /// Initialize an empty [`SchemaVec`] for items with the given schema.
     pub fn new(schema: &'static Schema) -> Self {
-        let layout = schema.layout_info().layout;
         Self {
-            buffer: ResizableAlloc::new(layout),
+            buffer: ResizableAlloc::new(schema.layout),
             len: 0,
             schema,
         }
