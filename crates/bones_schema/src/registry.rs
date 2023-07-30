@@ -19,13 +19,18 @@ pub struct SchemaId {
 /// [`&'static Schema`][Schema].
 pub struct SchemaRegistry {
     next_id: AtomicU32,
-    schemas: OnceLock<RwLock<HashMap<SchemaId, &'static Schema>>>,
+    state: OnceLock<RwLock<RegistryState>>,
+}
+
+#[derive(Default)]
+struct RegistryState {
+    schemas: HashMap<SchemaId, &'static Schema>,
 }
 
 impl SchemaRegistry {
     /// Register a schema with the registry.
     pub fn register(&self, schema_data: SchemaData) -> &'static Schema {
-        let schemas = self.schemas.get_or_init(default);
+        let state = self.state.get_or_init(default);
 
         // Allocate a new schema ID
         let id = SchemaId {
@@ -60,7 +65,7 @@ impl SchemaRegistry {
         }));
 
         // Inser the schema into the registry.
-        let entry = schemas.write().insert(id, schema);
+        let entry = state.write().schemas.insert(id, schema);
         debug_assert!(entry.is_none(), "SchemaId already used!");
 
         schema
@@ -68,10 +73,11 @@ impl SchemaRegistry {
 
     /// Get a `'static` reference to the schema associated to the given schema ID.
     pub fn get(&self, id: SchemaId) -> &'static Schema {
-        let schemas = self.schemas.get_or_init(default);
+        let schemas = self.state.get_or_init(default);
 
         schemas
             .read()
+            .schemas
             .get(&id)
             .expect("Reflection bug, schema Id created without associated registration")
     }
@@ -80,5 +86,5 @@ impl SchemaRegistry {
 /// Global [`SchemaRegistry`] used to
 pub static SCHEMA_REGISTRY: SchemaRegistry = SchemaRegistry {
     next_id: AtomicU32::new(0),
-    schemas: OnceLock::new(),
+    state: OnceLock::new(),
 };

@@ -1,3 +1,5 @@
+use std::alloc::Layout;
+
 use bones_schema::prelude::*;
 use glam::{Vec2, Vec3};
 
@@ -192,4 +194,29 @@ fn zst() {
     assert!(matches!(b.cast(), Zst));
     let b = SchemaBox::new(OpaqueZst);
     assert!(matches!(b.cast(), OpaqueZst));
+}
+
+#[test]
+fn schema_layout_matches_rust_layout() {
+    #[derive(HasSchema, Default, Clone)]
+    #[repr(C)]
+    struct A;
+
+    #[derive(HasSchema, Default, Clone)]
+    #[repr(C)]
+    struct B {
+        a: f32,
+        b: u8,
+        c: String,
+        d: Vec<Vec2>,
+    }
+
+    macro_rules! layout_eq {
+        ( $( $t:ident ),* ) => {
+            $(
+                assert_eq!($t::schema().layout(), Layout::new::<$t>());
+            )*
+        };
+    }
+    layout_eq!(A, B);
 }
