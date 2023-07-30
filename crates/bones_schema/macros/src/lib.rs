@@ -13,6 +13,20 @@ macro_rules! throw {
 }
 
 /// Derive macro for the `HasSchema` trait.
+///
+/// ## Known Limitations
+///
+/// Currently it isn't possible to construct a struct that contains itself. For example, this will
+/// not work:
+///
+/// ```rust
+/// #[derive(HasSchema)]
+/// struct Data {
+///     others: Vec<Data>,
+/// }
+/// ```
+///
+/// If this is a problem for your use-case, please open an issue.
 #[proc_macro_derive(HasSchema, attributes(schema, type_datas))]
 pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     let input = venial::parse_declaration(input.into()).unwrap();

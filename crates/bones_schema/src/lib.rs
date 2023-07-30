@@ -105,6 +105,23 @@ pub unsafe trait HasSchema: Sync + Send + 'static {
 }
 
 /// A schema registered with the [`SCHEMA_REGISTRY`].
+///
+/// ## Known Limitations
+///
+/// Currently there isn't a known-safe way to construct a schema for a recursive struct. For
+/// example, this struct is troublesome:
+///
+/// ```rust
+/// struct Data {
+///     others: Vec<Data>,
+/// }
+/// ```
+///
+/// This is because nested schemas are required to be a `&'static Schema`, and it would probalby
+/// require unsafe code to create a schema that references itself.
+///
+/// If this is a problem for your use-case, please open an issue. We would like to remove this
+/// limitation or find a suitable workaround in the future.
 #[derive(Deref, Clone, Debug)]
 pub struct Schema {
     id: SchemaId,
