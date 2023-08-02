@@ -22,6 +22,9 @@ pub mod prelude {
     pub use ulid::Ulid;
 }
 
+mod schema;
+pub use schema::*;
+
 pub mod alloc;
 pub mod ptr;
 pub mod raw_fns;
@@ -33,6 +36,3 @@ mod std_impls;
 /// Serde implementations for [`Schema`].
 #[cfg(feature = "serde")]
 mod ser_de;
-
-mod schema;
-pub use schema::*;
