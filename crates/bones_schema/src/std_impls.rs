@@ -1,6 +1,5 @@
 use bones_utils::HashMap;
-
-use super::*;
+use crate::{prelude::*, raw_fns::*};
 
 use std::{
     any::TypeId,
@@ -128,10 +127,10 @@ mod impl_glam {
 
                     S.get_or_init(|| {
                         let type_id = Some(TypeId::of::<Self>());
-                        let kind = SchemaKind::Struct(StructSchema {
+                        let kind = SchemaKind::Struct(StructSchemaInfo {
                             fields: vec![
                                 $(
-                                    StructField {
+                                    StructFieldInfo {
                                         name: Some(stringify!($field).into()),
                                         schema: SCHEMA_REGISTRY.register(SchemaData {
                                             kind: SchemaKind::Primitive(Primitive::$prim),

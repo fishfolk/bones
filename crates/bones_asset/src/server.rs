@@ -424,7 +424,7 @@ mod metadata {
 
     struct SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'prnt> {
         ctx: &'a mut MetaAssetLoadCtx<'srv>,
-        ptr: SchemaPtrMut<'ptr, 'prnt>,
+        ptr: SchemaRefMut<'ptr, 'prnt>,
     }
 
     impl<'a, 'srv, 'ptr, 'prnt, 'de> DeserializeSeed<'de> for SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'prnt> {
@@ -494,7 +494,7 @@ mod metadata {
 
     struct StructVisitor<'a, 'srv, 'ptr, 'prnt> {
         ctx: &'a mut MetaAssetLoadCtx<'srv>,
-        ptr: SchemaPtrMut<'ptr, 'prnt>,
+        ptr: SchemaRefMut<'ptr, 'prnt>,
     }
 
     impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for StructVisitor<'a, 'srv, 'ptr, 'prnt> {

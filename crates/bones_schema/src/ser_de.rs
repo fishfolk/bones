@@ -12,7 +12,7 @@ impl<'de> Deserialize<'de> for &'static Schema {
     }
 }
 
-impl<'de> serde::Deserialize<'de> for StructSchema {
+impl<'de> serde::Deserialize<'de> for StructSchemaInfo {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -23,7 +23,7 @@ impl<'de> serde::Deserialize<'de> for StructSchema {
 
 struct StructSchemaVisitor;
 impl<'de> serde::de::Visitor<'de> for StructSchemaVisitor {
-    type Value = StructSchema;
+    type Value = StructSchemaInfo;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(formatter, "a struct definition")
@@ -33,13 +33,13 @@ impl<'de> serde::de::Visitor<'de> for StructSchemaVisitor {
     where
         A: serde::de::SeqAccess<'de>,
     {
-        let mut struct_schema = StructSchema {
+        let mut struct_schema = StructSchemaInfo {
             fields: Vec::with_capacity(seq.size_hint().unwrap_or(0)),
         };
         while let Some(schema) = seq.next_element()? {
             struct_schema
                 .fields
-                .push(StructField { name: None, schema });
+                .push(StructFieldInfo { name: None, schema });
         }
         Ok(struct_schema)
     }
@@ -48,11 +48,11 @@ impl<'de> serde::de::Visitor<'de> for StructSchemaVisitor {
     where
         A: serde::de::MapAccess<'de>,
     {
-        let mut struct_schema = StructSchema {
+        let mut struct_schema = StructSchemaInfo {
             fields: Vec::with_capacity(map.size_hint().unwrap_or(0)),
         };
         while let Some((name, schema)) = map.next_entry()? {
-            struct_schema.fields.push(StructField {
+            struct_schema.fields.push(StructFieldInfo {
                 name: Some(name),
                 schema,
             });

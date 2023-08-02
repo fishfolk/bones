@@ -23,7 +23,7 @@ fn main() {
         a: DataA { x: 1.0, y: 2.0 },
         b: DataB(3, 4),
     };
-    let mut ptr = SchemaPtrMut::new(&mut data);
+    let mut ptr = SchemaRefMut::new(&mut data);
 
     let mut a = ptr.field("a");
     let mut x = a.field("x");

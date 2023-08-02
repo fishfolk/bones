@@ -233,7 +233,7 @@ impl<'a> Iterator for ResizableAllocIter<'a> {
     }
 }
 
-/// Iterator over items in a [`ResizableAlloc`].
+/// Mutable iterator over items in a [`ResizableAlloc`].
 pub struct ResizableAllocIterMut<'a> {
     alloc: &'a mut ResizableAlloc,
     idx: usize,

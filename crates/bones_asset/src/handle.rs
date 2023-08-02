@@ -1,6 +1,6 @@
 use std::{alloc::Layout, any::TypeId, marker::PhantomData, sync::OnceLock};
 
-use bones_schema::prelude::*;
+use bones_schema::{prelude::*, raw_fns::*};
 use ulid::Ulid;
 
 /// A typed handle to an asset.
@@ -107,8 +107,8 @@ macro_rules! schema_impl_for_handle {
             S.get_or_init(|| {
                 SCHEMA_REGISTRY.register(SchemaData {
                     type_id: Some(TypeId::of::<Self>()),
-                    kind: SchemaKind::Struct(StructSchema {
-                        fields: vec![StructField {
+                    kind: SchemaKind::Struct(StructSchemaInfo {
+                        fields: vec![StructFieldInfo {
                             name: Some("id".into()),
                             schema: SCHEMA_REGISTRY.register(SchemaData {
                                 type_id: Some(TypeId::of::<Ulid>()),

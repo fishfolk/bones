@@ -118,7 +118,7 @@ fn ptr_fields() {
     };
 
     {
-        let ptr = SchemaPtr::new(&data);
+        let ptr = SchemaRef::new(&data);
 
         let a = ptr.field("a");
         let x = a.field("x").cast::<f32>();
@@ -134,7 +134,7 @@ fn ptr_fields() {
     }
 
     {
-        let mut ptr = SchemaPtrMut::new(&mut data);
+        let mut ptr = SchemaRefMut::new(&mut data);
 
         let mut a = ptr.field("a");
         let mut x = a.field("x");

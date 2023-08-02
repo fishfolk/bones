@@ -1,4 +1,4 @@
-use crate::{Schema, SchemaBox, SchemaMismatchError, SchemaPtr, SchemaPtrMut};
+use crate::prelude::*;
 
 use super::ResizableAlloc;
 
@@ -16,7 +16,7 @@ impl SchemaVec {
     /// Initialize an empty [`SchemaVec`] for items with the given schema.
     pub fn new(schema: &'static Schema) -> Self {
         Self {
-            buffer: ResizableAlloc::new(schema.layout),
+            buffer: ResizableAlloc::new(schema.layout()),
             len: 0,
             schema,
         }
@@ -94,24 +94,24 @@ impl SchemaVec {
     }
 
     /// Get the item with the given index.
-    pub fn get(&self, idx: usize) -> Option<SchemaPtr<'_>> {
+    pub fn get(&self, idx: usize) -> Option<SchemaRef<'_>> {
         if idx >= self.len {
             None
         } else {
             let ptr = unsafe { self.buffer.unchecked_idx(idx) };
 
-            unsafe { Some(SchemaPtr::from_ptr_schema(ptr.as_ptr(), self.schema)) }
+            unsafe { Some(SchemaRef::from_ptr_schema(ptr.as_ptr(), self.schema)) }
         }
     }
 
     /// Get an item with the given index.
-    pub fn get_mut(&mut self, idx: usize) -> Option<SchemaPtrMut<'_, '_>> {
+    pub fn get_mut(&mut self, idx: usize) -> Option<SchemaRefMut<'_, '_>> {
         if idx >= self.len {
             None
         } else {
             let ptr = unsafe { self.buffer.unchecked_idx(idx) };
 
-            unsafe { Some(SchemaPtrMut::from_ptr_schema(ptr.as_ptr(), self.schema)) }
+            unsafe { Some(SchemaRefMut::from_ptr_schema(ptr.as_ptr(), self.schema)) }
         }
     }
 

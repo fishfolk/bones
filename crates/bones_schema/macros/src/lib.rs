@@ -92,12 +92,12 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     let clone_fn = if no_clone {
         quote!(None)
     } else {
-        quote!(Some(<Self as #schema_mod::RawClone>::raw_clone))
+        quote!(Some(<Self as #schema_mod::raw_fns::RawClone>::raw_clone))
     };
     let default_fn = if no_default {
         quote!(None)
     } else {
-        quote!(Some(<Self as #schema_mod::RawDefault>::raw_default))
+        quote!(Some(<Self as #schema_mod::raw_fns::RawDefault>::raw_default))
     };
 
     if is_opaque {
@@ -111,7 +111,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                             type_id: Some(std::any::TypeId::of::<Self>()),
                             clone_fn: #clone_fn,
                             default_fn: #default_fn,
-                            drop_fn: Some(<Self as #schema_mod::RawDrop>::raw_drop),
+                            drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
                             kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
                                 size: layout.size(),
                                 align: layout.align(),
@@ -145,7 +145,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                     .map(|(field, _)| {
                         let ty = &field.ty;
                         quote_spanned! {field.ty.__span() =>
-                            #schema_mod::StructField {
+                            #schema_mod::StructFieldInfo {
                                 name: None,
                                 schema: <#ty as #schema_mod::HasSchema>::schema(),
                             }
@@ -165,7 +165,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 
                         if opaque {
                             quote_spanned! {field.ty.__span() =>
-                                #schema_mod::StructField {
+                                #schema_mod::StructFieldInfo {
                                     name: Some(stringify!(#name).into()),
                                     schema: {
                                         let layout = ::std::alloc::Layout::new::<#ty>();
@@ -178,14 +178,14 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                             type_data: #type_datas,
                                             clone_fn: #clone_fn,
                                             default_fn: #default_fn,
-                                            drop_fn: Some(<Self as #schema_mod::RawDrop>::raw_drop),
+                                            drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
                                         })
                                     },
                                 }
                             }
                         } else {
                             quote_spanned! {field.ty.__span() =>
-                                #schema_mod::StructField {
+                                #schema_mod::StructFieldInfo {
                                     name: Some(stringify!(#name).into()),
                                     schema: <#ty as #schema_mod::HasSchema>::schema(),
                                 }
@@ -199,7 +199,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
             };
 
             quote! {
-                #schema_mod::SchemaKind::Struct(#schema_mod::StructSchema {
+                #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
                     fields: vec![
                         #(#fields),*
                     ]
@@ -226,7 +226,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                         type_data: #type_datas,
                         default_fn: #default_fn,
                         clone_fn: #clone_fn,
-                        drop_fn: Some(<Self as #schema_mod::RawDrop>::raw_drop),
+                        drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
                     })
                 })
             }

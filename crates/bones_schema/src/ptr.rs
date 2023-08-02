@@ -1,19 +1,23 @@
 //! Schema-aware smart pointers.
 
+use std::{
+    alloc::{handle_alloc_error, Layout},
+    marker::PhantomData,
+    ptr::NonNull,
+};
+
+use crate::prelude::*;
 use bones_utils::prelude::*;
 
-use std::{alloc::handle_alloc_error, marker::PhantomData, ptr::NonNull};
-
-use super::*;
-
-/// A wrapper for a pointer, that also contains it's schema.
+/// An untyped reference that knows the [`Schema`] of the pointee and that can be cast to a matching
+/// type.
 #[derive(Clone)]
-pub struct SchemaPtr<'pointer> {
+pub struct SchemaRef<'pointer> {
     ptr: Ptr<'pointer>,
     schema: &'static Schema,
 }
 
-impl<'pointer> SchemaPtr<'pointer> {
+impl<'pointer> SchemaRef<'pointer> {
     /// Cast this pointer to a reference to a type with a matching [`Schema`].
     ///
     /// # Panics
@@ -38,16 +42,16 @@ impl<'pointer> SchemaPtr<'pointer> {
         }
     }
 
-    /// Create a new [`SchemaPtr`] from a reference to a type that implements [`HasSchema`].
-    pub fn new<T: HasSchema>(v: &'pointer T) -> SchemaPtr<'pointer> {
+    /// Create a new [`SchemaRef`] from a reference to a type that implements [`HasSchema`].
+    pub fn new<T: HasSchema>(v: &'pointer T) -> SchemaRef<'pointer> {
         let schema = T::schema();
-        SchemaPtr {
+        SchemaRef {
             ptr: v.into(),
             schema,
         }
     }
 
-    /// Create a new [`SchemaPtr`] from a raw pointer and it's schema.
+    /// Create a new [`SchemaRef`] from a raw pointer and it's schema.
     ///
     /// # Safety
     /// - `inner` must point to valid value of whatever the pointee type is.
@@ -73,7 +77,7 @@ impl<'pointer> SchemaPtr<'pointer> {
     ///
     /// Panics if the field doesn't exist in the schema.
     #[track_caller]
-    pub fn field<'a, I: Into<FieldIdx<'a>>>(&self, idx: I) -> SchemaPtr {
+    pub fn field<'a, I: Into<FieldIdx<'a>>>(&self, idx: I) -> SchemaRef {
         self.get_field(idx).unwrap()
     }
 
@@ -85,11 +89,11 @@ impl<'pointer> SchemaPtr<'pointer> {
     pub fn get_field<'a, I: Into<FieldIdx<'a>>>(
         &self,
         idx: I,
-    ) -> Result<SchemaPtr, SchemaFieldNotFoundError<'a>> {
+    ) -> Result<SchemaRef, SchemaFieldNotFoundError<'a>> {
         let idx = idx.into();
         match &self.schema.kind {
             SchemaKind::Struct(s) => {
-                let field_offsets = self.schema.field_offsets;
+                let field_offsets = self.schema.field_offsets();
                 let Some((idx, offset)) = field_offsets.iter().enumerate().find_map(|(i, (name, offset))| {
                         let matches = match idx {
                             FieldIdx::Idx(n) => n == i,
@@ -103,7 +107,7 @@ impl<'pointer> SchemaPtr<'pointer> {
                     }) else { return Err(SchemaFieldNotFoundError { idx }) };
                 let field = &s.fields[idx];
 
-                Ok(SchemaPtr {
+                Ok(SchemaRef {
                     // SOUND: the schema certifies the soundness of the offset for the given field.
                     ptr: unsafe { self.ptr.byte_add(offset) },
                     schema: field.schema,
@@ -125,8 +129,9 @@ impl<'pointer> SchemaPtr<'pointer> {
     }
 }
 
-/// A wrapper for a pointer, that also contains it's schema.
-pub struct SchemaPtrMut<'pointer, 'parent> {
+/// An untyped mutable reference that knows the [`Schema`] of the pointee and that can be cast to a matching
+/// type.
+pub struct SchemaRefMut<'pointer, 'parent> {
     ptr: PtrMut<'pointer>,
     schema: &'static Schema,
     /// This `'parent` lifetime is used to lock the borrow to the parent [`SchemaWalkerMut`] if
@@ -143,7 +148,7 @@ pub struct SchemaPtrMut<'pointer, 'parent> {
     parent_lifetime: PhantomData<&'parent mut ()>,
 }
 
-impl<'pointer, 'parent> SchemaPtrMut<'pointer, 'parent> {
+impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
     /// Cast this pointer to a reference to a type with a matching [`Schema`].
     ///
     /// # Panics
@@ -161,13 +166,6 @@ impl<'pointer, 'parent> SchemaPtrMut<'pointer, 'parent> {
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
     pub fn try_cast_mut<T: HasSchema>(&mut self) -> Result<&mut T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
-            // // SAFE: the schemas have the same memory representation.
-            // let ptr = self.ptr.as_ptr();
-            // Ok(SchemaPtrMutCast {
-            //     ptr,
-            //     parent_lifetime: PhantomData,
-            // })
-
             // SOUND: here we clone our mutable pointer, and then offset it according to the
             // field. This is dangerous, but sound because we make sure that this
             // `get_field` method returns a `SchemaWalkerMut` with a virtual mutable borrow
@@ -190,17 +188,17 @@ impl<'pointer, 'parent> SchemaPtrMut<'pointer, 'parent> {
         }
     }
 
-    /// Create a new [`SchemaPtr`] from a reference to a type that implements [`HasSchema`].
-    pub fn new<T: HasSchema>(v: &'pointer mut T) -> SchemaPtrMut<'pointer, 'static> {
+    /// Create a new [`SchemaRefMut`] from a reference to a type that implements [`HasSchema`].
+    pub fn new<T: HasSchema>(v: &'pointer mut T) -> SchemaRefMut<'pointer, 'static> {
         let schema = T::schema();
-        SchemaPtrMut {
+        SchemaRefMut {
             ptr: v.into(),
             schema,
             parent_lifetime: PhantomData,
         }
     }
 
-    /// Create a new [`SchemaPtr`] from a raw pointer and it's schema.
+    /// Create a new [`SchemaRefMut`] from a raw pointer and it's schema.
     ///
     /// # Safety
     /// - `inner` must point to valid value of whatever the pointee type is.
@@ -212,7 +210,7 @@ impl<'pointer, 'parent> SchemaPtrMut<'pointer, 'parent> {
     pub unsafe fn from_ptr_schema(
         ptr: *mut u8,
         schema: &'static Schema,
-    ) -> SchemaPtrMut<'pointer, 'parent> {
+    ) -> SchemaRefMut<'pointer, 'parent> {
         Self {
             ptr: PtrMut::new(NonNull::new(ptr as *mut u8).expect("Ptr cannot be null")),
             schema,
@@ -229,7 +227,7 @@ impl<'pointer, 'parent> SchemaPtrMut<'pointer, 'parent> {
     pub fn field<'this, 'b, I: Into<FieldIdx<'b>>>(
         &'this mut self,
         idx: I,
-    ) -> SchemaPtrMut<'pointer, 'this> {
+    ) -> SchemaRefMut<'pointer, 'this> {
         self.get_field(idx).unwrap()
     }
 
@@ -241,11 +239,11 @@ impl<'pointer, 'parent> SchemaPtrMut<'pointer, 'parent> {
     pub fn get_field<'this, 'b, I: Into<FieldIdx<'b>>>(
         &'this mut self,
         idx: I,
-    ) -> Result<SchemaPtrMut<'pointer, 'this>, SchemaMismatchError> {
+    ) -> Result<SchemaRefMut<'pointer, 'this>, SchemaMismatchError> {
         let idx = idx.into();
         match &self.schema.kind {
             SchemaKind::Struct(s) => {
-                let field_offsets = self.schema.field_offsets;
+                let field_offsets = self.schema.field_offsets();
                 let Some((idx, offset)) = field_offsets.iter().enumerate().find_map(|(i, (name, offset))| {
                         let matches = match idx {
                             FieldIdx::Idx(n) => n == i,
@@ -274,7 +272,7 @@ impl<'pointer, 'parent> SchemaPtrMut<'pointer, 'parent> {
                     PtrMut::new(NonNull::new_unchecked(self.ptr.as_ptr())).byte_add(offset)
                 };
 
-                Ok(SchemaPtrMut {
+                Ok(SchemaRefMut {
                     ptr: offset_ptr,
                     schema: field.schema,
                     parent_lifetime: PhantomData,
@@ -296,7 +294,7 @@ impl<'pointer, 'parent> SchemaPtrMut<'pointer, 'parent> {
     }
 }
 
-/// A owning, type-erased [`Box`]-like container.
+/// A owning, type-erased [`Box`]-like container for types with a [`Schema`].
 pub struct SchemaBox {
     ptr: OwningPtr<'static>,
     schema: &'static Schema,
@@ -405,17 +403,17 @@ impl SchemaBox {
         }
     }
 
-    /// Borrow this as a [`SchemaPtr`].
-    pub fn as_ref(&self) -> SchemaPtr<'_> {
-        SchemaPtr {
+    /// Borrow this as a [`SchemaRef`].
+    pub fn as_ref(&self) -> SchemaRef<'_> {
+        SchemaRef {
             ptr: self.ptr.as_ref(),
             schema: self.schema,
         }
     }
 
-    /// Borrow this as a [`SchemaPtrMut`].
-    pub fn as_mut(&mut self) -> SchemaPtrMut<'_, '_> {
-        SchemaPtrMut {
+    /// Borrow this as a [`SchemaRefMut`].
+    pub fn as_mut(&mut self) -> SchemaRefMut<'_, '_> {
+        SchemaRefMut {
             ptr: self.ptr.as_mut(),
             schema: self.schema,
             parent_lifetime: PhantomData,
@@ -428,7 +426,8 @@ impl SchemaBox {
         let schema = T::schema();
         let layout = std::alloc::Layout::new::<T>();
         debug_assert_eq!(
-            layout, schema.layout,
+            layout,
+            schema.layout(),
             "BIG BUG: Schema layout doesn't match type layout!!"
         );
 
@@ -455,10 +454,10 @@ impl SchemaBox {
     ///
     /// # Safety
     ///
-    /// Accessing an uninitialized [`SchemaBox`] is undefined behavior. It is up to the user to
+    /// Accessing the data in an unitinialized [`SchemaBox`] is undefined behavior. It is up to the user to
     /// initialize the memory pointed at by the box after creating it.
     pub unsafe fn uninitialized(schema: &'static Schema) -> Self {
-        let layout = schema.layout;
+        let layout = schema.layout();
 
         let ptr = if layout.size() == 0 {
             NonNull::<u8>::dangling().as_ptr()
@@ -515,7 +514,7 @@ impl SchemaBox {
     pub unsafe fn from_raw_parts(ptr: OwningPtr<'static>, schema: &'static Schema) -> Self {
         Self {
             ptr,
-            layout: schema.layout,
+            layout: schema.layout(),
             schema,
         }
     }
@@ -523,20 +522,6 @@ impl SchemaBox {
     /// Get the [`Schema`] for the pointer.
     pub fn schema(&self) -> &Schema {
         self.schema
-    }
-}
-
-/// Error type when attempting to cast between types with mis-matched schemas.
-#[derive(Debug)]
-pub struct SchemaMismatchError;
-impl SchemaMismatchError {
-    /// The display error message for this error type.
-    pub const MSG: &str = "Invalid cast: the schemas of the casted types are not compatible.";
-}
-impl std::error::Error for SchemaMismatchError {}
-impl std::fmt::Display for SchemaMismatchError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", Self::MSG)
     }
 }
 
@@ -572,6 +557,20 @@ impl<'a> std::fmt::Display for FieldIdx<'a> {
     }
 }
 
+/// Error type when attempting to cast between types with mis-matched schemas.
+#[derive(Debug)]
+pub struct SchemaMismatchError;
+impl SchemaMismatchError {
+    /// The display error message for this error type.
+    pub const MSG: &str = "Invalid cast: the schemas of the casted types are not compatible.";
+}
+impl std::error::Error for SchemaMismatchError {}
+impl std::fmt::Display for SchemaMismatchError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", Self::MSG)
+    }
+}
+
 /// Error returned when a field is not found in a schema.
 #[derive(Debug)]
 pub struct SchemaFieldNotFoundError<'a> {
@@ -581,20 +580,5 @@ impl<'a> std::error::Error for SchemaFieldNotFoundError<'a> {}
 impl<'a> std::fmt::Display for SchemaFieldNotFoundError<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Field not found in schema: {}", self.idx)
-    }
-}
-
-/// Error type when attempting to cast between types with mis-matched schemas.
-pub struct SchemaPtrMutMismatchError<'a, 'c>(SchemaPtrMut<'a, 'c>);
-
-impl<'a, 'c> std::fmt::Debug for SchemaPtrMutMismatchError<'a, 'c> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SchemaMismatchError").finish()
-    }
-}
-impl<'a, 'c> std::error::Error for SchemaPtrMutMismatchError<'a, 'c> {}
-impl<'a, 'c> std::fmt::Display for SchemaPtrMutMismatchError<'a, 'c> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", SchemaMismatchError::MSG)
     }
 }
