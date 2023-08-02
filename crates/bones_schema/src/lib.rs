@@ -1,4 +1,7 @@
 //! Simple reflection system based on the `#[repr(C)]` memory layout.
+//!
+//! You can derive [`HasSchema`] for your Rust types to unlock integration with the `bones_schema`
+//! ecosystem, including `bones_ecs` and `bones_asset`.
 
 #![warn(missing_docs)]
 // This cfg_attr is needed because `rustdoc::all` includes lints not supported on stable
