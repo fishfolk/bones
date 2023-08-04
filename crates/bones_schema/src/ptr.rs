@@ -35,7 +35,7 @@ impl<'pointer> SchemaRef<'pointer> {
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
     pub fn try_cast<T: HasSchema>(&self) -> Result<&'pointer T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
-            // SAFE: the schemas have the same memory representation.
+            // SOUND: the schemas have the same memory representation.
             Ok(unsafe { self.ptr.deref() })
         } else {
             Err(SchemaMismatchError)
@@ -97,7 +97,7 @@ impl<'pointer> SchemaRef<'pointer> {
                 let Some((idx, offset)) = field_offsets.iter().enumerate().find_map(|(i, (name, offset))| {
                         let matches = match idx {
                             FieldIdx::Idx(n) => n == i,
-                            FieldIdx::Name(n) => name == &Some(n),
+                            FieldIdx::Name(n) => name.as_deref() == Some(n),
                         };
                         if matches {
                             Some((i, *offset))
@@ -247,7 +247,7 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
                 let Some((idx, offset)) = field_offsets.iter().enumerate().find_map(|(i, (name, offset))| {
                         let matches = match idx {
                             FieldIdx::Idx(n) => n == i,
-                            FieldIdx::Name(n) => name == &Some(n),
+                            FieldIdx::Name(n) => name.as_deref() == Some(n),
                         };
                         if matches {
                             Some((i, *offset))
@@ -323,7 +323,7 @@ impl Clone for SchemaBox {
         let new_ptr = if self.layout.size() == 0 {
             NonNull::<u8>::dangling().as_ptr()
         } else {
-            // SAFE: Non-zero size for layout
+            // SOUND: Non-zero size for layout
             unsafe { std::alloc::alloc(self.layout) }
         };
         let new_ptr = unsafe {
@@ -372,7 +372,7 @@ impl SchemaBox {
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
     pub fn try_cast<T: HasSchema>(&self) -> Result<&T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
-            // SAFE: the schemas have the same memory representation.
+            // SOUND: the schemas have the same memory representation.
             unsafe { Ok(self.ptr.as_ref().deref()) }
         } else {
             Err(SchemaMismatchError)
@@ -396,7 +396,7 @@ impl SchemaBox {
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
     pub fn try_cast_mut<T: HasSchema>(&mut self) -> Result<&mut T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
-            // SAFE: the schemas have the same memory representation.
+            // SOUND: the schemas have the same memory representation.
             unsafe { Ok(self.ptr.as_mut().deref_mut()) }
         } else {
             Err(SchemaMismatchError)
@@ -434,10 +434,10 @@ impl SchemaBox {
         let ptr = if layout.size() == 0 {
             NonNull::<u8>::dangling().as_ptr()
         } else {
-            // SAFE: Non-zero size for layout
+            // SOUND: Non-zero size for layout
             unsafe { std::alloc::alloc(layout) }
         };
-        // SAFE: The pointer is allocated for the layout of type T.
+        // SOUND: The pointer is allocated for the layout of type T.
         let ptr = unsafe {
             (ptr as *mut T).write(v);
             OwningPtr::new(NonNull::new(ptr).unwrap_or_else(|| handle_alloc_error(layout)))
@@ -462,7 +462,7 @@ impl SchemaBox {
         let ptr = if layout.size() == 0 {
             NonNull::<u8>::dangling().as_ptr()
         } else {
-            // SAFE: Non-zero size for layout
+            // SOUND: Non-zero size for layout
             unsafe { std::alloc::alloc(layout) }
         };
         // SOUND: The pointer is allocated for the layout matching the schema.

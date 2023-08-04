@@ -53,8 +53,15 @@ pub struct Schema {
     #[deref]
     data: SchemaData,
     layout: Layout,
-    field_offsets: &'static [(Option<&'static str>, usize)],
+    field_offsets: &'static [(Option<String>, usize)],
 }
+
+impl PartialEq for Schema {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+impl Eq for Schema {}
 
 impl Schema {
     /// Get the registered, unique ID of the [`Schema`].
@@ -78,7 +85,7 @@ impl Schema {
     /// If this schema represents a struct, this returns the list of fields, with the names of the
     /// fields, and their byte offsets from the beginning of the struct.
     #[inline]
-    pub fn field_offsets(&self) -> &'static [(Option<&'static str>, usize)] {
+    pub fn field_offsets(&self) -> &'static [(Option<String>, usize)] {
         self.field_offsets
     }
 }
@@ -117,7 +124,7 @@ impl SchemaRegistry {
             .into_iter()
             .map(|(name, offset)| {
                 (
-                    name.map(|n| Box::leak(Box::new(n.to_string())).as_str()),
+                    name.map(|n| n.to_string()),
                     offset,
                 )
             })

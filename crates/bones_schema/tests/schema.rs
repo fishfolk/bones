@@ -168,24 +168,50 @@ fn schema_vec() {
     let mut v = SchemaVec::new(DataA::schema());
     assert_eq!(v.len(), 0);
     assert_eq!(v.capacity(), 0);
-    v.push(SchemaBox::new(DataA { x: 1.0, y: 2.0 }));
-    v.push(SchemaBox::new(DataA { x: 3.0, y: 4.0 }));
+    v.push(DataA { x: 1.0, y: 2.0 });
+    v.push_box(SchemaBox::new(DataA { x: 3.0, y: 4.0 }));
     assert_eq!(v.len(), 2);
 
-    let d0 = v.get(0).unwrap().cast::<DataA>();
+    let d0 = v.get::<DataA>(0).unwrap();
     assert_eq!(d0.x, 1.0);
     assert_eq!(d0.y, 2.0);
-    let d1 = v.get(1).unwrap().cast::<DataA>();
+    let d1 = v.get_ref(1).unwrap().cast::<DataA>();
     assert_eq!(d1.x, 3.0);
     assert_eq!(d1.y, 4.0);
 
     assert_eq!(v.len(), 2);
 
-    let d1 = v.pop().unwrap();
+    let d1 = v.pop_box().unwrap();
     assert_eq!(d1.cast::<DataA>().x, 3.0);
-    let d0 = v.pop().unwrap();
-    assert_eq!(d0.cast::<DataA>().x, 1.0);
-    assert!(v.pop().is_none());
+    let d0 = v.pop::<DataA>().unwrap();
+    assert_eq!(d0.x, 1.0);
+    assert!(v.pop_box().is_none());
+}
+
+#[test]
+fn svec() {
+    let mut v = SVec::new();
+    for i in 0..10 {
+        v.push(i);
+    }
+
+    let mut i = 0;
+    #[allow(clippy::explicit_counter_loop)]
+    for n in &v {
+        assert_eq!(i, *n);
+        i += 1;
+    }
+
+    for n in &mut v {
+        *n *= 2;
+    }
+
+    let mut i = 0;
+    #[allow(clippy::explicit_counter_loop)]
+    for n in &v {
+        assert_eq!(i * 2, *n);
+        i += 1;
+    }
 }
 
 #[test]
@@ -208,7 +234,7 @@ fn schema_layout_matches_rust_layout() {
         a: f32,
         b: u8,
         c: String,
-        d: Vec<Vec2>,
+        d: SVec<Vec2>,
     }
 
     macro_rules! layout_eq {

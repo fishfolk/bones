@@ -26,8 +26,8 @@ struct Player {
     /// [`Schema`].
     #[schema(opaque)]
     arc_mutex: Arc<Mutex<()>>,
-    favorite_things: Vec<String>,
-    fancier: Vec<Vec<TupleExample>>,
+    favorite_things: SVec<String>,
+    fancier: SVec<SVec<TupleExample>>,
 }
 
 /// You can also make the entire type opaque, so that it contains no real description of it's type

@@ -38,7 +38,7 @@ pub unsafe trait HasSchema: Sync + Send + 'static {
         let s1 = Self::schema();
         let s2 = T::schema();
         if s1.represents(s2) {
-            // SAFE: the schemas have the same memory representation.
+            // SOUND: the schemas have the same memory representation.
             unsafe { Ok(&*(self as *const Self as *const T)) }
         } else {
             Err(SchemaMismatchError)
@@ -66,7 +66,7 @@ pub unsafe trait HasSchema: Sync + Send + 'static {
         let s1 = Self::schema();
         let s2 = T::schema();
         if s1.represents(s2) {
-            // SAFE: the schemas have the same memory representation.
+            // SOUND: the schemas have the same memory representation.
             unsafe { Ok(&mut *(self as *mut Self as *mut T)) }
         } else {
             Err(SchemaMismatchError)
@@ -74,6 +74,8 @@ pub unsafe trait HasSchema: Sync + Send + 'static {
     }
 }
 
+// Export the `Schema` type so it appears in this module. It is defined in the registry module so
+// that the registry is the only module that is allowed to construct `Schema`s.
 #[doc(inline)]
 pub use crate::registry::Schema;
 
@@ -82,7 +84,7 @@ impl Schema {
     /// and you can safely cast a pointer to one to a pointer to the other.
     pub fn represents(&self, other: &Schema) -> bool {
         // If these have equal type/schema ids.
-        self.equivalent(other)
+        self == other
         // If the schemas don't have any opaque fields, and are equal to each-other, then they
         // have the same representation.
         || (!self.has_opaque() && !other.has_opaque() && {
@@ -98,14 +100,6 @@ impl Schema {
                 _ => false
             }
         })
-    }
-
-    /// Returns whether or not this schema is the same schema as another.
-    ///
-    /// This check is made by checking the ID of both schemas to see if they have a matching Rust
-    /// [`TypeId`], or if they have a matching [`SchemaId`].
-    pub fn equivalent(&self, other: &Schema) -> bool {
-        self.id() == other.id()
     }
 }
 
@@ -150,10 +144,7 @@ pub struct SchemaData {
 pub enum SchemaKind {
     /// The type represents a struct.
     Struct(StructSchemaInfo),
-    /// Type represents a Rust [`Vec`], where each item in the vec has the contained [`Schema`].
-    ///
-    /// Since the type is a Rust [`Vec`] interactions with it must happen through the Rust [`Vec`]
-    /// methods.
+    /// Type represents a [`SchemaVec`], where each item in the vec has the contained [`Schema`].
     ///
     /// The scripting solution must facilitate a way for scripts to access data in the [`Vec`] if it
     /// is to be readable/modifyable from scripts.
@@ -341,7 +332,7 @@ impl SchemaData {
                 }
             }
             SchemaKind::Vec(_) => {
-                extend_layout(&mut layout, Layout::new::<Vec<u8>>());
+                extend_layout(&mut layout, Layout::new::<SVec<u8>>());
             }
             SchemaKind::Primitive(p) => {
                 extend_layout(

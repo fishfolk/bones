@@ -16,7 +16,12 @@ pub use bones_schema_macros::*;
 
 /// The prelude.
 pub mod prelude {
-    pub use crate::{alloc::SchemaVec, ptr::*, registry::*, schema::*};
+    pub use crate::{
+        alloc::{SVec, SchemaVec},
+        ptr::*,
+        registry::*,
+        schema::*,
+    };
     #[cfg(feature = "derive")]
     pub use bones_schema_macros::*;
     pub use ulid::Ulid;

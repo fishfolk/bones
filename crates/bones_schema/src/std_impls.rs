@@ -1,10 +1,6 @@
-use bones_utils::HashMap;
 use crate::{prelude::*, raw_fns::*};
 
-use std::{
-    any::TypeId,
-    sync::{OnceLock, RwLock},
-};
+use std::{any::TypeId, sync::OnceLock};
 
 macro_rules! impl_primitive {
     ($t:ty, $prim:ident) => {
@@ -81,36 +77,6 @@ unsafe impl HasSchema for isize {
                 type_data: Default::default(),
             })
         })
-    }
-}
-
-// TODO: since we don't have specialization, we have to require this `Clone` bound. :/ :/ :/ Figure
-// out if there is some tricky way we can get around this limitation, and have a separate impl for
-// `Vec<T: Clone>` and `Vec<T: !Clone>`.
-unsafe impl<T: Clone + HasSchema + 'static> HasSchema for Vec<T> {
-    fn schema() -> &'static Schema {
-        static STORE: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
-        let store = STORE.get_or_init(Default::default);
-        let read = store.read().unwrap();
-        let type_id = TypeId::of::<Self>();
-
-        if let Some(schema) = read.get(&type_id) {
-            schema
-        } else {
-            drop(read);
-            let kind = SchemaKind::Vec(T::schema());
-            let schema = SCHEMA_REGISTRY.register(SchemaData {
-                kind,
-                type_data: Default::default(),
-                type_id: Some(type_id),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
-                drop_fn: Some(<Self as RawDrop>::raw_drop),
-                default_fn: Some(<Self as RawDefault>::raw_default),
-            });
-            let mut write = store.write().unwrap();
-            write.insert(type_id, schema);
-            schema
-        }
     }
 }
 
