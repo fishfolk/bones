@@ -1,7 +1,8 @@
 use std::error::Error;
 
 /// The types of errors used throughout the ECS.
-// TODO: Re-evaluate possible errors. Some of them may not be used anymore.
+// TODO: Re-evaluate `EcsError` variants.
+// Some of them may not be used anymore.
 #[derive(Debug, thiserror::Error)]
 pub enum EcsError {
     /// A resource was not initialized in the [`World`][crate::World] but the

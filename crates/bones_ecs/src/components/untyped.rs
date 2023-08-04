@@ -290,7 +290,7 @@ impl UntypedComponentStore {
                     .map(|(_i, x)| x),
             )
         } else {
-            // TODO: More tests for this iterator
+            // TODO: Add more tests for the ZST component iterator.
             let mut idx = 0usize;
             let max_id = self.max_id;
             let iterator = std::iter::from_fn(move || loop {

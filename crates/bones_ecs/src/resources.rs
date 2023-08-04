@@ -28,8 +28,9 @@ pub struct UntypedResourceInfo {
     /// The memory layout of the resource
     pub layout: Layout,
     /// Cell containing the raw pointer to the resource's data
-    // TODO: Evaluate possibility of avoiding an `Arc` here, and just passing references with a
-    // lifetime for acessing it, instead of cloning the Arc like we do here.
+    // TODO: Evaluate possibility of avoiding an `Arc` clone.
+    // We might be able to just just pass references with a lifetime for acessing it,
+    // instead of cloning the Arc like we do here.
     pub cell: Arc<AtomicRefCell<*mut u8>>,
     /// A function that may be called to clone the resource from one pointer to another.
     pub clone_fn: unsafe extern "C" fn(*const u8, *mut u8),
@@ -323,7 +324,7 @@ mod test {
         resources.insert(A(vec![7, 8, 9]));
         assert_eq!(resources.get::<A>().borrow().0, vec![7, 8, 9]);
 
-        // TODO: Split into more focused test for cloning
+        // TODO: Create more focused test for cloning resources.
         assert_eq!(r2.get::<A>().borrow().0, vec![3, 2, 1]);
 
         resources.insert(B(1));

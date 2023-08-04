@@ -33,7 +33,7 @@ pub mod _private {
 }
 
 /// Trait that may be derived to implement a Bevy asset type.
-// TODO: Integrate or move HasLoadProgress with BonesBevyAsset.
+// TODO: Integrate or move `HasLoadProgress` to `BonesBevyAsset`.
 pub trait BonesBevyAsset: TypeUlid + Asset {
     /// Install the asset loader for this type.
     fn install_asset(app: &mut App);

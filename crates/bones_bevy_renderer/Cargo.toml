@@ -16,7 +16,8 @@ glam       = { version = "0.23", features = ["serde"] }
 serde      = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
-# TODO: Update when PR merged: https://github.com/forbjok/bevy_simple_tilemap/pull/9
+# TODO: Update `bevy_simple_tilemap` when our PR is merged.
+# https://github.com/forbjok/bevy_simple_tilemap/pull/9
 bevy_prototype_lyon = "0.8"
 # Disable default features to remove rayon par-iter, is not performant. Once https://github.com/forbjok/bevy_simple_tilemap/pull/17 is merged,
 # switch off fork back to original crate.
