@@ -14,6 +14,16 @@ pub struct SchemaVec {
     schema: &'static Schema,
 }
 
+impl std::fmt::Debug for SchemaVec {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SchemaVec")
+            .field("buffer", &"ResizableAlloc")
+            .field("len", &self.len)
+            .field("schema", &self.schema)
+            .finish()
+    }
+}
+
 // SOUND: the SchemaVec may only contain `HasSchema` types which are required to be `Sync + Send`.
 unsafe impl Sync for SchemaVec {}
 unsafe impl Send for SchemaVec {}
@@ -319,6 +329,7 @@ impl Drop for SchemaVec {
 ///
 /// This type exists as an alternative to [`Vec`] that properly implements [`HasSchema`].
 #[repr(transparent)]
+#[derive(Debug)]
 pub struct SVec<T: HasSchema> {
     vec: SchemaVec,
     _phantom: PhantomData<T>,
@@ -428,7 +439,6 @@ impl<T: HasSchema> Default for SVec<T> {
         }
     }
 }
-
 impl<T: HasSchema> Clone for SVec<T> {
     fn clone(&self) -> Self {
         Self {
@@ -494,6 +504,9 @@ impl<'a, T: HasSchema> Iterator for SVecIterMut<'a, T> {
 }
 
 /// Helper to transmute a lifetime unsafely.
+///
+/// This is safer than just calling [`transmute`][std::mem::transmute] because it can only transmut
+/// the lifetime, not the type of the reference.
 unsafe fn transmute_lt<'b, T>(v: &mut T) -> &'b mut T {
     std::mem::transmute(v)
 }

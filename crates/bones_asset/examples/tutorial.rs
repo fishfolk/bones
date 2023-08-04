@@ -10,7 +10,7 @@ struct GameMeta {
     // We can add global game settings, for example.
     pub gravity: f32,
     /// Handles allow one asset to reference another asset in the asset files.
-    pub player: Handle<PlayerMeta>,
+    pub players: SVec<Handle<PlayerMeta>>,
 }
 
 /// We will use this as our player meta format.
@@ -113,23 +113,25 @@ fn main() -> anyhow::Result<()> {
     assert_eq!(game_meta.gravity, 9.8);
 
     // The GameMeta contains a handle to the player asset, which we can get here.
-    let player_handle = game_meta.player;
+    for (i, player_handle) in game_meta.players.iter().enumerate() {
+        // And we can load the `PlayerMeta` using the handle.
+        let player_meta = asset_server.get(player_handle);
 
-    // And we can load the `PlayerMeta` using the handle.
-    let player_meta = asset_server.get(&player_handle);
+        dbg!(&player_meta);
 
-    dbg!(&player_meta);
-    assert_eq!(player_meta.name, "Jane");
-    // This should be the default value because it was left unspecified in the asset file.
-    assert_eq!(player_meta.stats.intelligence, 20.);
+        // And we can load the player's atlas metadata in the same way.
+        let atlas_handle = player_meta.atlas;
+        let atlas_meta = asset_server.get(&atlas_handle);
+        dbg!(atlas_meta);
 
-    // And we can load the player's atlas metadata in the same way.
-    let atlas_handle = player_meta.atlas;
-    let atlas_meta = asset_server.get(&atlas_handle);
-
-    dbg!(atlas_meta);
-    assert_eq!(atlas_meta.tile_size, Vec2::new(25.5, 30.));
-    assert_eq!(atlas_meta.grid_size, UVec2::new(2, 4));
+        if i == 0 {
+            assert_eq!(player_meta.name, "Jane");
+            // This should be the default value because it was left unspecified in the asset file.
+            assert_eq!(player_meta.stats.intelligence, 20.);
+            assert_eq!(atlas_meta.tile_size, Vec2::new(25.5, 30.));
+            assert_eq!(atlas_meta.grid_size, UVec2::new(2, 4));
+        }
+    }
 
     // We can also check out our loaded asset packs.
     println!("\n===== Asset Packs =====\n");

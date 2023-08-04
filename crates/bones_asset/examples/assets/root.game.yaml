@@ -6,4 +6,6 @@
 gravity: 9.8
 
 # And we can reference other assets.
-player: ./players/jane/jane.player.yaml
+players:
+  - ./players/jane/jane.player.yaml
+  - ./players/john/john.player.yaml

@@ -162,7 +162,13 @@ impl AssetServer {
         }
 
         // Load the asset and produce a handle
-        let root_handle = self.load_asset(&meta.root, pack)?;
+        let root_handle = self.load_asset(&meta.root, pack).map_err(|e| {
+            e.context(format!(
+                "Error loading asset from pack `{}`: {:?}",
+                pack.unwrap(),
+                meta.root
+            ))
+        })?;
 
         // Return the loaded asset pack.
         Ok(AssetPack {
@@ -191,7 +197,9 @@ impl AssetServer {
         }
 
         // Load the asset and produce a handle
-        let handle = self.load_asset(&meta.root, None)?;
+        let handle = self
+            .load_asset(&meta.root, None)
+            .map_err(|e| e.context(format!("Error loading core asset: {:?}", meta.root)))?;
 
         // Return the loaded asset pack.
         Ok(AssetPack {
@@ -461,7 +469,10 @@ mod metadata {
                     ptr: self.ptr,
                     ctx: self.ctx,
                 })?,
-                SchemaKind::Vec(_) => todo!("{:#?}", self.ptr.schema()),
+                SchemaKind::Vec(_) => deserializer.deserialize_seq(VecVisitor {
+                    ptr: self.ptr,
+                    ctx: self.ctx,
+                })?,
                 SchemaKind::Primitive(p) => {
                     match p {
                         Primitive::Bool => *self.ptr.cast_mut() = bool::deserialize(deserializer)?,
@@ -564,6 +575,49 @@ mod metadata {
                         return Err(A::Error::custom(msg));
                     }
                 }
+            }
+
+            Ok(())
+        }
+    }
+
+    struct VecVisitor<'a, 'srv, 'ptr, 'prnt> {
+        ctx: &'a mut MetaAssetLoadCtx<'srv>,
+        ptr: SchemaRefMut<'ptr, 'prnt>,
+    }
+
+    impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for VecVisitor<'a, 'srv, 'ptr, 'prnt> {
+        type Value = ();
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            // FIXME: write a really nice error message for this.
+            write!(
+                formatter,
+                "asset metadata matching the schema: {:#?}",
+                self.ptr.schema()
+            )
+        }
+
+        fn visit_seq<A>(mut self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::SeqAccess<'de>,
+        {
+            // TODO: Is there a safe way to do this?
+            let v = unsafe { &mut *(self.ptr.ptr().as_ptr() as *mut SchemaVec) };
+            loop {
+                let item_schema = self.ptr.schema().kind.as_vec().unwrap();
+                let mut item = SchemaBox::default(item_schema);
+                let item_ref = item.as_mut();
+                if seq
+                    .next_element_seed(SchemaPtrLoadCtx {
+                        ctx: self.ctx,
+                        ptr: item_ref,
+                    })?
+                    .is_none()
+                {
+                    break;
+                }
+                v.push_box(item);
             }
 
             Ok(())
