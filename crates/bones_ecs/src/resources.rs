@@ -24,7 +24,7 @@ pub struct UntypedAtomicResource {
 }
 
 impl UntypedAtomicResource {
-    /// Creates a new [`UntypedAtomicResource`] storing the given data.
+    /// Creates a new [`UntypedResource`] storing the given data.
     pub fn new<T: HasSchema>(resource: T) -> Self {
         Self {
             cell: Arc::new(AtomicRefCell::new(SchemaBox::new(resource))),
@@ -32,8 +32,8 @@ impl UntypedAtomicResource {
         }
     }
 
-    /// Create a new [`UntypedAtomicResource`] for the given schema, initially populated with the
-    /// default value for the schema.
+    /// Create a new [`UntypedResource`] for the given schema, initially populated with the default
+    /// value for the schema.
     pub fn from_schema(schema: &'static Schema) -> Self {
         Self {
             cell: Arc::new(AtomicRefCell::new(SchemaBox::default(schema))),
@@ -198,23 +198,22 @@ mod test {
         struct B(u32);
 
         let mut resources = Resources::new();
-        UntypedAtomicResource::new(A("hi".into()));
 
-        resources.insert(A("hi".into()));
-        assert_eq!(resources.get::<A>().borrow_mut().0, vec![3, 2, 1]);
+        resources.insert(A(String::from("hi")));
+        assert_eq!(resources.get::<A>().borrow_mut().0, "hi");
 
         let r2 = resources.clone();
 
-        resources.insert(A(vec![4, 5, 6]));
-        resources.insert(A(vec![7, 8, 9]));
-        assert_eq!(resources.get::<A>().borrow().0, vec![7, 8, 9]);
+        resources.insert(A(String::from("bye")));
+        resources.insert(A(String::from("world")));
+        assert_eq!(resources.get::<A>().borrow().0, "world");
 
-        assert_eq!(r2.get::<A>().borrow().0, vec![3, 2, 1]);
+        assert_eq!(r2.get::<A>().borrow().0, "hi");
 
         resources.insert(B(1));
         assert_eq!(resources.get::<B>().borrow().0, 1);
         resources.insert(B(2));
         assert_eq!(resources.get::<B>().borrow().0, 2);
-        assert_eq!(resources.get::<A>().borrow().0, vec![7, 8, 9]);
+        assert_eq!(resources.get::<A>().borrow().0, "world");
     }
 }
