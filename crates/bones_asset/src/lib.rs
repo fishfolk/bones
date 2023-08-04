@@ -43,7 +43,7 @@ pub struct AssetProviders {
 pub type ResAssetProviders<'a> = bones_ecs::system::Res<'a, AssetProvidersResource>;
 
 /// The type of the [`AssetProviders`] resource.
-// TODO: Make a custom system parameter to prevent needing to manualy .borrow() this resource.
+// TODO: Create custom system parameter to prevent needing to manualy `.borrow()` `AssetProvidersResource`.
 #[derive(Deref, DerefMut, Clone, TypeUlid)]
 #[ulid = "01GNWY5HKV5JZQRKG20ANJXHCK"]
 

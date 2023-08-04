@@ -144,7 +144,7 @@ fn sync_sprites<W: HasBonesWorld>(
 
     let world = world_resource.world();
 
-    // TODO: Evaluate cost of calling this every frame
+    // TODO: Evaluate cost of initializing bones render components every frame.
     world.components.init::<bones::Sprite>();
     world.components.init::<bones::Transform>();
 
@@ -419,9 +419,9 @@ fn sync_tilemaps<W: HasBonesWorld>(
             tile_map.clear();
             tile_map.set_tiles(tile_iter);
 
-            // TODO: This is probably a bug in bevy_simple_tilemap. If the tilemap atlas has been
-            // changed, and one of the tiles in the map had a tile index greater than the max tile
-            // count in the new atlas, the map renderer will panic.
+            // This is maybe a bug in bevy_simple_tilemap. If the tilemap atlas has been changed,
+            // and one of the tiles in the map had a tile index greater than the max tile count in
+            // the new atlas, the map renderer will panic.
             //
             // This shouldn't happen because we made sure to `clear()` the tiles and ensured that
             // all the new tile indexes are clamped, but apparently the chunks are updated a frame

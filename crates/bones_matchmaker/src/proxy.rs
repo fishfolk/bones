@@ -82,7 +82,7 @@ async fn impl_proxy(match_info: MatchInfo, clients: Vec<Connection>) -> anyhow::
             .detach();
 
         // Spawn task for handling the client's unreliable messages
-        // TODO: De-duplicate this code a little?
+        // TODO: De-duplicate matchmaker proxy code if possible.
         task_pool
             .spawn(async move {
                 let result = async {
