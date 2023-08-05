@@ -473,6 +473,7 @@ mod metadata {
                     ptr: self.ptr,
                     ctx: self.ctx,
                 })?,
+                SchemaKind::Map { .. } => todo!(),
                 SchemaKind::Primitive(p) => {
                     match p {
                         Primitive::Bool => *self.ptr.cast_mut() = bool::deserialize(deserializer)?,

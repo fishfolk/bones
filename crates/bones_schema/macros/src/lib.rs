@@ -76,7 +76,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 
         quote! {
             {
-                let mut tds = #schema_mod::TypeDatas::default();
+                let mut tds = #schema_mod::TypeDataMap::default();
                 #(#add_type_datas),*
                 tds
             }

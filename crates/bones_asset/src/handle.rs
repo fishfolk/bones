@@ -110,21 +110,16 @@ macro_rules! schema_impl_for_handle {
                     kind: SchemaKind::Struct(StructSchemaInfo {
                         fields: vec![StructFieldInfo {
                             name: Some("id".into()),
-                            schema: SCHEMA_REGISTRY.register(SchemaData {
-                                type_id: Some(TypeId::of::<Ulid>()),
-                                kind: SchemaKind::Primitive(Primitive::U128),
-                                type_data: Default::default(),
-                                clone_fn: Some(<u128 as RawClone>::raw_clone),
-                                drop_fn: None,
-                                default_fn: Some(<u128 as RawDefault>::raw_default),
-                            }),
-                        }],
+                            schema: u128::schema(),
+                        }]
                     }),
                     clone_fn: Some(<Self as RawClone>::raw_clone),
                     drop_fn: None,
                     default_fn: Some(<Self as RawDefault>::raw_default),
+                    eq_fn: Some(<Self as RawEq>::raw_eq),
+                    hash_fn: Some(<Self as RawHash>::raw_hash),
                     type_data: {
-                        let mut td = TypeDatas::default();
+                        let mut td = TypeDataMap::default();
                         td.insert(SchemaAssetHandle);
                         td
                     },

@@ -111,11 +111,8 @@ pub struct SchemaData {
     /// The kind of schema.
     pub kind: SchemaKind,
     #[serde(skip)]
-    /// Arbitrary type data assocated to the schema.
-    ///
-    /// The [`Ulid`] key is arbitrary, allows different types to add different kinds of data to the
-    /// schema.
-    pub type_data: TypeDatas,
+    /// Type data assocated to the schema.
+    pub type_data: TypeDataMap,
 
     // NOTE: The fields below could be implemented as type datas, and it would be nicely elegant to
     // do so, but for performance reasons, we put them right in the [`Schema`] struct because
@@ -292,8 +289,8 @@ pub enum Primitive {
 /// struct MyData;
 /// ```
 #[derive(Clone, Debug, Default)]
-pub struct TypeDatas(HashMap<SchemaId, SchemaBox>);
-impl TypeDatas {
+pub struct TypeDataMap(HashMap<SchemaId, SchemaBox>);
+impl TypeDataMap {
     /// Get a type data out of the store.
     #[track_caller]
     pub fn get<T: HasSchema>(&self) -> Option<&T> {
