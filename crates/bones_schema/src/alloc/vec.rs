@@ -1,5 +1,7 @@
 use std::{any::TypeId, marker::PhantomData, mem::MaybeUninit, sync::OnceLock};
 
+use bones_utils::ahash::AHasher;
+
 use crate::{prelude::*, raw_fns::*};
 
 use super::ResizableAlloc;
@@ -289,6 +291,62 @@ impl SchemaVec {
             Err(SchemaMismatchError)
         }
     }
+
+    /// Get the hash of this [`SchemaVec`].
+    /// # Panics
+    /// Panics if the inner type doesn't implement hash.
+    #[track_caller]
+    pub fn hash(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let Some(hash_fn) = self.schema.hash_fn else {
+            panic!("Schema doesn't specify a hash_fn");
+        };
+        let mut hasher = AHasher::default();
+        for item_ptr in self.buffer.iter() {
+            let item_hash = unsafe { (hash_fn)(item_ptr.as_ptr()) };
+            item_hash.hash(&mut hasher);
+        }
+        hasher.finish()
+    }
+
+    /// Raw version of the [`hash()`][Self::hash] function. Not meant for normal use.
+    /// # Safety
+    /// Pointer must be a valid pointer to a [`SchemaVec`].
+    pub unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64 {
+        let this = unsafe { &*(ptr as *const Self) };
+        this.hash()
+    }
+
+    /// Raw version of the [`eq()`][PartialEq::eq] function. Not meant for normal use.
+    /// # Safety
+    /// Pointers must be valid pointers to [`SchemaVec`]s.
+    pub unsafe extern "C-unwind" fn raw_eq(a: *const u8, b: *const u8) -> bool {
+        let a = &*(a as *const Self);
+        let b = &*(b as *const Self);
+        a.eq(b)
+    }
+}
+
+impl Eq for SchemaVec {}
+impl PartialEq for SchemaVec {
+    #[track_caller]
+    fn eq(&self, other: &Self) -> bool {
+        if self.schema != other.schema {
+            panic!("Cannot compare two `SchemaVec`s with different schemas.");
+        }
+        let Some(eq_fn) = self.schema.eq_fn else {
+            panic!("Schema doesn't have an eq_fn");
+        };
+
+        for i in 0..self.len {
+            let a = self.get_ref(i).unwrap().ptr().as_ptr();
+            let b = self.get_ref(i).unwrap().ptr().as_ptr();
+            if unsafe { !(eq_fn)(a, b) } {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 impl Clone for SchemaVec {
@@ -329,7 +387,7 @@ impl Drop for SchemaVec {
 ///
 /// This type exists as an alternative to [`Vec`] that properly implements [`HasSchema`].
 #[repr(transparent)]
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct SVec<T: HasSchema> {
     vec: SchemaVec,
     _phantom: PhantomData<T>,
@@ -397,6 +455,11 @@ impl<T: HasSchema> SVec<T> {
     pub fn into_schema_vec(self) -> SchemaVec {
         self.vec
     }
+
+    /// Get the hash of the [`SVec`].
+    pub fn hash(&self) -> u64 {
+        self.vec.hash()
+    }
 }
 
 impl<T: HasSchema> std::ops::Index<usize> for SVec<T> {
@@ -425,6 +488,8 @@ unsafe impl<T: HasSchema> HasSchema for SVec<T> {
                 clone_fn: Some(<Self as RawClone>::raw_clone),
                 drop_fn: Some(<Self as RawDrop>::raw_drop),
                 default_fn: Some(<Self as RawDefault>::raw_default),
+                hash_fn: Some(SchemaVec::raw_hash),
+                eq_fn: Some(SchemaVec::raw_eq),
                 type_data: Default::default(),
             })
         })

@@ -17,7 +17,7 @@ pub use bones_schema_macros::*;
 /// The prelude.
 pub mod prelude {
     pub use crate::{
-        alloc::{SVec, SchemaVec},
+        alloc::{SMap, SVec, SchemaMap, SchemaVec},
         ptr::*,
         registry::*,
         schema::*,

@@ -2,6 +2,7 @@
 
 use std::{
     alloc::{handle_alloc_error, Layout},
+    hash::Hash,
     marker::PhantomData,
     ptr::NonNull,
 };
@@ -115,6 +116,7 @@ impl<'pointer> SchemaRef<'pointer> {
             }
             SchemaKind::Vec(_) => Err(SchemaFieldNotFoundError { idx }),
             SchemaKind::Primitive(_) => Err(SchemaFieldNotFoundError { idx }),
+            SchemaKind::Map { .. } => todo!(),
         }
     }
 
@@ -280,6 +282,7 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
             }
             SchemaKind::Vec(_) => Err(SchemaMismatchError),
             SchemaKind::Primitive(_) => Err(SchemaMismatchError),
+            SchemaKind::Map { .. } => todo!(),
         }
     }
 
@@ -310,6 +313,35 @@ impl std::fmt::Debug for SchemaBox {
             .finish_non_exhaustive()
     }
 }
+
+impl Hash for SchemaBox {
+    #[track_caller]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let Some(hash_fn) = self.schema.hash_fn else {
+            panic!("Cannot hash schema box where schema doesn't provide hash_fn");
+        };
+        let hash = unsafe { (hash_fn)(self as *const Self as *const u8) };
+        state.write_u64(hash);
+    }
+}
+
+impl PartialEq for SchemaBox {
+    fn eq(&self, other: &Self) -> bool {
+        if self.schema != other.schema {
+            panic!("Cannot compare two `SchemaBox`s with different schemas.");
+        }
+        let Some(eq_fn) = self.schema.eq_fn else {
+            panic!("Cannot hash schema box where schema doesn't provide hash_fn.");
+        };
+        unsafe {
+            (eq_fn)(
+                self as *const Self as *const u8,
+                other as *const Self as *const u8,
+            )
+        }
+    }
+}
+impl Eq for SchemaBox {}
 
 impl Clone for SchemaBox {
     fn clone(&self) -> Self {

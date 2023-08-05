@@ -134,6 +134,13 @@ pub struct SchemaData {
     /// The function pointer that may be used to write a default value to a pointer.
     #[serde(skip)]
     pub default_fn: Option<unsafe extern "C-unwind" fn(ptr: *mut u8)>,
+    /// The function pointer that may be used to hash the value.
+    #[serde(skip)]
+    pub hash_fn: Option<unsafe extern "C-unwind" fn(ptr: *const u8) -> u64>,
+    /// The function pointer that may be used to compare two values for equality. Note that this is
+    /// total equality, not partial equality.
+    #[serde(skip)]
+    pub eq_fn: Option<unsafe extern "C-unwind" fn(a: *const u8, b: *const u8) -> bool>,
 }
 
 /// A schema describes the data layout of a type, to enable dynamic access to the type's data
@@ -149,6 +156,13 @@ pub enum SchemaKind {
     /// The scripting solution must facilitate a way for scripts to access data in the [`Vec`] if it
     /// is to be readable/modifyable from scripts.
     Vec(&'static Schema),
+    /// Type represents a [`SchemaMap`].
+    Map {
+        /// The schema of the key type.
+        key: &'static Schema,
+        /// The schema of the value type.
+        value: &'static Schema,
+    },
     /// The type represents a primitive value.
     Primitive(Primitive),
 }
@@ -332,7 +346,7 @@ impl SchemaData {
                 }
             }
             SchemaKind::Vec(_) => {
-                extend_layout(&mut layout, Layout::new::<SVec<u8>>());
+                extend_layout(&mut layout, Layout::new::<SchemaVec>());
             }
             SchemaKind::Primitive(p) => {
                 extend_layout(
@@ -358,6 +372,9 @@ impl SchemaData {
                     },
                 );
             }
+            SchemaKind::Map { .. } => {
+                extend_layout(&mut layout, Layout::new::<SchemaMap>());
+            }
         }
 
         SchemaLayoutInfo {
@@ -375,19 +392,9 @@ impl SchemaData {
             SchemaKind::Struct(s) => s.fields.iter().any(|field| field.schema.has_opaque()),
             SchemaKind::Vec(v) => v.has_opaque(),
             SchemaKind::Primitive(p) => matches!(p, Primitive::Opaque { .. }),
-        }
-    }
-}
-
-impl From<SchemaKind> for SchemaData {
-    fn from(kind: SchemaKind) -> Self {
-        Self {
-            type_id: None,
-            clone_fn: None,
-            drop_fn: None,
-            default_fn: None,
-            kind,
-            type_data: Default::default(),
+            SchemaKind::Map { key, value } => {
+                key.schema().has_opaque() || value.schema().has_opaque()
+            }
         }
     }
 }

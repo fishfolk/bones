@@ -112,6 +112,9 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                             clone_fn: #clone_fn,
                             default_fn: #default_fn,
                             drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
+                            // TODO: Allow deriving `hash_fn` and `eq_fn` for `HasSchema`.
+                            eq_fn: None,
+                            hash_fn: None,
                             kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
                                 size: layout.size(),
                                 align: layout.align(),
@@ -178,6 +181,8 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                             type_data: #type_datas,
                                             clone_fn: #clone_fn,
                                             default_fn: #default_fn,
+                                            eq_fn: None,
+                                            hash_fn: None,
                                             drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
                                         })
                                     },
@@ -226,6 +231,8 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                         type_data: #type_datas,
                         default_fn: #default_fn,
                         clone_fn: #clone_fn,
+                        eq_fn: None,
+                        hash_fn: None,
                         drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
                     })
                 })
