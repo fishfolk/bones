@@ -371,68 +371,59 @@ impl Clone for SchemaBox {
     }
 }
 
-impl Drop for SchemaBox {
-    fn drop(&mut self) {
-        unsafe {
-            if let Some(drop_fn) = self.schema.drop_fn {
-                // Drop the type
-                (drop_fn)(self.ptr.as_mut().as_ptr());
-            }
-
-            // De-allocate the memory
-            if self.layout.size() > 0 {
-                std::alloc::dealloc(self.ptr.as_mut().as_ptr(), self.layout)
-            }
-        }
-    }
-}
-
 impl SchemaBox {
-    /// Cast this pointer to a reference to a type with a matching [`Schema`].
-    ///
+    /// Cast this box to it's inner type and return it.
     /// # Panics
-    /// Panics if the schema of the pointer does not match that of the type you are casting to.
+    /// Panics if the schema of the box does not match that of the type you are casting to.
     #[track_caller]
     pub fn into_inner<T: HasSchema>(self) -> T {
         self.try_into_inner().unwrap()
     }
 
     /// Cast this box to it's inner type and return it.
-    ///
     /// # Errors
-    /// Errors if the schema of the pointer does not match that of the type you are casting to.
+    /// Errors if the schema of the box does not match that of the type you are casting to.
     pub fn try_into_inner<T: HasSchema>(self) -> Result<T, SchemaMismatchError> {
         if self.schema == T::schema() {
-            let mut ret = MaybeUninit::<T>::uninit();
-
-            // SOUND: We've validated that the box has the same schema as T
-            unsafe {
-                (ret.as_mut_ptr() as *mut u8)
-                    .copy_from_nonoverlapping(self.ptr.as_ptr(), self.schema.layout().size());
-            }
-
-            // SOUND: we initialized the type above
-            Ok(unsafe { ret.assume_init() })
+            // We've validated that the schema of the box matches T
+            Ok(unsafe { self.into_inner_unchecked() })
         } else {
             Err(SchemaMismatchError)
         }
     }
 
-    /// Cast this pointer to a reference to a type with a matching [`Schema`].
-    ///
+    /// Unsafely convert this box into an owned T.
+    /// # Safety
+    /// - The schema of type T must equal that of this box.
+    pub unsafe fn into_inner_unchecked<T: HasSchema>(self) -> T {
+        // Allocate memory for T on the stack
+        let mut ret = MaybeUninit::<T>::uninit();
+
+        // Copy the data from the box into the stack.
+        // SOUND: We've validated that the box has the same schema as T
+        unsafe {
+            (ret.as_mut_ptr() as *mut u8)
+                .copy_from_nonoverlapping(self.ptr.as_ptr(), self.schema.layout().size());
+        }
+
+        // De-allocate the box without running the destructor for the inner data.
+        self.forget();
+
+        // SOUND: we initialized the type above
+        unsafe { ret.assume_init() }
+    }
+
+    /// Cast this box to a reference to a type with a representative [`Schema`].
     /// # Panics
-    ///
-    /// Panics if the schema of the pointer does not match that of the type you are casting to.
+    /// Panics if the schema of the box does not match that of the type you are casting to.
     #[track_caller]
     pub fn cast_ref<T: HasSchema>(&self) -> &T {
         self.try_cast_ref().expect(SchemaMismatchError::MSG)
     }
 
-    /// Cast this pointer to a reference to a type with a matching [`Schema`].
-    ///
+    /// Cast this box to a reference to a type with a representative [`Schema`].
     /// # Errors
-    ///
-    /// Errors if the schema of the pointer does not match that of the type you are casting to.
+    /// Errors if the schema of the box does not match that of the type you are casting to.
     pub fn try_cast_ref<T: HasSchema>(&self) -> Result<&T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
             // SOUND: the schemas have the same memory representation.
@@ -442,19 +433,17 @@ impl SchemaBox {
         }
     }
 
-    /// Cast this pointer to a mutable reference to a type with a matching [`Schema`].
-    ///
+    /// Cast this box to a mutable reference to a type with a representing [`Schema`].
     /// # Panics
-    /// Panics if the schema of the pointer does not match that of the type you are casting to.
+    /// Panics if the schema of the box does not match that of the type you are casting to.
     #[track_caller]
     pub fn cast_mut<T: HasSchema>(&mut self) -> &mut T {
         self.try_cast_mut().expect(SchemaMismatchError::MSG)
     }
 
-    /// Cast this pointer to a mutable reference to a type with a matching [`Schema`].
-    ///
+    /// Cast this box to a mutable reference to a type with a representing [`Schema`].
     /// # Errors
-    /// Errors if the schema of the pointer does not match that of the type you are casting to.
+    /// Errors if the schema of the box does not match that of the type you are casting to.
     pub fn try_cast_mut<T: HasSchema>(&mut self) -> Result<&mut T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
             // SOUND: the schemas have the same memory representation.
@@ -464,7 +453,7 @@ impl SchemaBox {
         }
     }
 
-    /// Borrow this as a [`SchemaRef`].
+    /// Borrow this box as a [`SchemaRef`].
     pub fn as_ref(&self) -> SchemaRef<'_> {
         SchemaRef {
             ptr: self.ptr.as_ref(),
@@ -472,7 +461,7 @@ impl SchemaBox {
         }
     }
 
-    /// Borrow this as a [`SchemaRefMut`].
+    /// Borrow this box as a [`SchemaRefMut`].
     pub fn as_mut(&mut self) -> SchemaRefMut<'_, '_> {
         SchemaRefMut {
             ptr: self.ptr.as_mut(),
@@ -485,29 +474,11 @@ impl SchemaBox {
     #[track_caller]
     pub fn new<T: HasSchema + Sync + Send>(v: T) -> Self {
         let schema = T::schema();
-        let layout = std::alloc::Layout::new::<T>();
-        debug_assert_eq!(
-            layout,
-            schema.layout(),
-            "BIG BUG: Schema layout doesn't match type layout!!"
-        );
-
-        let ptr = if layout.size() == 0 {
-            NonNull::<u8>::dangling().as_ptr()
-        } else {
-            // SOUND: Non-zero size for layout
-            unsafe { std::alloc::alloc(layout) }
-        };
-        // SOUND: The pointer is allocated for the layout of type T.
-        let ptr = unsafe {
-            (ptr as *mut T).write(v);
-            OwningPtr::new(NonNull::new(ptr).unwrap_or_else(|| handle_alloc_error(layout)))
-        };
-
-        Self {
-            ptr,
-            schema,
-            layout,
+        // SOUND: we initialize the box immediately after creation.
+        unsafe {
+            let b = SchemaBox::uninitialized(schema);
+            (b.ptr.as_ptr() as *mut T).write(v);
+            b
         }
     }
 
@@ -515,8 +486,8 @@ impl SchemaBox {
     ///
     /// # Safety
     ///
-    /// Accessing the data in an unitinialized [`SchemaBox`] is undefined behavior. It is up to the user to
-    /// initialize the memory pointed at by the box after creating it.
+    /// Accessing the data in an unitinialized [`SchemaBox`] is undefined behavior. It is up to the
+    /// user to initialize the memory pointed at by the box after creating it.
     pub unsafe fn uninitialized(schema: &'static Schema) -> Self {
         let layout = schema.layout();
 
@@ -538,12 +509,6 @@ impl SchemaBox {
         }
     }
 
-    /// Deallocate the memory stored in the box, but don't run the destructor.
-    pub fn forget(self) {
-        unsafe { std::alloc::dealloc(self.ptr.as_ptr(), self.layout) }
-        std::mem::forget(self);
-    }
-
     /// Create a new [`SchemaBox`] for a type with a [`Schema`] that has a
     /// [`SchemaData::default_fn`].
     ///
@@ -563,6 +528,33 @@ impl SchemaBox {
         }
     }
 
+    /// Convert into an [`SBox`] if the schema of T matches.
+    /// # Panics
+    /// Panics if the schema of `T` doesn't match that of the box.
+    pub fn into_sbox<T: HasSchema>(self) -> SBox<T> {
+        self.try_into_sbox()
+            .unwrap_or_else(|_| panic!("{:?}", SchemaMismatchError))
+    }
+
+    /// Convert into an [`SBox`] if the schema of T matches.
+    /// # Errors
+    /// Returns an error with the orignal [`SchemaBox`] if the schema of `T` doesn't match.
+    pub fn try_into_sbox<T: HasSchema>(self) -> Result<SBox<T>, Self> {
+        if self.schema == T::schema() {
+            Ok(SBox {
+                b: self,
+                _phantom: PhantomData,
+            })
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Get the [`Schema`] for the pointer.
+    pub fn schema(&self) -> &Schema {
+        self.schema
+    }
+
     /// Create a new [`SchemaBox`] from raw parts.
     ///
     /// This is useful for creating a [`SchemaBox`] for data with a schema loaded at runtime and
@@ -570,8 +562,7 @@ impl SchemaBox {
     ///
     /// # Safety
     ///
-    /// - You must insure that the pointer is valid for the given `layout`, `schem`, `drop_fn`, and
-    /// `clone_fn`.
+    /// - You must insure that the pointer is valid for the given schema.
     pub unsafe fn from_raw_parts(ptr: OwningPtr<'static>, schema: &'static Schema) -> Self {
         Self {
             ptr,
@@ -580,9 +571,102 @@ impl SchemaBox {
         }
     }
 
-    /// Get the [`Schema`] for the pointer.
-    pub fn schema(&self) -> &Schema {
-        self.schema
+    /// Deallocate the memory stored in the box, but don't run the destructor.
+    pub fn forget(mut self) {
+        unsafe {
+            self.dealloc();
+        }
+        std::mem::forget(self);
+    }
+
+    /// Deallocate the memory in the box.
+    unsafe fn dealloc(&mut self) {
+        if self.schema.layout().size() > 0 {
+            std::alloc::dealloc(self.ptr.as_ptr(), self.layout)
+        }
+    }
+
+    /// Drop the inner type, without dealocating the box's memory.
+    unsafe fn drop_inner(&mut self) {
+        if let Some(drop_fn) = self.schema.drop_fn {
+            // Drop the type
+            (drop_fn)(self.ptr.as_mut().as_ptr());
+        }
+    }
+}
+
+impl Drop for SchemaBox {
+    fn drop(&mut self) {
+        unsafe {
+            self.drop_inner();
+            self.dealloc();
+        }
+    }
+}
+
+/// A typed version of [`SchemaBox`].
+///
+/// This allows to use [`SBox<T>`] extremely similar to a [`Box<T>`] except that it can be converted
+/// to and from a [`SchemaBox`] for compatibility with the schema ecosystem.
+///
+/// Also, compared to a [`SchemaBox`], it is more efficient to access, because it avoids extra
+/// runtime checks for a matching schema after it has been created, and doesn't need to be cast to
+/// `T` upon every access.
+#[repr(transparent)]
+pub struct SBox<T: HasSchema> {
+    b: SchemaBox,
+    _phantom: PhantomData<T>,
+}
+impl<T: HasSchema + Default> Default for SBox<T> {
+    fn default() -> Self {
+        Self {
+            b: SchemaBox::new(T::default()),
+            _phantom: Default::default(),
+        }
+    }
+}
+impl<T: HasSchema + std::fmt::Debug> std::fmt::Debug for SBox<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SBox")
+            .field("b", &self.b)
+            .finish()
+    }
+}
+
+impl<T: HasSchema> SBox<T> {
+    /// Create a new [`SBox`].
+    pub fn new(value: T) -> Self {
+        SBox {
+            b: SchemaBox::new(value),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<T: HasSchema> From<SBox<T>> for SchemaBox {
+    fn from(value: SBox<T>) -> Self {
+        value.b
+    }
+}
+
+impl<T: HasSchema> TryFrom<SchemaBox> for SBox<T> {
+    type Error = SchemaBox;
+    fn try_from(value: SchemaBox) -> Result<Self, Self::Error> {
+        value.try_into_sbox()
+    }
+}
+
+impl<T: HasSchema> std::ops::Deref for SBox<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        // SOUND: `SBox`s always contain their type `T`.
+        unsafe { self.b.ptr.as_ref().deref() }
+    }
+}
+impl<T: HasSchema> std::ops::DerefMut for SBox<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { self.b.ptr.as_mut().deref_mut() }
     }
 }
 

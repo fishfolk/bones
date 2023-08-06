@@ -90,10 +90,24 @@ fn ptr_cast() {
     store[1].cast_mut::<Vec3>().x = 7.0;
     assert_eq!(store[1].cast_ref::<Vec3>().x, 7.0);
 
-    // And we can even clone it ( you can only create `SchemaBox` for types that can be cloned ).
+    // And we can even clone it ( cloning will panic if the schema doesn't implement cloning ).
     let ptr = store[1].clone();
 
     assert_eq!(ptr.cast_ref::<Vec3>(), store[1].cast_ref::<Vec3>());
+
+    // Finally, we can conver the box to the inner type, if we know what it is. This will panic if
+    // the schema doesn't match.
+    let ptr = SchemaBox::new(String::from("hello"));
+    let inner = ptr.into_inner::<String>();
+    assert_eq!(inner, "hello");
+}
+
+#[test]
+fn sbox() {
+    let mut b = SBox::new(String::from("hello"));
+    assert_eq!(*b, "hello");
+    b.push('!');
+    assert_eq!(*b, "hello!");
 }
 
 #[test]
