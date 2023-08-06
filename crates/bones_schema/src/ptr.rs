@@ -4,6 +4,7 @@ use std::{
     alloc::{handle_alloc_error, Layout},
     hash::Hash,
     marker::PhantomData,
+    mem::MaybeUninit,
     ptr::NonNull,
 };
 
@@ -390,11 +391,41 @@ impl SchemaBox {
     /// Cast this pointer to a reference to a type with a matching [`Schema`].
     ///
     /// # Panics
+    /// Panics if the schema of the pointer does not match that of the type you are casting to.
+    #[track_caller]
+    pub fn into_inner<T: HasSchema>(self) -> T {
+        self.try_into_inner().unwrap()
+    }
+
+    /// Cast this box to it's inner type and return it.
+    ///
+    /// # Errors
+    /// Errors if the schema of the pointer does not match that of the type you are casting to.
+    pub fn try_into_inner<T: HasSchema>(self) -> Result<T, SchemaMismatchError> {
+        if self.schema == T::schema() {
+            let mut ret = MaybeUninit::<T>::uninit();
+
+            // SOUND: We've validated that the box has the same schema as T
+            unsafe {
+                (ret.as_mut_ptr() as *mut u8)
+                    .copy_from_nonoverlapping(self.ptr.as_ptr(), self.schema.layout().size());
+            }
+
+            // SOUND: we initialized the type above
+            Ok(unsafe { ret.assume_init() })
+        } else {
+            Err(SchemaMismatchError)
+        }
+    }
+
+    /// Cast this pointer to a reference to a type with a matching [`Schema`].
+    ///
+    /// # Panics
     ///
     /// Panics if the schema of the pointer does not match that of the type you are casting to.
     #[track_caller]
-    pub fn cast<T: HasSchema>(&self) -> &T {
-        self.try_cast().expect(SchemaMismatchError::MSG)
+    pub fn cast_ref<T: HasSchema>(&self) -> &T {
+        self.try_cast_ref().expect(SchemaMismatchError::MSG)
     }
 
     /// Cast this pointer to a reference to a type with a matching [`Schema`].
@@ -402,7 +433,7 @@ impl SchemaBox {
     /// # Errors
     ///
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
-    pub fn try_cast<T: HasSchema>(&self) -> Result<&T, SchemaMismatchError> {
+    pub fn try_cast_ref<T: HasSchema>(&self) -> Result<&T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
             // SOUND: the schemas have the same memory representation.
             unsafe { Ok(self.ptr.as_ref().deref()) }
@@ -414,7 +445,6 @@ impl SchemaBox {
     /// Cast this pointer to a mutable reference to a type with a matching [`Schema`].
     ///
     /// # Panics
-    ///
     /// Panics if the schema of the pointer does not match that of the type you are casting to.
     #[track_caller]
     pub fn cast_mut<T: HasSchema>(&mut self) -> &mut T {
@@ -424,7 +454,6 @@ impl SchemaBox {
     /// Cast this pointer to a mutable reference to a type with a matching [`Schema`].
     ///
     /// # Errors
-    ///
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
     pub fn try_cast_mut<T: HasSchema>(&mut self) -> Result<&mut T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {

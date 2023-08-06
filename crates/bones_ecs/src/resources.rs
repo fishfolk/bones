@@ -170,7 +170,7 @@ impl<T: HasSchema> AtomicResource<T> {
     pub fn borrow(&self) -> AtomicRef<T> {
         let borrow = self.untyped.borrow();
         // SAFE: We know that the data pointer is valid for type T.
-        AtomicRef::map(borrow, |data| data.cast::<T>())
+        AtomicRef::map(borrow, |data| data.cast_ref::<T>())
     }
 
     /// Lock the resource for read-writing.

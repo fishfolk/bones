@@ -119,7 +119,7 @@ macro_rules! schema_impl_for_handle {
                     eq_fn: Some(<Self as RawEq>::raw_eq),
                     hash_fn: Some(<Self as RawHash>::raw_hash),
                     type_data: {
-                        let mut td = TypeDataMap::default();
+                        let mut td = bones_schema::alloc::SchemaTypeMap::default();
                         td.insert(SchemaAssetHandle);
                         td
                     },

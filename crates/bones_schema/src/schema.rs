@@ -2,8 +2,7 @@
 
 use std::{alloc::Layout, any::TypeId, borrow::Cow};
 
-use crate::prelude::*;
-use bones_utils::prelude::*;
+use crate::{alloc::SchemaTypeMap, prelude::*};
 
 /// Trait implemented for types that have a [`Schema`].
 ///
@@ -111,8 +110,36 @@ pub struct SchemaData {
     /// The kind of schema.
     pub kind: SchemaKind,
     #[serde(skip)]
-    /// Type data assocated to the schema.
-    pub type_data: TypeDataMap,
+    /// Container for storing [`Schema`] type datas.
+    ///
+    /// "Type data" is extra data that is stored in a type's [`Schema`] that may be used for any number
+    /// of different purposes.
+    ///
+    /// Each type data is a type that implements [`HasSchema`] and usually describes something about the
+    /// type that has the schema. For instance, a type data could be added to a struct that can be used
+    /// to serialize/deserialize that type.
+    ///
+    /// If a type data also implements [`FromType`] it can be derived for types that it implements
+    /// [`FromType`] for:
+    ///
+    /// ```rust
+    /// # use bones_schema::prelude::*;
+    /// #[derive(HasSchema, Default, Clone)]
+    /// #[schema(opaque)]
+    /// struct SomeTypeData;
+    ///
+    /// impl<T> FromType<T> for SomeTypeData {
+    ///     fn from_type() -> Self {
+    ///         SomeTypeData
+    ///     }
+    /// }
+    ///
+    /// #[derive(HasSchema, Default, Clone)]
+    /// #[type_datas(SomeTypeData)]
+    /// #[schema(opaque)]
+    /// struct MyData;
+    /// ```
+    pub type_data: SchemaTypeMap,
 
     // NOTE: The fields below could be implemented as type datas, and it would be nicely elegant to
     // do so, but for performance reasons, we put them right in the [`Schema`] struct because
@@ -257,51 +284,6 @@ pub enum Primitive {
         /// The alignment of the data.
         align: usize,
     },
-}
-
-/// Container for storing [`Schema`] type datas.
-///
-/// "Type data" is extra data that is stored in a type's [`Schema`] that may be used for any number
-/// of different purposes.
-///
-/// Each type data is a type that implements [`HasSchema`] and usually describes something about the
-/// type that has the schema. For instance, a type data could be added to a struct that can be used
-/// to serialize/deserialize that type.
-///
-/// If a type data also implements [`FromType`] it can be derived for types that it implements
-/// [`FromType`] for:
-///
-/// ```rust
-/// # use bones_schema::prelude::*;
-/// #[derive(HasSchema, Default, Clone)]
-/// #[schema(opaque)]
-/// struct SomeTypeData;
-///
-/// impl<T> FromType<T> for SomeTypeData {
-///     fn from_type() -> Self {
-///         SomeTypeData
-///     }
-/// }
-///
-/// #[derive(HasSchema, Default, Clone)]
-/// #[type_datas(SomeTypeData)]
-/// #[schema(opaque)]
-/// struct MyData;
-/// ```
-#[derive(Clone, Debug, Default)]
-pub struct TypeDataMap(HashMap<SchemaId, SchemaBox>);
-impl TypeDataMap {
-    /// Get a type data out of the store.
-    #[track_caller]
-    pub fn get<T: HasSchema>(&self) -> Option<&T> {
-        let schema = T::schema();
-        self.0.get(&schema.id()).map(|x| x.cast())
-    }
-
-    /// Insert a type data into the store
-    pub fn insert<T: HasSchema>(&mut self, data: T) {
-        self.0.insert(T::schema().id(), SchemaBox::new(data));
-    }
 }
 
 /// Trait implemented for types that can produce an instance of themselves from a Rust type.

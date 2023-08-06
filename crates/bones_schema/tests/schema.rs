@@ -75,10 +75,10 @@ fn ptr_cast() {
     // When we want to get the data back out
     for ptr in &store {
         // We can try to cast the data back to any  type with the same schema.
-        if let Ok(data) = ptr.try_cast::<DataA>() {
+        if let Ok(data) = ptr.try_cast_ref::<DataA>() {
             assert_eq!(data.x, a.x);
             assert_eq!(data.y, a.y);
-        } else if let Ok(data) = ptr.try_cast::<Vec3>() {
+        } else if let Ok(data) = ptr.try_cast_ref::<Vec3>() {
             assert_eq!(data.x, b.x);
             assert_eq!(data.y, b.y);
             assert_eq!(data.z, b.z);
@@ -88,12 +88,12 @@ fn ptr_cast() {
     // And we can modify the data, too.
     // Here we use the panicking version of the cast function
     store[1].cast_mut::<Vec3>().x = 7.0;
-    assert_eq!(store[1].cast::<Vec3>().x, 7.0);
+    assert_eq!(store[1].cast_ref::<Vec3>().x, 7.0);
 
     // And we can even clone it ( you can only create `SchemaBox` for types that can be cloned ).
     let ptr = store[1].clone();
 
-    assert_eq!(ptr.cast::<Vec3>(), store[1].cast::<Vec3>());
+    assert_eq!(ptr.cast_ref::<Vec3>(), store[1].cast_ref::<Vec3>());
 }
 
 #[test]
@@ -182,7 +182,7 @@ fn schema_vec() {
     assert_eq!(v.len(), 2);
 
     let d1 = v.pop_box().unwrap();
-    assert_eq!(d1.cast::<DataA>().x, 3.0);
+    assert_eq!(d1.cast_ref::<DataA>().x, 3.0);
     let d0 = v.pop::<DataA>().unwrap();
     assert_eq!(d0.x, 1.0);
     assert!(v.pop_box().is_none());
@@ -217,9 +217,9 @@ fn svec() {
 #[test]
 fn zst() {
     let b = SchemaBox::new(Zst);
-    assert!(matches!(b.cast(), Zst));
+    assert!(matches!(b.cast_ref(), Zst));
     let b = SchemaBox::new(OpaqueZst);
-    assert!(matches!(b.cast(), OpaqueZst));
+    assert!(matches!(b.cast_ref(), OpaqueZst));
 }
 
 #[test]

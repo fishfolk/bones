@@ -351,7 +351,7 @@ impl AssetServer {
             .asset_ids
             .get(&handle.untyped())
             .expect(NO_ASSET_MSG);
-        self.store.assets.get(cid).expect(NO_ASSET_MSG).cast()
+        self.store.assets.get(cid).expect(NO_ASSET_MSG).cast_ref()
     }
 
     /// Mutably borrow a loaded asset.
