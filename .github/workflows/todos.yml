@@ -27,6 +27,7 @@ jobs:
       - name: Run Issue Bot
         uses: derjuulsn/todo-issue@main
         with:
+          autoAssign: false
           blobLinesBefore: 2
           label: code:todo
         env:
