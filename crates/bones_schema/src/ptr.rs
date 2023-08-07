@@ -119,6 +119,7 @@ impl<'pointer> SchemaRef<'pointer> {
             }
             SchemaKind::Vec(_) => Err(SchemaFieldNotFoundError { idx }),
             SchemaKind::Primitive(_) => Err(SchemaFieldNotFoundError { idx }),
+            SchemaKind::Box(_) => todo!(),
             SchemaKind::Map { .. } => todo!(),
         }
     }
@@ -297,9 +298,10 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
                     parent_lifetime: PhantomData,
                 })
             }
+            SchemaKind::Map { .. } => todo!(),
+            SchemaKind::Box(_) => todo!(),
             SchemaKind::Vec(_) => Err(SchemaMismatchError),
             SchemaKind::Primitive(_) => Err(SchemaMismatchError),
-            SchemaKind::Map { .. } => todo!(),
         }
     }
 

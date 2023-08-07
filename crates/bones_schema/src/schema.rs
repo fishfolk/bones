@@ -187,6 +187,8 @@ pub enum SchemaKind {
         /// The schema of the value type.
         value: &'static Schema,
     },
+    /// The represents a [`SchemaBox`].
+    Box(&'static Schema),
     /// The type represents a primitive value.
     Primitive(Primitive),
 }
@@ -327,6 +329,12 @@ impl SchemaData {
             SchemaKind::Vec(_) => {
                 extend_layout(&mut layout, Layout::new::<SchemaVec>());
             }
+            SchemaKind::Box(_) => {
+                extend_layout(&mut layout, Layout::new::<SchemaBox>());
+            }
+            SchemaKind::Map { .. } => {
+                extend_layout(&mut layout, Layout::new::<SchemaMap>());
+            }
             SchemaKind::Primitive(p) => {
                 extend_layout(
                     &mut layout,
@@ -351,9 +359,6 @@ impl SchemaData {
                     },
                 );
             }
-            SchemaKind::Map { .. } => {
-                extend_layout(&mut layout, Layout::new::<SchemaMap>());
-            }
         }
 
         SchemaLayoutInfo {
@@ -370,10 +375,11 @@ impl SchemaData {
         match &self.kind {
             SchemaKind::Struct(s) => s.fields.iter().any(|field| field.schema.has_opaque()),
             SchemaKind::Vec(v) => v.has_opaque(),
-            SchemaKind::Primitive(p) => matches!(p, Primitive::Opaque { .. }),
+            SchemaKind::Box(b) => b.schema().has_opaque(),
             SchemaKind::Map { key, value } => {
                 key.schema().has_opaque() || value.schema().has_opaque()
             }
+            SchemaKind::Primitive(p) => matches!(p, Primitive::Opaque { .. }),
         }
     }
 }

@@ -473,6 +473,7 @@ mod metadata {
                     ptr: self.ptr,
                     ctx: self.ctx,
                 })?,
+                SchemaKind::Box(_) => todo!(),
                 SchemaKind::Map { .. } => todo!(),
                 SchemaKind::Primitive(p) => {
                     match p {
