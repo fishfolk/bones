@@ -229,6 +229,47 @@ fn svec() {
 }
 
 #[test]
+fn schema_map() {
+    let k1 = String::from("hello");
+    let k2 = String::from("goodbye");
+    let mut m = SchemaMap::new(String::schema(), DataB::schema());
+    m.insert(k1.clone(), DataB(1.0, 2.0));
+    m.insert(k2.clone(), DataB(3.0, 4.0));
+
+    {
+        let v1: &mut DataB = m.get_mut(&k1).unwrap();
+        assert_eq!(v1.1, 2.0);
+        v1.0 = 7.0;
+    }
+    {
+        let v2: &mut DataB = m.get_mut(&k2).unwrap();
+        assert_eq!(v2.0, 3.0);
+        assert_eq!(v2.1, 4.0);
+    }
+
+    let v1: &mut DataB = m.get_mut(&k1).unwrap();
+    assert_eq!(v1.0, 7.0);
+}
+
+#[test]
+fn eq_hash() {
+    let b1 = SchemaBox::new(String::from("hello"));
+    let b2 = SchemaBox::new(String::from("hello"));
+    let b3 = SchemaBox::new(String::from("goodbye"));
+    assert_eq!(b1, b2);
+    assert_ne!(b3, b2);
+    assert_ne!(b3, b1);
+    assert_eq!(dbg!(b1.hash()), b2.hash());
+    assert_ne!(dbg!(b3.hash()), b1.hash());
+
+    let s_hash_fn = b1.schema().hash_fn.unwrap();
+    assert_eq!(
+        unsafe { (s_hash_fn)(b1.as_ref().as_ptr()) },
+        b1.hash().unwrap()
+    );
+}
+
+#[test]
 fn zst() {
     let b = SchemaBox::new(Zst);
     assert!(matches!(b.cast_ref(), Zst));

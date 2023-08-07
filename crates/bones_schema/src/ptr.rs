@@ -138,6 +138,13 @@ impl<'pointer> SchemaRef<'pointer> {
     pub fn schema(&self) -> &Schema {
         self.schema
     }
+
+    /// Get the hash of this schema box, if supported.
+    pub fn hash(&self) -> Option<u64> {
+        self.schema
+            .hash_fn
+            .map(|hash_fn| unsafe { (hash_fn)(self.ptr.as_ptr()) })
+    }
 }
 
 /// An untyped mutable reference that knows the [`Schema`] of the pointee and that can be cast to a matching
@@ -311,6 +318,13 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
     pub fn schema(&self) -> &Schema {
         self.schema
     }
+
+    /// Get the hash of this schema box, if supported.
+    pub fn hash(&self) -> Option<u64> {
+        self.schema
+            .hash_fn
+            .map(|hash_fn| unsafe { (hash_fn)(self.ptr.as_ptr()) })
+    }
 }
 
 /// A owning, type-erased [`Box`]-like container for types with a [`Schema`].
@@ -336,7 +350,7 @@ impl Hash for SchemaBox {
         let Some(hash_fn) = self.schema.hash_fn else {
             panic!("Cannot hash schema box where schema doesn't provide hash_fn");
         };
-        let hash = unsafe { (hash_fn)(self as *const Self as *const u8) };
+        let hash = unsafe { (hash_fn)(self.ptr.as_ptr()) };
         state.write_u64(hash);
     }
 }
@@ -349,12 +363,7 @@ impl PartialEq for SchemaBox {
         let Some(eq_fn) = self.schema.eq_fn else {
             panic!("Cannot hash schema box where schema doesn't provide hash_fn.");
         };
-        unsafe {
-            (eq_fn)(
-                self as *const Self as *const u8,
-                other as *const Self as *const u8,
-            )
-        }
+        unsafe { (eq_fn)(self.ptr.as_ptr(), other.ptr.as_ptr()) }
     }
 }
 impl Eq for SchemaBox {}
@@ -592,6 +601,13 @@ impl SchemaBox {
             self.dealloc();
         }
         std::mem::forget(self);
+    }
+
+    /// Get the hash of this schema box, if supported.
+    pub fn hash(&self) -> Option<u64> {
+        self.schema
+            .hash_fn
+            .map(|hash_fn| unsafe { (hash_fn)(self.ptr.as_ptr()) })
     }
 
     /// Deallocate the memory in the box.
