@@ -10,7 +10,7 @@ struct DataA {
     y: f32,
 }
 
-#[derive(HasSchema, Debug, Clone, Default)]
+#[derive(HasSchema, Debug, Clone, Default, PartialEq)]
 #[repr(C)]
 struct DataB(f32, f32);
 
@@ -233,7 +233,8 @@ fn schema_map() {
     let k1 = String::from("hello");
     let k2 = String::from("goodbye");
     let mut m = SchemaMap::new(String::schema(), DataB::schema());
-    m.insert(k1.clone(), DataB(1.0, 2.0));
+    let previous = m.insert(k1.clone(), DataB(1.0, 2.0));
+    assert!(previous.is_none());
     m.insert(k2.clone(), DataB(3.0, 4.0));
 
     {
@@ -249,6 +250,9 @@ fn schema_map() {
 
     let v1: &mut DataB = m.get_mut(&k1).unwrap();
     assert_eq!(v1.0, 7.0);
+
+    let previous = m.insert(k1.clone(), DataB(10., 11.));
+    assert_eq!(previous, Some(DataB(7.0, 2.0)))
 }
 
 #[test]
@@ -263,10 +267,7 @@ fn eq_hash() {
     assert_ne!(dbg!(b3.hash()), b1.hash());
 
     let s_hash_fn = b1.schema().hash_fn.unwrap();
-    assert_eq!(
-        unsafe { (s_hash_fn)(b1.as_ref().as_ptr()) },
-        b1.hash().unwrap()
-    );
+    assert_eq!(unsafe { (s_hash_fn)(b1.as_ref().as_ptr()) }, b1.hash());
 }
 
 #[test]

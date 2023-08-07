@@ -604,10 +604,18 @@ impl SchemaBox {
     }
 
     /// Get the hash of this schema box, if supported.
-    pub fn hash(&self) -> Option<u64> {
+    pub fn try_hash(&self) -> Option<u64> {
         self.schema
             .hash_fn
             .map(|hash_fn| unsafe { (hash_fn)(self.ptr.as_ptr()) })
+    }
+
+    /// Get the hash of this schema box.
+    /// # Panics
+    /// Panics if the schema doesn't implement hash.
+    #[track_caller]
+    pub fn hash(&self) -> u64 {
+        self.try_hash().expect("Schema doesn't implement hash")
     }
 
     /// Deallocate the memory in the box.
