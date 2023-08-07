@@ -599,12 +599,12 @@ mod metadata {
             )
         }
 
-        fn visit_seq<A>(mut self, mut seq: A) -> Result<Self::Value, A::Error>
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
         where
             A: serde::de::SeqAccess<'de>,
         {
-            // TODO: Is there a safe way to do this?
-            let v = unsafe { &mut *(self.ptr.ptr().as_ptr() as *mut SchemaVec) };
+            // TODO: Is there a safe(r) way to do this?
+            let v = unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaVec) };
             loop {
                 let item_schema = self.ptr.schema().kind.as_vec().unwrap();
                 let mut item = SchemaBox::default(item_schema);

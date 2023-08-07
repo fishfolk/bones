@@ -56,7 +56,8 @@ impl<'pointer> SchemaRef<'pointer> {
     /// Create a new [`SchemaRef`] from a raw pointer and it's schema.
     ///
     /// # Safety
-    /// - `inner` must point to valid value of whatever the pointee type is.
+    /// - `ptr` must point to valid value of whatever the pointee type is.
+    /// - `ptr` must not be null.
     /// - If the `A` type parameter is [`Aligned`] then `inner` must be sufficiently aligned for the
     ///   pointee type.
     /// - `inner` must have correct provenance to allow read and writes of the pointee type.
@@ -67,8 +68,9 @@ impl<'pointer> SchemaRef<'pointer> {
         Self {
             // SOUND: casting the `*const u8` to a `*mut u8` is dangerous but sound in this case
             // because we are passing the `NonNull` to a read-only `Ptr`. Unfortunately there's not
-            // a read-only `NonNull` type to do that to instead.
-            ptr: unsafe { Ptr::new(NonNull::new(ptr as *mut u8).expect("Ptr cannot be null")) },
+            // a read-only `NonNull` type to do that to instead. Also, the user verifies that the
+            // pointer is non-null.
+            ptr: unsafe { Ptr::new(NonNull::new_unchecked(ptr as *mut u8)) },
             schema,
         }
     }
@@ -122,8 +124,14 @@ impl<'pointer> SchemaRef<'pointer> {
     }
 
     /// Get the pointer.
-    pub fn ptr(&self) -> Ptr<'pointer> {
-        self.ptr
+    pub fn as_ptr(&self) -> *const u8 {
+        self.ptr.as_ptr()
+    }
+
+    /// # Safety
+    /// Assert that the pointer is valid for type T, and that the lifetime is valid.
+    pub unsafe fn deref<T>(&self) -> &'pointer T {
+        self.ptr.deref()
     }
 
     /// Get the [`Schema`] for the pointer.
@@ -204,10 +212,11 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
     /// Create a new [`SchemaRefMut`] from a raw pointer and it's schema.
     ///
     /// # Safety
-    /// - `inner` must point to valid value of whatever the pointee type is.
+    /// - `ptr` must point to valid value of whatever the pointee type is.
+    /// - `ptr` must not be null.
     /// - If the `A` type parameter is [`Aligned`] then `inner` must be sufficiently aligned for the
     ///   pointee type.
-    /// - `inner` must have correct provenance to allow read and writes of the pointee type.
+    /// - `ptr` must have correct provenance to allow read and writes of the pointee type.
     /// - The lifetime `'a` must be constrained such that this [`PtrMut`] will stay valid and
     ///   nothing else can read or mutate the pointee while this [`PtrMut`] is live.
     pub unsafe fn from_ptr_schema(
@@ -215,7 +224,7 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
         schema: &'static Schema,
     ) -> SchemaRefMut<'pointer, 'parent> {
         Self {
-            ptr: PtrMut::new(NonNull::new(ptr as *mut u8).expect("Ptr cannot be null")),
+            ptr: PtrMut::new(NonNull::new_unchecked(ptr as *mut u8)),
             schema,
             parent_lifetime: PhantomData,
         }
@@ -287,9 +296,15 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
         }
     }
 
-    /// Get the raw pointer.
-    pub fn ptr(&mut self) -> &PtrMut<'pointer> {
-        &self.ptr
+    /// Get the raw pointer
+    pub fn as_ptr(&self) -> *mut u8 {
+        self.ptr.as_ptr()
+    }
+
+    /// # Safety
+    /// You assert that the pointer points to a valid instance of T with the given lifetime.
+    pub unsafe fn deref_mut<T>(self) -> &'pointer mut T {
+        self.ptr.deref_mut()
     }
 
     /// Get the [`Schema`] for the pointer.
@@ -627,9 +642,7 @@ impl<T: HasSchema + Default> Default for SBox<T> {
 }
 impl<T: HasSchema + std::fmt::Debug> std::fmt::Debug for SBox<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SBox")
-            .field("b", &self.b)
-            .finish()
+        f.debug_struct("SBox").field("b", &self.b).finish()
     }
 }
 
@@ -640,6 +653,11 @@ impl<T: HasSchema> SBox<T> {
             b: SchemaBox::new(value),
             _phantom: PhantomData,
         }
+    }
+
+    /// Convert into a [`SchemaBox`]
+    pub fn into_schema_box(self) -> SchemaBox {
+        self.b
     }
 }
 
