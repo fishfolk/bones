@@ -2,13 +2,18 @@
 
 use std::{
     alloc::{handle_alloc_error, Layout},
+    any::TypeId,
     hash::Hash,
     marker::PhantomData,
     mem::MaybeUninit,
     ptr::NonNull,
+    sync::OnceLock,
 };
 
-use crate::prelude::*;
+use crate::{
+    prelude::*,
+    raw_fns::{RawClone, RawDefault, RawDrop},
+};
 use bones_utils::prelude::*;
 
 /// An untyped reference that knows the [`Schema`] of the pointee and that can be cast to a matching
@@ -743,17 +748,53 @@ pub struct SBox<T: HasSchema> {
     b: SchemaBox,
     _phantom: PhantomData<T>,
 }
-impl<T: HasSchema + Default> Default for SBox<T> {
+impl<T: HasSchema> Default for SBox<T> {
+    #[track_caller]
     fn default() -> Self {
+        let schema = T::schema();
+        let Some(default_fn) = schema.default_fn else {
+            panic!("Schema doesn't implement default");
+        };
         Self {
-            b: SchemaBox::new(T::default()),
+            // SOUND: we initialize the schema box immediately, and the schema asserts the default
+            // fn is valid for the type.
+            b: unsafe {
+                let mut b = SchemaBox::uninitialized(schema);
+                (default_fn)(b.as_mut().as_ptr());
+                b
+            },
             _phantom: Default::default(),
+        }
+    }
+}
+impl<T: HasSchema> Clone for SBox<T> {
+    fn clone(&self) -> Self {
+        Self {
+            b: self.b.clone(),
+            _phantom: self._phantom,
         }
     }
 }
 impl<T: HasSchema + std::fmt::Debug> std::fmt::Debug for SBox<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SBox").field("b", &self.b).finish()
+    }
+}
+unsafe impl<T: HasSchema> HasSchema for SBox<T> {
+    fn schema() -> &'static Schema {
+        static S: OnceLock<&'static Schema> = OnceLock::new();
+        S.get_or_init(|| {
+            SCHEMA_REGISTRY.register(SchemaData {
+                kind: SchemaKind::Box(T::schema()),
+                type_id: Some(TypeId::of::<Self>()),
+                clone_fn: Some(<Self as RawClone>::raw_clone),
+                drop_fn: Some(<Self as RawDrop>::raw_drop),
+                default_fn: Some(<Self as RawDefault>::raw_default),
+                hash_fn: Some(SchemaVec::raw_hash),
+                eq_fn: Some(SchemaVec::raw_eq),
+                type_data: Default::default(),
+            })
+        })
     }
 }
 

@@ -473,7 +473,15 @@ mod metadata {
                     ptr: self.ptr,
                     ctx: self.ctx,
                 })?,
-                SchemaKind::Box(_) => todo!(),
+                SchemaKind::Box(_) => {
+                    // SOUND: schema asserts pointer is a SchemaBox.
+                    let b = unsafe { self.ptr.deref_mut::<SchemaBox>() };
+                    SchemaPtrLoadCtx {
+                        ctx: self.ctx,
+                        ptr: b.as_mut(),
+                    }
+                    .deserialize(deserializer)?
+                }
                 SchemaKind::Map { .. } => todo!(),
                 SchemaKind::Primitive(p) => {
                     match p {
