@@ -81,7 +81,7 @@ impl<'pointer> SchemaRef<'pointer> {
     ///
     /// Panics if the field doesn't exist in the schema.
     #[track_caller]
-    pub fn field<'a, I: Into<FieldIdx<'a>>>(&self, idx: I) -> SchemaRef {
+    pub fn field<'a, I: Into<FieldIdx<'a>>>(&self, idx: I) -> SchemaRef<'pointer> {
         self.get_field(idx).unwrap()
     }
 
@@ -93,8 +93,9 @@ impl<'pointer> SchemaRef<'pointer> {
     pub fn get_field<'a, I: Into<FieldIdx<'a>>>(
         &self,
         idx: I,
-    ) -> Result<SchemaRef, SchemaFieldNotFoundError<'a>> {
+    ) -> Result<SchemaRef<'pointer>, SchemaFieldNotFoundError<'a>> {
         let idx = idx.into();
+        let not_found = Err(SchemaFieldNotFoundError { idx });
         match &self.schema.kind {
             SchemaKind::Struct(s) => {
                 let field_offsets = self.schema.field_offsets();
@@ -108,7 +109,7 @@ impl<'pointer> SchemaRef<'pointer> {
                         } else {
                             None
                         }
-                    }) else { return Err(SchemaFieldNotFoundError { idx }) };
+                    }) else { return not_found };
                 let field = &s.fields[idx];
 
                 Ok(SchemaRef {
@@ -117,10 +118,12 @@ impl<'pointer> SchemaRef<'pointer> {
                     schema: field.schema,
                 })
             }
-            SchemaKind::Vec(_) => Err(SchemaFieldNotFoundError { idx }),
-            SchemaKind::Primitive(_) => Err(SchemaFieldNotFoundError { idx }),
-            SchemaKind::Box(_) => todo!(),
-            SchemaKind::Map { .. } => todo!(),
+            SchemaKind::Box(_) => {
+                // SOUND: schema asserts that type is box
+                let the_box = unsafe { self.ptr.deref::<SchemaBox>() };
+                the_box.get_field(idx)
+            }
+            SchemaKind::Vec(_) | SchemaKind::Primitive(_) | SchemaKind::Map { .. } => not_found,
         }
     }
 
@@ -153,18 +156,28 @@ impl<'pointer> SchemaRef<'pointer> {
 pub struct SchemaRefMut<'pointer, 'parent> {
     ptr: PtrMut<'pointer>,
     schema: &'static Schema,
-    /// This `'parent` lifetime is used to lock the borrow to the parent [`SchemaWalkerMut`] if
-    /// this is a walker for a field of another walker.
+    /// This `'parent` lifetime is used to lock the borrow to the parent [`SchemaRefMut`] if this
+    /// was created by borrowing the field of another [`SchemaRefMut`].
     ///
-    /// The top-level walker's `'parent` lifetime will be `'static`, meaning it doesn't have a
-    /// parent.
+    /// A top-level [`SchemaRefMut`] that doesn't borrow from another one will have the 'parent
+    /// lifetime equal to the 'pointer lifetime.
     ///
-    /// This allows us to prevent borrowing the parent walker, while one of the children walkers
-    /// are potentially writing to the fields.
+    /// This allows us to prevent borrowing the [`SchemaRefMut`], while one of the children
+    /// [`SchemaRefMut`]s are potentially writing to the fields.
     ///
-    /// In other words, this represents that the child schema walker may borrow mutably from
-    /// it's parent schema walker.
+    /// In other words, this represents that the child [`SchemaRefMut`] may borrow mutably from it's
+    /// parent schema walker.
     parent_lifetime: PhantomData<&'parent mut ()>,
+}
+
+impl<'pointer, 'parent> std::fmt::Debug for SchemaRefMut<'pointer, 'parent> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SchemaRefMut")
+            // .field("ptr", &self.ptr)
+            .field("schema", &self.schema)
+            // .field("parent_lifetime", &self.parent_lifetime)
+            .finish()
+    }
 }
 
 impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
@@ -256,11 +269,12 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
     /// # Errors
     ///
     /// Errors if the field doesn't exist in the schema.
-    pub fn get_field<'this, 'b, I: Into<FieldIdx<'b>>>(
+    pub fn get_field<'this, 'idx, I: Into<FieldIdx<'idx>>>(
         &'this mut self,
         idx: I,
-    ) -> Result<SchemaRefMut<'pointer, 'this>, SchemaMismatchError> {
+    ) -> Result<SchemaRefMut<'pointer, 'this>, SchemaFieldNotFoundError<'idx>> {
         let idx = idx.into();
+        let not_found = Err(SchemaFieldNotFoundError { idx });
         match &self.schema.kind {
             SchemaKind::Struct(s) => {
                 let field_offsets = self.schema.field_offsets();
@@ -274,7 +288,7 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
                         } else {
                             None
                         }
-                    }) else { return Err(SchemaMismatchError) };
+                    }) else { return not_found };
                 let field = &s.fields[idx];
 
                 // SOUND: here we clone our mutable pointer, and then offset it according to the
@@ -298,10 +312,47 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
                     parent_lifetime: PhantomData,
                 })
             }
-            SchemaKind::Map { .. } => todo!(),
-            SchemaKind::Box(_) => todo!(),
-            SchemaKind::Vec(_) => Err(SchemaMismatchError),
-            SchemaKind::Primitive(_) => Err(SchemaMismatchError),
+            SchemaKind::Box(_) => {
+                // SOUND: schema asserts that type is box
+                let the_box = unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaBox) };
+                the_box.get_field_mut(idx)
+            }
+            SchemaKind::Map { .. } | SchemaKind::Vec(_) | SchemaKind::Primitive(_) => not_found,
+        }
+    }
+
+    /// Convert this ref into a ref to one of it's fields.
+    ///
+    /// This is useful because it consumes self and avoids keeping a reference to it's parent
+    /// [`SchemaRefMut`].
+    /// # Panics
+    /// Panics if the field does not exist.
+    #[inline]
+    #[track_caller]
+    pub fn into_field<'idx, I: Into<FieldIdx<'idx>>>(
+        self,
+        idx: I,
+    ) -> SchemaRefMut<'pointer, 'parent> {
+        self.try_into_field(idx).unwrap()
+    }
+
+    /// Convert this ref into a ref to one of it's fields.
+    ///
+    /// This is useful because it consumes self and avoids keeping a reference to it's parent
+    /// [`SchemaRefMut`].
+    /// # Errors
+    /// Errors if the field does not exist.
+    pub fn try_into_field<'idx, I: Into<FieldIdx<'idx>>>(
+        mut self,
+        idx: I,
+    ) -> Result<SchemaRefMut<'pointer, 'parent>, Self> {
+        match self.get_field(idx) {
+            Ok(r) => Ok(SchemaRefMut {
+                ptr: r.ptr,
+                schema: r.schema,
+                parent_lifetime: PhantomData,
+            }),
+            Err(_) => Err(self),
         }
     }
 
@@ -618,6 +669,40 @@ impl SchemaBox {
     #[track_caller]
     pub fn hash(&self) -> u64 {
         self.try_hash().expect("Schema doesn't implement hash")
+    }
+
+    /// Get a ref to the field with the given name/index, and panic if it doesn't exist.
+    #[inline]
+    #[track_caller]
+    pub fn field<'idx, I: Into<FieldIdx<'idx>>>(&self, idx: I) -> SchemaRef {
+        self.get_field(idx).unwrap()
+    }
+
+    /// Get a reference to the field with the given name/index, if it exists.
+    pub fn get_field<'idx, 'ptr, I: Into<FieldIdx<'idx>>>(
+        &'ptr self,
+        idx: I,
+    ) -> Result<SchemaRef<'ptr>, SchemaFieldNotFoundError<'idx>> {
+        self.as_ref().get_field(idx)
+    }
+
+    /// Get a ref to the field with the given name/index, and panic if it doesn't exist.
+    #[inline]
+    #[track_caller]
+    pub fn field_mut<'idx, I: Into<FieldIdx<'idx>>>(&mut self, idx: I) -> SchemaRefMut {
+        self.get_field_mut(idx).unwrap()
+    }
+
+    /// Get a mutable reference to the field with the given name/index, if it exists.
+    pub fn get_field_mut<'idx, 'ptr, I: Into<FieldIdx<'idx>>>(
+        &'ptr mut self,
+        idx: I,
+    ) -> Result<SchemaRefMut<'ptr, 'ptr>, SchemaFieldNotFoundError<'idx>> {
+        let idx = idx.into();
+        match self.as_mut().try_into_field(idx) {
+            Ok(r) => Ok(r),
+            Err(_) => Err(SchemaFieldNotFoundError { idx }),
+        }
     }
 
     /// Deallocate the memory in the box.
