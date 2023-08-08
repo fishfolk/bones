@@ -26,6 +26,15 @@ struct PlayerMeta {
     /// We can include nested structs of our own if they implement HasSchema. This will not be
     /// loaded from a separate file because it is not in a Handle.
     pub stats: PlayerMetaStats,
+    /// We can also load key-value data using an SMap
+    pub animations: SMap<String, AnimMeta>,
+}
+
+#[derive(HasSchema, Debug, Default, Clone)]
+#[repr(C)]
+pub struct AnimMeta {
+    fps: f32,
+    frames: SVec<u32>,
 }
 
 /// Stats used in [`PlayerMeta`].
@@ -117,7 +126,9 @@ fn main() -> anyhow::Result<()> {
         // And we can load the `PlayerMeta` using the handle.
         let player_meta = asset_server.get(player_handle);
 
-        dbg!(&player_meta);
+        // dbg!(player_meta);
+        dbg!(player_meta.animations.get(&String::from("jump")));
+        dbg!(player_meta.animations.get(&String::from("run")));
 
         // And we can load the player's atlas metadata in the same way.
         let atlas_handle = player_meta.atlas;

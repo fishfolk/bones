@@ -1,4 +1,4 @@
-use std::{any::TypeId, marker::PhantomData, mem::MaybeUninit, sync::OnceLock};
+use std::{any::TypeId, fmt::Debug, marker::PhantomData, mem::MaybeUninit, sync::OnceLock};
 
 use bones_utils::ahash::AHasher;
 
@@ -263,7 +263,7 @@ impl SchemaVec {
 
     /// Get the schema of items in this [`SchemaVec`].
     #[inline]
-    pub fn schema(&self) -> &Schema {
+    pub fn schema(&self) -> &'static Schema {
         self.schema
     }
 
@@ -389,10 +389,20 @@ impl Drop for SchemaVec {
 /// Additionally, accessing an [`SVec`] is more efficient than using a [`SchemaVec`] because it
 /// avoids runtime schema checks after construction.
 #[repr(transparent)]
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Eq, PartialEq)]
 pub struct SVec<T: HasSchema> {
     vec: SchemaVec,
     _phantom: PhantomData<T>,
+}
+
+impl<T: HasSchema + Debug> std::fmt::Debug for SVec<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut l = f.debug_list();
+        for item in self.iter() {
+            l.entry(item);
+        }
+        l.finish()
+    }
 }
 
 impl<T: HasSchema> SVec<T> {

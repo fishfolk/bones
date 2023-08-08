@@ -1,13 +1,19 @@
 use std::{
+    any::TypeId,
     hash::{BuildHasher, Hasher},
     marker::PhantomData,
+    sync::OnceLock,
 };
 
 use bones_utils::HashMap;
 
-use crate::prelude::*;
+use crate::{
+    prelude::*,
+    raw_fns::{RawClone, RawDefault, RawDrop},
+};
 
 /// Untyped schema-aware "HashMap".
+#[derive(Clone, Debug)]
 pub struct SchemaMap {
     map: HashMap<SchemaBox, SchemaBox>,
     key_schema: &'static Schema,
@@ -26,6 +32,16 @@ impl SchemaMap {
             key_schema,
             value_schema,
         }
+    }
+
+    /// Get the schema for the map keys.
+    pub fn key_schema(&self) -> &'static Schema {
+        self.key_schema
+    }
+
+    /// Get the schema for the map values.
+    pub fn value_schema(&self) -> &'static Schema {
+        self.value_schema
     }
 
     /// Insert an item into the map.
@@ -379,9 +395,18 @@ impl SchemaMap {
 ///
 /// It is also slightly more efficient to access an [`SMap`] compared to a [`SchemaMap`] because it
 /// doesn't need to do a runtime schema check every time the map is accessed.
+#[derive(Debug)]
 pub struct SMap<K: HasSchema, V: HasSchema> {
     map: SchemaMap,
     _phantom: PhantomData<(K, V)>,
+}
+impl<K: HasSchema, V: HasSchema> Clone for SMap<K, V> {
+    fn clone(&self) -> Self {
+        Self {
+            map: self.map.clone(),
+            _phantom: self._phantom,
+        }
+    }
 }
 impl<K: HasSchema, V: HasSchema> Default for SMap<K, V> {
     fn default() -> Self {
@@ -389,6 +414,26 @@ impl<K: HasSchema, V: HasSchema> Default for SMap<K, V> {
             map: SchemaMap::new(K::schema(), V::schema()),
             _phantom: Default::default(),
         }
+    }
+}
+unsafe impl<K: HasSchema, V: HasSchema> HasSchema for SMap<K, V> {
+    fn schema() -> &'static Schema {
+        static S: OnceLock<&'static Schema> = OnceLock::new();
+        S.get_or_init(|| {
+            SCHEMA_REGISTRY.register(SchemaData {
+                kind: SchemaKind::Map {
+                    key: K::schema(),
+                    value: V::schema(),
+                },
+                type_id: Some(TypeId::of::<Self>()),
+                clone_fn: Some(<Self as RawClone>::raw_clone),
+                drop_fn: Some(<Self as RawDrop>::raw_drop),
+                default_fn: Some(<Self as RawDefault>::raw_default),
+                hash_fn: Some(SchemaVec::raw_hash),
+                eq_fn: Some(SchemaVec::raw_eq),
+                type_data: Default::default(),
+            })
+        })
     }
 }
 

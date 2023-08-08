@@ -473,6 +473,10 @@ mod metadata {
                     ptr: self.ptr,
                     ctx: self.ctx,
                 })?,
+                SchemaKind::Map { .. } => deserializer.deserialize_map(MapVisitor {
+                    ptr: self.ptr,
+                    ctx: self.ctx,
+                })?,
                 SchemaKind::Box(_) => {
                     // SOUND: schema asserts pointer is a SchemaBox.
                     let b = unsafe { self.ptr.deref_mut::<SchemaBox>() };
@@ -482,7 +486,6 @@ mod metadata {
                     }
                     .deserialize(deserializer)?
                 }
-                SchemaKind::Map { .. } => todo!(),
                 SchemaKind::Primitive(p) => {
                     match p {
                         Primitive::Bool => *self.ptr.cast_mut() = bool::deserialize(deserializer)?,
@@ -612,10 +615,10 @@ mod metadata {
         where
             A: serde::de::SeqAccess<'de>,
         {
-            // TODO: Is there a safe(r) way to do this?
+            // SOUND: schema asserts this is a SchemaVec.
             let v = unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaVec) };
             loop {
-                let item_schema = self.ptr.schema().kind.as_vec().unwrap();
+                let item_schema = v.schema();
                 let mut item = SchemaBox::default(item_schema);
                 let item_ref = item.as_mut();
                 if seq
@@ -630,6 +633,48 @@ mod metadata {
                 v.push_box(item);
             }
 
+            Ok(())
+        }
+    }
+
+    struct MapVisitor<'a, 'srv, 'ptr, 'prnt> {
+        ctx: &'a mut MetaAssetLoadCtx<'srv>,
+        ptr: SchemaRefMut<'ptr, 'prnt>,
+    }
+
+    impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for MapVisitor<'a, 'srv, 'ptr, 'prnt> {
+        type Value = ();
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            // FIXME: write a really nice error message for this.
+            write!(
+                formatter,
+                "asset metadata matching the schema: {:#?}",
+                self.ptr.schema()
+            )
+        }
+
+        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::MapAccess<'de>,
+        {
+            // SOUND: schema asserts this is a SchemaMap.
+            let v = unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaMap) };
+            if v.key_schema() != String::schema() {
+                return Err(A::Error::custom(
+                    "Can only deserialize maps with string keys.",
+                ));
+            }
+            while let Some(key) = map.next_key::<String>()? {
+                let key = SchemaBox::new(key);
+                let mut value = SchemaBox::default(v.value_schema());
+                map.next_value_seed(SchemaPtrLoadCtx {
+                    ctx: self.ctx,
+                    ptr: value.as_mut(),
+                })?;
+
+                v.insert_box(key, value);
+            }
             Ok(())
         }
     }
