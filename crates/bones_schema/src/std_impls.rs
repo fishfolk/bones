@@ -1,4 +1,4 @@
-use bones_utils::ahash::AHasher;
+use bones_utils::fxhash::FxHasher;
 
 use crate::{prelude::*, raw_fns::*};
 
@@ -190,7 +190,7 @@ mod impl_glam {
             impl CustomRawFns for $t {
                 unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64 {
                     let this = unsafe { &*(ptr as *const Self) };
-                    let mut hasher = AHasher::default();
+                    let mut hasher = FxHasher::default();
                     $(
                         hasher.write_u64($prim::raw_hash(&this.$field as *const $prim as *const u8));
                     )+
@@ -238,7 +238,7 @@ macro_rules! custom_fns_impl_float {
             unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64 {
                 let this = unsafe { &*(ptr as *const Self) };
 
-                let mut hasher = AHasher::default();
+                let mut hasher = FxHasher::default();
                 if this.is_nan() {
                     // Ensure all NaN representations hash to the same value
                     hasher.write(&$ty::to_ne_bytes($ty::NAN));

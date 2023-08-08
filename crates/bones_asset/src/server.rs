@@ -7,7 +7,7 @@ use serde::{de::DeserializeSeed, Deserialize};
 use ulid::Ulid;
 
 use crate::prelude::*;
-use bones_utils::prelude::*;
+use bones_utils::*;
 
 /// YAML format for the core asset pack's `pack.yaml` file.
 #[derive(Debug, Clone, Deserialize)]
@@ -83,7 +83,7 @@ impl AssetServer {
     /// All of the assets are immediately loaded synchronously, blocking until load is complete.
     pub fn load_assets(&mut self) -> anyhow::Result<()> {
         let core_pack = self.load_pack(None)?;
-        let mut packs = HashMap::new();
+        let mut packs = HashMap::default();
 
         // For every asset pack
         for pack_dir in self.io.enumerate_packs()? {

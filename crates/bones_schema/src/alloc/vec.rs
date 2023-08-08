@@ -2,7 +2,7 @@ use std::{
     any::TypeId, fmt::Debug, iter::Iterator, marker::PhantomData, mem::MaybeUninit, sync::OnceLock,
 };
 
-use bones_utils::ahash::AHasher;
+use bones_utils::fxhash::FxHasher;
 
 use crate::{prelude::*, raw_fns::*};
 
@@ -310,7 +310,7 @@ impl SchemaVec {
         let Some(hash_fn) = self.schema.hash_fn else {
             panic!("Schema doesn't specify a hash_fn");
         };
-        let mut hasher = AHasher::default();
+        let mut hasher = FxHasher::default();
         for item_ptr in self.buffer.iter() {
             let item_hash = unsafe { (hash_fn)(item_ptr.as_ptr()) };
             item_hash.hash(&mut hasher);

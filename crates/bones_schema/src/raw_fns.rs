@@ -3,7 +3,7 @@
 
 use std::hash::{Hash, Hasher};
 
-use bones_utils::ahash::AHasher;
+use bones_utils::fxhash::FxHasher;
 
 /// Trait implemented automatically for types that implement [`Clone`] and can be used to clone the
 /// type through raw pointers.
@@ -58,7 +58,7 @@ pub trait RawHash {
 impl<T: Hash> RawHash for T {
     unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64 {
         let this = unsafe { &*(ptr as *const Self) };
-        let mut hasher = AHasher::default();
+        let mut hasher = FxHasher::default();
         this.hash(&mut hasher);
         hasher.finish()
     }
