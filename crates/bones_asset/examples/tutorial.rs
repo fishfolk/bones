@@ -127,8 +127,7 @@ fn main() -> anyhow::Result<()> {
         let player_meta = asset_server.get(player_handle);
 
         // dbg!(player_meta);
-        dbg!(player_meta.animations.get(&String::from("jump")));
-        dbg!(player_meta.animations.get(&String::from("run")));
+        dbg!(&player_meta.animations);
 
         // And we can load the player's atlas metadata in the same way.
         let atlas_handle = player_meta.atlas;

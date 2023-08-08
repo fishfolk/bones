@@ -373,7 +373,7 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
     }
 
     /// Get the [`Schema`] for the pointer.
-    pub fn schema(&self) -> &Schema {
+    pub fn schema(&self) -> &'static Schema {
         self.schema
     }
 

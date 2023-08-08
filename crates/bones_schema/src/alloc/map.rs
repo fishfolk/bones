@@ -1,11 +1,12 @@
 use std::{
     any::TypeId,
+    fmt::Debug,
     hash::{BuildHasher, Hasher},
     marker::PhantomData,
     sync::OnceLock,
 };
 
-use bones_utils::HashMap;
+use bones_utils::{hashbrown::hash_map, HashMap};
 
 use crate::{
     prelude::*,
@@ -113,11 +114,11 @@ impl SchemaMap {
             .from_hash(hash, |other| other == &key);
         // Return the previous value.
         match entry {
-            bones_utils::hashbrown::hash_map::RawEntryMut::Occupied(mut occupied) => {
+            hash_map::RawEntryMut::Occupied(mut occupied) => {
                 std::mem::swap(occupied.get_mut(), &mut value);
                 Some(value)
             }
-            bones_utils::hashbrown::hash_map::RawEntryMut::Vacant(vacant) => {
+            hash_map::RawEntryMut::Vacant(vacant) => {
                 vacant.insert(key, value);
                 None
             }
@@ -248,10 +249,8 @@ impl SchemaMap {
             unsafe { (eq_fn)(key_ptr, other_ptr) }
         });
         match entry {
-            bones_utils::hashbrown::hash_map::RawEntryMut::Occupied(entry) => {
-                Some(entry.into_mut())
-            }
-            bones_utils::hashbrown::hash_map::RawEntryMut::Vacant(_) => None,
+            hash_map::RawEntryMut::Occupied(entry) => Some(entry.into_mut()),
+            hash_map::RawEntryMut::Vacant(_) => None,
         }
         .map(|x| x.as_mut())
     }
@@ -358,8 +357,8 @@ impl SchemaMap {
             unsafe { (eq_fn)(key_ptr, other_ptr) }
         });
         match entry {
-            bones_utils::hashbrown::hash_map::RawEntryMut::Occupied(entry) => Some(entry.remove()),
-            bones_utils::hashbrown::hash_map::RawEntryMut::Vacant(_) => None,
+            hash_map::RawEntryMut::Occupied(entry) => Some(entry.remove()),
+            hash_map::RawEntryMut::Vacant(_) => None,
         }
     }
 
@@ -389,16 +388,112 @@ impl SchemaMap {
     }
 }
 
+type SchemaMapIter<'iter> = std::iter::Map<
+    hash_map::Iter<'iter, SchemaBox, SchemaBox>,
+    for<'a> fn((&'a SchemaBox, &'a SchemaBox)) -> (SchemaRef<'a>, SchemaRef<'a>),
+>;
+type SchemaMapIterMut<'iter> = std::iter::Map<
+    hash_map::IterMut<'iter, SchemaBox, SchemaBox>,
+    for<'a> fn((&'a SchemaBox, &'a mut SchemaBox)) -> (SchemaRef<'a>, SchemaRefMut<'a, 'a>),
+>;
+impl SchemaMap {
+    /// Iterate over entries in the map.
+    #[allow(clippy::type_complexity)]
+    pub fn iter(&self) -> SchemaMapIter {
+        fn map_fn<'a>(
+            (key, value): (&'a SchemaBox, &'a SchemaBox),
+        ) -> (SchemaRef<'a>, SchemaRef<'a>) {
+            (key.as_ref(), value.as_ref())
+        }
+        self.map.iter().map(map_fn)
+    }
+
+    /// Iterate over entries in the map.
+    #[allow(clippy::type_complexity)]
+    pub fn iter_mut(&mut self) -> SchemaMapIterMut {
+        fn map_fn<'a>(
+            (key, value): (&'a SchemaBox, &'a mut SchemaBox),
+        ) -> (SchemaRef<'a>, SchemaRefMut<'a, 'a>) {
+            (key.as_ref(), value.as_mut())
+        }
+        self.map.iter_mut().map(map_fn)
+    }
+
+    /// Iterate over keys in the map.
+    #[allow(clippy::type_complexity)]
+    pub fn keys(
+        &self,
+    ) -> std::iter::Map<
+        hash_map::Keys<SchemaBox, SchemaBox>,
+        for<'a> fn(&'a SchemaBox) -> SchemaRef<'a>,
+    > {
+        fn map_fn(key: &SchemaBox) -> SchemaRef {
+            key.as_ref()
+        }
+        self.map.keys().map(map_fn)
+    }
+
+    /// Iterate over values in the map.
+    #[allow(clippy::type_complexity)]
+    pub fn values(
+        &self,
+    ) -> std::iter::Map<
+        hash_map::Values<SchemaBox, SchemaBox>,
+        for<'a> fn(&'a SchemaBox) -> SchemaRef<'a>,
+    > {
+        fn map_fn(key: &SchemaBox) -> SchemaRef {
+            key.as_ref()
+        }
+        self.map.values().map(map_fn)
+    }
+
+    /// Iterate over values in the map.
+    #[allow(clippy::type_complexity)]
+    pub fn values_mut(
+        &mut self,
+    ) -> std::iter::Map<
+        hash_map::ValuesMut<SchemaBox, SchemaBox>,
+        for<'a> fn(&'a mut SchemaBox) -> SchemaRefMut<'a, 'a>,
+    > {
+        fn map_fn(key: &mut SchemaBox) -> SchemaRefMut {
+            key.as_mut()
+        }
+        self.map.values_mut().map(map_fn)
+    }
+}
+impl<'a> IntoIterator for &'a SchemaMap {
+    type Item = (SchemaRef<'a>, SchemaRef<'a>);
+    type IntoIter = SchemaMapIter<'a>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+impl<'a> IntoIterator for &'a mut SchemaMap {
+    type Item = (SchemaRef<'a>, SchemaRefMut<'a, 'a>);
+    type IntoIter = SchemaMapIterMut<'a>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
+
 /// Typed version of a [`SchemaMap`].
 ///
 /// This works essentially like a [`HashMap`], but is compatible with the schema ecosystem.
 ///
 /// It is also slightly more efficient to access an [`SMap`] compared to a [`SchemaMap`] because it
 /// doesn't need to do a runtime schema check every time the map is accessed.
-#[derive(Debug)]
 pub struct SMap<K: HasSchema, V: HasSchema> {
     map: SchemaMap,
     _phantom: PhantomData<(K, V)>,
+}
+impl<K: HasSchema + Debug, V: HasSchema + Debug> Debug for SMap<K, V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut f = f.debug_map();
+        for (k, v) in self {
+            f.entry(k, v);
+        }
+        f.finish()
+    }
 }
 impl<K: HasSchema, V: HasSchema> Clone for SMap<K, V> {
     fn clone(&self) -> Self {
@@ -486,5 +581,92 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     /// Convert into an untyped [`SchemaMap`].
     pub fn into_schema_map(self) -> SchemaMap {
         self.map
+    }
+}
+
+type SMapIter<'iter, K, V> = std::iter::Map<
+    hash_map::Iter<'iter, SchemaBox, SchemaBox>,
+    for<'a> fn((&'a SchemaBox, &'a SchemaBox)) -> (&'a K, &'a V),
+>;
+type SMapIterMut<'iter, K, V> = std::iter::Map<
+    hash_map::IterMut<'iter, SchemaBox, SchemaBox>,
+    for<'a> fn((&'a SchemaBox, &'a mut SchemaBox)) -> (&'a K, &'a mut V),
+>;
+impl<K: HasSchema, V: HasSchema> SMap<K, V> {
+    /// Iterate over entries in the map.
+    #[allow(clippy::type_complexity)]
+    pub fn iter(&self) -> SMapIter<K, V> {
+        fn map_fn<'a, K, V>((key, value): (&'a SchemaBox, &'a SchemaBox)) -> (&K, &V) {
+            // SOUND: SMap ensures K and V schemas always match.
+            unsafe { (key.as_ref().deref(), value.as_ref().deref()) }
+        }
+        self.map.map.iter().map(map_fn)
+    }
+
+    /// Iterate over entries in the map.
+    #[allow(clippy::type_complexity)]
+    pub fn iter_mut(&mut self) -> SMapIterMut<K, V> {
+        fn map_fn<'a, K, V>(
+            (key, value): (&'a SchemaBox, &'a mut SchemaBox),
+        ) -> (&'a K, &'a mut V) {
+            // SOUND: SMap ensures K and V schemas always match.
+            unsafe { (key.as_ref().deref(), value.as_mut().deref_mut()) }
+        }
+        self.map.map.iter_mut().map(map_fn)
+    }
+
+    /// Iterate over keys in the map.
+    #[allow(clippy::type_complexity)]
+    pub fn keys(
+        &self,
+    ) -> std::iter::Map<hash_map::Keys<SchemaBox, SchemaBox>, for<'a> fn(&'a SchemaBox) -> &'a K>
+    {
+        fn map_fn<K>(key: &SchemaBox) -> &K {
+            // SOUND: SMap ensures key schema always match
+            unsafe { key.as_ref().deref() }
+        }
+        self.map.map.keys().map(map_fn)
+    }
+
+    /// Iterate over values in the map.
+    #[allow(clippy::type_complexity)]
+    pub fn values(
+        &self,
+    ) -> std::iter::Map<hash_map::Values<SchemaBox, SchemaBox>, for<'a> fn(&'a SchemaBox) -> &V>
+    {
+        fn map_fn<V>(value: &SchemaBox) -> &V {
+            // SOUND: SMap ensures value schema always matches.
+            unsafe { value.as_ref().deref() }
+        }
+        self.map.map.values().map(map_fn)
+    }
+
+    /// Iterate over values in the map.
+    #[allow(clippy::type_complexity)]
+    pub fn values_mut(
+        &mut self,
+    ) -> std::iter::Map<
+        hash_map::ValuesMut<SchemaBox, SchemaBox>,
+        for<'a> fn(&'a mut SchemaBox) -> &mut V,
+    > {
+        fn map_fn<V>(value: &mut SchemaBox) -> &mut V {
+            // SOUND: SMap ensures value schema always matches
+            unsafe { value.as_mut().deref_mut() }
+        }
+        self.map.map.values_mut().map(map_fn)
+    }
+}
+impl<'a, K: HasSchema, V: HasSchema> IntoIterator for &'a SMap<K, V> {
+    type Item = (&'a K, &'a V);
+    type IntoIter = SMapIter<'a, K, V>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+impl<'a, K: HasSchema, V: HasSchema> IntoIterator for &'a mut SMap<K, V> {
+    type Item = (&'a K, &'a mut V);
+    type IntoIter = SMapIterMut<'a, K, V>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
     }
 }

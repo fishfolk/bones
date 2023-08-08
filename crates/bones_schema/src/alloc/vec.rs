@@ -1,4 +1,6 @@
-use std::{any::TypeId, fmt::Debug, marker::PhantomData, mem::MaybeUninit, sync::OnceLock};
+use std::{
+    any::TypeId, fmt::Debug, iter::Iterator, marker::PhantomData, mem::MaybeUninit, sync::OnceLock,
+};
 
 use bones_utils::ahash::AHasher;
 
@@ -219,7 +221,7 @@ impl SchemaVec {
         self.get_ref_mut(idx)
             // SOUND: We are extending the lifetime of the cast to the lifetime of our borrow of
             // `&mut self`, which is valid.
-            .map(|mut x| unsafe { x.try_cast_mut().map(|x| transmute_lt(x)) })
+            .map(|mut x| unsafe { x.try_cast_mut().map(|x| transmute_lifetime(x)) })
             .transpose()
     }
 
@@ -265,6 +267,16 @@ impl SchemaVec {
     #[inline]
     pub fn schema(&self) -> &'static Schema {
         self.schema
+    }
+
+    /// Iterate over values in the vec
+    pub fn iter(&self) -> SchemaVecIter {
+        SchemaVecIter { vec: self, idx: 0 }
+    }
+
+    /// Iterate mutably over values in the vec
+    pub fn iter_mut(&mut self) -> SchemaVecIterMut {
+        SchemaVecIterMut { vec: self, idx: 0 }
     }
 
     /// Convert into a typed [`SVec`].
@@ -321,6 +333,60 @@ impl SchemaVec {
         let a = &*(a as *const Self);
         let b = &*(b as *const Self);
         a.eq(b)
+    }
+}
+
+impl<'a> IntoIterator for &'a SchemaVec {
+    type Item = SchemaRef<'a>;
+    type IntoIter = SchemaVecIter<'a>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+impl<'a> IntoIterator for &'a mut SchemaVec {
+    type Item = SchemaRefMut<'a, 'a>;
+    type IntoIter = SchemaVecIterMut<'a>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
+
+/// Iterator over [`SchemaVec`].
+pub struct SchemaVecIter<'a> {
+    vec: &'a SchemaVec,
+    idx: usize,
+}
+
+impl<'a> Iterator for SchemaVecIter<'a> {
+    type Item = SchemaRef<'a>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = self.vec.get_ref(self.idx);
+        if item.is_some() {
+            self.idx += 1;
+        }
+        item
+    }
+}
+
+/// Mutable iterator over [`SchemaVec`].
+pub struct SchemaVecIterMut<'a> {
+    vec: &'a mut SchemaVec,
+    idx: usize,
+}
+impl<'a> Iterator for SchemaVecIterMut<'a> {
+    type Item = SchemaRefMut<'a, 'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = self
+            .vec
+            .get_ref_mut(self.idx)
+            // SOUND: We are returning data with the lifetime of the SchemaVec, which is accurate
+            // and sound as long as we don't return two mutable references to the same item.
+            .map(|x| unsafe { SchemaRefMut::from_ptr_schema(x.as_ptr(), x.schema()) });
+        if item.is_some() {
+            self.idx += 1;
+        }
+        item
     }
 }
 
@@ -449,12 +515,12 @@ impl<T: HasSchema> SVec<T> {
 
     /// Iterate over references to the items in the vec.
     pub fn iter(&self) -> SVecIter<T> {
-        SVecIter { v: self, idx: 0 }
+        SVecIter { vec: self, idx: 0 }
     }
 
     /// Iterate over mutable references to the items in the vec.
     pub fn iter_mut(&mut self) -> SVecIterMut<T> {
-        SVecIterMut { v: self, idx: 0 }
+        SVecIterMut { vec: self, idx: 0 }
     }
 
     /// Get the length of the vector.
@@ -486,7 +552,6 @@ impl<T: HasSchema> SVec<T> {
         self.vec.hash()
     }
 }
-
 impl<T: HasSchema> std::ops::Index<usize> for SVec<T> {
     type Output = T;
 
@@ -576,41 +641,37 @@ impl<'a, T: HasSchema> IntoIterator for &'a mut SVec<T> {
 
 /// Iterator over items in an [`SVec`].
 pub struct SVecIter<'a, T: HasSchema> {
-    v: &'a SVec<T>,
+    vec: &'a SVec<T>,
     idx: usize,
 }
 impl<'a, T: HasSchema> Iterator for SVecIter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.idx >= self.v.len() {
-            None
-        } else {
-            let r = &self.v[self.idx];
+        let item = self.vec.get(self.idx);
+        if item.is_some() {
             self.idx += 1;
-            Some(r)
         }
+        item
     }
 }
 
 /// Iterator over items in an [`SVec`].
 pub struct SVecIterMut<'a, T: HasSchema> {
-    v: &'a mut SVec<T>,
+    vec: &'a mut SVec<T>,
     idx: usize,
 }
 impl<'a, T: HasSchema> Iterator for SVecIterMut<'a, T> {
     type Item = &'a mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.idx >= self.v.len() {
-            None
-        } else {
-            let r = &mut self.v[self.idx];
+        let item = self.vec.get_mut(self.idx);
+        if item.is_some() {
             self.idx += 1;
-            // SOUND: we know that the data is valid for the borrow of the SVecIterMut, and the
-            // iterator will never return two references to the same item.
-            Some(unsafe { transmute_lt(r) })
         }
+        // SOUND: we are returning data with the lifetime of the vec which is valid and sound,
+        // assuming we don't return two mutable references to the same item.
+        item.map(|x| unsafe { transmute_lifetime(x) })
     }
 }
 
@@ -618,6 +679,6 @@ impl<'a, T: HasSchema> Iterator for SVecIterMut<'a, T> {
 ///
 /// This is safer than just calling [`transmute`][std::mem::transmute] because it can only transmut
 /// the lifetime, not the type of the reference.
-unsafe fn transmute_lt<'b, T>(v: &mut T) -> &'b mut T {
+unsafe fn transmute_lifetime<'b, T>(v: &mut T) -> &'b mut T {
     std::mem::transmute(v)
 }
