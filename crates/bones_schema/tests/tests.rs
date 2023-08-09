@@ -205,9 +205,12 @@ fn schema_vec() {
     for i in 0..10 {
         v.push(i);
     }
+    for mut item in &mut v {
+        *item.cast_mut::<i32>() *= 2;
+    }
     let mut viter = v.iter();
     for i in 0..10 {
-        assert_eq!(*viter.next().unwrap().cast::<i32>(), i);
+        assert_eq!(*viter.next().unwrap().cast::<i32>(), i * 2);
     }
 }
 
