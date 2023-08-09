@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use proc_macro2::TokenTree;
+use proc_macro2::{TokenStream as TokenStream2, TokenTree as TokenTree2};
 use quote::{format_ident, quote, quote_spanned, spanned::Spanned};
 
 /// Helper macro to bail out of the macro with a compile error.
@@ -14,6 +14,43 @@ macro_rules! throw {
 
 /// Derive macro for the `HasSchema` trait.
 ///
+/// ## Example
+///
+/// ```ignore
+////// This is a custom type data.
+/// ///
+/// /// While it must implement [`HasSchema`] it is fine to just make it opaque.
+/// ///
+/// /// In this case we want to store the name of the type in our custom type data.
+/// #[derive(HasSchema, Clone, Default)]
+/// #[schema(opaque)]
+/// struct TypeName(String);
+///
+/// /// In order to make [`TypeName`] derivable, we must implement [`FromType`] for it.
+/// impl<T> FromType<T> for TypeName {
+///     fn from_type() -> Self {
+///         Self(std::any::type_name::<T>().to_string())
+///     }
+/// }
+///
+/// /// Finally we can derive our type data on other types that implement [`HasSchema`] by using the
+/// /// `#[derive_type_data()]` attribute with one or more type datas to derive.
+/// #[derive(HasSchema, Debug, Default, Clone)]
+/// #[derive_type_data(TypeName)]
+/// #[repr(C)]
+/// struct MyStruct {
+///     x: f32,
+///     y: f32,
+/// }
+///
+/// /// It is also possible to add type data that may or may not implement [`FromType`] by passing in an
+/// /// expression for the type data into a `type_data` attribute.
+/// #[derive(HasSchema, Clone, Default, Debug)]
+/// #[type_data(TypeName("CustomName".into()))]
+/// #[repr(C)]
+/// struct MyOtherStruct;
+/// ```
+///
 /// ## Known Limitations
 ///
 /// Currently it isn't possible to construct a struct that contains itself. For example, this will
@@ -27,57 +64,72 @@ macro_rules! throw {
 /// ```
 ///
 /// If this is a problem for your use-case, please open an issue.
-#[proc_macro_derive(HasSchema, attributes(schema, type_datas))]
+#[proc_macro_derive(HasSchema, attributes(schema, derive_type_data, type_data))]
 pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     let input = venial::parse_declaration(input.into()).unwrap();
     let name = input.name().expect("Type must have a name");
     let schema_mod = quote!(bones_schema);
 
     let get_flags_for_attr = |attr_name: &str| {
-        let attr = input
+        let attrs = input
             .attributes()
             .iter()
-            .find(|attr| attr.path.len() == 1 && attr.path[0].to_string() == attr_name);
-        attr.map(|attr| match &attr.value {
-            venial::AttributeValue::Group(_, value) => {
-                let mut flags = Vec::new();
+            .filter(|attr| attr.path.len() == 1 && attr.path[0].to_string() == attr_name)
+            .collect::<Vec<_>>();
+        attrs
+            .iter()
+            .map(|attr| match &attr.value {
+                venial::AttributeValue::Group(_, value) => {
+                    let mut flags = Vec::new();
 
-                let mut current_flag = proc_macro2::TokenStream::new();
-                for token in value {
-                    match token {
-                        TokenTree::Punct(x) if x.as_char() == ',' => {
-                            flags.push(current_flag.to_string());
-                            current_flag = Default::default();
+                    let mut current_flag = proc_macro2::TokenStream::new();
+                    for token in value {
+                        match token {
+                            TokenTree2::Punct(x) if x.as_char() == ',' => {
+                                flags.push(current_flag.to_string());
+                                current_flag = Default::default();
+                            }
+                            x => current_flag.extend(std::iter::once(x.clone())),
                         }
-                        x => current_flag.extend(std::iter::once(x.clone())),
                     }
-                }
-                flags.push(current_flag.to_string());
+                    flags.push(current_flag.to_string());
 
-                flags
-            }
-            venial::AttributeValue::Equals(_, _) => {
-                // TODO: Better error message span.
-                panic!("Unsupported attribute format");
-            }
-            venial::AttributeValue::Empty => Vec::new(),
-        })
-        .unwrap_or_default()
+                    flags
+                }
+                venial::AttributeValue::Equals(_, _) => {
+                    // TODO: Better error message span.
+                    panic!("Unsupported attribute format");
+                }
+                venial::AttributeValue::Empty => Vec::new(),
+            })
+            .fold(Vec::new(), |mut acc, item| {
+                acc.extend(item);
+                acc
+            })
     };
 
-    let type_datas_flags = get_flags_for_attr("type_datas");
+    let derive_type_data_flags = get_flags_for_attr("derive_type_data");
     let type_datas = {
-        let add_type_datas = type_datas_flags.into_iter().map(|ty| {
+        let add_derive_type_datas = derive_type_data_flags.into_iter().map(|ty| {
             let ty = format_ident!("{ty}");
             quote! {
                 tds.insert(<#ty as #schema_mod::FromType<#name>>::from_type());
             }
         });
+        let add_type_datas = input
+            .attributes()
+            .iter()
+            .filter(|x| x.path.len() == 1 && x.path[0].to_string() == "type_data")
+            .map(|x| x.get_value_tokens())
+            .map(|x| x.iter().cloned().collect::<TokenStream2>());
 
         quote! {
             {
                 let mut tds = #schema_mod::alloc::SchemaTypeMap::default();
-                #(#add_type_datas),*
+                #(#add_derive_type_datas),*
+                #(
+                    tds.insert(#add_type_datas);
+                ),*
                 tds
             }
         }

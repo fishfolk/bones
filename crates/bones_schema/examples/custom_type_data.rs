@@ -17,17 +17,26 @@ impl<T> FromType<T> for TypeName {
 }
 
 /// Finally we can derive our type data on other types that implement [`HasSchema`] by using the
-/// `#[type_datas()]` attribute with one or more type datas to derive.
+/// `#[derive_type_data()]` attribute with one or more type datas to derive.
 #[derive(HasSchema, Debug, Default, Clone)]
-#[type_datas(TypeName)]
+#[derive_type_data(TypeName)]
 #[repr(C)]
 struct MyStruct {
     x: f32,
     y: f32,
 }
 
+/// It is also possible to add type data that may or may not implement [`FromType`] by passing in an
+/// expression for the type data into a `type_data` attribute.
+#[derive(HasSchema, Clone, Default, Debug)]
+#[type_data(TypeName("CustomName".into()))]
+#[repr(C)]
+struct MyOtherStruct;
+
 fn main() {
     let s = MyStruct::schema();
     let tn = s.type_data.get::<TypeName>().unwrap();
-    assert_eq!(tn.0, "custom_type_data::MyStruct")
+    assert_eq!(tn.0, "custom_type_data::MyStruct");
+    let tn = MyOtherStruct::schema().type_data.get::<TypeName>().unwrap();
+    assert_eq!(tn.0, "CustomName");
 }
