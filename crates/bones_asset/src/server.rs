@@ -279,7 +279,7 @@ impl AssetServer {
             .find(|schema| {
                 let asset_kind = schema.type_data.get::<AssetKind>().unwrap();
                 match asset_kind {
-                    AssetKind::Metadata(name) => name == schema_name,
+                    AssetKind::Metadata { extension } => extension == schema_name,
                     _ => false,
                 }
             })
@@ -318,11 +318,46 @@ impl AssetServer {
 
     fn load_data_asset(
         &mut self,
-        _path: &Path,
+        path: &Path,
         _pack: Option<&str>,
-        _contents: Vec<u8>,
+        contents: Vec<u8>,
     ) -> anyhow::Result<PartialAsset> {
-        todo!()
+        // Get the schema for the asset
+        let filename = path
+            .file_name()
+            .ok_or_else(|| anyhow::format_err!("Invalid asset filename"))?
+            .to_str()
+            .ok_or_else(|| anyhow::format_err!("Invalid unicode in filename"))?;
+        let (_name, extension) = filename.split_once('.').unwrap();
+        let loader = self
+            .asset_types
+            .iter()
+            .find_map(|schema| {
+                let asset_kind = schema.type_data.get::<AssetKind>().unwrap();
+                match &asset_kind {
+                    AssetKind::Custom { extensions, loader } => {
+                        if extensions.iter().any(|ext| ext == extension) {
+                            Some(loader)
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
+                }
+            })
+            .ok_or_else(|| {
+                anyhow::format_err!("Schema loader for extension not found: {extension}")
+            })?;
+
+        let mut cid = Cid::default();
+        cid.update(&contents);
+        let sbox = loader.load(contents)?;
+
+        Ok(PartialAsset {
+            cid,
+            data: sbox,
+            dependencies: default(),
+        })
     }
 
     /// Borrow a [`LoadedAsset`] associated to the given handle.

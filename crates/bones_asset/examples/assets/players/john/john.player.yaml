@@ -4,6 +4,7 @@
 name: John
 age: 22
 atlas: ./john.atlas.yaml
+avatar: ./avatar.png
 stats:
   speed: 70
   # Left out fields like `intelligence` from the `PlayerMetaStats` struct,

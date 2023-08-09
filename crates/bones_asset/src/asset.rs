@@ -150,9 +150,9 @@ pub struct AssetInfo {
 }
 
 /// A custom assset loader.
-pub trait AssetLoader: Sync + Send {
+pub trait AssetLoader: Sync + Send + 'static {
     /// Load the asset from raw bytes.
-    fn load(&mut self, bytes: &[u8]) -> SchemaBox;
+    fn load(&self, bytes: Vec<u8>) -> anyhow::Result<SchemaBox>;
 }
 
 /// The kind of asset a type represents.
@@ -160,13 +160,19 @@ pub trait AssetLoader: Sync + Send {
 #[schema(opaque, no_default, no_clone)]
 pub enum AssetKind {
     /// This is a metadata asset that can be loaded from JSON or YAML files.
-    ///
-    /// The string parameter is the portion of the extension that comes before the `.json`, `.yml`,
-    /// or `.yaml` extension. For example, if the parameter was set to `weapon`, then the asset
-    /// could be loaded from `.weapon.json`, `.weapon.yml`, or `.weapon.yaml` files.
-    Metadata(String),
-    /// An asset with a custom asset loader
-    Custom(Box<dyn AssetLoader>),
+    Metadata {
+        /// The `extension` is the portion of the extension that comes before the `.json`, `.yml`,
+        /// or `.yaml` extension. For example, if the `extension` was set to `weapon`, then the asset
+        /// could be loaded from `.weapon.json`, `.weapon.yml`, or `.weapon.yaml` files.
+        extension: String,
+    },
+    /// An asset with a custom asset loader.
+    Custom {
+        /// The loader implementation for the asset.
+        loader: Box<dyn AssetLoader>,
+        /// The list of file extensions to load this asset from.
+        extensions: Vec<String>,
+    },
 }
 
 /// Helper function to return type data for a metadata asset.
@@ -180,11 +186,51 @@ pub enum AssetKind {
 /// #[type_data(metadata_asset("atlas"))]
 /// #[repr(C)]
 /// struct AtlasMeta {
-///     /// We can include glam types!
 ///     pub tile_size: Vec2,
 ///     pub grid_size: UVec2,
 /// }
 /// ```
-pub fn metadata_asset(name: &str) -> AssetKind {
-    AssetKind::Metadata(name.into())
+pub fn metadata_asset(extension: &str) -> AssetKind {
+    AssetKind::Metadata {
+        extension: extension.into(),
+    }
+}
+
+/// Helper function to return type data for a custom asset loader.
+///
+/// # Example
+///
+/// This is meant to be used in a `type_data` attribute when deriving [`HasSchema`].
+///
+/// ```
+/// #[derive(HasSchema, Default, Clone)]
+/// #[type_data(asset_loader("png", PngLoader))]
+/// #[repr(C)]
+/// struct Image {
+///     data: Vec<u8>,
+///     width: u32,
+///     height: u32,
+/// }
+/// ```
+pub fn asset_loader<L: AssetLoader, E: Into<AssetExtensions>>(
+    extensions: E,
+    loader: L,
+) -> AssetKind {
+    AssetKind::Custom {
+        loader: Box::new(loader),
+        extensions: extensions.into().0,
+    }
+}
+
+/// Helper type for storing asset extensions.
+pub struct AssetExtensions(Vec<String>);
+impl<'a, const N: usize> From<[&'a str; N]> for AssetExtensions {
+    fn from(value: [&'a str; N]) -> Self {
+        Self(value.iter().map(|x| x.to_string()).collect())
+    }
+}
+impl<'a> From<&'a str> for AssetExtensions {
+    fn from(value: &'a str) -> Self {
+        Self(vec![value.to_string()])
+    }
 }

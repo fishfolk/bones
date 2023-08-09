@@ -36,6 +36,8 @@ struct PlayerMeta {
     pub stats: PlayerMetaStats,
     /// We can also load key-value data using an SMap
     pub animations: SMap<String, AnimMeta>,
+    /// The player's avatar. This is a custom asset type, which we will implement below.
+    pub avatar: Handle<Image>,
 }
 
 /// Player animation metadata
@@ -85,6 +87,30 @@ struct PluginMeta {
     pub description: String,
 }
 
+/// We can also make asset types that use a custom asset loader, for example, for images.
+#[derive(HasSchema, Debug, Clone, Default)]
+// We specify the file extensions and the asset loader to use to load the asset.
+#[type_data(asset_loader(["png", "jpg"], ImageAssetLoader))]
+#[schema(opaque)]
+struct Image {
+    data: Vec<u8>,
+    width: u32,
+    height: u32,
+}
+
+/// Our custom loader for image assets.
+struct ImageAssetLoader;
+impl AssetLoader for ImageAssetLoader {
+    fn load(&self, bytes: Vec<u8>) -> anyhow::Result<SchemaBox> {
+        // We're not going to bother actually loading the image.
+        Ok(SchemaBox::new(Image {
+            data: bytes.to_vec(),
+            width: 0,
+            height: 0,
+        }))
+    }
+}
+
 fn main() -> anyhow::Result<()> {
     // Locate the dir that our core asset pack will be loaded from.
     let core_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -114,6 +140,7 @@ fn main() -> anyhow::Result<()> {
     asset_server.register_asset::<PlayerMeta>();
     asset_server.register_asset::<AtlasMeta>();
     asset_server.register_asset::<PluginMeta>();
+    asset_server.register_asset::<Image>();
 
     // Load all of the assets. This happens synchronously. After this function completes, all the
     // assets have been loaded, or an error is returned.
@@ -141,6 +168,9 @@ fn main() -> anyhow::Result<()> {
         let atlas_handle = player_meta.atlas;
         let atlas_meta = asset_server.get(&atlas_handle);
         dbg!(atlas_meta);
+
+        let avatar = asset_server.get(&player_meta.avatar);
+        dbg!(avatar.data.len(), avatar.width, avatar.height);
 
         if i == 0 {
             assert_eq!(player_meta.name, "Jane");
