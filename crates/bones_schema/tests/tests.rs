@@ -200,6 +200,15 @@ fn schema_vec() {
     let d0 = v.pop::<DataA>().unwrap();
     assert_eq!(d0.x, 1.0);
     assert!(v.pop_box().is_none());
+
+    let mut v = SchemaVec::new(i32::schema());
+    for i in 0..10 {
+        v.push(i);
+    }
+    let mut viter = v.iter();
+    for i in 0..10 {
+        assert_eq!(*viter.next().unwrap().cast::<i32>(), i);
+    }
 }
 
 #[test]
