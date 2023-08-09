@@ -177,7 +177,7 @@ impl AssetServer {
             id: meta.id,
             version: meta.version,
             game_version: meta.game_version,
-            // TODO: load & import schemas.
+            // TODO: load & import schemas that are defined in asset packs.
             schemas: default(),
             import_schemas: default(),
             root: root_handle,
@@ -568,7 +568,7 @@ mod metadata {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            // FIXME: write a really nice error message for this.
+            // TODO: write a really nice error message for this.
             write!(
                 formatter,
                 "asset metadata matching the schema: {:#?}",
@@ -646,7 +646,7 @@ mod metadata {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            // FIXME: write a really nice error message for this.
+            // TODO: write a really nice error message for this.
             write!(
                 formatter,
                 "asset metadata matching the schema: {:#?}",
@@ -689,7 +689,7 @@ mod metadata {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            // FIXME: write a really nice error message for this.
+            // TODO: write a really nice error message for this.
             write!(
                 formatter,
                 "asset metadata matching the schema: {:#?}",

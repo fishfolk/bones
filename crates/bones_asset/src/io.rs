@@ -75,7 +75,7 @@ impl AssetIo for FileAssetIo {
     }
 
     fn watch(&self) -> Option<async_channel::Receiver<AssetChange>> {
-        // TODO: implement filesystem watcher.
+        // TODO: Implement filesystem watcher for asset loader.
         None
     }
 }

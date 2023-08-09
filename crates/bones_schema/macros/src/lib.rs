@@ -97,7 +97,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                     flags
                 }
                 venial::AttributeValue::Equals(_, _) => {
-                    // TODO: Better error message span.
+                    // TODO: Improve macro error message span.
                     panic!("Unsupported attribute format");
                 }
                 venial::AttributeValue::Empty => Vec::new(),

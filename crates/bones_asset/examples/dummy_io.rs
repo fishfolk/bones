@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use bones_utils::HashMap;
 
-// TODO: implement asset loading test using `DummyIo`.
+// TODO: Implement asset loading tests using `DummyIo`.
 pub struct DummyIo {
     core: HashMap<PathBuf, Vec<u8>>,
     packs: HashMap<String, HashMap<PathBuf, Vec<u8>>>,

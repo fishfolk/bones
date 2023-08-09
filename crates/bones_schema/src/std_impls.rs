@@ -167,7 +167,7 @@ mod impl_glam {
     schema_impl_glam_vecs!(F64, f64, DVec);
     schema_impl_glam!(Quat, F32, f32, x, y, z, w);
 
-    // TODO: matrix types.
+    // TODO: Implement `HasSchema` for glam matrix types.
 
     macro_rules! custom_fns_impl_bvec {
         ($ty:ident) => {

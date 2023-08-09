@@ -87,7 +87,6 @@ impl Schema {
         // If the schemas don't have any opaque fields, and are equal to each-other, then they
         // have the same representation.
         || (!self.has_opaque() && !other.has_opaque() && {
-            // FIXME: do we need to compare clone_fn and drop_fn!?
             match (&self.kind, &other.kind) {
                 (SchemaKind::Struct(s1), SchemaKind::Struct(s2)) => {
                     s1.fields.len() == s2.fields.len() &&
@@ -277,7 +276,6 @@ pub enum Primitive {
     /// [`f64`]
     F64,
     /// A Rust [`String`]. Must be manipulated with Rust string methods.
-    // TODO: it might be best to represent strings as opaque primitives.
     String,
     /// Opaque data that cannot described by a schema.
     Opaque {
