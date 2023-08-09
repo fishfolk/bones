@@ -88,11 +88,8 @@ pub struct AssetServer {
     pub io: Box<dyn AssetIo>,
     /// The asset store.
     pub store: AssetStore,
-    /// Mapping of core schemas.
-    ///
-    /// The string key may be used in asset file extensions like `some_name.key.yaml` or
-    /// `some_name.key.json`.
-    pub core_schemas: HashMap<String, &'static Schema>,
+    /// List of registered asset types.
+    pub asset_types: Vec<&'static Schema>,
     /// Lists the packs that have not been loaded due to an incompatible game version.
     pub incompabile_packs: HashMap<String, PackfileMeta>,
 }
@@ -150,4 +147,44 @@ pub struct AssetInfo {
     pub pack: Cid,
     /// The path to the asset, relative to the root of the asset pack.
     pub path: PathBuf,
+}
+
+/// A custom assset loader.
+pub trait AssetLoader: Sync + Send {
+    /// Load the asset from raw bytes.
+    fn load(&mut self, bytes: &[u8]) -> SchemaBox;
+}
+
+/// The kind of asset a type represents.
+#[derive(HasSchema)]
+#[schema(opaque, no_default, no_clone)]
+pub enum AssetKind {
+    /// This is a metadata asset that can be loaded from JSON or YAML files.
+    ///
+    /// The string parameter is the portion of the extension that comes before the `.json`, `.yml`,
+    /// or `.yaml` extension. For example, if the parameter was set to `weapon`, then the asset
+    /// could be loaded from `.weapon.json`, `.weapon.yml`, or `.weapon.yaml` files.
+    Metadata(String),
+    /// An asset with a custom asset loader
+    Custom(Box<dyn AssetLoader>),
+}
+
+/// Helper function to return type data for a metadata asset.
+///
+/// # Example
+///
+/// This is meant to be used in a `type_data` attribute when deriving [`HasSchema`].
+///
+/// ```
+/// #[derive(HasSchema, Default, Clone)]
+/// #[type_data(metadata_asset("atlas"))]
+/// #[repr(C)]
+/// struct AtlasMeta {
+///     /// We can include glam types!
+///     pub tile_size: Vec2,
+///     pub grid_size: UVec2,
+/// }
+/// ```
+pub fn metadata_asset(name: &str) -> AssetKind {
+    AssetKind::Metadata(name.into())
 }

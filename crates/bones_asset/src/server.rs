@@ -66,16 +66,17 @@ impl AssetServer {
             io: Box::new(io),
             game_version: version,
             store: default(),
-            core_schemas: default(),
+            asset_types: default(),
             incompabile_packs: default(),
         }
     }
 
-    /// Register a type with the core schema, and the given name.
-    ///
-    /// TODO: better docs.
-    pub fn register_core_schema<T: HasSchema>(&mut self, name: &str) {
-        self.core_schemas.insert(name.into(), T::schema());
+    /// Register an asset type.
+    pub fn register_asset<T: HasSchema>(&mut self) {
+        if T::schema().type_data.get::<AssetKind>().is_none() {
+            panic!("Must have AssetType type data");
+        }
+        self.asset_types.push(T::schema());
     }
 
     /// Load the assets.
@@ -273,8 +274,15 @@ impl AssetServer {
             .rsplit_once('.')
             .ok_or_else(|| anyhow::format_err!("Missing schema name in asset filename"))?;
         let schema = *self
-            .core_schemas
-            .get(schema_name)
+            .asset_types
+            .iter()
+            .find(|schema| {
+                let asset_kind = schema.type_data.get::<AssetKind>().unwrap();
+                match asset_kind {
+                    AssetKind::Metadata(name) => name == schema_name,
+                    _ => false,
+                }
+            })
             .ok_or_else(|| anyhow::format_err!("Schema not found: {schema_name}"))?;
         let mut dependencies = Vec::new();
 

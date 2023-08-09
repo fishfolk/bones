@@ -5,6 +5,12 @@ use std::path::PathBuf;
 
 /// We will use this as our root asset data, as we will see below.
 #[derive(HasSchema, Debug, Default, Clone)]
+// Every asset type that will be loaded from a file needs either the `metadata_asset` annotation, or
+// the `asset_loader` annotation.
+//
+// The `metadata_asset` annotation tells the asset loader to load the file from a YAML or JSON file
+// with an extension like `.game.yaml`, or `.game.json`.
+#[type_data(metadata_asset("game"))]
 #[repr(C)]
 struct GameMeta {
     // We can add global game settings, for example.
@@ -15,6 +21,8 @@ struct GameMeta {
 
 /// We will use this as our player meta format.
 #[derive(HasSchema, Debug, Default, Clone)]
+// We want to load players from `.player.yaml` files.
+#[type_data(metadata_asset("player"))]
 #[repr(C)]
 struct PlayerMeta {
     /// We include basic info.
@@ -30,6 +38,7 @@ struct PlayerMeta {
     pub animations: SMap<String, AnimMeta>,
 }
 
+/// Player animation metadata
 #[derive(HasSchema, Debug, Default, Clone)]
 #[repr(C)]
 pub struct AnimMeta {
@@ -58,6 +67,7 @@ impl Default for PlayerMetaStats {
 
 /// The atlas metadata referenced by [`PlayerMeta`].
 #[derive(HasSchema, Debug, Default, Clone)]
+#[type_data(metadata_asset("atlas"))]
 #[repr(C)]
 struct AtlasMeta {
     /// We can include glam types!
@@ -68,6 +78,7 @@ struct AtlasMeta {
 /// We also want to support loading asset packs, so we create a plugin metdata type that will be
 /// used for plugin assets.
 #[derive(HasSchema, Debug, Default, Clone)]
+#[type_data(metadata_asset("plugin"))]
 #[repr(C)]
 struct PluginMeta {
     /// We'll keep this one simple for now.
@@ -98,13 +109,11 @@ fn main() -> anyhow::Result<()> {
     // compatible with our game version.
     let mut asset_server = AssetServer::new(io, Version::new(0, 1, 3));
 
-    // Register our GameMeta type as a core schema with the "game" file extension, so that all
-    // `.game.yaml` files will be loaded with the GameMeta schema.
-    asset_server.register_core_schema::<GameMeta>("game");
-    // We also need to register file extensions for PlayerMeta, AtlasMeta, and PluginMeta.
-    asset_server.register_core_schema::<PlayerMeta>("player");
-    asset_server.register_core_schema::<AtlasMeta>("atlas");
-    asset_server.register_core_schema::<PluginMeta>("plugin");
+    // Each asset type needs to be registered with the asset server.
+    asset_server.register_asset::<GameMeta>();
+    asset_server.register_asset::<PlayerMeta>();
+    asset_server.register_asset::<AtlasMeta>();
+    asset_server.register_asset::<PluginMeta>();
 
     // Load all of the assets. This happens synchronously. After this function completes, all the
     // assets have been loaded, or an error is returned.
