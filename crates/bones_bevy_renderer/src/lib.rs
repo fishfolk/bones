@@ -584,7 +584,10 @@ fn sync_time<W: HasBonesWorld>(
     let world = world_resource.world();
 
     // Initialize the time resource if it doesn't exist.
-    if world.get_resource::<bones_lib::prelude::Time>().is_none() {
+    if world
+        .get_atomic_resource::<bones_lib::prelude::Time>()
+        .is_none()
+    {
         world.init_resource::<bones_lib::prelude::Time>();
     }
 

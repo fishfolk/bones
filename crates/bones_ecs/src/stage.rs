@@ -9,6 +9,13 @@ pub struct SystemStages {
     /// The stages in the collection, in the order that they will be run.
     pub stages: Vec<Box<dyn SystemStage>>,
 }
+impl std::fmt::Debug for SystemStages {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SystemStages")
+            // TODO: add list of stages to the debug render for `SystemStages`.
+            .finish()
+    }
+}
 
 impl Default for SystemStages {
     fn default() -> Self {
@@ -171,7 +178,7 @@ impl SystemStage for SimpleSystemStage {
 
         // Drain the command queue
         {
-            let command_queue = world.resource::<CommandQueue>();
+            let command_queue = world.resources.get_cell::<CommandQueue>().unwrap();
             let mut command_queue = command_queue.borrow_mut();
 
             for mut system in command_queue.queue.drain(..) {
@@ -280,7 +287,7 @@ impl<'a> SystemParam for Commands<'a> {
     fn initialize(_world: &mut World) {}
 
     fn get_state(world: &World) -> Self::State {
-        world.resource::<CommandQueue>()
+        world.resources.get_cell::<CommandQueue>().unwrap()
     }
 
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {

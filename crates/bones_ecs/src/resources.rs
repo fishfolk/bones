@@ -70,18 +70,32 @@ impl UntypedResources {
         Self::default()
     }
 
-    /// Insert a new resource
+    /// Insert a new resource.
     pub fn insert(&mut self, resource: UntypedAtomicResource) -> Option<UntypedAtomicResource> {
         let id = resource.cell.borrow().schema().id();
         self.resources.insert(id, resource)
     }
 
-    /// Get a cell containing the resource data pointer for the given ID
-    pub fn get(&self, schema_id: SchemaId) -> Option<UntypedAtomicResource> {
+    /// Get a cell containing the resource data pointer for the given ID.
+    pub fn get_cell(&self, schema_id: SchemaId) -> Option<UntypedAtomicResource> {
         self.resources.get(&schema_id).map(|x| x.clone_cell())
     }
 
-    /// Remove a resource
+    /// Get a reference to an untyped resource.
+    pub fn get(&self, schema_id: SchemaId) -> Option<AtomicRef<SchemaBox>> {
+        self.resources
+            .get(&schema_id)
+            .map(|x| AtomicRefCell::borrow(&x.cell))
+    }
+
+    /// Get a mutable reference to an untyped resource.
+    pub fn get_mut(&mut self, schema_id: SchemaId) -> Option<AtomicRefMut<SchemaBox>> {
+        self.resources
+            .get(&schema_id)
+            .map(|x| AtomicRefCell::borrow_mut(&x.cell))
+    }
+
+    /// Remove a resource.
     pub fn remove(&mut self, id: SchemaId) -> Option<UntypedAtomicResource> {
         self.resources.remove(&id)
     }
@@ -106,19 +120,26 @@ impl Resources {
         self.untyped.insert(UntypedAtomicResource::new(resource));
     }
 
-    /// Get a resource handle from the store.
-    ///
-    /// This is not the resource itself, but a handle, may be cloned cheaply.
-    ///
-    /// In order to access the resource you must call [`borrow()`][AtomicResource::borrow] or
-    /// [`borrow_mut()`][AtomicResource::borrow_mut] on the returned value.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the resource does not exist in the store.
-    #[track_caller]
-    pub fn get<T: HasSchema>(&self) -> AtomicResource<T> {
-        self.try_get().unwrap()
+    /// Borrow a resource.
+    pub fn get<T: HasSchema>(&self) -> Option<AtomicRef<T>> {
+        self.untyped.get(T::schema().id()).map(|sbox| {
+            AtomicRef::map(sbox, |sbox| {
+                // SOUND: schema matches as checked by retreiving from the untyped store by the schema
+                // ID.
+                unsafe { sbox.as_ref().deref() }
+            })
+        })
+    }
+
+    /// Mutably borrow a resource.
+    pub fn get_mut<T: HasSchema>(&mut self) -> Option<AtomicRefMut<T>> {
+        self.untyped.get_mut(T::schema().id()).map(|sbox| {
+            AtomicRefMut::map(sbox, |sbox| {
+                // SOUND: schema matches as checked by retreiving from the untyped store by the
+                // schema ID.
+                unsafe { sbox.as_mut().deref_mut() }
+            })
+        })
     }
 
     /// Check whether or not a resource is in the store.
@@ -128,9 +149,9 @@ impl Resources {
         self.untyped.resources.contains_key(&T::schema().id())
     }
 
-    /// Gets a resource handle from the store if it exists.
-    pub fn try_get<T: HasSchema>(&self) -> Option<AtomicResource<T>> {
-        let untyped = self.untyped.get(T::schema().id())?;
+    /// Gets a clone of the resource cell for the resource of the given type.
+    pub fn get_cell<T: HasSchema>(&self) -> Option<AtomicResource<T>> {
+        let untyped = self.untyped.get_cell(T::schema().id())?;
 
         Some(AtomicResource {
             untyped,
@@ -168,18 +189,18 @@ impl<T: HasSchema> AtomicResource<T> {
     ///
     /// This returns a read guard, very similar to an [`RwLock`][std::sync::RwLock].
     pub fn borrow(&self) -> AtomicRef<T> {
-        let borrow = self.untyped.borrow();
-        // SAFE: We know that the data pointer is valid for type T.
-        AtomicRef::map(borrow, |data| data.cast_ref::<T>())
+        let borrow = AtomicRefCell::borrow(&self.untyped);
+        // SOUND: We know that the data pointer is valid for type T.
+        AtomicRef::map(borrow, |data| unsafe { data.as_ref().deref() })
     }
 
     /// Lock the resource for read-writing.
     ///
     /// This returns a write guard, very similar to an [`RwLock`][std::sync::RwLock].
     pub fn borrow_mut(&self) -> AtomicRefMut<T> {
-        let borrow = self.untyped.borrow_mut();
-        // SAFE: We know that the data pointer is valid for type T.
-        AtomicRefMut::map(borrow, |data| data.cast_mut::<T>())
+        let borrow = AtomicRefCell::borrow_mut(&self.untyped);
+        // SOUND: We know that the data pointer is valid for type T.
+        AtomicRefMut::map(borrow, |data| unsafe { data.as_mut().deref_mut() })
     }
 }
 
@@ -200,20 +221,20 @@ mod test {
         let mut resources = Resources::new();
 
         resources.insert(A(String::from("hi")));
-        assert_eq!(resources.get::<A>().borrow_mut().0, "hi");
+        assert_eq!(resources.get::<A>().unwrap().0, "hi");
 
         let r2 = resources.clone();
 
         resources.insert(A(String::from("bye")));
         resources.insert(A(String::from("world")));
-        assert_eq!(resources.get::<A>().borrow().0, "world");
+        assert_eq!(resources.get::<A>().unwrap().0, "world");
 
-        assert_eq!(r2.get::<A>().borrow().0, "hi");
+        assert_eq!(r2.get::<A>().unwrap().0, "hi");
 
         resources.insert(B(1));
-        assert_eq!(resources.get::<B>().borrow().0, 1);
+        assert_eq!(resources.get::<B>().unwrap().0, 1);
         resources.insert(B(2));
-        assert_eq!(resources.get::<B>().borrow().0, 2);
-        assert_eq!(resources.get::<A>().borrow().0, "world");
+        assert_eq!(resources.get::<B>().unwrap().0, 2);
+        assert_eq!(resources.get::<A>().unwrap().0, "world");
     }
 }

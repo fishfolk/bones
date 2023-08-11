@@ -11,16 +11,16 @@ pub use {bones_ecs as ecs, bones_input as input, bones_render as render, bones_u
 /// Bones lib prelude
 pub mod prelude {
     pub use crate::{
-        animation::prelude::*, asset::prelude::*, bones_core::*, camera::*, ecs::prelude::*,
+        animation::prelude::*, asset::prelude::*, camera::*, ecs::prelude::*, game::*,
         input::prelude::*, render::prelude::*, utils::prelude::*, FrameTime,
     };
 }
 use prelude::*;
 
 pub mod animation;
-pub mod bones_core;
-pub mod camera;
 pub mod asset;
+pub mod camera;
+pub mod game;
 
 /// This is a resource that stores the game's fixed frame time.
 ///
@@ -40,7 +40,7 @@ impl Default for FrameTime {
 }
 
 /// [`BonesPlugin`] that installs the `bones_lib` systems for things such as animation etc.
-pub fn plugin(core: &mut BonesCore) {
+pub fn plugin(core: &mut Session) {
     core.install_plugin(animation::plugin)
         .install_plugin(camera::plugin)
         .install_plugin(asset::plugin);

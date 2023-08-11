@@ -12,9 +12,14 @@ use crate::prelude::*;
 #[derive(Clone)]
 pub struct World {
     /// Stores the world resources.
-    pub(crate) resources: Resources,
+    pub resources: Resources,
     /// Stores the world components.
     pub components: ComponentStores,
+}
+impl std::fmt::Debug for World {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("World").finish()
+    }
 }
 
 impl Default for World {
@@ -44,8 +49,7 @@ impl World {
     /// This will remove the component storage for all killed entities, and allow their slots to be
     /// re-used for any new entities.
     pub fn maintain(&mut self) {
-        let entities = self.resources.get::<Entities>();
-        let mut entities = entities.borrow_mut();
+        let mut entities = self.resources.get_mut::<Entities>().unwrap();
 
         for components in &mut self.components.components.values_mut() {
             let mut components = components.borrow_mut();
@@ -105,30 +109,44 @@ impl World {
         self.resources.insert(resource)
     }
 
-    /// Get a resource handle from the store.
-    ///
-    /// This is not the resource itself, but a handle, may be cloned cheaply.
-    ///
-    /// In order to access the resource you must call [`borrow()`][AtomicResource::borrow] or
-    /// [`borrow_mut()`][AtomicResource::borrow_mut] on the returned value.
-    ///
+    /// Borrow a resource from the world.
     /// # Panics
-    ///
     /// Panics if the resource does not exist in the store.
-    pub fn resource<R: HasSchema>(&self) -> AtomicResource<R> {
-        match self.resources.try_get::<R>() {
+    #[track_caller]
+    pub fn resource<T: HasSchema>(&self) -> AtomicRef<T> {
+        match self.resources.get::<T>() {
             Some(r) => r,
             None => panic!(
                 "Requested resource {} does not exist in the `World`.
                 Did you forget to add it using `world.insert_resource` / `world.init_resource`?",
-                std::any::type_name::<R>()
+                std::any::type_name::<T>()
             ),
         }
     }
 
-    /// Gets a resource handle from the store if it exists.
-    pub fn get_resource<R: HasSchema>(&self) -> Option<AtomicResource<R>> {
-        self.resources.try_get::<R>()
+    /// Borrow a resource from the world.
+    /// # Panics
+    /// Panics if the resource does not exist in the store.
+    #[track_caller]
+    pub fn resource_mut<T: HasSchema>(&mut self) -> AtomicRefMut<T> {
+        match self.resources.get_mut::<T>() {
+            Some(r) => r,
+            None => panic!(
+                "Requested resource {} does not exist in the `World`.
+                Did you forget to add it using `world.insert_resource` / `world.init_resource`?",
+                std::any::type_name::<T>()
+            ),
+        }
+    }
+
+    /// Borrow a resource from the world, if it exists.
+    pub fn get_resource<T: HasSchema>(&self) -> Option<AtomicRef<T>> {
+        self.resources.get()
+    }
+
+    /// Borrow a resource from the world, if it exists.
+    pub fn get_resource_mut<T: HasSchema>(&mut self) -> Option<AtomicRefMut<T>> {
+        self.resources.get_mut()
     }
 }
 
@@ -295,7 +313,6 @@ mod tests {
     impl FromWorld for TestFromWorld {
         fn from_world(world: &mut World) -> Self {
             let b = world.resource::<TestResource>();
-            let b = b.borrow();
             Self(b.0)
         }
     }
@@ -308,7 +325,6 @@ mod tests {
         w.insert_resource(TestResource(1));
 
         let resource = w.resource::<TestFromWorld>();
-        let resource = resource.borrow();
         assert_eq!(resource.0, 0);
     }
 }

@@ -7,7 +7,7 @@ use bones_input::Time;
 use crate::prelude::*;
 
 /// Install the camera utilities on the given [`SystemStages`].
-pub fn plugin(core: &mut BonesCore) {
+pub fn plugin(core: &mut Session) {
     core.stages
         .add_system_to_stage(CoreStage::Last, apply_shake)
         .add_system_to_stage(CoreStage::Last, apply_trauma)

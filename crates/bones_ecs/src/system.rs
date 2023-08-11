@@ -168,7 +168,7 @@ impl<'a, T: HasSchema + FromWorld> SystemParam for Res<'a, T> {
     }
 
     fn get_state(world: &World) -> Self::State {
-        world.resource::<T>()
+        world.resources.get_cell::<T>().unwrap()
     }
 
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
@@ -185,7 +185,7 @@ impl<'a, T: HasSchema + FromWorld> SystemParam for ResMut<'a, T> {
     }
 
     fn get_state(world: &World) -> Self::State {
-        world.resource::<T>()
+        world.resources.get_cell::<T>().unwrap()
     }
 
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
@@ -424,18 +424,18 @@ mod tests {
         })
         .system();
 
-        assert!(world.resources.try_get::<B>().is_none());
+        assert!(world.resources.get_cell::<B>().is_none());
         my_system.initialize(&mut world);
 
         let res = world.resource::<B>();
-        assert_eq!(res.borrow().x, 0);
+        assert_eq!(res.x, 0);
 
         my_system.run(&world).unwrap();
 
         let res = world.resource::<B>();
-        assert_eq!(res.borrow().x, 45);
+        assert_eq!(res.x, 45);
 
         let res = world.resource::<A>();
-        assert_eq!(*res.borrow(), A);
+        assert_eq!(*res, A);
     }
 }
