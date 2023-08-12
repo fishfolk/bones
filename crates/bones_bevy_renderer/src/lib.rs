@@ -10,14 +10,11 @@ use std::marker::PhantomData;
 use bevy::{prelude::*, render::camera::ScalingMode};
 use bevy_prototype_lyon::prelude as lyon;
 use bevy_simple_tilemap::{prelude::TileMapBundle, Tile, TileFlags, TileMap};
-use bones_lib::prelude::{self as bones, BitSet, IntoBevy};
 
 /// The prelude
 pub mod prelude {
     pub use crate::*;
 }
-
-mod asset;
 
 /// This is a trait that must be implemented for your Bevy resource containing the bones
 /// [`World`][bones::World].

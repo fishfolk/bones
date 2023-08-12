@@ -12,3 +12,4 @@ pub mod line;
 pub mod sprite;
 pub mod tilemap;
 pub mod transform;
+pub mod ui;

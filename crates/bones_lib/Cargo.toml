@@ -12,5 +12,4 @@ default = []
 glam = ["bones_ecs/glam"]
 
 [dependencies]
-bones_asset      = { version = "^0.2.0", path = "../bones_asset" }
 bones_ecs        = { version = "^0.2.0", path = "../bones_ecs" }

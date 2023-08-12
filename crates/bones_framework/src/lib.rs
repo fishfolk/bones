@@ -7,6 +7,8 @@
 
 #[doc(inline)]
 pub use bones_lib as lib;
+#[doc(inline)]
+pub use bones_asset as asset;
 
 /// Math library.
 #[doc(inline)]
@@ -17,6 +19,7 @@ pub mod prelude {
     pub use crate::{input::prelude::*, render::prelude::*};
     pub use bones_lib::prelude::*;
     pub use glam::*;
+    pub use bones_asset::prelude::*;
 }
 
 pub mod input;

@@ -6,19 +6,13 @@
 #![deny(rustdoc::all)]
 
 #[doc(inline)]
-pub use bones_asset as asset;
-
-#[doc(inline)]
 pub use bones_ecs as ecs;
 
 /// Bones lib prelude
 pub mod prelude {
-    pub use crate::{
-        asset::prelude::*, ecs::prelude::*, Game, Plugin, Session, SessionRunner, Sessions,
-    };
+    pub use crate::{ecs::prelude::*, Game, Plugin, Session, SessionRunner, Sessions};
 }
 
-use bones_asset::AssetServer;
 use std::fmt::Debug;
 
 use crate::prelude::*;
@@ -140,8 +134,6 @@ pub struct Game {
     ///
     /// Not meant for use by the user.
     session_keys_cache: Vec<Key>,
-    /// Aditional context provided by game environment before [`Game::step()`] can be called.
-    ctx: Option<GameCtx>,
 }
 
 impl Game {
@@ -150,29 +142,18 @@ impl Game {
         Self::default()
     }
 
-    /// Must be called once before calling [`Game::step()`] to provide context necessary to advance
-    /// the game simulation.
-    pub fn prepare(&mut self, ctx: GameCtx) {
-        self.ctx = Some(ctx);
-    }
-
-    /// Returns whether or not [`Game::prepare()`] has been run, and the game is ready to run
-    /// [`Game::step()`].
-    pub fn has_prepared(&self) -> bool {
-        self.ctx.is_some()
-    }
-
     /// Step the game simulation.
     ///
     /// `apply_input` is a function that will be called once for every active [`Session`], allowing
     /// you to update the world with the current frame's input, whatever form that may come in.
-    /// Usually this will be used to assign to a resource containing the player's controls and
-    /// possibly other information from outside the game such as the window size, etc.
+    ///
+    /// Usually this will be used to:
+    /// - assign the player input to a resource so that the game can respond to player controls.
+    /// - assign the window information to a resource, so that the game can respond to the window
+    ///   size.
+    /// - setup other important resources such as the UI context and the asset server, if
+    ///   applicable.
     pub fn step<F: FnMut(&mut World)>(&mut self, mut apply_input: F) {
-        let Some(ctx) = &mut self.ctx else {
-            panic!("You must call Game::prepare() once before calling Game::step().");
-        };
-
         // Sort session keys by priority
         self.session_keys_cache.clear();
         self.session_keys_cache.extend(self.sessions.map.keys());
@@ -188,14 +169,6 @@ impl Game {
             if current_session.active {
                 // Apply the game input
                 apply_input(&mut current_session.world);
-
-                // Insert the asset server into the session.
-                if !current_session.world.resources.contains::<AssetServer>() {
-                    current_session
-                        .world
-                        .resources
-                        .insert_cell(ctx.asset_server.clone_cell());
-                }
 
                 // Insert the other sessions into the current session's world
                 {
@@ -219,17 +192,6 @@ impl Game {
             // Insert the current session back into the session list
             self.sessions.map.insert(session_name, current_session);
         }
-    }
-}
-
-/// Extra context provided to the game to prepare it before calling [`Game::step`].
-pub struct GameCtx {
-    /// A handle to the asset server.
-    pub asset_server: AtomicResource<AssetServer>,
-}
-impl std::fmt::Debug for GameCtx {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GameCtx").finish_non_exhaustive()
     }
 }
 
