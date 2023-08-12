@@ -58,6 +58,11 @@ pub struct Entities {
     /// bitset.
     has_deleted: bool,
 }
+impl std::fmt::Debug for Entities {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Entities").finish_non_exhaustive()
+    }
+}
 
 impl Default for Entities {
     fn default() -> Self {

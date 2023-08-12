@@ -1,0 +1,11 @@
+[package]
+authors     = ["The Fish Folk & Spicy Lobster Developers"]
+description = "Bones framework for making games."
+edition     = "2021"
+license     = "MIT OR Apache-2.0"
+name        = "bones_framework"
+repository  = "https://github.com/fishfolk/bones"
+version     = "0.2.0"
+
+[dependencies]
+bones_lib = { version = "0.2", path = "../bones_lib" }

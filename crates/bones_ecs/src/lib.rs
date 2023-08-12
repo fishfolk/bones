@@ -17,7 +17,9 @@ pub mod entities;
 pub mod resources;
 pub mod stage;
 pub mod system;
-pub use bones_schema as reflect;
+
+pub use bones_schema as schema;
+pub use bones_utils as utils;
 
 mod error;
 pub use error::EcsError;

@@ -108,7 +108,7 @@ impl Schema {
 pub struct SchemaData {
     /// The kind of schema.
     pub kind: SchemaKind,
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     /// Container for storing [`Schema`] type datas.
     ///
     /// "Type data" is extra data that is stored in a type's [`Schema`] that may be used for any number
@@ -146,23 +146,23 @@ pub struct SchemaData {
     // as type datas, we may want to remove these fields in favor of the type data.
     /// The Rust [`TypeId`] that this [`Schema`] was created from, if it was created from a Rust
     /// type.
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     pub type_id: Option<TypeId>,
     /// The function pointer that may be used to clone data with this schema.
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     pub clone_fn: Option<unsafe extern "C-unwind" fn(src: *const u8, dst: *mut u8)>,
     /// The function pointer that may be used to drop data with this schema.
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     pub drop_fn: Option<unsafe extern "C-unwind" fn(ptr: *mut u8)>,
     /// The function pointer that may be used to write a default value to a pointer.
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     pub default_fn: Option<unsafe extern "C-unwind" fn(ptr: *mut u8)>,
     /// The function pointer that may be used to hash the value.
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     pub hash_fn: Option<unsafe extern "C-unwind" fn(ptr: *const u8) -> u64>,
     /// The function pointer that may be used to compare two values for equality. Note that this is
     /// total equality, not partial equality.
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     pub eq_fn: Option<unsafe extern "C-unwind" fn(a: *const u8, b: *const u8) -> bool>,
 }
 
@@ -247,7 +247,7 @@ pub struct StructFieldInfo {
 /// A type of primitive.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
-#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 pub enum Primitive {
     /// A boolean.
     Bool,

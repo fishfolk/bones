@@ -1,6 +1,6 @@
 //! World resource storage.
 
-use std::{marker::PhantomData, sync::Arc};
+use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
 use crate::prelude::*;
 
@@ -25,10 +25,10 @@ pub struct UntypedAtomicResource {
 
 impl UntypedAtomicResource {
     /// Creates a new [`UntypedResource`] storing the given data.
-    pub fn new<T: HasSchema>(resource: T) -> Self {
+    pub fn new(resource: SchemaBox) -> Self {
         Self {
-            cell: Arc::new(AtomicRefCell::new(SchemaBox::new(resource))),
-            schema: T::schema(),
+            schema: resource.schema(),
+            cell: Arc::new(AtomicRefCell::new(resource)),
         }
     }
 
@@ -70,8 +70,18 @@ impl UntypedResources {
         Self::default()
     }
 
-    /// Insert a new resource.
-    pub fn insert(&mut self, resource: UntypedAtomicResource) -> Option<UntypedAtomicResource> {
+    /// Insert a resource.
+    pub fn insert(&mut self, resource: SchemaBox) -> Option<UntypedAtomicResource> {
+        let id = resource.schema().id();
+        self.resources
+            .insert(id, UntypedAtomicResource::new(resource))
+    }
+
+    /// Insert a resource.
+    pub fn insert_cell(
+        &mut self,
+        resource: UntypedAtomicResource,
+    ) -> Option<UntypedAtomicResource> {
         let id = resource.cell.borrow().schema().id();
         self.resources.insert(id, resource)
     }
@@ -116,8 +126,15 @@ impl Resources {
     }
 
     /// Insert a resource.
-    pub fn insert<T: HasSchema>(&mut self, resource: T) {
-        self.untyped.insert(UntypedAtomicResource::new(resource));
+    pub fn insert<T: HasSchema>(&mut self, resource: T) -> Option<AtomicResource<T>> {
+        self.untyped
+            .insert(SchemaBox::new(resource))
+            .map(|x| AtomicResource::from_untyped(x))
+    }
+
+    /// Insert a resource cell.
+    pub fn insert_cell<T: HasSchema>(&mut self, resource: AtomicResource<T>) {
+        self.untyped.insert_cell(resource.untyped);
     }
 
     /// Borrow a resource.
@@ -183,8 +200,52 @@ pub struct AtomicResource<T: HasSchema> {
     untyped: UntypedAtomicResource,
     _phantom: PhantomData<T>,
 }
+impl<T: HasSchema + Debug> Debug for AtomicResource<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("AtomicResource(")?;
+        T::fmt(self.untyped.cell.borrow().cast_ref(), f)?;
+        f.write_str(")")?;
+        Ok(())
+    }
+}
+
+impl<T: HasSchema + Default> Default for AtomicResource<T> {
+    fn default() -> Self {
+        Self {
+            untyped: UntypedAtomicResource::new(SchemaBox::new(T::default())),
+            _phantom: Default::default(),
+        }
+    }
+}
 
 impl<T: HasSchema> AtomicResource<T> {
+    /// Create a new atomic resource.
+    ///
+    /// This can be inserted into a world by calling `world.resources.insert_cell`.
+    pub fn new(data: T) -> Self {
+        AtomicResource {
+            untyped: UntypedAtomicResource::new(SchemaBox::new(data)),
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Clone this atomic resource, returning a handle to the same resource data.
+    pub fn clone_cell(&self) -> Self {
+        Self {
+            untyped: self.untyped.clone_cell(),
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Create from an [`UntypedAtomicResource`].
+    pub fn from_untyped(untyped: UntypedAtomicResource) -> Self {
+        assert_eq!(T::schema(), untyped.schema);
+        AtomicResource {
+            untyped,
+            _phantom: PhantomData,
+        }
+    }
+
     /// Lock the resource for reading.
     ///
     /// This returns a read guard, very similar to an [`RwLock`][std::sync::RwLock].

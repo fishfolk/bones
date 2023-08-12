@@ -100,12 +100,12 @@ impl World {
     pub fn init_resource<R: HasSchema + FromWorld>(&mut self) {
         if !self.resources.contains::<R>() {
             let value = R::from_world(self);
-            self.resources.insert(value)
+            self.resources.insert(value);
         }
     }
 
     /// Insert a resource.
-    pub fn insert_resource<R: HasSchema>(&mut self, resource: R) {
+    pub fn insert_resource<R: HasSchema>(&mut self, resource: R) -> Option<AtomicResource<R>> {
         self.resources.insert(resource)
     }
 

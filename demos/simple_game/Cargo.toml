@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bones_lib = { path = "../../" }
+bones_lib = { path = "../../crates/bones_lib", features = ["glam"] }
+glam = "0.23"

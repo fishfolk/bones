@@ -1,29 +1,5 @@
-[package]
-authors     = ["The Fish Folks & Spicy Lobster Developers"]
-description = "Opinionated game meta-engine built on Bevy"
-edition     = "2021"
-license     = "MIT OR Apache-2.0"
-name        = "bones_lib"
-repository  = "https://github.com/fishfolk/bones"
-version     = "0.2.0"
-
 [workspace]
-members = [".", "crates/*", "demos/*"]
+members = ["crates/*", "demos/*"]
 
 [profile.release]
 lto = true
-
-[features]
-serde = ["dep:serde", "bones_render/serde", "bones_ecs/serde"]
-
-[dependencies]
-bones_asset      = { version = "^0.2.0", path = "./crates/bones_asset" }
-bones_bevy_utils = { version = "^0.2.0", path = "./crates/bones_bevy_utils", optional = true }
-bones_ecs        = { version = "^0.2.0", path = "./crates/bones_ecs" }
-bones_input      = { version = "^0.2.0", path = "./crates/bones_input" }
-bones_render     = { version = "^0.2.0", path = "./crates/bones_render" }
-bones_utils      = { version = "^0.1.0", path = "./crates/bones_utils" }
-
-noise = "0.8"
-serde = { version = "1.0", features = ["derive"], optional = true }
-once_cell = { version = "1.18.0", features = ["parking_lot"] }

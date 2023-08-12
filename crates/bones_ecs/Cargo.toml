@@ -13,9 +13,8 @@ repository = "https://github.com/fishfolk/bones"
 version = "0.2.0"
 
 [features]
-default = ["keysize16", "serde", "glam"]
-serde = ["dep:serde", "serde_yaml"]
-glam = ["dep:glam", "dep:paste"]
+default = ["keysize16"]
+glam = ["dep:glam", "dep:paste", "bones_schema/glam"]
 
 keysize16 = []
 keysize20 = []
@@ -33,9 +32,7 @@ bytemuck    = "1.12"
 either      = "1.8"
 fxhash      = "0.2"
 itertools   = "0.10"
-serde       = { version = "1.0", features = ["derive"], optional = true }
 thiserror   = "1.0"
-serde_yaml  = { version = "0.9", optional = true }
 glam        = { version = "0.23", optional = true }
 paste       = { version = "1.0", optional = true }
 

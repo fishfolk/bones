@@ -8,10 +8,10 @@ repository  = "https://github.com/fishfolk/bones"
 version     = "0.1.0"
 
 [features]
-# TODO: Make `bones_schema` features non-default.
-default = ["serde", "glam", "derive"]
+default = ["derive"]
 serde   = ["dep:serde", "ulid/serde", "bones_utils/serde"]
 derive  = ["bones_schema_macros"]
+glam    = ["dep:glam"]
 
 [dependencies]
 bones_utils = { version = "0.1", path = "../bones_utils" }
