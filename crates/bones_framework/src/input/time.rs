@@ -6,9 +6,9 @@
 //!
 //! [`bevy_time`]: https://github.com/bevyengine/bevy/tree/aa4170d9a471c6f6a4f3bea4e41ed2c39de98e16/crates/bevy_time
 
-use instant::{Duration, Instant};
+use crate::prelude::*;
 
-use bones_schema::HasSchema;
+use instant::{Duration, Instant};
 
 mod stopwatch;
 pub use stopwatch::*;
@@ -161,13 +161,13 @@ impl Time {
         self.delta
     }
 
-    /// Returns how much time has advanced since the last [`update`](#method.update), as [`f32`] seconds.
+    /// Returns how much time has advanced since the last [`update`](#method.update), as [`prim@f32`] seconds.
     #[inline]
     pub fn delta_seconds(&self) -> f32 {
         self.delta_seconds
     }
 
-    /// Returns how much time has advanced since the last [`update`](#method.update), as [`f64`] seconds.
+    /// Returns how much time has advanced since the last [`update`](#method.update), as [`prim@f64`] seconds.
     #[inline]
     pub fn delta_seconds_f64(&self) -> f64 {
         self.delta_seconds_f64
@@ -179,7 +179,7 @@ impl Time {
         self.elapsed
     }
 
-    /// Returns how much time has advanced since [`startup`](#method.startup), as [`f32`] seconds.
+    /// Returns how much time has advanced since [`startup`](#method.startup), as [`prim@f32`] seconds.
     ///
     /// **Note:** This is a monotonically increasing value. It's precision will degrade over time.
     /// If you need an `f32` but that precision loss is unacceptable,
@@ -189,7 +189,7 @@ impl Time {
         self.elapsed_seconds
     }
 
-    /// Returns how much time has advanced since [`startup`](#method.startup), as [`f64`] seconds.
+    /// Returns how much time has advanced since [`startup`](#method.startup), as [`prim@f64`] seconds.
     #[inline]
     pub fn elapsed_seconds_f64(&self) -> f64 {
         self.elapsed_seconds_f64

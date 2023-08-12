@@ -1,6 +1,5 @@
 //! Animation utilities and systems.
 
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::prelude::*;
@@ -67,7 +66,6 @@ pub struct AnimationBankSprite {
     /// The last animation that was playing.
     pub last_animation: Key,
 }
-
 #[cfg(feature = "serde")]
 fn deserialize_arc<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
     deserializer: D,
@@ -75,7 +73,6 @@ fn deserialize_arc<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
     let item = T::deserialize(deserializer)?;
     Ok(Arc::new(item))
 }
-#[cfg(feature = "serde")]
 fn serialize_arc<T: Serialize + Clone, S: Serializer>(
     data: &Arc<T>,
     serializer: S,
@@ -84,14 +81,12 @@ fn serialize_arc<T: Serialize + Clone, S: Serializer>(
     let data = data.deref();
     data.serialize(serializer)
 }
-#[cfg(feature = "serde")]
 fn deserialize_arc_slice<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<Arc<[T]>, D::Error> {
     let item = <Vec<T>>::deserialize(deserializer)?;
     Ok(Arc::from(item))
 }
-#[cfg(feature = "serde")]
 fn serialize_arc_slice<T: Serialize + Clone, S: Serializer>(
     data: &Arc<[T]>,
     serializer: S,

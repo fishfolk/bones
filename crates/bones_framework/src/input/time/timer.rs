@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use crate::prelude::*;
+
 use super::stopwatch::Stopwatch;
 
 /// Tracks elapsed time. Enters the finished state once `duration` is reached.
@@ -9,8 +11,8 @@ use super::stopwatch::Stopwatch;
 /// exceeded, and can still be reset at any given point.
 ///
 /// Paused timers will not have elapsed time increased.
-#[derive(Clone, Debug, Default)]
-#[cfg_attr(feature = "serialize", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Debug, Default, HasSchema)]
+#[schema(opaque)]
 pub struct Timer {
     finished: bool,
     mode: TimerMode,

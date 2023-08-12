@@ -1,4 +1,4 @@
-//! Opinionated game meta-engine built on Bevy.
+//! The core bones library.
 
 #![warn(missing_docs)]
 // This cfg_attr is needed because `rustdoc::all` includes lints not supported on stable
@@ -6,16 +6,20 @@
 #![deny(rustdoc::all)]
 
 #[doc(inline)]
+pub use bones_asset as asset;
+
+#[doc(inline)]
 pub use bones_ecs as ecs;
 
 /// Bones lib prelude
 pub mod prelude {
-    pub use crate::{ecs::prelude::*, Game, Plugin, Session, SessionRunner, Sessions};
+    pub use crate::{
+        asset::prelude::*, ecs::prelude::*, Game, Plugin, Session, SessionRunner, Sessions,
+    };
 }
 
-use std::fmt::Debug;
-
 use bones_asset::AssetServer;
+use std::fmt::Debug;
 
 use crate::prelude::*;
 
