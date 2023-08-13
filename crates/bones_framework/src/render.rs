@@ -2,7 +2,9 @@
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{audio::*, camera::*, color::*, line::*, sprite::*, tilemap::*, transform::*};
+    pub use super::{
+        audio::*, camera::*, color::*, line::*, sprite::*, tilemap::*, transform::*, ui::*,
+    };
 }
 
 pub mod audio;

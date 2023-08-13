@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 bones_framework = { path = "../../crates/bones_framework" }
+bones_bevy_renderer = { path = "../../crates/bones_bevy_renderer" }

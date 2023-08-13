@@ -130,10 +130,11 @@ impl SessionRunner for DefaultSessionRunner {
 pub struct Game {
     /// The sessions that make up the game.
     pub sessions: Sessions,
-    /// Cache of the session keys, used to sort sessions.
+    /// List of sorted session keys.
     ///
-    /// Not meant for use by the user.
-    session_keys_cache: Vec<Key>,
+    /// These are only guaranteed to be sorted and up-to-date immediately after calling
+    /// [`Game::step()`].
+    pub sorted_session_keys: Vec<Key>,
 }
 
 impl Game {
@@ -155,13 +156,13 @@ impl Game {
     ///   applicable.
     pub fn step<F: FnMut(&mut World)>(&mut self, mut apply_input: F) {
         // Sort session keys by priority
-        self.session_keys_cache.clear();
-        self.session_keys_cache.extend(self.sessions.map.keys());
-        self.session_keys_cache
+        self.sorted_session_keys.clear();
+        self.sorted_session_keys.extend(self.sessions.map.keys());
+        self.sorted_session_keys
             .sort_by_key(|name| self.sessions.map.get(name).unwrap().priority);
 
         // For every session
-        for session_name in self.session_keys_cache.drain(..) {
+        for session_name in self.sorted_session_keys.drain(..) {
             // Extract the current session
             let mut current_session = self.sessions.map.remove(&session_name).unwrap();
 
@@ -257,6 +258,16 @@ impl Sessions {
         <K as TryInto<Key>>::Error: Debug,
     {
         self.map.get_mut(&name.try_into().unwrap())
+    }
+
+    /// Mutably iterate over sessions.
+    pub fn iter_mut(&mut self) -> hashbrown::hash_map::IterMut<Key, Session> {
+        self.map.iter_mut()
+    }
+
+    /// Iterate over sessions.
+    pub fn iter(&self) -> hashbrown::hash_map::Iter<Key, Session> {
+        self.map.iter()
     }
 }
 

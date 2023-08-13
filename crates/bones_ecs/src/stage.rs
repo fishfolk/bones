@@ -178,12 +178,13 @@ impl SystemStage for SimpleSystemStage {
 
         // Drain the command queue
         {
-            let command_queue = world.resources.get_cell::<CommandQueue>().unwrap();
-            let mut command_queue = command_queue.borrow_mut();
+            if let Some(command_queue) = world.resources.get_cell::<CommandQueue>() {
+                let mut command_queue = command_queue.borrow_mut();
 
-            for mut system in command_queue.queue.drain(..) {
-                system.initialize(world);
-                system.run(world).unwrap();
+                for mut system in command_queue.queue.drain(..) {
+                    system.initialize(world);
+                    system.run(world).unwrap();
+                }
             }
         }
 
