@@ -5,18 +5,29 @@
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
 
+use std::path::PathBuf;
+
 pub use bevy;
 
-use bevy::prelude::*;
+use bevy::{
+    input::{
+        keyboard::KeyboardInput,
+        mouse::{MouseButtonInput, MouseMotion, MouseWheel},
+    },
+    prelude::*,
+};
 use bevy_egui::EguiContext;
 use bevy_prototype_lyon::prelude as lyon;
 
-use bones_framework::prelude::{self as bones, HasSchema};
+use bones_framework::prelude as bones;
+use prelude::convert::IntoBones;
 
 /// The prelude
 pub mod prelude {
     pub use crate::*;
 }
+
+mod convert;
 
 /// Marker component for entities that are rendered in Bevy for bones.
 #[derive(Component)]
@@ -36,38 +47,39 @@ pub enum BonesStage {
 
 /// Renderer for [`bones_framework`] [`Game`][bones::Game]s using Bevy.
 #[derive(Resource)]
-pub struct BonesBevyRenderer<Input: HasSchema, S: System<In = (), Out = Input>> {
+pub struct BonesBevyRenderer {
     /// The bones game to run.
     pub game: bones::Game,
-    /// The bevy system that will be used to collec the bones game's `Input`.
-    pub input_system: S,
+    /// The version of the game, used for the asset loader.
+    pub game_version: bones::Version,
+    /// The path to load assets from.
+    pub asset_dir: PathBuf,
+    /// The path to load asset packs from.
+    pub packs_dir: PathBuf,
 }
 
 /// Bevy resource that contains the info for the bones game that is being rendered.
 #[derive(Resource)]
-pub struct BonesData<Input: HasSchema, S: System<In = (), Out = Input>> {
+pub struct BonesData {
     /// The bones game.
     pub game: bones::Game,
-    /// The input collection system.
-    pub input_system: S,
-    /// The bones resource handle for the game input.
-    pub input_resource: bones::AtomicResource<Input>,
+    /// The bones asset server.
+    pub asset_server: bones::AtomicResource<bones::AssetServer>,
 }
 
-impl<Input: HasSchema + Default, S: System<In = (), Out = Input>> BonesBevyRenderer<Input, S> {
+impl BonesBevyRenderer {
     /// Create a new [`BevyBonesRenderer`] for the provided game.
-    pub fn new<IntoS, Marker>(game: bones::Game, input_system: IntoS) -> Self
-    where
-        IntoS: IntoSystem<(), Input, Marker, System = S>,
-    {
+    pub fn new(game: bones::Game) -> Self {
         BonesBevyRenderer {
             game,
-            input_system: IntoS::into_system(input_system),
+            game_version: bones::Version::new(0, 1, 0),
+            asset_dir: PathBuf::from("assets"),
+            packs_dir: PathBuf::from("packs"),
         }
     }
 
     /// Return a bevy [`App`] configured to run the bones game.
-    pub fn app(mut self) -> App {
+    pub fn app(self) -> App {
         let mut app = App::new();
 
         // Initialize Bevy plugins we use
@@ -76,17 +88,19 @@ impl<Input: HasSchema + Default, S: System<In = (), Out = Input>> BonesBevyRende
             .add_plugin(bevy_egui::EguiPlugin)
             .add_plugin(lyon::ShapePlugin);
 
-        // Create input resource
-        let input_resource = bones::AtomicResource::new(Input::default());
-
-        // Initialize the input system
-        self.input_system.initialize(&mut app.world);
+        // Create the asset server and load the assets
+        let asset_server = bones::AssetServer::new(
+            bones::FileAssetIo {
+                core_dir: self.asset_dir.clone(),
+                packs_dir: self.packs_dir.clone(),
+            },
+            self.game_version,
+        );
 
         // Insert the bones data
         app.insert_resource(BonesData {
             game: self.game,
-            input_system: self.input_system,
-            input_resource,
+            asset_server: bones::AtomicResource::new(asset_server),
         });
 
         // Configure the bones stages
@@ -94,7 +108,7 @@ impl<Input: HasSchema + Default, S: System<In = (), Out = Input>> BonesBevyRende
             .configure_set(BonesStage::SyncRender.before(CoreSet::Update));
 
         // Add the world sync systems
-        app.add_system(step::<Input, S>);
+        app.add_system(get_bones_input.pipe(step_bones_game));
 
         // .add_systems(
         //     (
@@ -114,32 +128,67 @@ impl<Input: HasSchema + Default, S: System<In = (), Out = Input>> BonesBevyRende
     }
 }
 
+fn get_bones_input(
+    mut mouse_button_input_events: EventReader<MouseButtonInput>,
+    mut mouse_motion_events: EventReader<MouseMotion>,
+    mut mouse_wheel_events: EventReader<MouseWheel>,
+    mut keyboard_events: EventReader<KeyboardInput>,
+) -> (bones::MouseInputs, bones::KeyboardInputs) {
+    // TODO: investigate possible ways to avoid allocating vectors every frame for event lists.
+    (
+        bones::MouseInputs {
+            movement: mouse_motion_events
+                .iter()
+                .last()
+                .map(|x| x.delta)
+                .unwrap_or_default(),
+            wheel_events: mouse_wheel_events
+                .iter()
+                .map(|event| bones::MouseScrollInput {
+                    unit: event.unit.into_bones(),
+                    movement: Vec2::new(event.x, event.y),
+                })
+                .collect(),
+            button_events: mouse_button_input_events
+                .iter()
+                .map(|event| bones::MouseButtonInput {
+                    button: event.button.into_bones(),
+                    state: event.state.into_bones(),
+                })
+                .collect(),
+        },
+        bones::KeyboardInputs {
+            keys: keyboard_events
+                .iter()
+                .map(|event| bones::KeyboardInput {
+                    scan_code: event.scan_code,
+                    key_code: event.key_code.map(|x| x.into_bones()),
+                    button_state: event.state.into_bones(),
+                })
+                .collect(),
+        },
+    )
+}
+
 /// System to step the bones simulation.
-fn step<Input: HasSchema + Default, S: System<In = (), Out = Input>>(world: &mut World) {
-    world.resource_scope(|world: &mut World, mut data: Mut<BonesData<Input, S>>| {
+fn step_bones_game(
+    In((mouse_inputs, keyboard_inputs)): In<(bones::MouseInputs, bones::KeyboardInputs)>,
+    world: &mut World,
+) {
+    world.resource_scope(|world: &mut World, mut data: Mut<BonesData>| {
         let egui_ctx = {
             let mut egui_query = world.query_filtered::<&mut EguiContext, With<Window>>();
             let mut egui_ctx = egui_query.get_single_mut(world).unwrap();
             egui_ctx.get_mut().clone()
         };
+        let BonesData { game, asset_server } = &mut *data;
 
-        let BonesData {
-            game,
-            input_system,
-            input_resource,
-        } = &mut *data;
-
-        // Collect input
-        let input = input_system.run((), world);
-
-        {
-            // Update the input resource
-            let mut input_resource = input_resource.borrow_mut();
-            *input_resource = input;
-        }
+        let mouse_inputs = bones::AtomicResource::new(mouse_inputs);
+        let keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
 
         // Step the game simulation
         game.step(|bones_world| {
+            // Insert egui context if not present
             if !bones_world
                 .resources
                 .contains::<bones_framework::render::ui::EguiCtx>()
@@ -148,9 +197,17 @@ fn step<Input: HasSchema + Default, S: System<In = (), Out = Input>>(world: &mut
                     .resources
                     .insert(bones_framework::render::ui::EguiCtx(egui_ctx.clone()));
             }
+
+            // Insert asset server if not present
+            if !bones_world.resources.contains::<bones::AssetServer>() {
+                bones_world.resources.insert_cell(asset_server.clone_cell());
+            }
+
+            // Update the inputs.
+            bones_world.resources.insert_cell(mouse_inputs.clone_cell());
             bones_world
                 .resources
-                .insert_cell(input_resource.clone_cell())
+                .insert_cell(keyboard_inputs.clone_cell());
         });
     });
 }
