@@ -56,6 +56,8 @@ pub struct BonesBevyRenderer {
     pub asset_dir: PathBuf,
     /// The path to load asset packs from.
     pub packs_dir: PathBuf,
+    /// Function to configure the bones asset server.
+    pub asset_server_config_fn: Box<dyn FnOnce(&mut bones::AssetServer) + Sync + Send + 'static>,
 }
 
 /// Bevy resource that contains the info for the bones game that is being rendered.
@@ -69,12 +71,16 @@ pub struct BonesData {
 
 impl BonesBevyRenderer {
     /// Create a new [`BevyBonesRenderer`] for the provided game.
-    pub fn new(game: bones::Game) -> Self {
+    pub fn new<F: FnOnce(&mut bones::AssetServer) + Sync + Send + 'static>(
+        game: bones::Game,
+        configure_asset_server: F,
+    ) -> Self {
         BonesBevyRenderer {
             game,
             game_version: bones::Version::new(0, 1, 0),
             asset_dir: PathBuf::from("assets"),
             packs_dir: PathBuf::from("packs"),
+            asset_server_config_fn: Box::new(configure_asset_server),
         }
     }
 
@@ -88,14 +94,21 @@ impl BonesBevyRenderer {
             .add_plugin(bevy_egui::EguiPlugin)
             .add_plugin(lyon::ShapePlugin);
 
-        // Create the asset server and load the assets
-        let asset_server = bones::AssetServer::new(
+        // Create the asset server
+        let mut asset_server = bones::AssetServer::new(
             bones::FileAssetIo {
                 core_dir: self.asset_dir.clone(),
                 packs_dir: self.packs_dir.clone(),
             },
             self.game_version,
         );
+        // Configure the asset server
+        (self.asset_server_config_fn)(&mut asset_server);
+
+        // Load the game assets
+        asset_server
+            .load_assets()
+            .expect("Could not load game assets");
 
         // Insert the bones data
         app.insert_resource(BonesData {
@@ -212,20 +225,14 @@ fn step_bones_game(
     });
 }
 
-// fn sync_clear_color<W: HasBonesRenderer>(
-//     mut clear_color: ResMut<ClearColor>,
-//     game_resource: Option<ResMut<W>>,
-// ) {
-//     let Some(mut game_resource) = game_resource else {
-//         return;
-//     };
-//     let game = game_resource.game();
-//     game.init_resource::<bones::ClearColor>();
+fn sync_clear_color(mut clear_color: ResMut<ClearColor>, data: ResMut<BonesData>) {
+    // let game = &mut data.game;
+    // game.init_resource::<bones::ClearColor>();
 
-//     let bones_clear_color = game.resource::<bones::ClearColor>();
+    // let bones_clear_color = game.resource::<bones::ClearColor>();
 
-//     clear_color.0 = bones_clear_color.0.into_bevy()
-// }
+    // clear_color.0 = bones_clear_color.0.into_bevy()
+}
 
 // /// The system that renders the bones world.
 // fn sync_sprites<W: HasBonesRenderer>(

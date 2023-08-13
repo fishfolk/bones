@@ -376,6 +376,11 @@ impl AssetServer {
         self.store.core_pack.as_ref().unwrap()
     }
 
+    /// Get the core asset pack's root asset.
+    pub fn root<T: HasSchema>(&self) -> &T {
+        self.get(&self.core().root.typed())
+    }
+
     /// Read the loaded asset packs.
     pub fn packs(&self) -> &HashMap<AssetPackSpec, AssetPack> {
         &self.store.packs

@@ -137,8 +137,22 @@ pub trait SystemParam: Sized {
 }
 
 /// [`SystemParam`] for getting read access to a resource.
-pub struct Res<'a, T: HasSchema + FromWorld>(AtomicRef<'a, T>);
-impl<'a, T: HasSchema + FromWorld> std::ops::Deref for Res<'a, T> {
+///
+/// Use [`Res`] if you want to automatically initialize the resource.
+pub struct Res<'a, T: HasSchema>(AtomicRef<'a, T>);
+impl<'a, T: HasSchema> std::ops::Deref for Res<'a, T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+/// [`SystemParam`] for getting read access to a resource and initialzing it if it doesn't already
+/// exist.
+///
+/// Use [`Res`] if you don't want to automatically initialize the resource.
+pub struct ResInit<'a, T: HasSchema + FromWorld>(AtomicRef<'a, T>);
+impl<'a, T: HasSchema + FromWorld> std::ops::Deref for ResInit<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -146,29 +160,54 @@ impl<'a, T: HasSchema + FromWorld> std::ops::Deref for Res<'a, T> {
 }
 
 /// [`SystemParam`] for getting mutable access to a resource.
-pub struct ResMut<'a, T: HasSchema + FromWorld>(AtomicRefMut<'a, T>);
-impl<'a, T: HasSchema + FromWorld> std::ops::Deref for ResMut<'a, T> {
+///
+/// Use [`ResMutInit`] if you want to automatically initialize the resource.
+pub struct ResMut<'a, T: HasSchema>(AtomicRefMut<'a, T>);
+impl<'a, T: HasSchema> std::ops::Deref for ResMut<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<'a, T: HasSchema + FromWorld> std::ops::DerefMut for ResMut<'a, T> {
+impl<'a, T: HasSchema> std::ops::DerefMut for ResMut<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl<'a, T: HasSchema + FromWorld> SystemParam for Res<'a, T> {
+/// [`SystemParam`] for getting mutable access to a resource and initializing it if it doesn't
+/// already exist.
+///
+/// Use [`ResMut`] if you don't want to automatically initialize the resource.
+pub struct ResMutInit<'a, T: HasSchema + FromWorld>(AtomicRefMut<'a, T>);
+impl<'a, T: HasSchema + FromWorld> std::ops::Deref for ResMutInit<'a, T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl<'a, T: HasSchema + FromWorld> std::ops::DerefMut for ResMutInit<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<'a, T: HasSchema> SystemParam for Res<'a, T> {
     type State = AtomicResource<T>;
     type Param<'p> = Res<'p, T>;
 
-    fn initialize(world: &mut World) {
-        world.init_resource::<T>()
-    }
+    fn initialize(_world: &mut World) {}
 
     fn get_state(world: &World) -> Self::State {
-        world.resources.get_cell::<T>().unwrap()
+        world.resources.get_cell::<T>().unwrap_or_else(|| {
+            panic!(
+                "Resource of type `{}` not in world. \
+                You may need to insert or initialize the resource or use \
+                `ResInit` instead of `Res` to automatically initialize the \
+                resource with the default value.",
+                std::any::type_name::<T>()
+            )
+        })
     }
 
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
@@ -176,12 +215,14 @@ impl<'a, T: HasSchema + FromWorld> SystemParam for Res<'a, T> {
     }
 }
 
-impl<'a, T: HasSchema + FromWorld> SystemParam for ResMut<'a, T> {
+impl<'a, T: HasSchema + FromWorld> SystemParam for ResInit<'a, T> {
     type State = AtomicResource<T>;
-    type Param<'p> = ResMut<'p, T>;
+    type Param<'p> = ResInit<'p, T>;
 
     fn initialize(world: &mut World) {
-        world.init_resource::<T>();
+        if !world.resources.contains::<T>() {
+            world.init_resource::<T>();
+        }
     }
 
     fn get_state(world: &World) -> Self::State {
@@ -189,7 +230,49 @@ impl<'a, T: HasSchema + FromWorld> SystemParam for ResMut<'a, T> {
     }
 
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
+        ResInit(state.borrow())
+    }
+}
+
+impl<'a, T: HasSchema> SystemParam for ResMut<'a, T> {
+    type State = AtomicResource<T>;
+    type Param<'p> = ResMut<'p, T>;
+
+    fn initialize(_world: &mut World) {}
+
+    fn get_state(world: &World) -> Self::State {
+        world.resources.get_cell::<T>().unwrap_or_else(|| {
+            panic!(
+                "Resource of type `{}` not in world. \
+                You may need to insert or initialize the resource or use \
+                `ResInit` instead of `Res` to automatically initialize the \
+                resource with the default value.",
+                std::any::type_name::<T>()
+            )
+        })
+    }
+
+    fn borrow(state: &mut Self::State) -> Self::Param<'_> {
         ResMut(state.borrow_mut())
+    }
+}
+
+impl<'a, T: HasSchema + FromWorld> SystemParam for ResMutInit<'a, T> {
+    type State = AtomicResource<T>;
+    type Param<'p> = ResMutInit<'p, T>;
+
+    fn initialize(world: &mut World) {
+        if !world.resources.contains::<T>() {
+            world.init_resource::<T>();
+        }
+    }
+
+    fn get_state(world: &World) -> Self::State {
+        world.resources.get_cell::<T>().unwrap()
+    }
+
+    fn borrow(state: &mut Self::State) -> Self::Param<'_> {
+        ResMutInit(state.borrow_mut())
     }
 }
 
