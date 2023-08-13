@@ -1,7 +1,7 @@
 use bones_bevy_renderer::BonesBevyRenderer;
 use bones_framework::prelude::*;
 
-/// Create our game metadata asset.
+/// Create our root asset type.
 #[derive(HasSchema, Default, Clone)]
 #[repr(C)]
 // Allow asset to be loaded from "game.yaml" assets.
@@ -60,7 +60,8 @@ fn menu_system(
     mut hello: ResMutInit<ShowHello>,
     keyboard_input: Res<KeyboardInputs>,
     egui_ctx: ResMut<EguiCtx>,
-    asset_server: Res<AssetServer>,
+    // Get the root asset with the `Root` system param.
+    game_meta: Root<GameMeta>,
 ) {
     // Update the hello state based on keyboard events.
     for event in &keyboard_input.keys {
@@ -72,9 +73,6 @@ fn menu_system(
             }
         }
     }
-
-    // Get the root asset data from the asset server
-    let game_meta: &GameMeta = asset_server.root();
 
     // Render the menu.
     egui::CentralPanel::default().show(&egui_ctx, |ui| {

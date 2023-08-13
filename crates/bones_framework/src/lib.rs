@@ -6,9 +6,9 @@
 #![deny(rustdoc::all)]
 
 #[doc(inline)]
-pub use bones_lib as lib;
-#[doc(inline)]
 pub use bones_asset as asset;
+#[doc(inline)]
+pub use bones_lib as lib;
 
 /// Math library.
 #[doc(inline)]
@@ -16,11 +16,12 @@ pub use glam;
 
 /// The prelude.
 pub mod prelude {
-    pub use crate::{input::prelude::*, render::prelude::*};
+    pub use crate::{input::prelude::*, params::*, render::prelude::*};
+    pub use bones_asset::prelude::*;
     pub use bones_lib::prelude::*;
     pub use glam::*;
-    pub use bones_asset::prelude::*;
 }
 
 pub mod input;
+pub mod params;
 pub mod render;
