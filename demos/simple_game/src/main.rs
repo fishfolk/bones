@@ -15,50 +15,45 @@ pub fn game_init() -> Game {
     let menu_session = game.sessions.create("menu");
 
     // Install our menu plugin into the menu session
-    menu_session.install_plugin(menu::plugin);
+    menu_session.install_plugin(menu_plugin);
 
     game
 }
 
-mod menu {
-    use super::*;
+/// Menu plugin
+pub fn menu_plugin(session: &mut Session) {
+    session
+        .stages
+        .add_system_to_stage(CoreStage::Update, menu_system);
+}
 
-    /// Menu plugin
-    pub fn plugin(session: &mut Session) {
-        session.world.init_resource::<ShowHello>();
-        session
-            .stages
-            .add_system_to_stage(CoreStage::Update, menu_system);
-    }
+#[derive(HasSchema, Default, Clone, Debug, Deref, DerefMut)]
+#[repr(C)]
+struct ShowHello(pub bool);
 
-    #[derive(HasSchema, Default, Clone, Debug, Deref, DerefMut)]
-    #[repr(C)]
-    struct ShowHello(pub bool);
-
-    fn menu_system(
-        mut hello: ResMut<ShowHello>,
-        keyboard_input: Res<KeyboardInputs>,
-        egui_ctx: ResMut<EguiCtx>,
-    ) {
-        for event in &keyboard_input.keys {
-            if event.key_code == Some(KeyCode::Space) {
-                if event.button_state == ButtonState::Pressed {
-                    **hello = true;
-                } else if event.button_state == ButtonState::Released {
-                    **hello = false;
-                }
+fn menu_system(
+    mut hello: ResMut<ShowHello>,
+    keyboard_input: Res<KeyboardInputs>,
+    egui_ctx: ResMut<EguiCtx>,
+) {
+    for event in &keyboard_input.keys {
+        if event.key_code == Some(KeyCode::Space) {
+            if event.button_state == ButtonState::Pressed {
+                **hello = true;
+            } else if event.button_state == ButtonState::Released {
+                **hello = false;
             }
         }
-
-        egui::CentralPanel::default().show(&egui_ctx, |ui| {
-            ui.vertical_centered(|ui| {
-                ui.add_space(20.0);
-                if **hello {
-                    ui.label("Hello World!");
-                } else {
-                    ui.label("...");
-                }
-            });
-        });
     }
+
+    egui::CentralPanel::default().show(&egui_ctx, |ui| {
+        ui.vertical_centered(|ui| {
+            ui.add_space(20.0);
+            if **hello {
+                ui.label("Hello World!");
+            } else {
+                ui.label("...");
+            }
+        });
+    });
 }

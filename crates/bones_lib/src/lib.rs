@@ -52,11 +52,6 @@ impl Session {
         Self::default()
     }
 
-    /// Run the session's stages on it's world once.
-    pub fn step(&mut self) -> SystemResult {
-        self.stages.run(&mut self.world)
-    }
-
     /// Install a plugin.
     pub fn install_plugin(&mut self, plugin: impl Plugin) -> &mut Self {
         plugin.install(self);
@@ -116,6 +111,12 @@ pub trait SessionRunner: Sync + Send + 'static {
 pub struct DefaultSessionRunner;
 impl SessionRunner for DefaultSessionRunner {
     fn step(&mut self, world: &mut World, stages: &mut SystemStages) -> SystemResult {
+        // TODO: evaluate cost of initializing systems.
+        //
+        // We need to find out how long it takes to initialize systems and decide whether or not it
+        // is worth finding a way to avoid doing it every step. The issue is finding a place to make
+        // sure the initialization happens for every system at least once.
+        stages.initialize_systems(world);
         stages.run(world)
     }
 }
