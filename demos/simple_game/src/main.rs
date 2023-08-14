@@ -11,40 +11,47 @@ use bones_framework::prelude::*;
 struct GameMeta {
     /// The title shown on the menu.
     title: String,
+    /// Character information that will be loaded from a separate asset file.
     character: Handle<CharacterMeta>,
 }
 
+/// Character information.
 #[derive(HasSchema, Default, Clone)]
 #[repr(C)]
 #[type_data(metadata_asset("character"))]
 struct CharacterMeta {
-    pub fps: f32,
+    /// The sprite atlas for the player.
     pub atlas: Handle<Atlas>,
+    /// The frames-per-second of the animation.
+    pub fps: f32,
+    /// The frames of the animation.
+    ///
+    /// Note: We use an [`SVec`] here because it implements [`HasSchema`], allowing it to be loaded
+    /// in a metadata asset.
     pub animation: SVec<u32>,
 }
 
 fn main() {
-    // Create a bones bevy renderer
-    BonesBevyRenderer::new(
-        // Pass it our bones game
-        game_init(),
-        // Configure the asset server
-        |asset_server| {
-            // Register our game meta asset kind
-            asset_server.register_asset::<GameMeta>();
-            asset_server.register_asset::<CharacterMeta>();
-        },
-    )
-    // Get a bevy app for running our game
-    .app()
-    // Run the bevy app
-    .run()
+    // Create a bones bevy renderer from our bones game
+    BonesBevyRenderer::new(game_init())
+        // Get a bevy app for running our game
+        .app()
+        // Run the bevy app
+        .run()
 }
 
 // Initialize the game.
 pub fn game_init() -> Game {
     // Create an empty game
     let mut game = Game::new();
+
+    // Configure the asset server
+    game.asset_server()
+        // Register the default asset types
+        .register_default_assets()
+        // Register our custom asset types
+        .register_asset::<GameMeta>()
+        .register_asset::<CharacterMeta>();
 
     // Create our menu session
     let menu_session = game.sessions.create("menu");
@@ -59,7 +66,9 @@ pub fn game_init() -> Game {
 pub fn menu_plugin(session: &mut Session) {
     // Register our menu system
     session
+        // Install the default plugins for this session
         .install_plugin(DefaultPlugins)
+        // And add our systems.
         .stages
         .add_system_to_stage(CoreStage::Update, menu_system)
         .add_system_to_stage(CoreStage::Update, init_system);

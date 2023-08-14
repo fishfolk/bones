@@ -14,7 +14,6 @@ image_jpeg = ["image/jpeg"]
 
 [dependencies]
 bones_lib = { version = "0.2", path = "../bones_lib", features = ["glam"] }
-bones_asset = { version = "0.2", path = "../bones_asset" }
 egui = "0.22"
 glam = "0.24"
 hex = "0.4"

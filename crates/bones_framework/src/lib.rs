@@ -6,8 +6,6 @@
 #![deny(rustdoc::all)]
 
 #[doc(inline)]
-pub use bones_asset as asset;
-#[doc(inline)]
 pub use bones_lib as lib;
 
 /// Math library.
@@ -17,9 +15,9 @@ pub use glam;
 /// The prelude.
 pub mod prelude {
     pub use crate::{
-        animation::*, input::prelude::*, params::*, render::prelude::*, DefaultPlugins,
+        animation::*, input::prelude::*, params::*, render::prelude::*, AssetServerExt,
+        DefaultPlugins,
     };
-    pub use bones_asset::prelude::*;
     pub use bones_lib::prelude::*;
     pub use glam::*;
 }
@@ -34,5 +32,18 @@ pub struct DefaultPlugins;
 impl lib::Plugin for DefaultPlugins {
     fn install(self, session: &mut lib::Session) {
         session.install_plugin(animation::plugin);
+    }
+}
+
+/// Extension trait for the bones [`AssetServer`][bones_lib::prelude::AssetServer].
+pub trait AssetServerExt {
+    /// Register the default assets from `bones_framework`.
+    fn register_default_assets(self) -> Self;
+}
+impl AssetServerExt for &mut bones_lib::prelude::AssetServer {
+    fn register_default_assets(self) -> Self {
+        self.register_asset::<crate::prelude::Image>();
+        self.register_asset::<crate::prelude::Atlas>();
+        self
     }
 }

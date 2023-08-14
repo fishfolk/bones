@@ -6,11 +6,15 @@
 #![deny(rustdoc::all)]
 
 #[doc(inline)]
+pub use bones_asset as asset;
+#[doc(inline)]
 pub use bones_ecs as ecs;
 
 /// Bones lib prelude
 pub mod prelude {
-    pub use crate::{ecs::prelude::*, Game, Plugin, Session, SessionRunner, Sessions};
+    pub use crate::{
+        asset::prelude::*, ecs::prelude::*, Game, Plugin, Session, SessionRunner, Sessions,
+    };
 }
 
 use std::fmt::Debug;
@@ -127,7 +131,7 @@ impl SessionRunner for DefaultSessionRunner {
 /// Games are made up of one or more [`Session`]s, each of which contains it's own [`World`] and
 /// [`SystemStages`]. These different sessions can be used for parts of the game with independent
 /// states, such as the main menu and the gameplay.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Game {
     /// The sessions that make up the game.
     pub sessions: Sessions,
@@ -136,12 +140,19 @@ pub struct Game {
     /// These are only guaranteed to be sorted and up-to-date immediately after calling
     /// [`Game::step()`].
     pub sorted_session_keys: Vec<Key>,
+    /// The asset server cell.
+    pub asset_server: AtomicResource<AssetServer>,
 }
 
 impl Game {
     /// Create an empty game.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Borrow the asset server.
+    pub fn asset_server(&self) -> AtomicRefMut<AssetServer> {
+        self.asset_server.borrow_mut()
     }
 
     /// Step the game simulation.
@@ -169,6 +180,14 @@ impl Game {
 
             // If this session is active
             if current_session.active {
+                // Make sure the asset server is inserted
+                if !current_session.world.resources.contains::<AssetServer>() {
+                    current_session
+                        .world
+                        .resources
+                        .insert_cell(self.asset_server.clone_cell());
+                }
+
                 // Apply the game input
                 apply_input(&mut current_session.world);
 

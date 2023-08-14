@@ -72,7 +72,7 @@ impl AssetServer {
     }
 
     /// Register an asset type.
-    pub fn register_asset<T: HasSchema>(&mut self) {
+    pub fn register_asset<T: HasSchema>(&mut self) -> &mut Self {
         if T::schema().type_data.get::<AssetKind>().is_none() {
             panic!(
                 "Type `{}` must have AssetType type data",
@@ -80,6 +80,15 @@ impl AssetServer {
             );
         }
         self.asset_types.push(T::schema());
+
+        self
+    }
+
+    /// Set the [`AssetIo`] implementation.
+    ///
+    /// This should almost always be called before calling [`load_assets()`].
+    pub fn set_io<Io: AssetIo + 'static>(&mut self, io: Io) {
+        self.io = Box::new(io);
     }
 
     /// Load the assets.

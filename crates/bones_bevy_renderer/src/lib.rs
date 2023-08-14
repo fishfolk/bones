@@ -48,8 +48,6 @@ pub struct BonesBevyRenderer {
     pub asset_dir: PathBuf,
     /// The path to load asset packs from.
     pub packs_dir: PathBuf,
-    /// Function to configure the bones asset server.
-    pub asset_server_config_fn: Box<dyn FnOnce(&mut bones::AssetServer) + Sync + Send + 'static>,
 }
 
 /// Bevy resource that contains the info for the bones game that is being rendered.
@@ -57,24 +55,20 @@ pub struct BonesBevyRenderer {
 pub struct BonesData {
     /// The bones game.
     pub game: bones::Game,
-    /// The bones asset server.
+    /// The bones asset server cell.
     pub asset_server: bones::AtomicResource<bones::AssetServer>,
 }
 
 impl BonesBevyRenderer {
     // TODO: Create a better builder pattern struct for `BonesBevyRenderer`.
     /// Create a new [`BevyBonesRenderer`] for the provided game.
-    pub fn new<F: FnOnce(&mut bones::AssetServer) + Sync + Send + 'static>(
-        game: bones::Game,
-        configure_asset_server: F,
-    ) -> Self {
+    pub fn new(game: bones::Game) -> Self {
         BonesBevyRenderer {
             pixel_art: true,
             game,
             game_version: bones::Version::new(0, 1, 0),
             asset_dir: PathBuf::from("assets"),
             packs_dir: PathBuf::from("packs"),
-            asset_server_config_fn: Box::new(configure_asset_server),
         }
     }
 
@@ -95,31 +89,25 @@ impl BonesBevyRenderer {
             ))
             .init_resource::<BonesImageIds>();
 
-        // Create the asset server
-        let mut asset_server = bones::AssetServer::new(
-            bones::FileAssetIo {
+        {
+            // Configure the AssetIO
+            let io = bones::FileAssetIo {
                 core_dir: self.asset_dir.clone(),
                 packs_dir: self.packs_dir.clone(),
-            },
-            self.game_version,
-        );
+            };
+            let mut asset_server = self.game.asset_server();
+            asset_server.set_io(io);
 
-        // Register core asset types
-        asset_server.register_asset::<bones::Image>();
-        asset_server.register_asset::<bones::Atlas>();
-
-        // Configure the asset server
-        (self.asset_server_config_fn)(&mut asset_server);
-
-        // Load the game assets
-        asset_server
-            .load_assets()
-            .expect("Could not load game assets");
+            // Load the game assets
+            asset_server
+                .load_assets()
+                .expect("Could not load game assets");
+        }
 
         // Insert the bones data
         app.insert_resource(BonesData {
+            asset_server: self.game.asset_server.clone_cell(),
             game: self.game,
-            asset_server: bones::AtomicResource::new(asset_server),
         });
 
         // Add the world sync systems

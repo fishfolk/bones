@@ -79,7 +79,7 @@ pub struct SchemaPath {
 /// Struct responsible for loading assets into it's contained [`AssetStore`], using an [`AssetIo`]
 /// implementation.
 #[derive(HasSchema)]
-#[schema(opaque, no_clone, no_default)]
+#[schema(opaque, no_clone)]
 pub struct AssetServer {
     /// The version of the game. This is used to evaluate whether asset packs are compatible with
     /// the game.
@@ -92,6 +92,18 @@ pub struct AssetServer {
     pub asset_types: Vec<&'static Schema>,
     /// Lists the packs that have not been loaded due to an incompatible game version.
     pub incompabile_packs: HashMap<String, PackfileMeta>,
+}
+
+impl Default for AssetServer {
+    fn default() -> Self {
+        Self {
+            game_version: Version::new(0, 0, 0),
+            io: Box::new(DummyIo::new([])),
+            store: Default::default(),
+            asset_types: Default::default(),
+            incompabile_packs: Default::default(),
+        }
+    }
 }
 
 /// Struct containing all the game's loaded assets, including the default assets and
