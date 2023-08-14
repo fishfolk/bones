@@ -92,7 +92,7 @@ impl Default for Session {
 /// Trait for plugins that can be installed into a [`Session`].
 pub trait Plugin {
     /// Install the plugin into the [`Session`].
-    fn install(self, core: &mut Session);
+    fn install(self, session: &mut Session);
 }
 impl<F: FnOnce(&mut Session)> Plugin for F {
     fn install(self, core: &mut Session) {

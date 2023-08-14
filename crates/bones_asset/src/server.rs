@@ -74,7 +74,10 @@ impl AssetServer {
     /// Register an asset type.
     pub fn register_asset<T: HasSchema>(&mut self) {
         if T::schema().type_data.get::<AssetKind>().is_none() {
-            panic!("Must have AssetType type data");
+            panic!(
+                "Type `{}` must have AssetType type data",
+                std::any::type_name::<T>()
+            );
         }
         self.asset_types.push(T::schema());
     }

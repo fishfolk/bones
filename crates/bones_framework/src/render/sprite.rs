@@ -22,11 +22,24 @@ impl AssetLoader for ImageAssetLoader {
     }
 }
 
-/// An atlas image asset type, contains no data, but [`Handle<Atlas>`] is still useful becaause it
-/// uniquely represents an atlas asset that may be rendered outside of the core.
+/// Atlas image component.
 #[derive(Copy, Clone, HasSchema, Debug, Default)]
 #[repr(C)]
-pub struct Atlas;
+#[type_data(metadata_asset("atlas"))]
+pub struct Atlas {
+    /// The image for the atlas.
+    pub image: Handle<Image>,
+    /// The size of each tile in the atlas.
+    pub tile_size: Vec2,
+    /// The number of rows in the atlas.
+    pub rows: u32,
+    /// The number of columns in the atlas.
+    pub columns: u32,
+    /// The amount of padding between tiles.
+    pub padding: Vec2,
+    /// The offset of the first tile from the top-left of the image.
+    pub offset: Vec2,
+}
 
 /// A 2D sprite component
 #[derive(Clone, HasSchema, Debug, Default)]

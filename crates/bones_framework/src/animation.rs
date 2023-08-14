@@ -1,7 +1,5 @@
 //! Animation utilities and systems.
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
 use crate::prelude::*;
 
 use std::sync::Arc;
@@ -19,25 +17,19 @@ pub fn plugin(core: &mut Session) {
 
 /// Component that may be added to entities with an [`AtlasSprite`] to animate them.
 #[derive(Clone, HasSchema, Debug)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[schema(opaque)]
 pub struct AnimatedSprite {
     /// The current frame in the animation.
-    #[cfg_attr(feature = "serde", serde(default))]
     pub index: usize,
     /// The frames in the animation.
     ///
     /// These are the indexes into the atlas, specified in the order they will be played.
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_arc_slice"))]
-    #[cfg_attr(feature = "serde", serde(serialize_with = "serialize_arc_slice"))]
-    pub frames: Arc<[usize]>,
+    pub frames: Arc<[u32]>,
     /// The frames per second to play the animation at.
     pub fps: f32,
     /// The amount of time the current frame has been playing
-    #[cfg_attr(feature = "serde", serde(default))]
     pub timer: f32,
     /// Whether or not to repeat the animation
-    #[cfg_attr(feature = "serde", serde(default = "default_true"))]
     pub repeat: bool,
 }
 
@@ -52,48 +44,15 @@ fn default_true() -> bool {
 /// This is great for players or other sprites that will change through different, named animations
 /// at different times.
 #[derive(Clone, HasSchema, Debug, Default)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[schema(opaque)]
 pub struct AnimationBankSprite {
-    #[cfg_attr(feature = "serde", serde(default))]
     /// The current animation.
     pub current: Key,
     /// The collection of animations in this animation bank.
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_arc"))]
-    #[cfg_attr(feature = "serde", serde(serialize_with = "serialize_arc"))]
     pub animations: Arc<HashMap<Key, AnimatedSprite>>,
     #[cfg_attr(feature = "serde", serde(default))]
     /// The last animation that was playing.
     pub last_animation: Key,
-}
-#[cfg(feature = "serde")]
-fn deserialize_arc<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Arc<T>, D::Error> {
-    let item = T::deserialize(deserializer)?;
-    Ok(Arc::new(item))
-}
-fn serialize_arc<T: Serialize + Clone, S: Serializer>(
-    data: &Arc<T>,
-    serializer: S,
-) -> Result<S::Ok, S::Error> {
-    use std::ops::Deref;
-    let data = data.deref();
-    data.serialize(serializer)
-}
-fn deserialize_arc_slice<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Arc<[T]>, D::Error> {
-    let item = <Vec<T>>::deserialize(deserializer)?;
-    Ok(Arc::from(item))
-}
-fn serialize_arc_slice<T: Serialize + Clone, S: Serializer>(
-    data: &Arc<[T]>,
-    serializer: S,
-) -> Result<S::Ok, S::Error> {
-    use std::ops::Deref;
-    let data = data.deref();
-    data.serialize(serializer)
 }
 
 impl Default for AnimatedSprite {
@@ -110,8 +69,8 @@ impl Default for AnimatedSprite {
 
 /// System for automatically animating sprites with the [`AnimatedSprite`] component.
 pub fn animate_sprites(
+    time: Res<Time>,
     entities: Res<Entities>,
-    frame_time: Res<FrameTime>,
     mut atlas_sprites: CompMut<AtlasSprite>,
     mut animated_sprites: CompMut<AnimatedSprite>,
 ) {
@@ -122,7 +81,7 @@ pub fn animate_sprites(
             continue;
         }
 
-        animated_sprite.timer += **frame_time;
+        animated_sprite.timer += time.delta_seconds();
 
         // If we are ready to go to the next frame
         if (animated_sprite.index != animated_sprite.frames.len() - 1 || animated_sprite.repeat)
@@ -136,7 +95,7 @@ pub fn animate_sprites(
         }
 
         // Set the atlas sprite to match the current frame of the animated sprite
-        atlas_sprite.index = animated_sprite.frames[animated_sprite.index];
+        atlas_sprite.index = animated_sprite.frames[animated_sprite.index] as usize;
     }
 }
 

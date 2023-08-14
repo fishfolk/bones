@@ -54,6 +54,7 @@ impl ComponentStores {
     /// # Panics
     ///
     /// Panics if the component type has not been initialized.
+    #[track_caller]
     pub fn get_cell<T: HasSchema>(&self) -> AtomicComponentStore<T> {
         self.try_get_cell::<T>().unwrap()
     }

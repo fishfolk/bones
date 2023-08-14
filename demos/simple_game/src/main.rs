@@ -9,10 +9,18 @@ use bones_framework::prelude::*;
 // Allow asset to be loaded from "game.yaml" assets.
 #[type_data(metadata_asset("game"))]
 struct GameMeta {
-    /// The name of the game.
-    name: String,
-    /// The sprite to render
-    sprite: Handle<Image>,
+    /// The title shown on the menu.
+    title: String,
+    character: Handle<CharacterMeta>,
+}
+
+#[derive(HasSchema, Default, Clone)]
+#[repr(C)]
+#[type_data(metadata_asset("character"))]
+struct CharacterMeta {
+    pub fps: f32,
+    pub atlas: Handle<Atlas>,
+    pub animation: SVec<u32>,
 }
 
 fn main() {
@@ -24,6 +32,7 @@ fn main() {
         |asset_server| {
             // Register our game meta asset kind
             asset_server.register_asset::<GameMeta>();
+            asset_server.register_asset::<CharacterMeta>();
         },
     )
     // Get a bevy app for running our game
@@ -50,24 +59,15 @@ pub fn game_init() -> Game {
 pub fn menu_plugin(session: &mut Session) {
     // Register our menu system
     session
+        .install_plugin(DefaultPlugins)
         .stages
         .add_system_to_stage(CoreStage::Update, menu_system)
-        .add_system_to_stage(CoreStage::Update, move_sprite)
         .add_system_to_stage(CoreStage::Update, init_system);
 }
-
-/// Resource that stores whether or not we should say hello.
-#[derive(HasSchema, Default, Clone, Debug, Deref, DerefMut)]
-#[repr(C)]
-struct ShowHello(pub bool);
 
 #[derive(HasSchema, Debug, Default, Clone, Deref, DerefMut)]
 #[repr(C)]
 struct HasInit(pub bool);
-
-#[derive(HasSchema, Default, Clone)]
-#[repr(C)]
-struct MySprite;
 
 #[allow(clippy::too_many_arguments)]
 fn init_system(
@@ -75,46 +75,60 @@ fn init_system(
     mut entities: ResMut<Entities>,
     mut transforms: CompMut<Transform>,
     mut cameras: CompMut<Camera>,
-    mut sprites: CompMut<Sprite>,
-    mut my_sprites: CompMut<MySprite>,
+    mut atlas_sprites: CompMut<AtlasSprite>,
+    mut animated_sprites: CompMut<AnimatedSprite>,
     mut clear_color: ResMutInit<ClearColor>,
     meta: Root<GameMeta>,
+    assets: Res<AssetServer>,
 ) {
     if !**has_init {
         **has_init = true;
 
+        // Set the clear color
         **clear_color = Color::BLACK;
 
+        // Spawn the camera
         let camera_ent = entities.create();
         transforms.insert(
             camera_ent,
             Transform::from_translation(Vec3::new(0., 0., 100.)),
         );
-        cameras.insert(camera_ent, default());
-
-        let sprite_ent = entities.create();
-        transforms.insert(sprite_ent, default());
-        sprites.insert(
-            sprite_ent,
-            Sprite {
-                image: meta.sprite,
+        cameras.insert(
+            camera_ent,
+            Camera {
+                height: 250.0,
                 ..default()
             },
         );
-        my_sprites.insert(sprite_ent, default());
+
+        // Get the character metadata
+        let character = assets.get(&meta.character);
+
+        // Spawn the character sprite.
+        let sprite_ent = entities.create();
+        transforms.insert(sprite_ent, default());
+        atlas_sprites.insert(
+            sprite_ent,
+            AtlasSprite {
+                atlas: character.atlas,
+                ..default()
+            },
+        );
+        animated_sprites.insert(
+            sprite_ent,
+            AnimatedSprite {
+                frames: character.animation.iter().copied().collect(),
+                fps: character.fps,
+                ..default()
+            },
+        );
     }
 }
 
-fn move_sprite(
-    time: Res<Time>,
-    entities: Res<Entities>,
-    my_sprites: Comp<MySprite>,
-    mut transforms: CompMut<Transform>,
-) {
-    for (_, (transform, _)) in entities.iter_with((&mut transforms, &my_sprites)) {
-        transform.translation.x = time.elapsed_seconds().sin() * 200.0;
-    }
-}
+/// Resource that stores whether or not we should say hello.
+#[derive(HasSchema, Default, Clone, Debug, Deref, DerefMut)]
+#[repr(C)]
+struct ShowHello(pub bool);
 
 /// Our main menu system.
 fn menu_system(
@@ -142,7 +156,7 @@ fn menu_system(
         .show(&egui_ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(20.0);
-                ui.heading(&game_meta.name);
+                ui.heading(&game_meta.title);
                 ui.add_space(20.0);
                 ui.label(&format!("{:.0?}", time.elapsed()));
                 ui.add_space(20.0);
