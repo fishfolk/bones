@@ -11,6 +11,27 @@ pub trait IntoBones<T> {
     fn into_bones(self) -> T;
 }
 
+impl IntoBevy<Color> for bones::Color {
+    fn into_bevy(self) -> Color {
+        Color::Rgba {
+            red: self.r(),
+            green: self.g(),
+            blue: self.b(),
+            alpha: self.a(),
+        }
+    }
+}
+
+impl IntoBevy<Transform> for bones::Transform {
+    fn into_bevy(self) -> Transform {
+        Transform {
+            translation: self.translation,
+            rotation: self.rotation,
+            scale: self.scale,
+        }
+    }
+}
+
 impl IntoBones<bones::MouseScrollUnit> for MouseScrollUnit {
     fn into_bones(self) -> bones::MouseScrollUnit {
         match self {
@@ -154,11 +175,11 @@ impl IntoBones<bones::KeyCode> for KeyCode {
             KeyCode::Grave => bones::KeyCode::Grave,
             KeyCode::Kana => bones::KeyCode::Kana,
             KeyCode::Kanji => bones::KeyCode::Kanji,
-            KeyCode::LAlt => bones::KeyCode::LAlt,
-            KeyCode::LBracket => bones::KeyCode::LBracket,
-            KeyCode::LControl => bones::KeyCode::LControl,
-            KeyCode::LShift => bones::KeyCode::LShift,
-            KeyCode::LWin => bones::KeyCode::LWin,
+            KeyCode::AltLeft => bones::KeyCode::AltLeft,
+            KeyCode::BracketLeft => bones::KeyCode::BracketLeft,
+            KeyCode::ControlLeft => bones::KeyCode::ControlLeft,
+            KeyCode::ShiftLeft => bones::KeyCode::ShiftLeft,
+            KeyCode::SuperLeft => bones::KeyCode::SuperLeft,
             KeyCode::Mail => bones::KeyCode::Mail,
             KeyCode::MediaSelect => bones::KeyCode::MediaSelect,
             KeyCode::MediaStop => bones::KeyCode::MediaStop,
@@ -178,11 +199,11 @@ impl IntoBones<bones::KeyCode> for KeyCode {
             KeyCode::PlayPause => bones::KeyCode::PlayPause,
             KeyCode::Power => bones::KeyCode::Power,
             KeyCode::PrevTrack => bones::KeyCode::PrevTrack,
-            KeyCode::RAlt => bones::KeyCode::RAlt,
-            KeyCode::RBracket => bones::KeyCode::RBracket,
-            KeyCode::RControl => bones::KeyCode::RControl,
-            KeyCode::RShift => bones::KeyCode::RShift,
-            KeyCode::RWin => bones::KeyCode::RWin,
+            KeyCode::AltRight => bones::KeyCode::AltRight,
+            KeyCode::BracketRight => bones::KeyCode::BracketRight,
+            KeyCode::ControlRight => bones::KeyCode::ControlRight,
+            KeyCode::ShiftRight => bones::KeyCode::ShiftRight,
+            KeyCode::SuperRight => bones::KeyCode::SuperRight,
             KeyCode::Semicolon => bones::KeyCode::Semicolon,
             KeyCode::Slash => bones::KeyCode::Slash,
             KeyCode::Sleep => bones::KeyCode::Sleep,

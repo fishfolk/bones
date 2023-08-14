@@ -9,18 +9,18 @@ version     = "0.2.0"
 
 [dependencies]
 bones_framework = { version = "^0.2.0", path = "../bones_framework" }
-glam       = { version = "0.23", features = ["serde"] }
-bevy_egui = "0.20"
+glam       = { version = "0.24", features = ["serde"] }
+bevy_egui = "0.21"
 
 # TODO: Update `bevy_simple_tilemap` when our PR is merged.
 # https://github.com/forbjok/bevy_simple_tilemap/pull/9
-bevy_prototype_lyon = "0.8"
+bevy_prototype_lyon = "0.9"
 # Disable default features to remove rayon par-iter, is not performant. Once https://github.com/forbjok/bevy_simple_tilemap/pull/17 is merged,
 # switch off fork back to original crate.
-bevy_simple_tilemap = {git = "https://github.com/MaxCWhitehead/bevy_simple_tilemap.git", default-features = false, branch = "v0.11.0"}
+bevy_simple_tilemap = {git = "https://github.com/MaxCWhitehead/bevy_simple_tilemap.git", default-features = false, rev = "a354afd" }
 
 
 [dependencies.bevy]
 default-features = false
 features         = ["bevy_render", "bevy_core_pipeline", "bevy_sprite", "x11"]
-version          = "0.10"
+version          = "0.11"

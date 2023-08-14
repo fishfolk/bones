@@ -2,11 +2,25 @@
 
 use crate::prelude::*;
 
-/// Image asset type, contains no data, but [`Handle<Image>`] is still useful because it uniquely
-/// represents an image that may be rendered outside of the core.
-#[derive(Copy, Clone, HasSchema, Debug, Default)]
-#[repr(C)]
-pub struct Image;
+/// Image component.
+#[derive(Clone, HasSchema, Debug)]
+#[schema(opaque, no_default)]
+#[type_data(asset_loader(["png", "jpg", "jpeg"], ImageAssetLoader))]
+pub enum Image {
+    /// Loaded image data
+    Data(image::DynamicImage),
+    /// A reference to image data stored in the external bones renderer.
+    External(u32),
+}
+
+struct ImageAssetLoader;
+impl AssetLoader for ImageAssetLoader {
+    fn load(&self, bytes: Vec<u8>) -> anyhow::Result<SchemaBox> {
+        Ok(SchemaBox::new(Image::Data(image::load_from_memory(
+            &bytes,
+        )?)))
+    }
+}
 
 /// An atlas image asset type, contains no data, but [`Handle<Atlas>`] is still useful becaause it
 /// uniquely represents an atlas asset that may be rendered outside of the core.

@@ -7,12 +7,18 @@ name        = "bones_framework"
 repository  = "https://github.com/fishfolk/bones"
 version     = "0.2.0"
 
+[features]
+default = ["image_png"]
+image_png = ["image/png"]
+image_jpeg = ["image/jpeg"]
+
 [dependencies]
 bones_lib = { version = "0.2", path = "../bones_lib", features = ["glam"] }
 bones_asset = { version = "0.2", path = "../bones_asset" }
-egui = "0.21"
-glam = "0.23"
+egui = "0.22"
+glam = "0.24"
 hex = "0.4"
 thiserror = "1.0"
 instant = "0.1"
 gilrs = "0.10"
+image = { version = "0.24", default-features = false }

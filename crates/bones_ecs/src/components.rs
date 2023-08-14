@@ -54,13 +54,13 @@ impl ComponentStores {
     /// # Panics
     ///
     /// Panics if the component type has not been initialized.
-    pub fn get<T: HasSchema>(&self) -> AtomicComponentStore<T> {
-        self.try_get::<T>().unwrap()
+    pub fn get_cell<T: HasSchema>(&self) -> AtomicComponentStore<T> {
+        self.try_get_cell::<T>().unwrap()
     }
 
     /// Get the components of a certain type
-    pub fn try_get<T: HasSchema>(&self) -> Result<AtomicComponentStore<T>, EcsError> {
-        let untyped = self.try_get_by_schema_id(T::schema().id())?;
+    pub fn try_get_cell<T: HasSchema>(&self) -> Result<AtomicComponentStore<T>, EcsError> {
+        let untyped = self.try_get_cell_by_schema_id(T::schema().id())?;
 
         // Safe: We've made sure that the data initialized in the untyped components matches T
         unsafe { Ok(AtomicComponentStore::from_components_unsafe(untyped)) }
@@ -71,12 +71,12 @@ impl ComponentStores {
     /// # Panics
     ///
     /// Panics if the component type has not been initialized.
-    pub fn get_by_uuid(&self, id: SchemaId) -> Arc<AtomicRefCell<UntypedComponentStore>> {
-        self.try_get_by_schema_id(id).unwrap()
+    pub fn get_cell_by_schema_id(&self, id: SchemaId) -> Arc<AtomicRefCell<UntypedComponentStore>> {
+        self.try_get_cell_by_schema_id(id).unwrap()
     }
 
     /// Get the untyped component storage by the component's [`SchemaId`].
-    pub fn try_get_by_schema_id(
+    pub fn try_get_cell_by_schema_id(
         &self,
         id: SchemaId,
     ) -> Result<Arc<AtomicRefCell<UntypedComponentStore>>, EcsError> {

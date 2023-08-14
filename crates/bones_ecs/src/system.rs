@@ -290,7 +290,7 @@ impl<'a, T: HasSchema> SystemParam for Comp<'a, T> {
     }
 
     fn get_state(world: &World) -> Self::State {
-        world.components.get::<T>()
+        world.components.get_cell::<T>()
     }
 
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
@@ -307,7 +307,7 @@ impl<'a, T: HasSchema> SystemParam for CompMut<'a, T> {
     }
 
     fn get_state(world: &World) -> Self::State {
-        world.components.get::<T>()
+        world.components.get_cell::<T>()
     }
 
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {

@@ -77,11 +77,11 @@ unsafe impl HasSchema for usize {
                     p
                 }),
                 type_id: Some(TypeId::of::<usize>()),
-                clone_fn: Some(<usize as RawClone>::raw_clone),
-                drop_fn: Some(<usize as RawDrop>::raw_drop),
-                default_fn: Some(<usize as RawDefault>::raw_default),
-                hash_fn: Some(<usize as RawHash>::raw_hash),
-                eq_fn: Some(<usize as RawEq>::raw_eq),
+                clone_fn: Some(<Self as RawClone>::raw_clone),
+                drop_fn: Some(<Self as RawDrop>::raw_drop),
+                default_fn: Some(<Self as RawDefault>::raw_default),
+                hash_fn: Some(<Self as RawHash>::raw_hash),
+                eq_fn: Some(<Self as RawEq>::raw_eq),
                 type_data: Default::default(),
             })
         })
@@ -99,12 +99,12 @@ unsafe impl HasSchema for isize {
                     let p = Primitive::I64;
                     p
                 }),
-                type_id: Some(TypeId::of::<usize>()),
-                clone_fn: Some(<usize as RawClone>::raw_clone),
-                drop_fn: Some(<usize as RawDrop>::raw_drop),
-                default_fn: Some(<usize as RawDefault>::raw_default),
-                hash_fn: Some(<isize as RawHash>::raw_hash),
-                eq_fn: Some(<isize as RawEq>::raw_eq),
+                type_id: Some(TypeId::of::<Self>()),
+                clone_fn: Some(<Self as RawClone>::raw_clone),
+                drop_fn: Some(<Self as RawDrop>::raw_drop),
+                default_fn: Some(<Self as RawDefault>::raw_default),
+                hash_fn: Some(<Self as RawHash>::raw_hash),
+                eq_fn: Some(<Self as RawEq>::raw_eq),
                 type_data: Default::default(),
             })
         })
@@ -115,6 +115,29 @@ unsafe impl HasSchema for isize {
 mod impl_glam {
     use super::*;
     use glam::*;
+
+    unsafe impl HasSchema for Quat {
+        fn schema() -> &'static Schema {
+            static S: OnceLock<&'static Schema> = OnceLock::new();
+            let layout = std::alloc::Layout::new::<Quat>();
+            S.get_or_init(|| {
+                SCHEMA_REGISTRY.register(SchemaData {
+                    kind: SchemaKind::Primitive(Primitive::Opaque {
+                        size: layout.size(),
+                        align: layout.align(),
+                    }),
+                    type_id: Some(TypeId::of::<usize>()),
+                    clone_fn: Some(<Self as RawClone>::raw_clone),
+                    drop_fn: Some(<Self as RawDrop>::raw_drop),
+                    default_fn: Some(<Self as RawDefault>::raw_default),
+                    // TODO: Implement hash and eq for `Quat`.
+                    hash_fn: None,
+                    eq_fn: None,
+                    type_data: Default::default(),
+                })
+            })
+        }
+    }
 
     macro_rules! schema_impl_glam {
         ($t:ty, $prim:ident, $nprim:ident, $($field:ident),+) => {
@@ -165,7 +188,6 @@ mod impl_glam {
     schema_impl_glam_vecs!(I32, i32, IVec);
     schema_impl_glam_vecs!(F32, f32, Vec);
     schema_impl_glam_vecs!(F64, f64, DVec);
-    schema_impl_glam!(Quat, F32, f32, x, y, z, w);
 
     // TODO: Implement `HasSchema` for glam matrix types.
 

@@ -163,9 +163,9 @@ impl Game {
             .sort_by_key(|name| self.sessions.map.get(name).unwrap().priority);
 
         // For every session
-        for session_name in self.sorted_session_keys.drain(..) {
+        for session_name in &self.sorted_session_keys {
             // Extract the current session
-            let mut current_session = self.sessions.map.remove(&session_name).unwrap();
+            let mut current_session = self.sessions.map.remove(session_name).unwrap();
 
             // If this session is active
             if current_session.active {
@@ -192,7 +192,7 @@ impl Game {
             }
 
             // Insert the current session back into the session list
-            self.sessions.map.insert(session_name, current_session);
+            self.sessions.map.insert(*session_name, current_session);
         }
     }
 }

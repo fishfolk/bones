@@ -15,12 +15,14 @@ use bevy::{
         mouse::{MouseButtonInput, MouseMotion, MouseWheel},
     },
     prelude::*,
+    render::camera::ScalingMode,
+    utils::HashMap,
 };
 use bevy_egui::EguiContext;
 use bevy_prototype_lyon::prelude as lyon;
 
-use bones_framework::prelude as bones;
-use prelude::convert::IntoBones;
+use bones_framework::prelude::{self as bones, BitSet};
+use prelude::convert::{IntoBevy, IntoBones};
 
 /// The prelude
 pub mod prelude {
@@ -32,18 +34,6 @@ mod convert;
 /// Marker component for entities that are rendered in Bevy for bones.
 #[derive(Component)]
 pub struct BevyBonesEntity;
-
-/// [`SystemSet`] marker for sets added by bones to the Bevy world.
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-#[system_set(base)]
-pub enum BonesStage {
-    /// This stage is run after [`CoreSet::First`] to synchronize the bevy `Time` resource with
-    /// the bones one.
-    SyncTime,
-    /// This is the stage where the plugin reads the bones world adds bevy sprites, tiles, etc. to
-    /// be rendered.
-    SyncRender,
-}
 
 /// Renderer for [`bones_framework`] [`Game`][bones::Game]s using Bevy.
 #[derive(Resource)]
@@ -90,9 +80,12 @@ impl BonesBevyRenderer {
 
         // Initialize Bevy plugins we use
         app.add_plugins(DefaultPlugins)
-            .add_plugin(bevy_simple_tilemap::plugin::SimpleTileMapPlugin)
-            .add_plugin(bevy_egui::EguiPlugin)
-            .add_plugin(lyon::ShapePlugin);
+            .add_plugins((
+                bevy_simple_tilemap::plugin::SimpleTileMapPlugin,
+                bevy_egui::EguiPlugin,
+                lyon::ShapePlugin,
+            ))
+            .init_resource::<BonesImageIds>();
 
         // Create the asset server
         let mut asset_server = bones::AssetServer::new(
@@ -102,6 +95,10 @@ impl BonesBevyRenderer {
             },
             self.game_version,
         );
+
+        // Register core asset types
+        asset_server.register_asset::<bones::Image>();
+
         // Configure the asset server
         (self.asset_server_config_fn)(&mut asset_server);
 
@@ -116,24 +113,24 @@ impl BonesBevyRenderer {
             asset_server: bones::AtomicResource::new(asset_server),
         });
 
-        // Configure the bones stages
-        app.configure_set(BonesStage::SyncTime.after(CoreSet::First))
-            .configure_set(BonesStage::SyncRender.before(CoreSet::Update));
-
         // Add the world sync systems
-        app.add_system(get_bones_input.pipe(step_bones_game));
-
-        // .add_systems(
-        //     (
-        //         sync_sprites,
-        //         sync_cameras,
-        //         sync_path2ds,
-        //         sync_tilemaps,
-        //         sync_clear_color,
-        //         sync_atlas_sprites,
-        //     )
-        //         .in_base_set(BonesStage::SyncRender),
-        // );
+        app.add_systems(
+            Update,
+            (
+                // Collect input and run world simulation
+                get_bones_input.pipe(step_bones_game),
+                // Synchronize bones render components with the Bevy world.
+                (
+                    sync_clear_color,
+                    sync_cameras,
+                    sync_sprites,
+                    // sync_path2ds,
+                    // sync_tilemaps,
+                    // sync_atlas_sprites,
+                ),
+            )
+                .chain(),
+        );
 
         // app.add_system(sync_time.in_base_set(BonesStage::SyncTime));
 
@@ -195,6 +192,7 @@ fn step_bones_game(
             egui_ctx.get_mut().clone()
         };
         let BonesData { game, asset_server } = &mut *data;
+        let bevy_time = world.resource::<Time>();
 
         let mouse_inputs = bones::AtomicResource::new(mouse_inputs);
         let keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
@@ -211,6 +209,23 @@ fn step_bones_game(
                     .insert(bones_framework::render::ui::EguiCtx(egui_ctx.clone()));
             }
 
+            // Update bones time
+            {
+                // Initialize the time resource if it doesn't exist.
+                if !bones_world.resources.contains::<bones::Time>() {
+                    bones_world.init_resource::<bones::Time>();
+                }
+
+                let mut time = bones_world.resource_mut::<bones::Time>();
+
+                // Use the Bevy time if it's available, otherwise use the default time.
+                if let Some(instant) = bevy_time.last_update() {
+                    time.update_with_instant(instant);
+                } else {
+                    time.update();
+                }
+            }
+
             // Insert asset server if not present
             if !bones_world.resources.contains::<bones::AssetServer>() {
                 bones_world.resources.insert_cell(asset_server.clone_cell());
@@ -225,74 +240,200 @@ fn step_bones_game(
     });
 }
 
-fn sync_clear_color(mut clear_color: ResMut<ClearColor>, data: ResMut<BonesData>) {
-    // let game = &mut data.game;
-    // game.init_resource::<bones::ClearColor>();
+fn sync_clear_color(mut clear_color: ResMut<ClearColor>, mut data: ResMut<BonesData>) {
+    let game = &mut data.game;
 
-    // let bones_clear_color = game.resource::<bones::ClearColor>();
-
-    // clear_color.0 = bones_clear_color.0.into_bevy()
+    for name in &game.sorted_session_keys {
+        let session = game.sessions.get(*name).unwrap();
+        if !session.visible {
+            continue;
+        }
+        if let Some(bones_clear_color) = session.world.get_resource::<bones::ClearColor>() {
+            clear_color.0 = bones_clear_color.0.into_bevy();
+        }
+    }
 }
 
-// /// The system that renders the bones world.
-// fn sync_sprites<W: HasBonesRenderer>(
-//     mut commands: Commands,
-//     world_resource: Option<ResMut<W>>,
-//     mut bevy_bones_sprites: Query<
-//         (Entity, &mut Handle<Image>, &mut Sprite, &mut Transform),
-//         With<BevyBonesEntity>,
-//     >,
-// ) {
-//     let Some(mut world_resource) = world_resource else {
-//         bevy_bones_sprites.for_each(|(e, ..)| commands.entity(e).despawn());
-//         return;
-//     };
+/// Sync bones cameras with Bevy
+fn sync_cameras(
+    mut commands: Commands,
+    data: Res<BonesData>,
+    mut bevy_bones_cameras: Query<
+        (
+            Entity,
+            &mut Camera,
+            &mut OrthographicProjection,
+            &mut Transform,
+        ),
+        With<BevyBonesEntity>,
+    >,
+) {
+    let game = &data.game;
 
-//     let world = world_resource.game();
+    for session_name in &game.sorted_session_keys {
+        let session = game.sessions.get(*session_name).unwrap();
 
-//     // TODO: Evaluate cost of initializing bones render components every frame.
-//     world.components.init::<bones::Sprite>();
-//     world.components.init::<bones::Transform>();
+        let world = &session.world;
 
-//     let entities = world.resource::<bones::Entities>();
-//     let entities = entities.borrow();
-//     let sprites = world.components.get::<bones::Sprite>();
-//     let sprites = sprites.borrow();
-//     let transforms = world.components.get::<bones::Transform>();
-//     let transforms = transforms.borrow();
+        // Skip worlds without cameras and transforms
+        if !(world.components.try_get_cell::<bones::Transform>().is_ok()
+            && world.components.try_get_cell::<bones::Camera>().is_ok())
+        {
+            continue;
+        }
 
-//     // Sync sprites
-//     let mut sprites_bitset = sprites.bitset().clone();
-//     sprites_bitset.bit_and(transforms.bitset());
-//     let mut bones_sprite_entity_iter = entities.iter_with_bitset(&sprites_bitset);
-//     for (bevy_ent, mut image, mut sprite, mut transform) in &mut bevy_bones_sprites {
-//         if let Some(bones_ent) = bones_sprite_entity_iter.next() {
-//             let bones_sprite = sprites.get(bones_ent).unwrap();
-//             let bones_transform = transforms.get(bones_ent).unwrap();
+        let entities = world.resource::<bones::Entities>();
+        // TODO: Attempt to refactor component store so we can avoid the two-step borrow process.
+        //
+        // With resources we were able to avoid this step, but component stores are structured
+        // differently and might need more work.
+        let transforms = world.components.get_cell::<bones::Transform>();
+        let transforms = transforms.borrow();
+        let cameras = world.components.get_cell::<bones::Camera>();
+        let cameras = cameras.borrow();
 
-//             sprite.flip_x = bones_sprite.flip_x;
-//             sprite.flip_y = bones_sprite.flip_y;
-//             sprite.color = bones_sprite.color.into_bevy();
-//             *image = bones_sprite.image.get_bevy_handle_untyped().typed();
-//             *transform = bones_transform.into_bevy();
-//         } else {
-//             commands.entity(bevy_ent).despawn();
-//         }
-//     }
-//     for bones_ent in bones_sprite_entity_iter {
-//         let bones_sprite = sprites.get(bones_ent).unwrap();
-//         let bones_transform = transforms.get(bones_ent).unwrap();
+        // Sync cameras
+        let mut cameras_bitset = cameras.bitset().clone();
+        cameras_bitset.bit_and(transforms.bitset());
+        let mut bones_camera_entity_iter = entities.iter_with_bitset(&cameras_bitset);
+        for (bevy_ent, mut camera, mut projection, mut transform) in &mut bevy_bones_cameras {
+            if let Some(bones_ent) = bones_camera_entity_iter.next() {
+                let bones_camera = cameras.get(bones_ent).unwrap();
+                let bones_transform = transforms.get(bones_ent).unwrap();
 
-//         commands.spawn((
-//             SpriteBundle {
-//                 texture: bones_sprite.image.get_bevy_handle_untyped().typed(),
-//                 transform: bones_transform.into_bevy(),
-//                 ..default()
-//             },
-//             BevyBonesEntity,
-//         ));
-//     }
-// }
+                camera.is_active = bones_camera.active;
+                match projection.scaling_mode {
+                    ScalingMode::FixedVertical(height) if height != bones_camera.height => {
+                        projection.scaling_mode = ScalingMode::FixedVertical(bones_camera.height)
+                    }
+                    _ => (),
+                }
+                camera.viewport = bones_camera
+                    .viewport
+                    .map(|x| bevy::render::camera::Viewport {
+                        physical_position: x.position,
+                        physical_size: x.size,
+                        depth: x.depth_min..x.depth_max,
+                    });
+
+                *transform = bones_transform.into_bevy();
+            } else {
+                commands.entity(bevy_ent).despawn();
+            }
+        }
+        for bones_ent in bones_camera_entity_iter {
+            let bones_camera = cameras.get(bones_ent).unwrap();
+            let bones_transform = transforms.get(bones_ent).unwrap();
+
+            commands.spawn((
+                Camera2dBundle {
+                    camera: Camera {
+                        is_active: bones_camera.active,
+                        ..default()
+                    },
+                    projection: OrthographicProjection {
+                        scaling_mode: ScalingMode::FixedVertical(bones_camera.height),
+                        ..default()
+                    },
+                    transform: bones_transform.into_bevy(),
+                    ..default()
+                },
+                BevyBonesEntity,
+            ));
+        }
+    }
+}
+
+/// Resource mapping bones image IDs to their bevy handles.
+#[derive(Resource, Default, Debug)]
+pub struct BonesImageIds {
+    /// The mapping of bones external imag IDs to Bevy image handles.
+    pub map: HashMap<u32, Handle<Image>>,
+    /// The next handle ID to dish out
+    next_id: u32,
+}
+
+/// The system that renders the bones world.
+fn sync_sprites(
+    mut commands: Commands,
+    data: Res<BonesData>,
+    mut bevy_bones_sprites: Query<
+        (Entity, &mut Handle<Image>, &mut Sprite, &mut Transform),
+        With<BevyBonesEntity>,
+    >,
+    mut bevy_images: ResMut<Assets<Image>>,
+    mut bones_image_ids: ResMut<BonesImageIds>,
+) {
+    let game = &data.game;
+    let mut bones_assets = data.asset_server.borrow_mut();
+
+    let mut get_bevy_image_handle = |bones_handle: &bones::Handle<bones::Image>| {
+        let mut image_data = bones::Image::External(0); // Take some dummy image
+        let bones_image = bones_assets.get_mut(bones_handle);
+        std::mem::swap(&mut image_data, bones_image);
+        match image_data {
+            bones::Image::Data(data) => {
+                let handle = bevy_images.add(Image::from_dynamic(data, true));
+                let id = bones_image_ids.next_id;
+                bones_image_ids.next_id += 1;
+                bones_image_ids.map.insert(id, handle.clone());
+                handle
+            }
+            bones::Image::External(id) => bones_image_ids.map.get(&id).unwrap().clone(),
+        }
+    };
+
+    for session_name in &game.sorted_session_keys {
+        let session = game.sessions.get(*session_name).unwrap();
+
+        let world = &session.world;
+
+        // Skip worlds without cameras and transforms
+        if !(world.components.try_get_cell::<bones::Transform>().is_ok()
+            && world.components.try_get_cell::<bones::Camera>().is_ok())
+        {
+            continue;
+        }
+
+        let entities = world.resource::<bones::Entities>();
+        let sprites = world.components.get_cell::<bones::Sprite>();
+        let sprites = sprites.borrow();
+        let transforms = world.components.get_cell::<bones::Transform>();
+        let transforms = transforms.borrow();
+
+        // Sync sprites
+        let mut sprites_bitset = sprites.bitset().clone();
+        sprites_bitset.bit_and(transforms.bitset());
+        let mut bones_sprite_entity_iter = entities.iter_with_bitset(&sprites_bitset);
+        for (bevy_ent, mut image, mut sprite, mut transform) in &mut bevy_bones_sprites {
+            if let Some(bones_ent) = bones_sprite_entity_iter.next() {
+                let bones_sprite: &bones::Sprite = sprites.get(bones_ent).unwrap();
+                let bones_transform = transforms.get(bones_ent).unwrap();
+
+                sprite.flip_x = bones_sprite.flip_x;
+                sprite.flip_y = bones_sprite.flip_y;
+                sprite.color = bones_sprite.color.into_bevy();
+                *transform = bones_transform.into_bevy();
+                *image = get_bevy_image_handle(&bones_sprite.image);
+            } else {
+                commands.entity(bevy_ent).despawn();
+            }
+        }
+        for bones_ent in bones_sprite_entity_iter {
+            let bones_sprite = sprites.get(bones_ent).unwrap();
+            let bones_transform = transforms.get(bones_ent).unwrap();
+
+            commands.spawn((
+                SpriteBundle {
+                    texture: get_bevy_image_handle(&bones_sprite.image),
+                    transform: bones_transform.into_bevy(),
+                    ..default()
+                },
+                BevyBonesEntity,
+            ));
+        }
+    }
+}
 
 // /// The system that renders the bones world.
 // fn sync_atlas_sprites<W: HasBonesRenderer>(
@@ -352,88 +493,6 @@ fn sync_clear_color(mut clear_color: ResMut<ClearColor>, data: ResMut<BonesData>
 //         commands.spawn((
 //             SpriteSheetBundle {
 //                 texture_atlas: bones_atlas.atlas.get_bevy_handle_untyped().typed(),
-//                 transform: bones_transform.into_bevy(),
-//                 ..default()
-//             },
-//             BevyBonesEntity,
-//         ));
-//     }
-// }
-
-// /// The system that renders the bones world.
-// fn sync_cameras<W: HasBonesRenderer>(
-//     mut commands: Commands,
-//     world_resource: Option<ResMut<W>>,
-//     mut bevy_bones_cameras: Query<
-//         (
-//             Entity,
-//             &mut Camera,
-//             &mut OrthographicProjection,
-//             &mut Transform,
-//         ),
-//         With<BevyBonesEntity>,
-//     >,
-// ) {
-//     let Some(mut world_resource) = world_resource else {
-//         bevy_bones_cameras.for_each(|(e, ..)| commands.entity(e).despawn());
-//         return;
-//     };
-
-//     let world = world_resource.game();
-
-//     world.components.init::<bones::Transform>();
-//     world.components.init::<bones::Camera>();
-
-//     let entities = world.resource::<bones::Entities>();
-//     let entities = entities.borrow();
-//     let transforms = world.components.get::<bones::Transform>();
-//     let transforms = transforms.borrow();
-//     let cameras = world.components.get::<bones::Camera>();
-//     let cameras = cameras.borrow();
-
-//     // Sync cameras
-//     let mut cameras_bitset = cameras.bitset().clone();
-//     cameras_bitset.bit_and(transforms.bitset());
-//     let mut bones_camera_entity_iter = entities.iter_with_bitset(&cameras_bitset);
-//     for (bevy_ent, mut camera, mut projection, mut transform) in &mut bevy_bones_cameras {
-//         if let Some(bones_ent) = bones_camera_entity_iter.next() {
-//             let bones_camera = cameras.get(bones_ent).unwrap();
-//             let bones_transform = transforms.get(bones_ent).unwrap();
-
-//             camera.is_active = bones_camera.active;
-//             match projection.scaling_mode {
-//                 ScalingMode::FixedVertical(height) if height != bones_camera.height => {
-//                     projection.scaling_mode = ScalingMode::FixedVertical(bones_camera.height)
-//                 }
-//                 _ => (),
-//             }
-//             camera.viewport = bones_camera
-//                 .viewport
-//                 .map(|x| bevy::render::camera::Viewport {
-//                     physical_position: x.position,
-//                     physical_size: x.size,
-//                     depth: x.depth_min..x.depth_max,
-//                 });
-
-//             *transform = bones_transform.into_bevy();
-//         } else {
-//             commands.entity(bevy_ent).despawn();
-//         }
-//     }
-//     for bones_ent in bones_camera_entity_iter {
-//         let bones_camera = cameras.get(bones_ent).unwrap();
-//         let bones_transform = transforms.get(bones_ent).unwrap();
-
-//         commands.spawn((
-//             Camera2dBundle {
-//                 camera: Camera {
-//                     is_active: bones_camera.active,
-//                     ..default()
-//                 },
-//                 projection: OrthographicProjection {
-//                     scaling_mode: ScalingMode::FixedVertical(bones_camera.height),
-//                     ..default()
-//                 },
 //                 transform: bones_transform.into_bevy(),
 //                 ..default()
 //             },
@@ -676,34 +735,5 @@ fn sync_clear_color(mut clear_color: ResMut<ClearColor>, data: ResMut<BonesData>
 //             stroke,
 //             BevyBonesEntity,
 //         ));
-//     }
-// }
-
-// /// The system that renders the bones world.
-// fn sync_time<W: HasBonesRenderer>(
-//     world_resource: Option<ResMut<W>>,
-//     bevy_time: Res<bevy::prelude::Time>,
-// ) {
-//     let Some(mut world_resource) = world_resource else {
-//         return;
-//     };
-//     let world = world_resource.game();
-
-//     // Initialize the time resource if it doesn't exist.
-//     if world
-//         .get_atomic_resource::<bones_lib::prelude::Time>()
-//         .is_none()
-//     {
-//         world.init_resource::<bones_lib::prelude::Time>();
-//     }
-
-//     let time = world.resource::<bones_lib::prelude::Time>();
-//     let mut time = time.borrow_mut();
-
-//     // Use the Bevy time if it's available, otherwise use the default time.
-//     if let Some(instant) = bevy_time.last_update() {
-//         time.update_with_instant(instant);
-//     } else {
-//         time.update();
 //     }
 // }
