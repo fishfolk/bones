@@ -152,7 +152,8 @@ impl UntypedComponentStore {
     fn allocate_enough(&mut self, until: usize) {
         if self.storage.capacity() <= until {
             self.storage
-                .resize(self.storage.capacity().max(1) * 2)
+                // TODO: Determine a better policy for resizing component storage.
+                .resize((until + 1) * 2)
                 .unwrap();
         }
     }
