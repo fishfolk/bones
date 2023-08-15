@@ -68,3 +68,29 @@ impl<const N: usize, T, E: std::fmt::Debug> UnwrapMany<N, T> for [Result<T, E>; 
         std::array::from_fn(|_| iter.next().unwrap().unwrap())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::prelude::*;
+
+    #[test]
+    fn insert_comp_with_gap() {
+        let mut w = World::new();
+
+        #[derive(HasSchema, Default, Clone)]
+        #[repr(C)]
+        struct MyComp(u32, u32, u32);
+
+        w.run_system(
+            |mut entities: ResMut<Entities>, mut comps: CompMut<MyComp>| {
+                for _ in 0..3 {
+                    entities.create();
+                }
+
+                let e = entities.create();
+                comps.insert(e, default());
+            },
+        )
+        .unwrap();
+    }
+}

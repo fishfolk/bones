@@ -1,2 +1,3 @@
 title: Simple Game Demo
 character: ./seagul.character.yaml
+menu_sprite: ./sprite.png

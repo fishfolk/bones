@@ -9,8 +9,10 @@ version     = "0.2.0"
 
 [dependencies]
 bones_framework = { version = "^0.2.0", path = "../bones_framework" }
-glam       = { version = "0.24", features = ["serde"] }
-bevy_egui = "0.21"
+
+bevy_egui     = "0.21"
+async-channel = "1.9"
+glam          = { version = "0.24", features = ["serde"] }
 
 # TODO: Update `bevy_simple_tilemap` when our PR is merged.
 # https://github.com/forbjok/bevy_simple_tilemap/pull/9

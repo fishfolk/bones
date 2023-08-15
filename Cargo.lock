@@ -1172,6 +1172,7 @@ dependencies = [
 name = "bones_bevy_renderer"
 version = "0.2.0"
 dependencies = [
+ "async-channel",
  "bevy",
  "bevy_egui",
  "bevy_prototype_lyon",

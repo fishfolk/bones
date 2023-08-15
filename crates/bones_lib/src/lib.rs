@@ -13,7 +13,8 @@ pub use bones_ecs as ecs;
 /// Bones lib prelude
 pub mod prelude {
     pub use crate::{
-        asset::prelude::*, ecs::prelude::*, Game, Plugin, Session, SessionRunner, Sessions,
+        asset::prelude::*, ecs::prelude::*, Game, Plugin, Session, SessionOptions, SessionRunner,
+        Sessions,
     };
 }
 
@@ -174,12 +175,12 @@ impl Game {
             .sort_by_key(|name| self.sessions.map.get(name).unwrap().priority);
 
         // For every session
-        for session_name in &self.sorted_session_keys {
+        for session_name in self.sorted_session_keys.clone() {
             // Extract the current session
-            let mut current_session = self.sessions.map.remove(session_name).unwrap();
+            let mut current_session = self.sessions.map.remove(&session_name).unwrap();
 
             // If this session is active
-            if current_session.active {
+            let options = if current_session.active {
                 // Make sure the asset server is inserted
                 if !current_session.world.resources.contains::<AssetServer>() {
                     current_session
@@ -187,6 +188,13 @@ impl Game {
                         .resources
                         .insert_cell(self.asset_server.clone_cell());
                 }
+
+                // Insert the session options
+                current_session.world.resources.insert(SessionOptions {
+                    active: true,
+                    delete: false,
+                    visible: current_session.visible,
+                });
 
                 // Apply the game input
                 apply_input(&mut current_session.world);
@@ -208,10 +216,34 @@ impl Game {
                     let mut sessions = current_session.world.resource_mut::<Sessions>();
                     std::mem::swap(&mut *sessions, &mut self.sessions);
                 }
-            }
 
-            // Insert the current session back into the session list
-            self.sessions.map.insert(*session_name, current_session);
+                // Pull the current session options back out of the world.
+                *current_session.world.resource::<SessionOptions>()
+            } else {
+                SessionOptions {
+                    active: false,
+                    visible: current_session.visible,
+                    delete: false,
+                }
+            };
+
+            // Delete the session
+            if options.delete {
+                let session_idx = self
+                    .sorted_session_keys
+                    .iter()
+                    .position(|x| x == &session_name)
+                    .unwrap();
+                self.sorted_session_keys.remove(session_idx);
+
+            // Update session options
+            } else {
+                current_session.active = options.active;
+                current_session.visible = options.visible;
+
+                // Insert the current session back into the session list
+                self.sessions.map.insert(session_name, current_session);
+            }
         }
     }
 }
@@ -224,6 +256,18 @@ impl Game {
 pub struct Sessions {
     entities: AtomicResource<Entities>,
     map: HashMap<Key, Session>,
+}
+
+/// Resource that allows you to configure the current session.
+#[derive(HasSchema, Default, Debug, Clone, Copy)]
+#[repr(C)]
+pub struct SessionOptions {
+    /// Whether or not this session should be active after this frame.
+    pub active: bool,
+    /// Whether or not this session should be visible.
+    pub visible: bool,
+    /// Whether or not this session should be deleted.
+    pub delete: bool,
 }
 
 impl Sessions {

@@ -500,7 +500,7 @@ mod tests {
             x: u32,
         }
         let mut world = World::default();
-        let mut my_system = (|_a: Res<A>, mut b: ResMut<B>| {
+        let mut my_system = (|_a: ResInit<A>, mut b: ResMutInit<B>| {
             let b2 = B { x: 45 };
             *b = b2;
             Ok(())
@@ -510,8 +510,10 @@ mod tests {
         assert!(world.resources.get_cell::<B>().is_none());
         my_system.initialize(&mut world);
 
-        let res = world.resource::<B>();
-        assert_eq!(res.x, 0);
+        {
+            let res = world.resource::<B>();
+            assert_eq!(res.x, 0);
+        }
 
         my_system.run(&world).unwrap();
 

@@ -8,6 +8,10 @@ use crate::prelude::*;
 pub struct SystemStages {
     /// The stages in the collection, in the order that they will be run.
     pub stages: Vec<Box<dyn SystemStage>>,
+    /// Whether or not the startup systems have been run yet.
+    pub has_started: bool,
+    /// The systems that should run at startup.
+    pub startup_systems: Vec<System>,
 }
 impl std::fmt::Debug for SystemStages {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -38,6 +42,14 @@ impl SystemStages {
     /// > **Note:** You must call [`initialize_systems()`][Self::initialize_systems] once before
     /// > calling `run()` one or more times.
     pub fn run(&mut self, world: &mut World) -> SystemResult {
+        if !self.has_started {
+            for system in &mut self.startup_systems {
+                system.initialize(world);
+                system.run(world).unwrap();
+            }
+            self.has_started = true;
+        }
+
         for stage in &mut self.stages {
             stage.run(world)?;
         }
@@ -55,7 +67,15 @@ impl SystemStages {
                 Box::new(SimpleSystemStage::new(CoreStage::PostUpdate)),
                 Box::new(SimpleSystemStage::new(CoreStage::Last)),
             ],
+            has_started: false,
+            startup_systems: default(),
         }
+    }
+
+    /// Add a system that will run only once, before all of the other non-startup systems.
+    pub fn add_startup_system<Args, S: IntoSystem<Args, ()>>(&mut self, system: S) -> &mut Self {
+        self.startup_systems.push(system.system());
+        self
     }
 
     /// Add a [`System`] to the stage with the given label.

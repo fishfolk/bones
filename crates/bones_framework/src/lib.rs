@@ -16,7 +16,7 @@ pub use glam;
 pub mod prelude {
     pub use crate::{
         animation::*, input::prelude::*, params::*, render::prelude::*, AssetServerExt,
-        DefaultPlugins,
+        DefaultPlugin,
     };
     pub use bones_lib::prelude::*;
     pub use glam::*;
@@ -28,8 +28,8 @@ pub mod params;
 pub mod render;
 
 /// Default plugins for bones framework sessions.
-pub struct DefaultPlugins;
-impl lib::Plugin for DefaultPlugins {
+pub struct DefaultPlugin;
+impl lib::Plugin for DefaultPlugin {
     fn install(self, session: &mut lib::Session) {
         session.install_plugin(animation::plugin);
     }

@@ -13,3 +13,17 @@ pub struct EguiCtx(pub egui::Context);
 #[derive(HasSchema, Clone, Debug, Default, Deref, DerefMut)]
 #[schema(opaque)]
 pub struct EguiTextures(pub HashMap<Handle<Image>, egui::TextureId>);
+
+/// Resource for configuring egui rendering.
+#[derive(HasSchema, Clone, Debug)]
+#[repr(C)]
+pub struct EguiSettings {
+    /// Custom scale for the UI.
+    pub scale: f64,
+}
+
+impl Default for EguiSettings {
+    fn default() -> Self {
+        Self { scale: 1.0 }
+    }
+}

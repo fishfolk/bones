@@ -261,6 +261,30 @@ mod test {
     use crate::alloc::ResizableAlloc;
 
     #[test]
+    #[cfg(feature = "glam")]
+    fn realloc_transform() {
+        use crate as bones_schema;
+        use bones_schema_macros::HasSchema;
+        use glam::*;
+
+        #[derive(HasSchema, Clone, Default)]
+        #[repr(C)]
+        pub struct Transform {
+            pub translation: Vec3,
+            pub rotation: Quat,
+            pub scale: Vec3,
+        }
+
+        let layout = Layout::new::<Transform>();
+
+        let mut a = ResizableAlloc::new(layout);
+
+        a.resize(1).unwrap();
+        a.resize(2).unwrap();
+        a.resize(6).unwrap();
+    }
+
+    #[test]
     fn resizable_allocation() {
         // Create the layout of the type we want to store.
         type Ty = (u32, u8);

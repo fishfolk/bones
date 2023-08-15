@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use bones_bevy_renderer::BonesBevyRenderer;
 use bones_framework::prelude::*;
 
@@ -13,6 +15,8 @@ struct GameMeta {
     title: String,
     /// Character information that will be loaded from a separate asset file.
     character: Handle<CharacterMeta>,
+    /// A sprite that will be shown on the menu
+    menu_sprite: Handle<Image>,
 }
 
 /// Character information.
@@ -33,7 +37,7 @@ struct CharacterMeta {
 
 fn main() {
     // Create a bones bevy renderer from our bones game
-    BonesBevyRenderer::new(game_init())
+    BonesBevyRenderer::new(create_game())
         // Get a bevy app for running our game
         .app()
         // Run the bevy app
@@ -41,7 +45,7 @@ fn main() {
 }
 
 // Initialize the game.
-pub fn game_init() -> Game {
+pub fn create_game() -> Game {
     // Create an empty game
     let mut game = Game::new();
 
@@ -54,10 +58,7 @@ pub fn game_init() -> Game {
         .register_asset::<CharacterMeta>();
 
     // Create our menu session
-    let menu_session = game.sessions.create("menu");
-
-    // Install our menu plugin into the menu session
-    menu_session.install_plugin(menu_plugin);
+    game.sessions.create("menu").install_plugin(menu_plugin);
 
     game
 }
@@ -67,20 +68,88 @@ pub fn menu_plugin(session: &mut Session) {
     // Register our menu system
     session
         // Install the default plugins for this session
-        .install_plugin(DefaultPlugins)
+        .install_plugin(DefaultPlugin)
         // And add our systems.
         .stages
-        .add_system_to_stage(CoreStage::Update, menu_system)
-        .add_system_to_stage(CoreStage::Update, init_system);
+        .add_system_to_stage(CoreStage::Update, main_menu)
+        .add_startup_system(menu_startup);
 }
 
-#[derive(HasSchema, Debug, Default, Clone, Deref, DerefMut)]
-#[repr(C)]
-struct HasInit(pub bool);
+/// Setup the main menu
+fn menu_startup(
+    mut egui_settings: ResMutInit<EguiSettings>,
+    mut entities: ResMut<Entities>,
+    mut transforms: CompMut<Transform>,
+    mut sprites: CompMut<Sprite>,
+    mut cameras: CompMut<Camera>,
+    mut clear_color: ResMutInit<ClearColor>,
+    meta: Root<GameMeta>,
+) {
+    // Set the clear color
+    **clear_color = Color::BLACK;
 
-#[allow(clippy::too_many_arguments)]
-fn init_system(
-    mut has_init: ResMutInit<HasInit>,
+    egui_settings.scale = 2.0;
+
+    // Spawn the camera
+    let camera_ent = entities.create();
+    transforms.insert(
+        camera_ent,
+        Transform::from_translation(Vec3::new(0., 0., 100.)),
+    );
+    cameras.insert(camera_ent, default());
+
+    // Spawn a sprite for the menu
+    let ent = entities.create();
+    transforms.insert(ent, default());
+    sprites.insert(
+        ent,
+        Sprite {
+            image: meta.menu_sprite,
+            ..default()
+        },
+    );
+}
+
+/// Our main menu system.
+fn main_menu(
+    egui_ctx: ResMut<EguiCtx>,
+    mut sessions: ResMut<Sessions>,
+    mut session_options: ResMut<SessionOptions>,
+    // Get the root asset with the `Root` system param.
+    game_meta: Root<GameMeta>,
+) {
+    // Render the menu.
+    egui::CentralPanel::default()
+        .frame(egui::Frame::none())
+        .show(&egui_ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                ui.add_space(20.0);
+                ui.heading(&game_meta.title);
+                ui.add_space(20.0);
+                if ui.button("Start Game").clicked() {
+                    // Delete the menu session
+                    session_options.delete = true;
+
+                    // Create a session for the match
+                    sessions
+                        .create("match")
+                        .install_plugin(DefaultPlugin)
+                        .install_plugin(match_plugin);
+                }
+            });
+        });
+}
+
+fn match_plugin(session: &mut Session) {
+    session
+        .install_plugin(DefaultPlugin)
+        .stages
+        .add_startup_system(match_startup)
+        .add_system_to_stage(CoreStage::Update, match_ui);
+}
+
+/// System to startup the match.
+fn match_startup(
     mut entities: ResMut<Entities>,
     mut transforms: CompMut<Transform>,
     mut cameras: CompMut<Camera>,
@@ -90,89 +159,59 @@ fn init_system(
     meta: Root<GameMeta>,
     assets: Res<AssetServer>,
 ) {
-    if !**has_init {
-        **has_init = true;
+    // Set the clear color
+    **clear_color = Color::GRAY;
 
-        // Set the clear color
-        **clear_color = Color::BLACK;
+    // Spawn the camera
+    let camera_ent = entities.create();
+    transforms.insert(
+        camera_ent,
+        Transform::from_translation(Vec3::new(0., 0., 100.)),
+    );
+    cameras.insert(
+        camera_ent,
+        Camera {
+            height: 200.0,
+            ..default()
+        },
+    );
 
-        // Spawn the camera
-        let camera_ent = entities.create();
-        transforms.insert(
-            camera_ent,
-            Transform::from_translation(Vec3::new(0., 0., 100.)),
-        );
-        cameras.insert(
-            camera_ent,
-            Camera {
-                height: 250.0,
-                ..default()
-            },
-        );
+    // Get the character metadata
+    let character = assets.get(&meta.character);
 
-        // Get the character metadata
-        let character = assets.get(&meta.character);
-
-        // Spawn the character sprite.
-        let sprite_ent = entities.create();
-        transforms.insert(sprite_ent, default());
-        atlas_sprites.insert(
-            sprite_ent,
-            AtlasSprite {
-                atlas: character.atlas,
-                ..default()
-            },
-        );
-        animated_sprites.insert(
-            sprite_ent,
-            AnimatedSprite {
-                frames: character.animation.iter().copied().collect(),
-                fps: character.fps,
-                ..default()
-            },
-        );
-    }
+    // Spawn the character sprite.
+    let sprite_ent = entities.create();
+    transforms.insert(sprite_ent, default());
+    atlas_sprites.insert(
+        sprite_ent,
+        AtlasSprite {
+            atlas: character.atlas,
+            ..default()
+        },
+    );
+    animated_sprites.insert(
+        sprite_ent,
+        AnimatedSprite {
+            frames: character.animation.iter().copied().collect(),
+            fps: character.fps,
+            ..default()
+        },
+    );
 }
 
-/// Resource that stores whether or not we should say hello.
-#[derive(HasSchema, Default, Clone, Debug, Deref, DerefMut)]
-#[repr(C)]
-struct ShowHello(pub bool);
-
-/// Our main menu system.
-fn menu_system(
-    time: Res<Time>,
-    mut hello: ResMutInit<ShowHello>,
-    keyboard_input: Res<KeyboardInputs>,
+fn match_ui(
     egui_ctx: ResMut<EguiCtx>,
-    // Get the root asset with the `Root` system param.
-    game_meta: Root<GameMeta>,
+    mut sessions: ResMut<Sessions>,
+    mut session_options: ResMut<SessionOptions>,
 ) {
-    // Update the hello state based on keyboard events.
-    for event in &keyboard_input.keys {
-        if event.key_code == Some(KeyCode::Space) {
-            if event.button_state == ButtonState::Pressed {
-                **hello = true;
-            } else if event.button_state == ButtonState::Released {
-                **hello = false;
-            }
-        }
-    }
-
-    // Render the menu.
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
         .show(&egui_ctx, |ui| {
-            ui.vertical_centered(|ui| {
+            ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
                 ui.add_space(20.0);
-                ui.heading(&game_meta.title);
-                ui.add_space(20.0);
-                ui.label(&format!("{:.0?}", time.elapsed()));
-                ui.add_space(20.0);
-                if **hello {
-                    ui.label("Hello World!");
-                } else {
-                    ui.label("...");
+                if ui.button("Back to Menu").clicked() {
+                    session_options.delete = true;
+                    sessions.create("menu").install_plugin(menu_plugin);
                 }
             });
         });

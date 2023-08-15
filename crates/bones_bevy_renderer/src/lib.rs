@@ -15,7 +15,12 @@ use bevy::{
         mouse::{MouseButtonInput, MouseMotion, MouseWheel},
     },
     prelude::*,
-    render::camera::ScalingMode,
+    render::{
+        camera::ScalingMode,
+        view::{check_visibility, VisibilitySystems},
+        Extract, RenderApp,
+    },
+    sprite::{extract_sprites, ExtractedSprite, ExtractedSprites, SpriteSystem},
     utils::HashMap,
 };
 use bevy_egui::EguiContext;
@@ -50,6 +55,19 @@ pub struct BonesBevyRenderer {
     pub packs_dir: PathBuf,
 }
 
+/// Resource containing the entity spawned for all of the bones game renderables.
+#[derive(Resource)]
+pub struct BonesRenderableEntity(pub Entity);
+impl FromWorld for BonesRenderableEntity {
+    fn from_world(world: &mut World) -> Self {
+        Self(world.spawn(VisibilityBundle::default()).id())
+    }
+}
+
+/// Resource mapping bones image IDs to their bevy handles.
+#[derive(Resource, Default, Debug, Deref, DerefMut)]
+pub struct BonesImageIds(HashMap<u32, Handle<Image>>);
+
 /// Bevy resource that contains the info for the bones game that is being rendered.
 #[derive(Resource)]
 pub struct BonesData {
@@ -81,12 +99,20 @@ impl BonesBevyRenderer {
         if self.pixel_art {
             plugins = plugins.set(ImagePlugin::default_nearest());
         }
+
         app.add_plugins(plugins)
             .add_plugins((
                 bevy_simple_tilemap::plugin::SimpleTileMapPlugin,
                 bevy_egui::EguiPlugin,
                 lyon::ShapePlugin,
             ))
+            .insert_resource({
+                let mut egui_settings = bevy_egui::EguiSettings::default();
+                if self.pixel_art {
+                    egui_settings.use_nearest_descriptor();
+                }
+                egui_settings
+            })
             .init_resource::<BonesImageIds>();
 
         {
@@ -102,13 +128,32 @@ impl BonesBevyRenderer {
             asset_server
                 .load_assets()
                 .expect("Could not load game assets");
+
+            // Take all loaded image assets and conver them to external images that reference bevy handles
+            let mut bones_image_ids = BonesImageIds::default();
+            let mut bevy_images = app.world.resource_mut::<Assets<Image>>();
+            let mut next_id = 0;
+            for asset in asset_server.store.assets.values_mut() {
+                if let Ok(image) = asset.data.try_cast_mut::<bones::Image>() {
+                    let mut taken_image = bones::Image::External(0); // Dummy value temporarily
+                    std::mem::swap(image, &mut taken_image);
+                    if let bones::Image::Data(data) = taken_image {
+                        let handle = bevy_images.add(Image::from_dynamic(data, true));
+                        bones_image_ids.insert(next_id, handle);
+                        *image = bones::Image::External(next_id);
+                        next_id += 1;
+                    }
+                }
+            }
+            app.insert_resource(bones_image_ids);
         }
 
         // Insert the bones data
         app.insert_resource(BonesData {
             asset_server: self.game.asset_server.clone_cell(),
             game: self.game,
-        });
+        })
+        .init_resource::<BonesRenderableEntity>();
 
         // Add the world sync systems
         app.add_systems(
@@ -117,20 +162,39 @@ impl BonesBevyRenderer {
                 // Collect input and run world simulation
                 get_bones_input.pipe(step_bones_game),
                 // Synchronize bones render components with the Bevy world.
-                (
-                    sync_clear_color,
-                    sync_cameras,
-                    sync_sprites,
-                    sync_atlas_sprites,
-                    // sync_path2ds,
-                    // sync_tilemaps,
-                ),
+                (sync_egui_settings, sync_clear_color, sync_cameras),
             )
                 .chain(),
+        )
+        .add_systems(
+            PostUpdate,
+            set_renderable_visibility
+                .in_set(VisibilitySystems::CheckVisibility)
+                .after(check_visibility),
         );
+
+        if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
+            render_app.add_systems(
+                ExtractSchedule,
+                (
+                    // Systems
+                    extract_bones_sprites
+                        .in_set(SpriteSystem::ExtractSprites)
+                        .after(extract_sprites),
+                ),
+            );
+        }
 
         app
     }
+}
+
+fn set_renderable_visibility(
+    renderable: Res<BonesRenderableEntity>,
+    mut computed_visibilities: Query<&mut ComputedVisibility>,
+) {
+    let mut vis = computed_visibilities.get_mut(renderable.0).unwrap();
+    vis.set_visible_in_view();
 }
 
 fn get_bones_input(
@@ -249,6 +313,22 @@ fn sync_clear_color(mut clear_color: ResMut<ClearColor>, mut data: ResMut<BonesD
     }
 }
 
+fn sync_egui_settings(
+    data: Res<BonesData>,
+    mut bevy_egui_settings: ResMut<bevy_egui::EguiSettings>,
+) {
+    let game = &data.game;
+
+    for session_name in &game.sorted_session_keys {
+        let session = game.sessions.get(*session_name).unwrap();
+        let world = &session.world;
+
+        if let Some(settings) = world.get_resource::<bones::EguiSettings>() {
+            bevy_egui_settings.scale_factor = settings.scale;
+        }
+    }
+}
+
 /// Sync bones cameras with Bevy
 fn sync_cameras(
     mut commands: Commands,
@@ -339,52 +419,14 @@ fn sync_cameras(
     }
 }
 
-/// Resource mapping bones image IDs to their bevy handles.
-#[derive(Resource, Default, Debug)]
-pub struct BonesImageIds {
-    /// The mapping of bones external imag IDs to Bevy image handles.
-    pub map: HashMap<u32, Handle<Image>>,
-    /// The next handle ID to dish out
-    next_id: u32,
-}
-
-impl BonesImageIds {
-    #[track_caller]
-    fn get_bevy_image_handle(
-        &mut self,
-        bevy_images: &mut Assets<Image>,
-        bones_assets: &mut bones::AssetServer,
-        bones_handle: &bones::Handle<bones::Image>,
-    ) -> Handle<Image> {
-        let mut image_data = bones::Image::External(0); // Take some dummy image
-        let bones_image = bones_assets.get_mut(bones_handle);
-        std::mem::swap(&mut image_data, bones_image);
-        match image_data {
-            bones::Image::Data(data) => {
-                let handle = bevy_images.add(Image::from_dynamic(data, true));
-                let id = self.next_id;
-                self.next_id += 1;
-                self.map.insert(id, handle.clone());
-                handle
-            }
-            bones::Image::External(id) => self.map.get(&id).unwrap().clone(),
-        }
-    }
-}
-
-/// The system that renders the bones world.
-fn sync_sprites(
-    mut commands: Commands,
-    data: Res<BonesData>,
-    mut bevy_bones_sprites: Query<
-        (Entity, &mut Handle<Image>, &mut Sprite, &mut Transform),
-        With<BevyBonesEntity>,
-    >,
-    mut bevy_images: ResMut<Assets<Image>>,
-    mut bones_image_ids: ResMut<BonesImageIds>,
+fn extract_bones_sprites(
+    mut extracted_sprites: ResMut<ExtractedSprites>,
+    data: Extract<Res<BonesData>>,
+    bones_image_ids: Extract<Res<BonesImageIds>>,
+    bones_renderable_entity: Extract<Res<BonesRenderableEntity>>,
 ) {
     let game = &data.game;
-    let mut bones_assets = data.asset_server.borrow_mut();
+    let bones_assets = data.asset_server.borrow();
 
     for session_name in &game.sorted_session_keys {
         let session = game.sessions.get(*session_name).unwrap();
@@ -394,194 +436,84 @@ fn sync_sprites(
         // Skip worlds without cameras and transforms
         if !(world.components.try_get_cell::<bones::Transform>().is_ok()
             && world.components.try_get_cell::<bones::Camera>().is_ok()
-            && world.components.try_get_cell::<bones::Sprite>().is_ok())
+            && (world.components.try_get_cell::<bones::Sprite>().is_ok()
+                || world
+                    .components
+                    .try_get_cell::<bones::AtlasSprite>()
+                    .is_ok()))
         {
             continue;
         }
 
         let entities = world.resource::<bones::Entities>();
-        let sprites = world.components.get_cell::<bones::Sprite>();
-        let sprites = sprites.borrow();
         let transforms = world.components.get_cell::<bones::Transform>();
         let transforms = transforms.borrow();
 
-        // Sync sprites
-        let mut sprites_bitset = sprites.bitset().clone();
-        sprites_bitset.bit_and(transforms.bitset());
-        let mut bones_sprite_entity_iter = entities.iter_with_bitset(&sprites_bitset);
-        for (bevy_ent, mut texture, mut sprite, mut transform) in &mut bevy_bones_sprites {
-            if let Some(bones_ent) = bones_sprite_entity_iter.next() {
-                let bones_sprite: &bones::Sprite = sprites.get(bones_ent).unwrap();
-                let bones_transform = transforms.get(bones_ent).unwrap();
-
-                sprite.flip_x = bones_sprite.flip_x;
-                sprite.flip_y = bones_sprite.flip_y;
-                sprite.color = bones_sprite.color.into_bevy();
-                *transform = bones_transform.into_bevy();
-                *texture = bones_image_ids.get_bevy_image_handle(
-                    &mut bevy_images,
-                    &mut bones_assets,
-                    &bones_sprite.image,
-                );
-            } else {
-                commands.entity(bevy_ent).despawn();
+        // Extract normal sprites
+        if let Ok(sprites) = world.components.try_get_cell::<bones::Sprite>() {
+            let sprites = sprites.borrow();
+            for (_, (sprite, transform)) in entities.iter_with((&sprites, &transforms)) {
+                let sprite_image = bones_assets.get(&sprite.image);
+                let image_id = if let bones::Image::External(id) = sprite_image {
+                    *id
+                } else {
+                    panic!(
+                        "Images added at runtime not supported yet, \
+                please open an issue."
+                    );
+                };
+                extracted_sprites.sprites.push(ExtractedSprite {
+                    entity: bones_renderable_entity.0,
+                    transform: transform.into_bevy().into(),
+                    color: sprite.color.into_bevy(),
+                    rect: None,
+                    custom_size: None,
+                    image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
+                    flip_x: sprite.flip_x,
+                    flip_y: sprite.flip_y,
+                    anchor: Vec2::ZERO,
+                })
             }
         }
-        for bones_ent in bones_sprite_entity_iter {
-            let bones_sprite = sprites.get(bones_ent).unwrap();
-            let bones_transform = transforms.get(bones_ent).unwrap();
 
-            commands.spawn((
-                SpriteBundle {
-                    texture: bones_image_ids.get_bevy_image_handle(
-                        &mut bevy_images,
-                        &mut bones_assets,
-                        &bones_sprite.image,
-                    ),
-                    transform: bones_transform.into_bevy(),
-                    sprite: Sprite {
-                        flip_x: bones_sprite.flip_x,
-                        flip_y: bones_sprite.flip_y,
-                        color: bones_sprite.color.into_bevy(),
-                        ..default()
-                    },
-                    ..default()
-                },
-                BevyBonesEntity,
-            ));
-        }
-    }
-}
-
-/// Synchronize bones asset sprites with bevy.
-fn sync_atlas_sprites(
-    mut commands: Commands,
-    data: ResMut<BonesData>,
-    mut bevy_bones_atlases: Query<
-        (
-            Entity,
-            &mut Handle<TextureAtlas>,
-            &mut TextureAtlasSprite,
-            &mut Transform,
-        ),
-        With<BevyBonesEntity>,
-    >,
-    mut bevy_images: ResMut<Assets<Image>>,
-    mut atlas_assets: ResMut<Assets<TextureAtlas>>,
-    mut bones_image_ids: ResMut<BonesImageIds>,
-) {
-    let game = &data.game;
-    let mut bones_assets = data.asset_server.borrow_mut();
-
-    for session_name in &game.sorted_session_keys {
-        let session = game.sessions.get(*session_name).unwrap();
-
-        let world = &session.world;
-
-        // Skip worlds without cameras and transforms
-        if !(world.components.try_get_cell::<bones::Transform>().is_ok()
-            && world.components.try_get_cell::<bones::Camera>().is_ok()
-            && world
-                .components
-                .try_get_cell::<bones::AtlasSprite>()
-                .is_ok())
-        {
-            continue;
-        }
-
-        let entities = world.resource::<bones::Entities>();
-        let atlas_sprites = world.components.get_cell::<bones::AtlasSprite>();
-        let atlas_sprites = atlas_sprites.borrow();
-        let transforms = world.components.get_cell::<bones::Transform>();
-        let transforms = transforms.borrow();
-
-        // Sync atlas sprites
-        let mut atlas_bitset = atlas_sprites.bitset().clone();
-        atlas_bitset.bit_and(transforms.bitset());
-        let mut bones_atlas_sprite_entity_iter = entities.iter_with_bitset(&atlas_bitset);
-        for (bevy_ent, mut texture_atlas, mut atlas_sprite, mut transform) in
-            &mut bevy_bones_atlases
-        {
-            if let Some(bones_ent) = bones_atlas_sprite_entity_iter.next() {
-                let bones_atlas_sprite = atlas_sprites.get(bones_ent).unwrap();
-                let bones_transform = transforms.get(bones_ent).unwrap();
-
-                let bones_atlas = *bones_assets.get(&bones_atlas_sprite.atlas);
-                let atlas_image = bones_image_ids.get_bevy_image_handle(
-                    &mut bevy_images,
-                    &mut bones_assets,
-                    &bones_atlas.image,
-                );
-                // TODO: Avoid uploading texture atlas asset to bevy every frame.
-                *texture_atlas = atlas_assets.add(TextureAtlas::from_grid(
-                    atlas_image,
-                    bones_atlas.tile_size,
-                    bones_atlas.rows as usize,
-                    bones_atlas.columns as usize,
-                    if bones_atlas.padding == Vec2::ZERO {
-                        Some(bones_atlas.padding)
-                    } else {
-                        None
-                    },
-                    if bones_atlas.offset == Vec2::ZERO {
-                        Some(bones_atlas.offset)
-                    } else {
-                        None
-                    },
-                ));
-                *transform = bones_transform.into_bevy();
-
-                atlas_sprite.index = bones_atlas_sprite.index;
-                atlas_sprite.flip_x = bones_atlas_sprite.flip_x;
-                atlas_sprite.flip_y = bones_atlas_sprite.flip_y;
-                atlas_sprite.color = bones_atlas_sprite.color.into_bevy();
-            } else {
-                commands.entity(bevy_ent).despawn();
+        // Extract atlas sprites
+        if let Ok(atlas_sprites) = world.components.try_get_cell::<bones::AtlasSprite>() {
+            let atlas_sprites = atlas_sprites.borrow();
+            for (_, (atlas_sprite, transform)) in entities.iter_with((&atlas_sprites, &transforms))
+            {
+                let atlas = bones_assets.get(&atlas_sprite.atlas);
+                let atlas_image = bones_assets.get(&atlas.image);
+                let image_id = if let bones::Image::External(id) = atlas_image {
+                    *id
+                } else {
+                    panic!(
+                        "Images added at runtime not supported yet, \
+                please open an issue."
+                    );
+                };
+                let index = atlas_sprite.index;
+                let y = index / atlas.columns;
+                let x = index - (y * atlas.columns);
+                let cell = Vec2::new(x as f32, y as f32);
+                let current_padding = atlas.padding
+                    * Vec2::new(if x > 0 { 1.0 } else { 0.0 }, if y > 0 { 1.0 } else { 0.0 });
+                let min = (atlas.tile_size + current_padding) * cell + atlas.offset;
+                let rect = Rect {
+                    min,
+                    max: min + atlas.tile_size,
+                };
+                extracted_sprites.sprites.push(ExtractedSprite {
+                    entity: bones_renderable_entity.0,
+                    transform: transform.into_bevy().into(),
+                    color: atlas_sprite.color.into_bevy(),
+                    rect: Some(rect),
+                    custom_size: None,
+                    image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
+                    flip_x: atlas_sprite.flip_x,
+                    flip_y: atlas_sprite.flip_y,
+                    anchor: Vec2::ZERO,
+                })
             }
-        }
-        for bones_ent in bones_atlas_sprite_entity_iter {
-            let bones_atlas_sprite = atlas_sprites.get(bones_ent).unwrap();
-            let bones_transform = transforms.get(bones_ent).unwrap();
-
-            let bones_atlas = *bones_assets.get(&bones_atlas_sprite.atlas);
-            let atlas_image = bones_image_ids.get_bevy_image_handle(
-                &mut bevy_images,
-                &mut bones_assets,
-                &bones_atlas.image,
-            );
-            let texture_atlas = atlas_assets.add(TextureAtlas::from_grid(
-                atlas_image,
-                bones_atlas.tile_size,
-                bones_atlas.rows as usize,
-                bones_atlas.columns as usize,
-                if bones_atlas.padding == Vec2::ZERO {
-                    Some(bones_atlas.padding)
-                } else {
-                    None
-                },
-                if bones_atlas.offset == Vec2::ZERO {
-                    Some(bones_atlas.offset)
-                } else {
-                    None
-                },
-            ));
-            let transform = bones_transform.into_bevy();
-
-            commands.spawn((
-                SpriteSheetBundle {
-                    texture_atlas,
-                    transform,
-                    sprite: TextureAtlasSprite {
-                        index: bones_atlas_sprite.index,
-                        flip_x: bones_atlas_sprite.flip_x,
-                        flip_y: bones_atlas_sprite.flip_y,
-                        color: bones_atlas_sprite.color.into_bevy(),
-                        ..default()
-                    },
-                    ..default()
-                },
-                BevyBonesEntity,
-            ));
         }
     }
 }

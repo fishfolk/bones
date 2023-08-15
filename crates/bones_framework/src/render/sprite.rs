@@ -68,7 +68,7 @@ pub struct AtlasSprite {
     /// the sprite sheet will be `start`.
     ///
     /// If the idx is greater than `end - start`, then the animation will loop around.
-    pub index: usize,
+    pub index: u32,
     /// The atlas handle.
     pub atlas: Handle<Atlas>,
     /// Whether or not the flip the sprite horizontally.

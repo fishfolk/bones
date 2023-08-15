@@ -95,7 +95,7 @@ pub fn animate_sprites(
         }
 
         // Set the atlas sprite to match the current frame of the animated sprite
-        atlas_sprite.index = animated_sprite.frames[animated_sprite.index] as usize;
+        atlas_sprite.index = animated_sprite.frames[animated_sprite.index];
     }
 }
 
