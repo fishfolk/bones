@@ -1,311 +1,151 @@
-use std::{alloc::Layout, marker::PhantomData, rc::Rc, sync::Arc};
-
-use bytemuck::Pod;
+use std::{marker::PhantomData, rc::Rc};
 
 use crate::prelude::*;
 
-mod ops;
-pub use ops::TypedComponentOps;
-
-use super::{
-    iterator::{ComponentBitsetIterator, ComponentBitsetIteratorMut},
-    untyped::UntypedComponentStore,
-};
+use super::untyped::UntypedComponentStore;
 
 /// A typed wrapper around [`UntypedComponentStore`].
+#[repr(transparent)]
 pub struct ComponentStore<T: HasSchema> {
-    components: UntypedComponentStore,
-    ops: TypedComponentOps<T>,
+    untyped: UntypedComponentStore,
+    _phantom: PhantomData<T>,
 }
 
 impl<T: HasSchema> Default for ComponentStore<T> {
     fn default() -> Self {
         Self {
-            components: UntypedComponentStore::for_type::<T>(),
-            // Safe: We will only use `TypedComponentOps` for the untyped components we created
-            // above, which was initialized for the same type T.
-            ops: unsafe { TypedComponentOps::<T>::new() },
+            untyped: UntypedComponentStore::for_type::<T>(),
+            _phantom: PhantomData,
         }
     }
 }
 
-impl<T: HasSchema + Pod> ComponentStore<T> {
-    /// Create a new [`ComponentStore<T>`] by wrapping an [`UntypedComponentStore`].
-    ///
-    /// This method is safe because `T` is required to implement [`Pod`], which means `T` is valid
-    /// for _any_ bit pattern.
-    ///
-    /// # Panics
-    ///
-    /// This will panic if the layout of `T` does not match the layout of `components`.
-    pub fn from_components(components: UntypedComponentStore) -> Self {
-        assert_eq!(
-            components.schema.layout(),
-            Layout::new::<T>(),
-            "Layout mismatch creating `TypedComponents<T>`"
-        );
+impl<T: HasSchema> TryFrom<UntypedComponentStore> for ComponentStore<T> {
+    type Error = SchemaMismatchError;
 
-        Self {
-            components,
-            // Safe:
-            // - We will only use `TypedComponentOps` for the untyped components above
-            // - `T` is `Pod` so it is valid for any bit pattern
-            // - We validated the layout matches with the assertion above
-            ops: unsafe { TypedComponentOps::<T>::new() },
+    fn try_from(untyped: UntypedComponentStore) -> Result<Self, Self::Error> {
+        if untyped.schema == T::schema() {
+            Ok(Self {
+                untyped,
+                _phantom: PhantomData,
+            })
+        } else {
+            Err(SchemaMismatchError)
         }
     }
 }
 
 impl<T: HasSchema> ComponentStore<T> {
-    /// Create a new [`ComponentStore<T>`] by wrapping an [`UntypedComponentStore`].
-    ///
-    /// # Safety
-    ///
-    /// The data stored in `components` data must be a valid bit pattern for the given type `T`.
-    ///
-    /// > **Note:** If `T` implements [`Pod`] you can safely create an instance of
-    /// > [`ComponentStore`] with [`from_components`][Self::from_components].
-    pub unsafe fn from_components_unsafe(components: UntypedComponentStore) -> Self {
-        assert_eq!(
-            components.schema.layout(),
-            Layout::new::<T>(),
-            "Layout mismatch creating `TypedComponents<T>`"
-        );
-
-        Self {
-            components,
-            ops: TypedComponentOps::<T>::new(),
-        }
-    }
-
     /// Converts to the internal, untyped [`ComponentStore`].
+    #[inline]
     pub fn into_untyped(self) -> UntypedComponentStore {
-        self.components
+        self.untyped
     }
+
+    /// Creates a [`ComponentStore`] from an [`UntypedComponentStore`].
+    /// # Panics
+    /// Panics if the schema doesn't match `T`.
+    #[track_caller]
+    pub fn from_untyped(untyped: UntypedComponentStore) -> Self {
+        untyped.try_into().unwrap()
+    }
+
+    // TODO: Replace ComponentStore functions with non-validating ones.
+    //
+    // Right now functions like `insert`, `get`, and `get_mut` use the checked and panicing versions
+    // of the `untyped` functions. These functions do an extra check to see that the schema matches,
+    // but we've already validated that in the construction of the `ComponentStore`, so we should
+    // bypass the extra schema check for performance.
 
     /// Inserts a component for the given `Entity` index.
     /// Returns the previous component, if any.
+    #[inline]
     pub fn insert(&mut self, entity: Entity, component: T) -> Option<T> {
-        self.ops.insert(&mut self.components, entity, component)
+        self.untyped.insert(entity, component)
     }
 
     /// Gets an immutable reference to the component of `Entity`.
+    #[inline]
     pub fn get(&self, entity: Entity) -> Option<&T> {
-        self.ops.get(&self.components, entity)
+        self.untyped.get(entity)
     }
 
     /// Gets a mutable reference to the component of `Entity`.
-    pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
-        self.ops.get_mut(&mut self.components, entity)
-    }
-
-    /// Removes the component of `Entity`.
-    /// Returns `Some(T)` if the entity did have the component.
-    /// Returns `None` if the entity did not have the component.
-    pub fn remove(&mut self, entity: Entity) -> Option<T> {
-        self.ops.remove(&mut self.components, entity)
-    }
-
-    /// Iterates immutably over all components of this type.
-    /// Very fast but doesn't allow joining with other component types.
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
-        self.ops.iter(&self.components)
-    }
-
-    /// Iterates mutably over all components of this type.
-    /// Very fast but doesn't allow joining with other component types.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
-        self.ops.iter_mut(&mut self.components)
-    }
-
-    /// Iterates immutably over the components of this type where `bitset`
-    /// indicates the indices of entities.
-    /// Slower than `iter()` but allows joining between multiple component types.
-    pub fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> ComponentBitsetIterator<T> {
-        self.ops.iter_with_bitset(&self.components, bitset)
-    }
-
-    /// Iterates mutable over the components of this type where `bitset`
-    /// indicates the indices of entities.
-    /// Slower than `iter()` but allows joining between multiple component types.
-    pub fn iter_mut_with_bitset(&mut self, bitset: Rc<BitSetVec>) -> ComponentBitsetIteratorMut<T> {
-        self.ops.iter_mut_with_bitset(&mut self.components, bitset)
-    }
-
-    /// Read the bitset containing the list of entites with this component type on it.
-    pub fn bitset(&self) -> &BitSetVec {
-        self.components.bitset()
-    }
-
-    /// Check whether or not this component store has data for the given entity.
     #[inline]
-    pub fn contains(&self, entity: Entity) -> bool {
-        self.bitset().contains(entity)
-    }
-}
-
-/// A typed, wrapper handle around [`UntypedComponentStore`] that is runtime borrow checked and can
-/// be cheaply cloned. Think can think of it like an `Arc<RwLock<ComponentStore>>`.
-#[derive(Clone)]
-pub struct AtomicComponentStore<T: HasSchema> {
-    components: Arc<AtomicRefCell<UntypedComponentStore>>,
-    _phantom: PhantomData<T>,
-}
-
-impl<T: HasSchema> Default for AtomicComponentStore<T> {
-    fn default() -> Self {
-        Self {
-            components: Arc::new(AtomicRefCell::new(UntypedComponentStore::for_type::<T>())),
-            _phantom: Default::default(),
-        }
-    }
-}
-
-impl<T: HasSchema> AtomicComponentStore<T> {
-    /// # Safety
-    ///
-    /// The [`UntypedComponentStore`] underlying data must be valid for type `T`.
-    pub unsafe fn from_components_unsafe(
-        components: Arc<AtomicRefCell<UntypedComponentStore>>,
-    ) -> Self {
-        Self {
-            components,
-            _phantom: PhantomData,
-        }
-    }
-
-    /// Borrow the component store.
-    pub fn borrow(&self) -> AtomicComponentStoreRef<T> {
-        AtomicComponentStoreRef {
-            components: self.components.borrow(),
-            // Safe: The component type T is the same as the one we already have
-            ops: unsafe { TypedComponentOps::<T>::new() },
-        }
-    }
-
-    /// Mutably borrow the component store.
-    pub fn borrow_mut(&self) -> AtomicComponentStoreRefMut<T> {
-        AtomicComponentStoreRefMut {
-            components: self.components.borrow_mut(),
-            // Safe: The construction of an [`AtomicComponents`] is unsafe, and this has the same
-            // invariants.
-            ops: unsafe { TypedComponentOps::<T>::new() },
-        }
-    }
-}
-
-/// A read-only borrow of [`AtomicComponentStore`].
-pub struct AtomicComponentStoreRef<'a, T: HasSchema> {
-    components: AtomicRef<'a, UntypedComponentStore>,
-    ops: TypedComponentOps<T>,
-}
-
-impl<'a, T: HasSchema> AtomicComponentStoreRef<'a, T> {
-    /// Gets an immutable reference to the component of `Entity`.
-    pub fn get(&self, entity: Entity) -> Option<&T> {
-        self.ops.get(&self.components, entity)
-    }
-
-    /// Iterates immutably over all components of this type.
-    /// Very fast but doesn't allow joining with other component types.
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
-        self.ops.iter(&self.components)
-    }
-
-    /// Iterates immutably over the components of this type where `bitset`
-    /// indicates the indices of entities.
-    /// Slower than `iter()` but allows joining between multiple component types.
-    pub fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> ComponentBitsetIterator<T> {
-        self.ops.iter_with_bitset(&self.components, bitset)
-    }
-
-    /// Read the bitset containing the list of entites with this component type on it.
-    pub fn bitset(&self) -> &BitSetVec {
-        self.components.bitset()
-    }
-
-    /// Check whether or not this component store has data for the given entity.
-    #[inline]
-    pub fn contains(&self, entity: Entity) -> bool {
-        self.bitset().contains(entity)
-    }
-}
-
-/// A mutable borrow of [`AtomicComponentStore`].
-pub struct AtomicComponentStoreRefMut<'a, T: HasSchema> {
-    components: AtomicRefMut<'a, UntypedComponentStore>,
-    ops: TypedComponentOps<T>,
-}
-
-impl<'a, T: HasSchema> AtomicComponentStoreRefMut<'a, T> {
-    /// Inserts a component for the given [`Entity`] index.
-    ///
-    /// Returns the previous component, if any.
-    pub fn insert(&mut self, entity: Entity, component: T) -> Option<T> {
-        self.ops.insert(&mut self.components, entity, component)
-    }
-
-    /// Gets an immutable reference to the component of [`Entity`].
-    pub fn get(&self, entity: Entity) -> Option<&T> {
-        self.ops.get(&self.components, entity)
-    }
-
-    /// Gets a mutable reference to the component of [`Entity`].
     pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
-        self.ops.get_mut(&mut self.components, entity)
+        self.untyped.get_mut(entity)
     }
 
-    /// Get mutable pointers to the component data for multiple entities at the same time.
+    /// Get mutable references s to the component data for multiple entities at the same time.
     ///
     /// # Panics
     ///
     /// This will panic if the same entity is specified multiple times. This is invalid because it
     /// would mean you would have two mutable references to the same component data at the same
     /// time.
+    #[track_caller]
     pub fn get_many_mut<const N: usize>(&mut self, entities: [Entity; N]) -> [Option<&mut T>; N] {
-        self.ops.get_many_mut(&mut self.components, entities)
+        let mut result = self.untyped.get_many_ref_mut(entities);
+
+        std::array::from_fn(move |i| {
+            // SOUND: we know that the schema matches.
+            result[i].take().map(|x| unsafe { x.deref_mut() })
+        })
     }
 
-    /// Removes the component of [`Entity`].
-    ///
-    /// Returns the component that was on the entity, if any.
+    /// Removes the component of `Entity`.
+    /// Returns `Some(T)` if the entity did have the component.
+    /// Returns `None` if the entity did not have the component.
+    #[inline]
     pub fn remove(&mut self, entity: Entity) -> Option<T> {
-        self.ops.remove(&mut self.components, entity)
+        self.untyped.remove(entity)
     }
 
     /// Iterates immutably over all components of this type.
-    ///
     /// Very fast but doesn't allow joining with other component types.
+    #[inline]
     pub fn iter(&self) -> impl Iterator<Item = &T> {
-        self.ops.iter(&self.components)
+        // SOUND: we know the schema matches.
+        self.untyped.iter().map(|x| unsafe { x.deref() })
     }
 
     /// Iterates mutably over all components of this type.
-    ///
     /// Very fast but doesn't allow joining with other component types.
+    #[inline]
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
-        self.ops.iter_mut(&mut self.components)
+        // SOUND: we know the schema matches.
+        self.untyped.iter_mut().map(|x| unsafe { x.deref_mut() })
     }
 
-    /// Iterates immutably over the components of this type where `bitset` indicates the indices of
-    /// entities.
-    ///
+    /// Iterates immutably over the components of this type where `bitset`
+    /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
+    #[inline]
     pub fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> ComponentBitsetIterator<T> {
-        self.ops.iter_with_bitset(&self.components, bitset)
+        // SOUND: we know the schema matches.
+        fn map<T>(r: SchemaRef) -> &T {
+            unsafe { r.deref() }
+        }
+        self.untyped.iter_with_bitset(bitset).map(map)
     }
 
-    /// Iterates mutable over the components of this type where `bitset` indicates the indices of
-    /// entities.
-    ///
+    /// Iterates mutable over the components of this type where `bitset`
+    /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
+    #[inline]
     pub fn iter_mut_with_bitset(&mut self, bitset: Rc<BitSetVec>) -> ComponentBitsetIteratorMut<T> {
-        self.ops.iter_mut_with_bitset(&mut self.components, bitset)
+        // SOUND: we know the schema matches.
+        fn map<'a, T>(r: SchemaRefMut<'a, 'a>) -> &'a mut T {
+            unsafe { r.deref_mut() }
+        }
+
+        self.untyped.iter_mut_with_bitset(bitset).map(map)
     }
 
-    /// Get the bitset representing which entities have this component on it.
+    /// Read the bitset containing the list of entites with this component type on it.
+    #[inline]
     pub fn bitset(&self) -> &BitSetVec {
-        self.components.bitset()
+        self.untyped.bitset()
     }
 
     /// Check whether or not this component store has data for the given entity.

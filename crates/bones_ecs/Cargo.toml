@@ -28,7 +28,6 @@ bones_schema = { version = "0.1.0", path = "../bones_schema" }
 anyhow         = "1.0"
 atomic_refcell = "0.1"
 bitset-core = "0.1"
-bytemuck    = "1.12"
 either      = "1.8"
 fxhash      = "0.2"
 itertools   = "0.10"

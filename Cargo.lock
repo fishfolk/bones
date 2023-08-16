@@ -1198,7 +1198,6 @@ dependencies = [
  "bitset-core",
  "bones_schema",
  "bones_utils",
- "bytemuck",
  "either",
  "fxhash",
  "glam",

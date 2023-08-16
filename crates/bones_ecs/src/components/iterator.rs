@@ -1,64 +1,16 @@
-use std::{marker::PhantomData, rc::Rc};
+use std::rc::Rc;
 
 use crate::prelude::*;
 
 /// Read-only iterator over components matching a given bitset
-pub struct ComponentBitsetIterator<'a, T> {
-    iter: UntypedComponentBitsetIterator<'a>,
-    _phantom: PhantomData<T>,
-}
-
-impl<'a, T> ComponentBitsetIterator<'a, T> {
-    /// # Safety
-    /// The untyped iterator must be valid for type T.
-    pub(crate) unsafe fn new(iter: UntypedComponentBitsetIterator<'a>) -> Self {
-        Self {
-            iter,
-            _phantom: PhantomData,
-        }
-    }
-}
-
-impl<'a, T: 'static> Iterator for ComponentBitsetIterator<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter
-            .next()
-            // SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
-            // is valid for type T.
-            .map(|x| unsafe { x.deref() })
-    }
-}
+pub type ComponentBitsetIterator<'a, T> =
+    std::iter::Map<UntypedComponentBitsetIterator<'a>, for<'b> fn(SchemaRef<'b>) -> &'b T>;
 
 /// Mutable iterator over components matching a given bitset
-pub struct ComponentBitsetIteratorMut<'a, T> {
-    iter: UntypedComponentBitsetIteratorMut<'a>,
-    _phantom: PhantomData<T>,
-}
-
-impl<'a, T> ComponentBitsetIteratorMut<'a, T> {
-    /// # Safety
-    /// The untyped iterator must be valid for type T.
-    pub(crate) unsafe fn new(iter: UntypedComponentBitsetIteratorMut<'a>) -> Self {
-        Self {
-            iter,
-            _phantom: PhantomData,
-        }
-    }
-}
-
-impl<'a, T: 'static> Iterator for ComponentBitsetIteratorMut<'a, T> {
-    type Item = &'a mut T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter
-            .next()
-            // SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
-            // is valid for type T.
-            .map(|x| unsafe { x.deref_mut() })
-    }
-}
+pub type ComponentBitsetIteratorMut<'a, T> = std::iter::Map<
+    UntypedComponentBitsetIteratorMut<'a>,
+    for<'b> fn(SchemaRefMut<'b, 'b>) -> &'b mut T,
+>;
 
 /// Iterates over components using a provided bitset. Each time the bitset has a 1 in index i, the
 /// iterator will fetch data from the storage at index i and return it.
@@ -69,7 +21,7 @@ pub struct UntypedComponentBitsetIterator<'a> {
 }
 
 impl<'a> Iterator for UntypedComponentBitsetIterator<'a> {
-    type Item = Ptr<'a>;
+    type Item = SchemaRef<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         let max_id = self.components.max_id;
         while !(self.bitset.bit_test(self.current_id)
@@ -80,7 +32,15 @@ impl<'a> Iterator for UntypedComponentBitsetIterator<'a> {
         }
         let ret = if self.current_id <= max_id {
             // SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
-            Some(unsafe { self.components.storage.unchecked_idx(self.current_id) })
+            Some(unsafe {
+                SchemaRef::from_ptr_schema(
+                    self.components
+                        .storage
+                        .unchecked_idx(self.current_id)
+                        .as_ptr(),
+                    self.components.schema,
+                )
+            })
         } else {
             None
         };
@@ -98,7 +58,7 @@ pub struct UntypedComponentBitsetIteratorMut<'a> {
 }
 
 impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
-    type Item = PtrMut<'a>;
+    type Item = SchemaRefMut<'a, 'a>;
     fn next(&mut self) -> Option<Self::Item> {
         let max_id = self.components.max_id;
         while !(self.bitset.bit_test(self.current_id)
@@ -111,10 +71,13 @@ impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
             // SAFE: We know that the index is within bounds, and we know that the pointer will be
             // valid for the new lifetime.
             Some(unsafe {
-                self.components
-                    .storage
-                    .unchecked_idx_mut(self.current_id)
-                    .transmute_lifetime()
+                SchemaRefMut::from_ptr_schema(
+                    self.components
+                        .storage
+                        .unchecked_idx_mut(self.current_id)
+                        .as_ptr(),
+                    self.components.schema,
+                )
             })
         } else {
             None

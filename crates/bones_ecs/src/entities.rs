@@ -95,7 +95,7 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
-        Comp::iter_with_bitset(self, bitset)
+        ComponentStore::iter_with_bitset(&**self, bitset)
     }
 }
 impl<'a, 'q, T: HasSchema> QueryItem for &'a CompMut<'q, T> {
@@ -105,7 +105,7 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a CompMut<'q, T> {
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
-        CompMut::iter_with_bitset(self, bitset)
+        ComponentStore::iter_with_bitset(&**self, bitset)
     }
 }
 impl<'a, 'q, T: HasSchema> QueryItem for &'a mut CompMut<'q, T> {
@@ -115,7 +115,7 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a mut CompMut<'q, T> {
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
-        CompMut::iter_mut_with_bitset(self, bitset)
+        ComponentStore::iter_mut_with_bitset(self, bitset)
     }
 }
 

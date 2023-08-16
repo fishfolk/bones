@@ -12,6 +12,8 @@ pub use iterator::*;
 pub use typed::*;
 pub use untyped::*;
 
+type AtomicComponentStore<T> = Arc<AtomicRefCell<ComponentStore<T>>>;
+
 /// A collection of [`ComponentStore<T>`].
 ///
 /// [`ComponentStores`] is used to in [`World`] to store all component types that have been
@@ -50,38 +52,61 @@ impl ComponentStores {
     }
 
     /// Get the components of a certain type
-    ///
-    /// # Panics
-    ///
-    /// Panics if the component type has not been initialized.
-    #[track_caller]
     // TODO: Attempt to refactor component store so we can avoid the two-step borrow process.
     //
     // With resources we were able to avoid this step, but component stores are structured
     // differently and might need more work.
-    pub fn get_cell<T: HasSchema>(&self) -> AtomicComponentStore<T> {
-        self.try_get_cell::<T>().unwrap()
+    pub fn get_cell<T: HasSchema>(&self) -> Result<AtomicComponentStore<T>, EcsError> {
+        let untyped = self.get_cell_by_schema_id(T::schema().id())?;
+
+        // Safe: We know the schema matches, and `ComponentStore<T>` is repr(transparent) over
+        // `UntypedComponentStore`.
+        unsafe {
+            Ok(std::mem::transmute::<
+                Arc<AtomicRefCell<UntypedComponentStore>>,
+                Arc<AtomicRefCell<ComponentStore<T>>>,
+            >(untyped))
+        }
     }
 
-    /// Get the components of a certain type
-    pub fn try_get_cell<T: HasSchema>(&self) -> Result<AtomicComponentStore<T>, EcsError> {
-        let untyped = self.try_get_cell_by_schema_id(T::schema().id())?;
+    /// Borrow a component store.
+    /// # Errors
+    /// Errors if the component store has not been initialized yet.
+    pub fn get<T: HasSchema>(&self) -> Result<AtomicRef<ComponentStore<T>>, EcsError> {
+        let id = T::schema().id();
+        let atomicref = self
+            .components
+            .get(&id)
+            .ok_or(EcsError::NotInitialized)?
+            .borrow();
 
-        // Safe: We've made sure that the data initialized in the untyped components matches T
-        unsafe { Ok(AtomicComponentStore::from_components_unsafe(untyped)) }
+        let atomicref = AtomicRef::map(atomicref, |x| unsafe {
+            std::mem::transmute::<&UntypedComponentStore, &ComponentStore<T>>(x)
+        });
+
+        Ok(atomicref)
+    }
+
+    /// Borrow a component store.
+    /// # Errors
+    /// Errors if the component store has not been initialized yet.
+    pub fn get_mut<T: HasSchema>(&mut self) -> Result<AtomicRefMut<ComponentStore<T>>, EcsError> {
+        let id = T::schema().id();
+        let atomicref = self
+            .components
+            .get_mut(&id)
+            .ok_or(EcsError::NotInitialized)?
+            .borrow_mut();
+
+        let atomicref = AtomicRefMut::map(atomicref, |x| unsafe {
+            std::mem::transmute::<&mut UntypedComponentStore, &mut ComponentStore<T>>(x)
+        });
+
+        Ok(atomicref)
     }
 
     /// Get the untyped component storage by the component's [`SchemaId`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if the component type has not been initialized.
-    pub fn get_cell_by_schema_id(&self, id: SchemaId) -> Arc<AtomicRefCell<UntypedComponentStore>> {
-        self.try_get_cell_by_schema_id(id).unwrap()
-    }
-
-    /// Get the untyped component storage by the component's [`SchemaId`].
-    pub fn try_get_cell_by_schema_id(
+    pub fn get_cell_by_schema_id(
         &self,
         id: SchemaId,
     ) -> Result<Arc<AtomicRefCell<UntypedComponentStore>>, EcsError> {

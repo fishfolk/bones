@@ -58,7 +58,7 @@ impl World {
                 // Safe: We don't provide an out pointer, so it doesn't overlap the component's
                 // internal storage.
                 unsafe {
-                    components.remove(entity, None);
+                    components.remove_raw(entity, None);
                 }
             }
         }

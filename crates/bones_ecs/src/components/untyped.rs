@@ -2,6 +2,7 @@ use crate::prelude::*;
 
 use bones_schema::alloc::ResizableAlloc;
 use std::{
+    mem::MaybeUninit,
     ptr::{self},
     rc::Rc,
 };
@@ -101,16 +102,82 @@ impl UntypedComponentStore {
         self.schema
     }
 
+    /// Insert component data for the given entity and get the previous component data if present.
+    /// # Panics
+    /// Panics if the schema of `T` doesn't match the store.
+    #[inline]
+    #[track_caller]
+    pub fn insert_box(&mut self, entity: Entity, data: SchemaBox) -> Option<SchemaBox> {
+        self.try_insert_box(entity, data).unwrap()
+    }
+
+    /// Insert component data for the given entity and get the previous component data if present.
+    /// # Errors
+    /// Errors if the schema of `T` doesn't match the store.
+    pub fn try_insert_box(
+        &mut self,
+        entity: Entity,
+        mut data: SchemaBox,
+    ) -> Result<Option<SchemaBox>, SchemaMismatchError> {
+        if self.schema != data.schema() {
+            Err(SchemaMismatchError)
+        } else {
+            let ptr = data.as_mut().as_ptr();
+            // SOUND: we validated schema matches
+            let already_had_component = unsafe { self.insert_raw(entity, ptr) };
+            if already_had_component {
+                // Previous component data will be written to data pointer
+                Ok(Some(data))
+            } else {
+                // Don't run the data's destructor, it has been moved into the storage.
+                std::mem::forget(data);
+                Ok(None)
+            }
+        }
+    }
+
+    /// Insert component data for the given entity and get the previous component data if present.
+    /// # Panics
+    /// Panics if the schema of `T` doesn't match the store.
+    #[inline]
+    #[track_caller]
+    pub fn insert<T: HasSchema>(&mut self, entity: Entity, data: T) -> Option<T> {
+        self.try_insert(entity, data).unwrap()
+    }
+
+    /// Insert component data for the given entity and get the previous component data if present.
+    /// # Errors
+    /// Errors if the schema of `T` doesn't match the store.
+    pub fn try_insert<T: HasSchema>(
+        &mut self,
+        entity: Entity,
+        mut data: T,
+    ) -> Result<Option<T>, SchemaMismatchError> {
+        if self.schema != T::schema() {
+            Err(SchemaMismatchError)
+        } else {
+            let ptr = &mut data as *mut T as *mut u8;
+            // SOUND: we validated schema matches
+            let already_had_component = unsafe { self.insert_raw(entity, ptr) };
+            if already_had_component {
+                // Previous component data will be written to data pointer
+                Ok(Some(data))
+            } else {
+                // Don't run the data's destructor, it has been moved into the storage.
+                std::mem::forget(data);
+                Ok(None)
+            }
+        }
+    }
+
     /// Returns true if the entity already had a component of this type.
     ///
     /// If true is returned, the previous value of the pointer will be written to `data`.
     ///
     /// # Safety
-    ///
-    /// - The data pointer must be valid for reading and writing objects with the layout that the
-    /// [`UntypedComponentStore`] was created with.
-    /// - The data pointer must not overlap with the [`UntypedComponentStore`]'s internal storage.
-    pub unsafe fn insert(&mut self, entity: Entity, data: *mut u8) -> bool {
+    /// - The data must be a pointer to memory with the same schema.
+    /// - If `false` is returned you must ensure the `data` pointer is not used after pushing.
+    pub unsafe fn insert_raw(&mut self, entity: Entity, data: *mut u8) -> bool {
         let index = entity.index() as usize;
         let size = self.schema.layout().size();
 
@@ -158,51 +225,139 @@ impl UntypedComponentStore {
         }
     }
 
-    /// Get a read-only pointer to the component for the given [`Entity`] if the entity has this
+    /// Get a reference to the component storage for the given [`Entity`].
+    /// # Panics
+    /// Panics if the schema of `T` doesn't match.
+    #[track_caller]
+    #[inline]
+    pub fn get<T: HasSchema>(&self, entity: Entity) -> Option<&T> {
+        self.try_get(entity).unwrap()
+    }
+
+    /// Get a reference to the component storage for the given [`Entity`].
+    /// # Errors
+    /// Errors if the schema of `T` doesn't match.
+    pub fn try_get<T: HasSchema>(&self, entity: Entity) -> Result<Option<&T>, SchemaMismatchError> {
+        self.get_ref(entity).map(|x| x.try_cast()).transpose()
+    }
+
+    /// Get a [`SchemaRef`] to the component for the given [`Entity`] if the entity has this
     /// component.
-    pub fn get(&self, entity: Entity) -> Option<Ptr<'_>> {
+    #[inline]
+    pub fn get_ref(&self, entity: Entity) -> Option<SchemaRef> {
         let idx = entity.index() as usize;
         self.get_idx(idx)
     }
 
-    fn get_idx(&self, idx: usize) -> Option<Ptr<'_>> {
+    fn get_idx(&self, idx: usize) -> Option<SchemaRef> {
         if self.bitset.bit_test(idx) {
             // SOUND: we ensure that there is allocated storge for entities that have their bit set.
-            Some(unsafe { self.storage.unchecked_idx(idx) })
+            let ptr = unsafe { self.storage.unchecked_idx(idx) };
+            // SOUND: we know that the pointer has our schema.
+            Some(unsafe { SchemaRef::from_ptr_schema(ptr.as_ptr(), self.schema) })
         } else {
             None
         }
     }
 
-    /// Get a mutable pointer to the component for the given [`Entity`]
-    pub fn get_mut(&mut self, entity: Entity) -> Option<PtrMut<'_>> {
+    /// Get a mutable reference to the component storage for the given [`Entity`].
+    /// # Panics
+    /// Panics if the schema of `T` doesn't match.
+    #[track_caller]
+    #[inline]
+    pub fn get_mut<T: HasSchema>(&mut self, entity: Entity) -> Option<&mut T> {
+        self.try_get_mut(entity).unwrap()
+    }
+
+    /// Get a mutable reference to the component storage for the given [`Entity`].
+    /// # Errors
+    /// Errors if the schema of `T` doesn't match.
+    pub fn try_get_mut<T: HasSchema>(
+        &mut self,
+        entity: Entity,
+    ) -> Result<Option<&mut T>, SchemaMismatchError> {
+        self.get_ref_mut(entity)
+            .map(|x| x.try_cast_into_mut())
+            .transpose()
+    }
+
+    /// Get a [`SchemaRefMut`] to the component for the given [`Entity`]
+    #[inline]
+    pub fn get_ref_mut<'a>(&mut self, entity: Entity) -> Option<SchemaRefMut<'a, 'a>> {
         let idx = entity.index() as usize;
         self.get_idx_mut(idx)
     }
 
-    fn get_idx_mut(&mut self, idx: usize) -> Option<PtrMut<'_>> {
+    fn get_idx_mut<'a>(&mut self, idx: usize) -> Option<SchemaRefMut<'a, 'a>> {
         if self.bitset.bit_test(idx) {
-            // SAFE: we've already validated that the contents of storage is valid for type T.
-            unsafe {
-                let ptr = self.storage.unchecked_idx_mut(idx);
-                Some(ptr)
-            }
+            // SOUND: we ensure that there is allocated storage for entities that have their bit
+            // set.
+            let ptr = unsafe { self.storage.unchecked_idx_mut(idx) };
+            // SOUND: we know that the pointer has our schema.
+            Some(unsafe { SchemaRefMut::from_ptr_schema(ptr.as_ptr(), self.schema) })
         } else {
             None
         }
     }
 
-    /// Get mutable pointers to the component data for multiple entities at the same time.
+    /// Get mutable references s to the component data for multiple entities at the same time.
     ///
     /// # Panics
     ///
     /// This will panic if the same entity is specified multiple times. This is invalid because it
     /// would mean you would have two mutable references to the same component data at the same
     /// time.
-    pub fn get_many_mut<const N: usize>(
+    ///
+    /// This will also panic if there is a schema mismatch.
+    #[inline]
+    #[track_caller]
+    pub fn get_many_mut<const N: usize, T: HasSchema>(
         &mut self,
         entities: [Entity; N],
-    ) -> [Option<PtrMut<'_>>; N] {
+    ) -> [Option<&mut T>; N] {
+        self.try_get_many_mut(entities).unwrap()
+    }
+
+    /// Get mutable references s to the component data for multiple entities at the same time.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the same entity is specified multiple times. This is invalid because it
+    /// would mean you would have two mutable references to the same component data at the same
+    /// time.
+    ///
+    /// # Errors
+    ///
+    /// This will error if there is a schema mismatch.
+    pub fn try_get_many_mut<const N: usize, T: HasSchema>(
+        &mut self,
+        entities: [Entity; N],
+    ) -> Result<[Option<&mut T>; N], SchemaMismatchError> {
+        if self.schema != T::schema() {
+            Err(SchemaMismatchError)
+        } else {
+            let mut refs = self.get_many_ref_mut(entities);
+            let refs = std::array::from_fn(|i| {
+                let r = refs[i].take();
+                // SOUND: we've validated the schema matches.
+                r.map(|r| unsafe { r.deref_mut() })
+            });
+
+            Ok(refs)
+        }
+    }
+
+    /// Get [`SchemaRefMut`]s to the component data for multiple entities at the same time.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the same entity is specified multiple times. This is invalid because it
+    /// would mean you would have two mutable references to the same component data at the same
+    /// time.
+    pub fn get_many_ref_mut<const N: usize>(
+        &mut self,
+        entities: [Entity; N],
+    ) -> [Option<SchemaRefMut>; N] {
         // Sort a copy of the passed in entities list.
         let mut sorted = entities;
         sorted.sort_unstable();
@@ -221,17 +376,64 @@ impl UntypedComponentStore {
             let index = entities[i].index() as usize;
 
             if self.bitset.bit_test(index) {
-                // SAFE: we've already validated that the contents of storage is valid for type T.
-                // The transmut is safe because we validate that all of these borrows don't overlap
-                // and their lifetimes are that of the &mut self borrow.
+                // SOUND: we've already validated that the contents of storage is valid for type T.
+                // The new lifetime is sound because we validate that all of these borrows don't
+                // overlap and their lifetimes are that of the &mut self borrow.
                 unsafe {
-                    let ptr = self.storage.unchecked_idx_mut(index).transmute_lifetime();
-                    Some(ptr)
+                    let ptr = self.storage.unchecked_idx_mut(index);
+                    Some(SchemaRefMut::from_ptr_schema(ptr.as_ptr(), self.schema))
                 }
             } else {
                 None
             }
         })
+    }
+
+    /// Remove the component data for the entity if it exists.
+    /// # Errors
+    /// Errors if the schema doesn't match.
+    #[inline]
+    #[track_caller]
+    pub fn remove<T: HasSchema>(&mut self, entity: Entity) -> Option<T> {
+        self.try_remove(entity).unwrap()
+    }
+
+    /// Remove the component data for the entity if it exists.
+    /// # Errors
+    /// Errors if the schema doesn't match.
+    pub fn try_remove<T: HasSchema>(
+        &mut self,
+        entity: Entity,
+    ) -> Result<Option<T>, SchemaMismatchError> {
+        if self.schema != T::schema() {
+            Err(SchemaMismatchError)
+        } else if self.bitset.contains(entity) {
+            let mut data = MaybeUninit::<T>::uninit();
+            // SOUND: the data doesn't overlap the storage.
+            unsafe { self.remove_raw(entity, Some(data.as_mut_ptr() as *mut u8)) };
+
+            // SOUND: we've initialized the data.
+            Ok(Some(unsafe { data.assume_init() }))
+        } else {
+            // SOUND: we don't use the out pointer.
+            unsafe { self.remove_raw(entity, None) };
+            Ok(None)
+        }
+    }
+
+    /// Remove the component data for the entity if it exists.
+    pub fn remove_box(&mut self, entity: Entity) -> Option<SchemaBox> {
+        if self.bitset.contains(entity) {
+            // SOUND: we will immediately initialize the schema box with data matching the schema.
+            let mut b = unsafe { SchemaBox::uninitialized(self.schema) };
+            // SOUND: the box data doesn't overlap the storage.
+            unsafe { self.remove_raw(entity, Some(b.as_mut().as_ptr())) };
+            Some(b)
+        } else {
+            // SOUND: we don't use the out pointer.
+            unsafe { self.remove_raw(entity, None) };
+            None
+        }
     }
 
     /// If there is a previous value, `true` will be returned.
@@ -241,7 +443,7 @@ impl UntypedComponentStore {
     /// # Safety
     ///
     /// If set, the `out` pointer, must not overlap the internal component storage.
-    pub unsafe fn remove(&mut self, entity: Entity, out: Option<*mut u8>) -> bool {
+    pub unsafe fn remove_raw(&mut self, entity: Entity, out: Option<*mut u8>) -> bool {
         let index = entity.index() as usize;
         let size = self.schema.layout().size();
 
@@ -326,6 +528,15 @@ impl UntypedComponentStore {
     pub fn bitset(&self) -> &BitSetVec {
         &self.bitset
     }
+
+    /// Convert into a typed [`ComponentStore`].
+    /// # Panics
+    /// Panics if the schema doesn't match.
+    #[inline]
+    #[track_caller]
+    pub fn into_typed<T: HasSchema>(self) -> ComponentStore<T> {
+        self.try_into().unwrap()
+    }
 }
 
 /// Mutable iterator over pointers in an untyped component store.
@@ -334,7 +545,7 @@ pub struct UntypedComponentStoreIter<'a> {
     idx: usize,
 }
 impl<'a> Iterator for UntypedComponentStoreIter<'a> {
-    type Item = Ptr<'a>;
+    type Item = SchemaRef<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if self.idx < self.store.max_id {
@@ -357,14 +568,17 @@ pub struct UntypedComponentStoreIterMut<'a> {
     idx: usize,
 }
 impl<'a> Iterator for UntypedComponentStoreIterMut<'a> {
-    type Item = PtrMut<'a>;
+    type Item = SchemaRefMut<'a, 'a>;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if self.idx < self.store.max_id {
                 if let Some(ptr) = self.store.get_idx_mut(self.idx) {
                     self.idx += 1;
+                    // Re-create the ref to extend the lifetime.
                     // SOUND: We know the pointer will be valid for the lifetime of the store.
-                    break Some(unsafe { ptr.transmute_lifetime() });
+                    break Some(unsafe {
+                        SchemaRefMut::from_ptr_schema(ptr.as_ptr(), ptr.schema())
+                    });
                 } else {
                     self.idx += 1;
                 }

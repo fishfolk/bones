@@ -105,6 +105,9 @@ impl Schema {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+// TODO: Add name fields to `SchemaData`.
+//
+// We may want to to have both "full" names and "short" names.
 pub struct SchemaData {
     /// The kind of schema.
     pub kind: SchemaKind,

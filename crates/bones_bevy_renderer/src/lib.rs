@@ -342,23 +342,40 @@ fn sync_cameras(
 ) {
     let game = &data.game;
 
+    // let bones_cameras = game.sorted_session_keys
+    //     .iter()
+    //     .map(|name| game.sessions.get(*name).unwrap())
+    //     .filter(|session| session.visible)
+    //     .filter(|session| {
+    //         let world = &session.world;
+    //         (world.components.try_get_cell::<bones::Transform>().is_ok()
+    //             && world.components.try_get_cell::<bones::Camera>().is_ok())
+    //     })
+    //     .map(|session| {
+    //         let world = &session.world;
+    //         let entities = world.resource::<bones::Entities>();
+    //         let transforms = world.components.get_cell::<bones::Transform>();
+    //         let cameras = world.components.get_cell::<bones::Camera>();
+    //         let cameras = cameras.borrow();
+
+    //         entities
+    //     });
+
     for session_name in &game.sorted_session_keys {
         let session = game.sessions.get(*session_name).unwrap();
 
         let world = &session.world;
 
         // Skip worlds without cameras and transforms
-        if !(world.components.try_get_cell::<bones::Transform>().is_ok()
-            && world.components.try_get_cell::<bones::Camera>().is_ok())
+        if !(world.components.get_cell::<bones::Transform>().is_ok()
+            && world.components.get_cell::<bones::Camera>().is_ok())
         {
             continue;
         }
 
         let entities = world.resource::<bones::Entities>();
-        let transforms = world.components.get_cell::<bones::Transform>();
-        let transforms = transforms.borrow();
-        let cameras = world.components.get_cell::<bones::Camera>();
-        let cameras = cameras.borrow();
+        let transforms = world.components.get::<bones::Transform>().unwrap();
+        let cameras = world.components.get::<bones::Camera>().unwrap();
 
         // Sync cameras
         let mut cameras_bitset = cameras.bitset().clone();
@@ -427,24 +444,19 @@ fn extract_bones_sprites(
         let world = &session.world;
 
         // Skip worlds without cameras and transforms
-        if !(world.components.try_get_cell::<bones::Transform>().is_ok()
-            && world.components.try_get_cell::<bones::Camera>().is_ok()
-            && (world.components.try_get_cell::<bones::Sprite>().is_ok()
-                || world
-                    .components
-                    .try_get_cell::<bones::AtlasSprite>()
-                    .is_ok()))
+        if !(world.components.get_cell::<bones::Transform>().is_ok()
+            && world.components.get_cell::<bones::Camera>().is_ok()
+            && (world.components.get_cell::<bones::Sprite>().is_ok()
+                || world.components.get_cell::<bones::AtlasSprite>().is_ok()))
         {
             continue;
         }
 
         let entities = world.resource::<bones::Entities>();
-        let transforms = world.components.get_cell::<bones::Transform>();
-        let transforms = transforms.borrow();
+        let transforms = world.components.get::<bones::Transform>().unwrap();
 
         // Extract normal sprites
-        if let Ok(sprites) = world.components.try_get_cell::<bones::Sprite>() {
-            let sprites = sprites.borrow();
+        if let Ok(sprites) = world.components.get::<bones::Sprite>() {
             for (_, (sprite, transform)) in entities.iter_with((&sprites, &transforms)) {
                 let sprite_image = bones_assets.get(&sprite.image);
                 let image_id = if let bones::Image::External(id) = sprite_image {
@@ -470,7 +482,7 @@ fn extract_bones_sprites(
         }
 
         // Extract atlas sprites
-        if let Ok(atlas_sprites) = world.components.try_get_cell::<bones::AtlasSprite>() {
+        if let Ok(atlas_sprites) = world.components.get_cell::<bones::AtlasSprite>() {
             let atlas_sprites = atlas_sprites.borrow();
             for (_, (atlas_sprite, transform)) in entities.iter_with((&atlas_sprites, &transforms))
             {

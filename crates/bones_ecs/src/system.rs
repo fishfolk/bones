@@ -1,5 +1,7 @@
 //! Implements the system API for the ECS.
 
+use std::sync::Arc;
+
 use crate::prelude::*;
 
 #[derive(Deref, DerefMut)]
@@ -277,12 +279,12 @@ impl<'a, T: HasSchema + FromWorld> SystemParam for ResMutInit<'a, T> {
 }
 
 /// [`SystemParam`] for getting read access to a [`ComponentStore`].
-pub type Comp<'a, T> = AtomicComponentStoreRef<'a, T>;
+pub type Comp<'a, T> = AtomicRef<'a, ComponentStore<T>>;
 /// [`SystemParam`] for getting mutable access to a [`ComponentStore`].
-pub type CompMut<'a, T> = AtomicComponentStoreRefMut<'a, T>;
+pub type CompMut<'a, T> = AtomicRefMut<'a, ComponentStore<T>>;
 
 impl<'a, T: HasSchema> SystemParam for Comp<'a, T> {
-    type State = AtomicComponentStore<T>;
+    type State = Arc<AtomicRefCell<ComponentStore<T>>>;
     type Param<'p> = Comp<'p, T>;
 
     fn initialize(world: &mut World) {
@@ -290,7 +292,7 @@ impl<'a, T: HasSchema> SystemParam for Comp<'a, T> {
     }
 
     fn get_state(world: &World) -> Self::State {
-        world.components.get_cell::<T>()
+        world.components.get_cell::<T>().unwrap()
     }
 
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
@@ -299,7 +301,7 @@ impl<'a, T: HasSchema> SystemParam for Comp<'a, T> {
 }
 
 impl<'a, T: HasSchema> SystemParam for CompMut<'a, T> {
-    type State = AtomicComponentStore<T>;
+    type State = Arc<AtomicRefCell<ComponentStore<T>>>;
     type Param<'p> = CompMut<'p, T>;
 
     fn initialize(world: &mut World) {
@@ -307,7 +309,7 @@ impl<'a, T: HasSchema> SystemParam for CompMut<'a, T> {
     }
 
     fn get_state(world: &World) -> Self::State {
-        world.components.get_cell::<T>()
+        world.components.get_cell::<T>().unwrap()
     }
 
     fn borrow(state: &mut Self::State) -> Self::Param<'_> {
@@ -434,8 +436,8 @@ mod tests {
     #[test]
     fn convert_system() {
         fn tmp(
-            _var1: AtomicComponentStoreRef<u32>,
-            _var2: AtomicComponentStoreRef<u64>,
+            _var1: AtomicRef<ComponentStore<u32>>,
+            _var2: AtomicRef<ComponentStore<u64>>,
             _var3: Res<i32>,
             _var4: ResMut<i64>,
         ) -> SystemResult {

@@ -199,27 +199,47 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
     /// Cast this pointer to a mutable reference to a type with a matching [`Schema`].
     ///
     /// # Errors
-    ///
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
     pub fn try_cast_mut<T: HasSchema>(&mut self) -> Result<&mut T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
-            // SOUND: here we clone our mutable pointer, and then offset it according to the
-            // field. This is dangerous, but sound because we make sure that this
-            // `get_field` method returns a `SchemaWalkerMut` with a virtual mutable borrow
-            // to this one.
-            //
-            // This means that Rust will not let anybody use this `SchemaWalkerMut`, until
-            // the other one is dropped. That means all we have to do is not use our
-            // `self.ptr` while the `offset_ptr` exists.
-            //
-            // Additionally, the `new_unchecked` is sound because our pointer cannot be null
-            // because it comes out of a `PtrMut`.
+            // SOUND: here we clone our mutable pointer and dereference it. This is dangerous, but
+            // sound in this case because we don't use our pointer at the same time as it, and we
+            // make sure that we lock ourselves with a mutable borrow until the user drops the
+            // reference that we gave them.
             unsafe {
                 let copied_ptr: PtrMut<'_, Aligned> =
                     PtrMut::new(NonNull::new_unchecked(self.ptr.as_ptr()));
 
                 Ok(copied_ptr.deref_mut())
             }
+        } else {
+            Err(SchemaMismatchError)
+        }
+    }
+
+    /// Cast this pointer to a mutable reference to a type with a matching [`Schema`]. This is
+    /// different than `try_cast` because it consumes the [`SchemaRefMut`] and allows you to, for
+    /// instance, pass it out of a mapping operation without keeping a reference to the old
+    /// [`SchemaRefMut`].
+    ///
+    /// # Panics
+    /// Panics if the schema of the pointer does not match that of the type you are casting to.
+    #[inline]
+    pub fn cast_into_mut<T: HasSchema>(self) -> &'pointer mut T {
+        self.try_cast_into_mut().unwrap()
+    }
+
+    /// Cast this pointer to a mutable reference to a type with a matching [`Schema`]. This is
+    /// different than `try_cast` because it consumes the [`SchemaRefMut`] and allows you to, for
+    /// instance, pass it out of a mapping operation without keeping a reference to the old
+    /// [`SchemaRefMut`].
+    ///
+    /// # Errors
+    /// Errors if the schema of the pointer does not match that of the type you are casting to.
+    pub fn try_cast_into_mut<T: HasSchema>(self) -> Result<&'pointer mut T, SchemaMismatchError> {
+        if self.schema.represents(T::schema()) {
+            // We've checked that the pointer represents T
+            Ok(unsafe { self.ptr.deref_mut() })
         } else {
             Err(SchemaMismatchError)
         }
