@@ -127,8 +127,9 @@ fn main_menu(
                 ui.heading(&game_meta.title);
                 ui.add_space(20.0);
                 if ui.button("Start Game").clicked() {
-                    // Delete the menu session
-                    session_options.delete = true;
+                    // Disable and hide the menu
+                    session_options.active = false;
+                    session_options.visible = false;
 
                     // Create a session for the match
                     sessions
@@ -211,7 +212,9 @@ fn match_ui(
                 ui.add_space(20.0);
                 if ui.button("Back to Menu").clicked() {
                     session_options.delete = true;
-                    sessions.create("menu").install_plugin(menu_plugin);
+                    let menu_session = sessions.get_mut("menu").unwrap();
+                    menu_session.active = true;
+                    menu_session.visible = true;
                 }
             });
         });

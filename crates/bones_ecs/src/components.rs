@@ -55,6 +55,10 @@ impl ComponentStores {
     ///
     /// Panics if the component type has not been initialized.
     #[track_caller]
+    // TODO: Attempt to refactor component store so we can avoid the two-step borrow process.
+    //
+    // With resources we were able to avoid this step, but component stores are structured
+    // differently and might need more work.
     pub fn get_cell<T: HasSchema>(&self) -> AtomicComponentStore<T> {
         self.try_get_cell::<T>().unwrap()
     }

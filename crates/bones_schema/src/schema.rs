@@ -242,6 +242,10 @@ pub struct StructFieldInfo {
     pub name: Option<Cow<'static, str>>,
     /// The schema of the field.
     pub schema: &'static Schema,
+    // TODO: Investigate adding attribute info to `StructFieldInfo`.
+    //
+    // This would allow custom type datas to read and respond to custom attributes on fields as
+    // well.
 }
 
 /// A type of primitive.

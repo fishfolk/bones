@@ -11,6 +11,7 @@ pub struct Camera {
     /// The height of the camera in in-game pixels.
     ///
     /// The width of the camera will be determined from the window aspect ratio.
+    // TODO: implement different scaling modes for bones cameras.
     pub height: f32,
     /// Whether or not the camera is enabled and rendering.
     pub active: bool,
@@ -19,6 +20,8 @@ pub struct Camera {
     ///
     /// This can be used, for example, for split screen functionality.
     pub viewport: Option<Viewport>,
+    /// Cameras with a higher priority will be rendered on top of cameras with a lower priority.
+    pub priority: i32,
 }
 
 /// A custom viewport specification for a [`Camera`].
@@ -43,6 +46,7 @@ impl Default for Camera {
             height: 400.0,
             active: true,
             viewport: None,
+            priority: 0,
         }
     }
 }

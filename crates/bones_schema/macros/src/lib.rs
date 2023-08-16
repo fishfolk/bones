@@ -64,6 +64,13 @@ macro_rules! throw {
 /// ```
 ///
 /// If this is a problem for your use-case, please open an issue.
+// TODO: Figure out why HasSchema derives with #[repr(C)] break Rust analyzer.
+//
+// For some reason deriving HasSchema on something with the `#[repr(C)]` mode breaks the type
+// inferrence in rust analyzer for many uses of it, particulary in bones ECS system parameters like
+// `Res<T>`, etc.
+//
+// This doesn't have the same issue for `#[schema(opaquea)]` types.
 #[proc_macro_derive(HasSchema, attributes(schema, derive_type_data, type_data))]
 pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     let input = venial::parse_declaration(input.into()).unwrap();

@@ -1,6 +1,7 @@
 use bevy::{
     input::{mouse::MouseScrollUnit, ButtonState},
     prelude::*,
+    render::camera::Viewport,
 };
 use bones_framework::prelude as bones;
 
@@ -9,6 +10,16 @@ pub trait IntoBevy<T> {
 }
 pub trait IntoBones<T> {
     fn into_bones(self) -> T;
+}
+
+impl IntoBevy<Viewport> for bones::Viewport {
+    fn into_bevy(self) -> Viewport {
+        Viewport {
+            physical_position: self.position,
+            physical_size: self.size,
+            depth: self.depth_min..self.depth_max,
+        }
+    }
 }
 
 impl IntoBevy<Color> for bones::Color {

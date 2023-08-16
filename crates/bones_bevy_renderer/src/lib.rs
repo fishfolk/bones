@@ -57,8 +57,8 @@ pub struct BonesBevyRenderer {
 
 /// Resource containing the entity spawned for all of the bones game renderables.
 #[derive(Resource)]
-pub struct BonesRenderableEntity(pub Entity);
-impl FromWorld for BonesRenderableEntity {
+pub struct BonesGameEntity(pub Entity);
+impl FromWorld for BonesGameEntity {
     fn from_world(world: &mut World) -> Self {
         Self(world.spawn(VisibilityBundle::default()).id())
     }
@@ -153,7 +153,7 @@ impl BonesBevyRenderer {
             asset_server: self.game.asset_server.clone_cell(),
             game: self.game,
         })
-        .init_resource::<BonesRenderableEntity>();
+        .init_resource::<BonesGameEntity>();
 
         // Add the world sync systems
         app.add_systems(
@@ -176,12 +176,9 @@ impl BonesBevyRenderer {
         if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app.add_systems(
                 ExtractSchedule,
-                (
-                    // Systems
-                    extract_bones_sprites
-                        .in_set(SpriteSystem::ExtractSprites)
-                        .after(extract_sprites),
-                ),
+                extract_bones_sprites
+                    .in_set(SpriteSystem::ExtractSprites)
+                    .after(extract_sprites),
             );
         }
 
@@ -190,7 +187,7 @@ impl BonesBevyRenderer {
 }
 
 fn set_renderable_visibility(
-    renderable: Res<BonesRenderableEntity>,
+    renderable: Res<BonesGameEntity>,
     mut computed_visibilities: Query<&mut ComputedVisibility>,
 ) {
     let mut vis = computed_visibilities.get_mut(renderable.0).unwrap();
@@ -358,10 +355,6 @@ fn sync_cameras(
         }
 
         let entities = world.resource::<bones::Entities>();
-        // TODO: Attempt to refactor component store so we can avoid the two-step borrow process.
-        //
-        // With resources we were able to avoid this step, but component stores are structured
-        // differently and might need more work.
         let transforms = world.components.get_cell::<bones::Transform>();
         let transforms = transforms.borrow();
         let cameras = world.components.get_cell::<bones::Camera>();
@@ -423,7 +416,7 @@ fn extract_bones_sprites(
     mut extracted_sprites: ResMut<ExtractedSprites>,
     data: Extract<Res<BonesData>>,
     bones_image_ids: Extract<Res<BonesImageIds>>,
-    bones_renderable_entity: Extract<Res<BonesRenderableEntity>>,
+    bones_renderable_entity: Extract<Res<BonesGameEntity>>,
 ) {
     let game = &data.game;
     let bones_assets = data.asset_server.borrow();
