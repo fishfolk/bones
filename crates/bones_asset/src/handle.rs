@@ -111,7 +111,7 @@ macro_rules! schema_impl_for_handle {
                         fields: vec![StructFieldInfo {
                             name: Some("id".into()),
                             schema: u128::schema(),
-                        }]
+                        }],
                     }),
                     clone_fn: Some(<Self as RawClone>::raw_clone),
                     drop_fn: None,

@@ -19,10 +19,10 @@ macro_rules! pub_use {
         pub use crate::{collections::*, default::*, key_mod::*, labeled_id::*, names::*, ptr::*};
         pub use bevy_ptr::*;
         pub use bones_utils_macros::*;
+        pub use fxhash;
         pub use hashbrown;
         pub use maybe_owned::*;
         pub use parking_lot;
-        pub use fxhash;
     };
 }
 pub_use!();

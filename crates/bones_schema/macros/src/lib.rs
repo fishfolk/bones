@@ -270,9 +270,11 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                 })
             }
         }
-        venial::Declaration::Enum(_) => todo!("
+        venial::Declaration::Enum(_) => todo!(
+            "
             TODO: implement HasSchema for enum types.
-        "),
+        "
+        ),
         _ => {
             throw!(
                 input,

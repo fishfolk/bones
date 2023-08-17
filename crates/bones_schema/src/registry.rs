@@ -122,12 +122,7 @@ impl SchemaRegistry {
         // Leak the field offsets to get static references
         let field_offsets: Box<_> = field_offsets
             .into_iter()
-            .map(|(name, offset)| {
-                (
-                    name.map(|n| n.to_string()),
-                    offset,
-                )
-            })
+            .map(|(name, offset)| (name.map(|n| n.to_string()), offset))
             .collect();
         let field_offsets = Box::leak(field_offsets);
 
