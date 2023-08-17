@@ -337,14 +337,19 @@ fn sync_cameras(
 ) {
     let game = &data.game;
 
+    // Collect the bevy cameras that we've created for the bones game
     let mut bevy_bones_cameras = bevy_bones_cameras.iter_mut();
+
+    // Create a helper callback to add/update a bones camera into the bevy world
     let mut add_bones_camera = |bones_camera: &bones::Camera,
                                 bones_transform: &bones::Transform| {
+        // Get or spawn an entity for the camera
         let mut camera_ent = match bevy_bones_cameras.next() {
             Some(ent) => commands.entity(ent),
             None => commands.spawn((Camera2dBundle::default(), BevyBonesEntity)),
         };
 
+        // Insert our updated components on the camera
         camera_ent.insert((
             Camera {
                 is_active: bones_camera.active,
@@ -358,6 +363,7 @@ fn sync_cameras(
         ));
     };
 
+    // Loop through all sessions
     for session_name in &game.sorted_session_keys {
         let session = game.sessions.get(*session_name).unwrap();
         if !session.visible {
@@ -379,10 +385,12 @@ fn sync_cameras(
 
         // Sync cameras
         for (_ent, (transform, camera)) in entities.iter_with((&transforms, &cameras)) {
+            // Add each camera to the bevy world
             add_bones_camera(camera, transform)
         }
     }
 
+    // Delete any remaining bevy cameras that don't have bones equivalents.
     for remaining_ent in bevy_bones_cameras {
         commands.entity(remaining_ent).despawn()
     }
