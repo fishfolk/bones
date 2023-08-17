@@ -26,7 +26,7 @@ use bevy::{
 use bevy_egui::EguiContext;
 use bevy_prototype_lyon::prelude as lyon;
 
-use bones_framework::prelude::{self as bones, BitSet};
+use bones_framework::prelude as bones;
 use prelude::convert::{IntoBevy, IntoBones};
 
 /// The prelude
@@ -326,43 +326,43 @@ fn sync_egui_settings(
     }
 }
 
+#[derive(Resource, Deref, DerefMut)]
+struct CameraBuffer(Vec<(bones::Camera, bones::Transform)>);
+
 /// Sync bones cameras with Bevy
 fn sync_cameras(
     mut commands: Commands,
     data: Res<BonesData>,
-    mut bevy_bones_cameras: Query<
-        (
-            Entity,
-            &mut Camera,
-            &mut OrthographicProjection,
-            &mut Transform,
-        ),
-        With<BevyBonesEntity>,
-    >,
+    mut bevy_bones_cameras: Query<Entity, (With<BevyBonesEntity>, With<Camera>)>,
 ) {
     let game = &data.game;
 
-    // let bones_cameras = game.sorted_session_keys
-    //     .iter()
-    //     .map(|name| game.sessions.get(*name).unwrap())
-    //     .filter(|session| session.visible)
-    //     .filter(|session| {
-    //         let world = &session.world;
-    //         (world.components.try_get_cell::<bones::Transform>().is_ok()
-    //             && world.components.try_get_cell::<bones::Camera>().is_ok())
-    //     })
-    //     .map(|session| {
-    //         let world = &session.world;
-    //         let entities = world.resource::<bones::Entities>();
-    //         let transforms = world.components.get_cell::<bones::Transform>();
-    //         let cameras = world.components.get_cell::<bones::Camera>();
-    //         let cameras = cameras.borrow();
+    let mut bevy_bones_cameras = bevy_bones_cameras.iter_mut();
+    let mut add_bones_camera = |bones_camera: &bones::Camera,
+                                bones_transform: &bones::Transform| {
+        let mut camera_ent = match bevy_bones_cameras.next() {
+            Some(ent) => commands.entity(ent),
+            None => commands.spawn((Camera2dBundle::default(), BevyBonesEntity)),
+        };
 
-    //         entities
-    //     });
+        camera_ent.insert((
+            Camera {
+                is_active: bones_camera.active,
+                ..default()
+            },
+            OrthographicProjection {
+                scaling_mode: ScalingMode::FixedVertical(bones_camera.height),
+                ..default()
+            },
+            bones_transform.into_bevy(),
+        ));
+    };
 
     for session_name in &game.sorted_session_keys {
         let session = game.sessions.get(*session_name).unwrap();
+        if !session.visible {
+            continue;
+        }
 
         let world = &session.world;
 
@@ -378,54 +378,13 @@ fn sync_cameras(
         let cameras = world.components.get::<bones::Camera>().unwrap();
 
         // Sync cameras
-        let mut cameras_bitset = cameras.bitset().clone();
-        cameras_bitset.bit_and(transforms.bitset());
-        let mut bones_camera_entity_iter = entities.iter_with_bitset(&cameras_bitset);
-        for (bevy_ent, mut camera, mut projection, mut transform) in &mut bevy_bones_cameras {
-            if let Some(bones_ent) = bones_camera_entity_iter.next() {
-                let bones_camera = cameras.get(bones_ent).unwrap();
-                let bones_transform = transforms.get(bones_ent).unwrap();
-
-                camera.is_active = bones_camera.active;
-                match projection.scaling_mode {
-                    ScalingMode::FixedVertical(height) if height != bones_camera.height => {
-                        projection.scaling_mode = ScalingMode::FixedVertical(bones_camera.height)
-                    }
-                    _ => (),
-                }
-                camera.viewport = bones_camera
-                    .viewport
-                    .map(|x| bevy::render::camera::Viewport {
-                        physical_position: x.position,
-                        physical_size: x.size,
-                        depth: x.depth_min..x.depth_max,
-                    });
-
-                *transform = bones_transform.into_bevy();
-            } else {
-                commands.entity(bevy_ent).despawn();
-            }
+        for (_ent, (transform, camera)) in entities.iter_with((&transforms, &cameras)) {
+            add_bones_camera(camera, transform)
         }
-        for bones_ent in bones_camera_entity_iter {
-            let bones_camera = cameras.get(bones_ent).unwrap();
-            let bones_transform = transforms.get(bones_ent).unwrap();
+    }
 
-            commands.spawn((
-                Camera2dBundle {
-                    camera: Camera {
-                        is_active: bones_camera.active,
-                        ..default()
-                    },
-                    projection: OrthographicProjection {
-                        scaling_mode: ScalingMode::FixedVertical(bones_camera.height),
-                        ..default()
-                    },
-                    transform: bones_transform.into_bevy(),
-                    ..default()
-                },
-                BevyBonesEntity,
-            ));
-        }
+    for remaining_ent in bevy_bones_cameras {
+        commands.entity(remaining_ent).despawn()
     }
 }
 
@@ -440,6 +399,9 @@ fn extract_bones_sprites(
 
     for session_name in &game.sorted_session_keys {
         let session = game.sessions.get(*session_name).unwrap();
+        if !session.visible {
+            continue;
+        }
 
         let world = &session.world;
 
