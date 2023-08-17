@@ -87,6 +87,13 @@ jobs:
       - name: ⬇️ Checkout Source
         uses: actions/checkout@v3
 
+      - name: 🧰 Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y -q \
+              libasound2-dev \
+              libudev-dev
+
       - name: 🧰 Install Rust Nightly
         uses: actions-rs/toolchain@v1
         with:
