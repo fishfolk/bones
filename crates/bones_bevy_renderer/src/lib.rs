@@ -353,6 +353,8 @@ fn sync_cameras(
         camera_ent.insert((
             Camera {
                 is_active: bones_camera.active,
+                viewport: bones_camera.viewport.map(|x| x.into_bevy()),
+                order: bones_camera.priority as isize,
                 ..default()
             },
             OrthographicProjection {
@@ -493,9 +495,9 @@ fn extract_bones_sprites(
     }
 }
 
-// fn sync_tilemaps<W: HasBonesRenderer>(
+// fn sync_tilemaps(
 //     mut commands: Commands,
-//     world_resource: Option<ResMut<W>>,
+//     data: ResMut<BonesData>,
 //     mut bevy_bones_tile_layers: Query<
 //         (
 //             Entity,
@@ -507,42 +509,99 @@ fn extract_bones_sprites(
 //     >,
 //     atlas_assets: Res<Assets<TextureAtlas>>,
 // ) {
-//     let Some(mut world_resource) = world_resource else {
-//         bevy_bones_tile_layers.for_each(|(e, ..)| commands.entity(e).despawn());
-//         return;
-//     };
+//     let game = &data.game;
+//     let bones_assets = data.asset_server.borrow();
 
-//     let world = world_resource.game();
+//     for session_name in &game.sorted_session_keys {
+//         let session = game.sessions.get(*session_name).unwrap();
+//         if !session.visible {
+//             continue;
+//         }
 
-//     world.components.init::<bones::Tile>();
-//     world.components.init::<bones::TileLayer>();
+//         let world = &session.world;
 
-//     let entities = world.resource::<bones::Entities>();
-//     let entities = entities.borrow();
-//     let tiles = world.components.get::<bones::Tile>();
-//     let tiles = tiles.borrow();
-//     let tile_layers = world.components.get::<bones::TileLayer>();
-//     let tile_layers = tile_layers.borrow();
-//     let transforms = world.components.get::<bones::Transform>();
-//     let transforms = transforms.borrow();
+//         world.components.init::<bones::Tile>();
+//         world.components.init::<bones::TileLayer>();
 
-//     // Sync tile layers
-//     let mut tile_layers_bitset = tile_layers.bitset().clone();
-//     tile_layers_bitset.bit_and(transforms.bitset());
+//         let entities = world.resource::<bones::Entities>();
+//         let tiles = world.components.get::<bones::Tile>();
+//         let tile_layers = world.components.get::<bones::TileLayer>();
+//         let transforms = world.components.get::<bones::Transform>();
 
-//     let mut bones_tile_layer_entity_iter = entities.iter_with_bitset(&tile_layers_bitset);
-//     for (bevy_ent, mut tile_map, mut atlas, mut transform) in &mut bevy_bones_tile_layers {
-//         if let Some(bones_ent) = bones_tile_layer_entity_iter.next() {
+//         // Sync tile layers
+//         let mut tile_layers_bitset = tile_layers.bitset().clone();
+//         tile_layers_bitset.bit_and(transforms.bitset());
+
+//         let mut bones_tile_layer_entity_iter = entities.iter_with_bitset(&tile_layers_bitset);
+//         for (bevy_ent, mut tile_map, mut atlas, mut transform) in &mut bevy_bones_tile_layers {
+//             if let Some(bones_ent) = bones_tile_layer_entity_iter.next() {
+//                 let bones_tile_layer = tile_layers.get(bones_ent).unwrap();
+//                 let bones_transform = transforms.get(bones_ent).unwrap();
+
+//                 *atlas = bones_tile_layer.atlas.get_bevy_handle_untyped().typed();
+//                 *transform = bones_transform.into_bevy();
+//                 transform.translation += bones_tile_layer.tile_size.extend(0.0) / 2.0;
+
+//                 let Some(texture_atlas) = atlas_assets.get(&atlas) else { continue; };
+//                 let atlas_grid_size = texture_atlas.size / texture_atlas.textures[0].size();
+//                 let max_tile_idx = (atlas_grid_size.x * atlas_grid_size.y) as u32 - 1;
+
+//                 let grid_size = bones_tile_layer.grid_size;
+//                 let tile_iter = bones_tile_layer
+//                     .tiles
+//                     .iter()
+//                     .enumerate()
+//                     .map(|(idx, entity)| {
+//                         let y = idx as u32 / grid_size.x;
+//                         let x = idx as u32 - (y * grid_size.x);
+//                         let tile = entity
+//                             .map(|e| {
+//                                 let tile = tiles.get(e)?;
+//                                 Some(Tile {
+//                                     sprite_index: (tile.idx as u32).min(max_tile_idx),
+//                                     color: default(),
+//                                     flags: if tile.flip_x {
+//                                         TileFlags::FLIP_X
+//                                     } else {
+//                                         TileFlags::empty()
+//                                     } | if tile.flip_y {
+//                                         TileFlags::FLIP_Y
+//                                     } else {
+//                                         TileFlags::empty()
+//                                     },
+//                                 })
+//                             })
+//                             .flatten();
+//                         (IVec3::new(x as i32, y as i32, 0), tile)
+//                     });
+
+//                 tile_map.clear();
+//                 tile_map.set_tiles(tile_iter);
+
+//                 // This is maybe a bug in bevy_simple_tilemap. If the tilemap atlas has been changed,
+//                 // and one of the tiles in the map had a tile index greater than the max tile count in
+//                 // the new atlas, the map renderer will panic.
+//                 //
+//                 // This shouldn't happen because we made sure to `clear()` the tiles and ensured that
+//                 // all the new tile indexes are clamped, but apparently the chunks are updated a frame
+//                 // late or otherwise just evaluated before our tile changes take effect, so we must
+//                 // clamp the tiles indexes directly on the chunks as well.
+//                 tile_map.chunks.iter_mut().for_each(|(_, chunk)| {
+//                     chunk
+//                         .tiles
+//                         .iter_mut()
+//                         .flatten()
+//                         .for_each(|x| x.sprite_index = x.sprite_index.min(max_tile_idx))
+//                 });
+//             } else {
+//                 commands.entity(bevy_ent).despawn();
+//             }
+//         }
+//         for bones_ent in bones_tile_layer_entity_iter {
 //             let bones_tile_layer = tile_layers.get(bones_ent).unwrap();
 //             let bones_transform = transforms.get(bones_ent).unwrap();
 
-//             *atlas = bones_tile_layer.atlas.get_bevy_handle_untyped().typed();
-//             *transform = bones_transform.into_bevy();
-//             transform.translation += bones_tile_layer.tile_size.extend(0.0) / 2.0;
-
-//             let Some(texture_atlas) = atlas_assets.get(&atlas) else { continue; };
-//             let atlas_grid_size = texture_atlas.size / texture_atlas.textures[0].size();
-//             let max_tile_idx = (atlas_grid_size.x * atlas_grid_size.y) as u32 - 1;
+//             let mut tile_map = TileMap::default();
 
 //             let grid_size = bones_tile_layer.grid_size;
 //             let tile_iter = bones_tile_layer
@@ -556,7 +615,7 @@ fn extract_bones_sprites(
 //                         .map(|e| {
 //                             let tile = tiles.get(e)?;
 //                             Some(Tile {
-//                                 sprite_index: (tile.idx as u32).min(max_tile_idx),
+//                                 sprite_index: tile.idx as _,
 //                                 color: default(),
 //                                 flags: if tile.flip_x {
 //                                     TileFlags::FLIP_X
@@ -573,75 +632,19 @@ fn extract_bones_sprites(
 //                     (IVec3::new(x as i32, y as i32, 0), tile)
 //                 });
 
-//             tile_map.clear();
 //             tile_map.set_tiles(tile_iter);
 
-//             // This is maybe a bug in bevy_simple_tilemap. If the tilemap atlas has been changed,
-//             // and one of the tiles in the map had a tile index greater than the max tile count in
-//             // the new atlas, the map renderer will panic.
-//             //
-//             // This shouldn't happen because we made sure to `clear()` the tiles and ensured that
-//             // all the new tile indexes are clamped, but apparently the chunks are updated a frame
-//             // late or otherwise just evaluated before our tile changes take effect, so we must
-//             // clamp the tiles indexes directly on the chunks as well.
-//             tile_map.chunks.iter_mut().for_each(|(_, chunk)| {
-//                 chunk
-//                     .tiles
-//                     .iter_mut()
-//                     .flatten()
-//                     .for_each(|x| x.sprite_index = x.sprite_index.min(max_tile_idx))
-//             });
-//         } else {
-//             commands.entity(bevy_ent).despawn();
+//             let mut transform = bones_transform.into_bevy();
+//             transform.translation += bones_tile_layer.tile_size.extend(0.0) / 2.0;
+//             commands.spawn((
+//                 TileMapBundle {
+//                     tilemap: tile_map,
+//                     transform,
+//                     ..default()
+//                 },
+//                 BevyBonesEntity,
+//             ));
 //         }
-//     }
-//     for bones_ent in bones_tile_layer_entity_iter {
-//         let bones_tile_layer = tile_layers.get(bones_ent).unwrap();
-//         let bones_transform = transforms.get(bones_ent).unwrap();
-
-//         let mut tile_map = TileMap::default();
-
-//         let grid_size = bones_tile_layer.grid_size;
-//         let tile_iter = bones_tile_layer
-//             .tiles
-//             .iter()
-//             .enumerate()
-//             .map(|(idx, entity)| {
-//                 let y = idx as u32 / grid_size.x;
-//                 let x = idx as u32 - (y * grid_size.x);
-//                 let tile = entity
-//                     .map(|e| {
-//                         let tile = tiles.get(e)?;
-//                         Some(Tile {
-//                             sprite_index: tile.idx as _,
-//                             color: default(),
-//                             flags: if tile.flip_x {
-//                                 TileFlags::FLIP_X
-//                             } else {
-//                                 TileFlags::empty()
-//                             } | if tile.flip_y {
-//                                 TileFlags::FLIP_Y
-//                             } else {
-//                                 TileFlags::empty()
-//                             },
-//                         })
-//                     })
-//                     .flatten();
-//                 (IVec3::new(x as i32, y as i32, 0), tile)
-//             });
-
-//         tile_map.set_tiles(tile_iter);
-
-//         let mut transform = bones_transform.into_bevy();
-//         transform.translation += bones_tile_layer.tile_size.extend(0.0) / 2.0;
-//         commands.spawn((
-//             TileMapBundle {
-//                 tilemap: tile_map,
-//                 transform,
-//                 ..default()
-//             },
-//             BevyBonesEntity,
-//         ));
 //     }
 // }
 
