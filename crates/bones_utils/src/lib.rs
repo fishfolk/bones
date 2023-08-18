@@ -23,6 +23,7 @@ macro_rules! pub_use {
         pub use hashbrown;
         pub use maybe_owned::*;
         pub use parking_lot;
+        pub use branches::{likely, unlikely};
     };
 }
 pub_use!();

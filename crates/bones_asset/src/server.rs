@@ -390,7 +390,7 @@ impl AssetServer {
 
     /// Get the core asset pack's root asset.
     pub fn root<T: HasSchema>(&self) -> &T {
-        self.get(&self.core().root.typed())
+        self.get(self.core().root.typed())
     }
 
     /// Read the loaded asset packs.
@@ -405,7 +405,7 @@ impl AssetServer {
     /// Panics if the asset is not loaded or if the asset asset with the given handle doesn't have a
     /// schema matching `T`.
     #[track_caller]
-    pub fn get<T: HasSchema>(&self, handle: &Handle<T>) -> &T {
+    pub fn get<T: HasSchema>(&self, handle: Handle<T>) -> &T {
         let cid = self
             .store
             .asset_ids

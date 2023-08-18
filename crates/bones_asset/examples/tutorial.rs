@@ -152,7 +152,7 @@ fn main() -> anyhow::Result<()> {
 
     // We use the handle to get a reference to the `GameMeta`. This would panic if the actual asset
     // type was not `GameMeta`.
-    let game_meta = asset_server.get(&root_handle);
+    let game_meta = asset_server.get(root_handle);
 
     dbg!(&game_meta);
     assert_eq!(game_meta.gravity, 9.8);
@@ -160,16 +160,16 @@ fn main() -> anyhow::Result<()> {
     // The GameMeta contains a handle to the player asset, which we can get here.
     for (i, player_handle) in game_meta.players.iter().enumerate() {
         // And we can load the `PlayerMeta` using the handle.
-        let player_meta = asset_server.get(player_handle);
+        let player_meta = asset_server.get(*player_handle);
 
         dbg!(player_meta);
 
         // And we can load the player's atlas metadata in the same way.
         let atlas_handle = player_meta.atlas;
-        let atlas_meta = asset_server.get(&atlas_handle);
+        let atlas_meta = asset_server.get(atlas_handle);
         dbg!(atlas_meta);
 
-        let avatar = asset_server.get(&player_meta.avatar);
+        let avatar = asset_server.get(player_meta.avatar);
         dbg!(avatar.data.len(), avatar.width, avatar.height);
 
         if i == 0 {
@@ -186,7 +186,7 @@ fn main() -> anyhow::Result<()> {
     for (pack_spec, asset_pack) in asset_server.packs() {
         // Let's load the plugin metadata from the pack.
         let plugin_handle = asset_pack.root.typed::<PluginMeta>();
-        let plugin_meta = asset_server.get(&plugin_handle);
+        let plugin_meta = asset_server.get(plugin_handle);
 
         // Print the pack name and version and it's description
         println!("{pack_spec}: {}", plugin_meta.description);

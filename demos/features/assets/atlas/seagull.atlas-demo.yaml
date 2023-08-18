@@ -1,4 +1,4 @@
-atlas: ./seagul.atlas.yaml
+atlas: ./seagull.atlas.yaml
 fps: 5
 animation:
   - 0

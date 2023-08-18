@@ -34,7 +34,13 @@ pub mod prelude {
     };
 
     pub use crate::{
-        bitset::*, components::*, entities::*, error::*, resources::*, stage::*, system::*,
+        bitset::*,
+        components::*,
+        entities::*,
+        error::*,
+        resources::*,
+        stage::{CoreStage::*, *},
+        system::*,
         FromWorld, UnwrapMany, World,
     };
 

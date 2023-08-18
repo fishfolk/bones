@@ -18,10 +18,10 @@ pub struct TileLayer {
 
 /// A tilemap tile component.
 #[derive(Clone, Debug, HasSchema, Default)]
-#[schema(opaque)]
+#[repr(C)]
 pub struct Tile {
     /// The tile index in the tilemap texture.
-    pub idx: usize,
+    pub idx: u32,
     /// Whether or not to flip the tile horizontally.
     pub flip_x: bool,
     /// Whether or not to flip tile vertically.
@@ -31,36 +31,53 @@ pub struct Tile {
 impl TileLayer {
     /// Create a new tile layer
     pub fn new(grid_size: UVec2, tile_size: Vec2, atlas: Handle<Atlas>) -> Self {
-        let tile_count = (grid_size.x * grid_size.y) as usize;
-        let mut tiles = Vec::with_capacity(tile_count);
-        for _ in 0..tile_count {
-            tiles.push(None);
-        }
-        Self {
-            tiles,
+        let mut out = Self {
+            tiles: Vec::new(),
             grid_size,
             tile_size,
             atlas,
+        };
+        out.ensure_space();
+        out
+    }
+
+    /// Makes sure the tiles vector has space for all of our tiles.
+    fn ensure_space(&mut self) {
+        let tile_count = (self.grid_size.x * self.grid_size.y) as usize;
+
+        if unlikely(self.tiles.len() < tile_count) {
+            self.tiles
+                .extend((0..(tile_count - self.tiles.len())).map(|_| None));
         }
     }
 
+    /// Get the index of the tile at the given position.
     #[inline]
-    fn idx(&self, pos: UVec2) -> Option<usize> {
-        let idx = self.grid_size.x as i32 * pos.y as i32 + pos.x as i32;
-        idx.try_into().ok()
+    pub fn idx(&self, pos: UVec2) -> u32 {
+        self.grid_size.x * pos.y + pos.x
+    }
+
+    /// Get the position of the tile at the given index.
+    pub fn pos(&self, idx: u32) -> UVec2 {
+        let y = idx / self.grid_size.x;
+        let x = idx - (y * self.grid_size.x);
+
+        UVec2::new(x, y)
     }
 
     /// Get's the tile at the given position in the layer, indexed with the bottom-left of the layer
     /// being (0, 0).
     pub fn get(&self, pos: UVec2) -> Option<Entity> {
-        self.idx(pos)
-            .and_then(|idx| self.tiles.get(idx).cloned().flatten())
+        let idx = self.idx(pos);
+        self.tiles.get(idx as usize).cloned().flatten()
     }
 
     /// Set the tile at the given position, to a certain entity.
     pub fn set(&mut self, pos: UVec2, entity: Option<Entity>) {
-        let idx = self.idx(pos).expect("Tile pos out of bounds");
-        *self.tiles.get_mut(idx).unwrap_or_else(|| {
+        self.ensure_space();
+
+        let idx = self.idx(pos);
+        *self.tiles.get_mut(idx as usize).unwrap_or_else(|| {
             panic!(
                 "Tile pos out of range of tile size: pos {:?} size {:?}",
                 pos, self.grid_size

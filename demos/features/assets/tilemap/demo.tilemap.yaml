@@ -1,0 +1,27 @@
+atlas: ./tileset.atlas.yaml
+map_size: [9, 9]
+tiles:
+  - pos: [0, 0]
+    idx: 0
+  - pos: [1, 0]
+    idx: 1
+  - pos: [2, 0]
+    idx: 1
+  - pos: [3, 0]
+    idx: 1
+  - pos: [4, 0]
+    idx: 1
+  - pos: [5, 0]
+    idx: 1
+  - pos: [6, 0]
+    idx: 1
+  - pos: [7, 0]
+    idx: 1
+  - pos: [8, 0]
+    idx: 2
+  - pos: [4, 2]
+    idx: 56
+  - pos: [5, 2]
+    idx: 58
+  - pos: [6, 2]
+    idx: 60

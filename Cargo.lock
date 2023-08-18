@@ -1296,6 +1296,7 @@ version = "0.1.0"
 dependencies = [
  "bevy_ptr 0.11.1",
  "bones_utils_macros",
+ "branches",
  "fxhash",
  "hashbrown 0.14.0",
  "maybe-owned",
@@ -1312,6 +1313,12 @@ dependencies = [
  "quote",
  "venial",
 ]
+
+[[package]]
+name = "branches"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7958fb9748a08a6f46ef773e87c43997a844709bc293b4c3de48135debaf9d2a"
 
 [[package]]
 name = "bs58"
@@ -1816,6 +1823,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d329bdeac514ee06249dabc27877490f17f5d371ec693360768b838e19f3ae10"
 dependencies = [
  "simd-adler32",
+]
+
+[[package]]
+name = "features"
+version = "0.1.0"
+dependencies = [
+ "bones_bevy_renderer",
+ "bones_framework",
 ]
 
 [[package]]
@@ -3511,14 +3526,6 @@ name = "simd-adler32"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
-
-[[package]]
-name = "simple_game"
-version = "0.1.0"
-dependencies = [
- "bones_bevy_renderer",
- "bones_framework",
-]
 
 [[package]]
 name = "siphasher"

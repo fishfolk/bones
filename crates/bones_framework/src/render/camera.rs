@@ -55,3 +55,18 @@ impl Default for Camera {
 #[derive(Deref, DerefMut, Clone, Copy, HasSchema, Default)]
 #[schema(opaque)]
 pub struct ClearColor(pub Color);
+
+/// Utility function that spawns the camera in a default position.
+///
+/// Camera will be spawned such that it is positioned at `0` on X and Y axis and at `1000` on the Z
+/// axis, allowing it to see sprites with a Z position from `0` to `1000` non-inclusive.
+pub fn spawn_default_camera(
+    entities: &mut Entities,
+    transforms: &mut CompMut<Transform>,
+    cameras: &mut CompMut<Camera>,
+) -> Entity {
+    let ent = entities.create();
+    cameras.insert(ent, default());
+    transforms.insert(ent, Transform::from_translation(Vec3::new(0., 0., 1000.)));
+    ent
+}

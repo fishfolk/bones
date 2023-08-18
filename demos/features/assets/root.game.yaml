@@ -1,0 +1,4 @@
+title: Simple Game Demo
+sprite_demo: ./sprite/sprite.png
+atlas_demo: ./atlas/seagull.atlas-demo.yaml
+tilemap_demo: ./tilemap/demo.tilemap.yaml
