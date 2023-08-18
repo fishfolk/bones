@@ -68,11 +68,12 @@ fn main() {
     BonesBevyRenderer::new(create_game())
         // Get a bevy app for running our game
         .app()
+        // We can add our own bevy plugins now
         .add_plugins((
             FrameTimeDiagnosticsPlugin,
             LogDiagnosticsPlugin::default(),
         ))
-        // Run the bevy app
+        // And run the bevy app
         .run()
 }
 
