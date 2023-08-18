@@ -1172,6 +1172,7 @@ dependencies = [
  "bevy_prototype_lyon",
  "bones_framework",
  "glam",
+ "lyon_tessellation",
 ]
 
 [[package]]
@@ -1818,6 +1819,7 @@ dependencies = [
 name = "features"
 version = "0.1.0"
 dependencies = [
+ "bevy_prototype_lyon",
  "bones_bevy_renderer",
  "bones_framework",
 ]

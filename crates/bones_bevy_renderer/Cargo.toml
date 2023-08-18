@@ -13,8 +13,8 @@ bones_framework = { version = "^0.2.0", path = "../bones_framework" }
 bevy_egui     = "0.21"
 async-channel = "1.9"
 glam          = { version = "0.24", features = ["serde"] }
-
 bevy_prototype_lyon = "0.9"
+lyon_tessellation = "1.0"
 
 [dependencies.bevy]
 default-features = false

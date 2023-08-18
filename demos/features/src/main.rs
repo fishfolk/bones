@@ -136,7 +136,6 @@ fn menu_system(
                     // Create a session for the match
                     sessions
                         .create("sprite_demo")
-                        .install_plugin(DefaultPlugin)
                         .install_plugin(sprite_demo_plugin);
                 }
 
@@ -147,7 +146,6 @@ fn menu_system(
                     // Create a session for the match
                     sessions
                         .create("atlas_demo")
-                        .install_plugin(DefaultPlugin)
                         .install_plugin(atlas_demo_plugin);
                 }
 
@@ -158,8 +156,17 @@ fn menu_system(
                     // Create a session for the match
                     sessions
                         .create("tilemap_demo")
-                        .install_plugin(DefaultPlugin)
                         .install_plugin(tilemap_demo_plugin);
+                }
+
+                if ui.button("Path2d Demo").clicked() {
+                    // Delete the menu world
+                    session_options.delete = true;
+
+                    // Create a session for the match
+                    sessions
+                        .create("path2d_demo")
+                        .install_plugin(path2d_demo_plugin);
                 }
             });
         });
@@ -286,6 +293,41 @@ fn atlas_demo_startup(
         AnimatedSprite {
             frames: demo.animation.iter().copied().collect(),
             fps: demo.fps,
+            ..default()
+        },
+    );
+}
+
+fn path2d_demo_plugin(session: &mut Session) {
+    session
+        .install_plugin(DefaultPlugin)
+        .stages
+        .add_startup_system(path2d_demo_startup)
+        .add_system_to_stage(Update, back_to_menu_ui);
+}
+
+fn path2d_demo_startup(
+    mut entities: ResMut<Entities>,
+    mut transforms: CompMut<Transform>,
+    mut cameras: CompMut<Camera>,
+    mut path2ds: CompMut<Path2d>,
+) {
+    spawn_default_camera(&mut entities, &mut transforms, &mut cameras);
+
+    let ent = entities.create();
+    transforms.insert(ent, default());
+    const SIZE: f32 = 40.;
+    path2ds.insert(
+        ent,
+        Path2d {
+            color: Color::RED,
+            points: vec![
+                vec2(-SIZE, 0.),
+                vec2(0., SIZE),
+                vec2(SIZE, 0.),
+                vec2(-SIZE, 0.),
+            ],
+            thickness: 2.0,
             ..default()
         },
     );

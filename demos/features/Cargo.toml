@@ -7,3 +7,4 @@ license = "Unlicense"
 [dependencies]
 bones_framework = { path = "../../crates/bones_framework" }
 bones_bevy_renderer = { path = "../../crates/bones_bevy_renderer" }
+bevy_prototype_lyon = "0.9.0"
