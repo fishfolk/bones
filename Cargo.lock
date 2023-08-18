@@ -896,16 +896,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_simple_tilemap"
-version = "0.12.0"
-source = "git+https://github.com/MaxCWhitehead/bevy_simple_tilemap.git?rev=a354afd#a354afdb5b555bea2a6056c8cf6897a91f1eab34"
-dependencies = [
- "bevy",
- "bitflags 2.4.0",
- "bytemuck",
-]
-
-[[package]]
 name = "bevy_sprite"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1180,7 +1170,6 @@ dependencies = [
  "bevy",
  "bevy_egui",
  "bevy_prototype_lyon",
- "bevy_simple_tilemap",
  "bones_framework",
  "glam",
 ]

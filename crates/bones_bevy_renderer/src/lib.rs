@@ -102,11 +102,7 @@ impl BonesBevyRenderer {
         }
 
         app.add_plugins(plugins)
-            .add_plugins((
-                bevy_simple_tilemap::plugin::SimpleTileMapPlugin,
-                bevy_egui::EguiPlugin,
-                lyon::ShapePlugin,
-            ))
+            .add_plugins((bevy_egui::EguiPlugin, lyon::ShapePlugin))
             .insert_resource({
                 let mut egui_settings = bevy_egui::EguiSettings::default();
                 if self.pixel_art {
