@@ -1,6 +1,9 @@
 #![allow(clippy::too_many_arguments)]
 
-use bones_bevy_renderer::BonesBevyRenderer;
+use bones_bevy_renderer::{
+    bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    BonesBevyRenderer,
+};
 use bones_framework::prelude::*;
 
 /// Create our root asset type.
@@ -65,6 +68,10 @@ fn main() {
     BonesBevyRenderer::new(create_game())
         // Get a bevy app for running our game
         .app()
+        .add_plugins((
+            FrameTimeDiagnosticsPlugin,
+            LogDiagnosticsPlugin::default(),
+        ))
         // Run the bevy app
         .run()
 }

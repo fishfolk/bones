@@ -1,5 +1,5 @@
 atlas: ./seagull.atlas.yaml
-fps: 5
+fps: 10
 animation:
   - 0
   - 1
