@@ -263,6 +263,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "assets_minimal"
+version = "0.1.0"
+dependencies = [
+ "bones_bevy_renderer",
+ "bones_framework",
+]
+
+[[package]]
 name = "async-channel"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
