@@ -1,9 +1,15 @@
 //! Localization module.
 
-use std::{borrow::Cow, path::PathBuf, str::FromStr, sync::Arc};
+use std::{
+    borrow::Cow,
+    marker::PhantomData,
+    path::PathBuf,
+    str::FromStr,
+    sync::{Arc, OnceLock},
+};
 
 use bones_lib::prelude::anyhow::Context;
-use fluent_bundle::FluentResource;
+use fluent_bundle::{FluentArgs, FluentResource};
 use intl_memoizer::concurrent::IntlLangMemoizer;
 use unic_langid::LanguageIdentifier;
 
@@ -39,7 +45,7 @@ pub struct FluentBundleAsset(pub Arc<FluentBundle>);
 #[derive(HasSchema, Deref, DerefMut, Clone)]
 #[schema(opaque, no_default)]
 #[type_data(asset_loader(["localization.yaml", "localization.yml"], LocalizationLoader))]
-pub struct Localization {
+pub struct LocalizationAsset {
     /// The bundle selected as the current language.
     #[deref]
     pub current_bundle: FluentBundleAsset,
@@ -47,15 +53,106 @@ pub struct Localization {
     pub bundles: Arc<[FluentBundleAsset]>,
 }
 
-impl Localization {
+impl LocalizationAsset {
     /// Get a localized message.
     pub fn get(&self, id: &str) -> Cow<'_, str> {
         let b = &self.current_bundle.0;
-        let Some(message) = b.get_message(id) else {
-            return Cow::from("")
-        };
+        let Some(message) = b.get_message(id) else { return Cow::from("") };
+        let Some(value) = message.value() else { return Cow::from("") };
 
-        b.format_pattern(message.value().unwrap(), None, &mut vec![])
+        // TODO: Log localization formatting errors.
+        //
+        // We need to find a way to log the errors without allocating every time we format:
+        // https://github.com/projectfluent/fluent-rs/issues/323.
+        b.format_pattern(value, None, &mut vec![])
+    }
+
+    /// Get a localized message with the provided arguments.
+    pub fn get_with<'a>(&'a self, id: &'a str, args: &'a FluentArgs) -> Cow<'a, str> {
+        let b = &self.current_bundle.0;
+        let Some(message) = b.get_message(id) else { return Cow::from("") };
+        let Some(value) = message.value() else { return Cow::from("") };
+
+        b.format_pattern(value, Some(args), &mut vec![])
+    }
+}
+
+/// Borrow the localization field from the root asset.
+///
+/// This parameter uses the schema implementation to find the field of the root asset that is a
+/// [`Handle<LocalizationAsset>`].
+#[derive(Deref, DerefMut)]
+pub struct Localization<'a, T> {
+    #[deref]
+    asset: AtomicRef<'a, LocalizationAsset>,
+    _phantom: PhantomData<T>,
+}
+
+/// Internal resource used to cache the field of the root asset containing the localization resource
+/// for the [`Localization`] parameter.
+#[derive(HasSchema, Default, Clone)]
+#[schema(opaque)]
+pub struct RootLocalizationFieldIdx(OnceLock<usize>);
+
+impl<T: HasSchema> SystemParam for Localization<'_, T> {
+    type State = (
+        AtomicResource<AssetServer>,
+        AtomicResource<RootLocalizationFieldIdx>,
+    );
+    type Param<'s> = Localization<'s, T>;
+
+    fn initialize(world: &mut World) {
+        world.init_resource::<RootLocalizationFieldIdx>();
+    }
+    fn get_state(world: &World) -> Self::State {
+        (
+            world.resources.get_cell::<AssetServer>().unwrap(),
+            world
+                .resources
+                .get_cell::<RootLocalizationFieldIdx>()
+                .unwrap(),
+        )
+    }
+    fn borrow((asset_server, field_idx): &mut Self::State) -> Self::Param<'_> {
+        const ERR: &str = "Could not find a `Handle<LocalizationAsset>` field on root asset, \
+                           needed for `Localization` parameter to work";
+        let asset_server = asset_server.borrow();
+        let field_idx = field_idx.borrow();
+        let field_idx = field_idx.0.get_or_init(|| {
+            let mut idx = None;
+            for (i, field) in T::schema()
+                .kind
+                .as_struct()
+                .expect(ERR)
+                .fields
+                .iter()
+                .enumerate()
+            {
+                if let Some(handle_data) = field.schema.type_data.get::<SchemaAssetHandle>() {
+                    if let Some(schema) = handle_data.schema {
+                        if schema == LocalizationAsset::schema() {
+                            idx = Some(i);
+                            break;
+                        }
+                    }
+                }
+            }
+            idx.expect(ERR)
+        });
+
+        let asset = AtomicRef::map(asset_server, |asset_server| {
+            let root = asset_server.root::<T>().as_schema_ref();
+            let handle = root
+                .get_field(*field_idx)
+                .expect(ERR)
+                .cast::<Handle<LocalizationAsset>>();
+            asset_server.get(*handle)
+        });
+
+        Localization {
+            asset,
+            _phantom: PhantomData,
+        }
     }
 }
 
@@ -152,7 +249,7 @@ impl AssetLoader for LocalizationLoader {
                 anyhow::format_err!("Could not find matching locale for {user_locale}")
             })?;
 
-        Ok(SchemaBox::new(Localization {
+        Ok(SchemaBox::new(LocalizationAsset {
             current_bundle: selected_bundle.clone(),
             bundles: bundles.into_iter().collect(),
         }))

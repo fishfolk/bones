@@ -14,13 +14,7 @@ default = ["image_png", "ui", "localization"]
 ## Enable the `ui` module, powered by [`egui`].
 ui = ["dep:egui"]
 ## Enable the localization module, powered by [`fluent`](https://github.com/projectfluent/fluent-rs).
-localization = [
-    "dep:fluent-bundle",
-    "dep:fluent-langneg",
-    "dep:intl-memoizer",
-    "dep:unic-langid",
-    "dep:sys-locale",
-]
+localization = ["dep:fluent-bundle", "dep:fluent-langneg", "dep:intl-memoizer", "dep:unic-langid", "dep:sys-locale"]
 
 #! ### Image Formats
 #! These features enable different image formats.
@@ -56,6 +50,7 @@ glam = "0.24"
 thiserror = "1.0"
 instant = "0.1"
 hex = "0.4"
+tracing = "0.1"
 
 # Input
 gilrs = "0.10"

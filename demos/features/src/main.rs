@@ -21,7 +21,7 @@ struct GameMeta {
     /// The tilemap demo metadata.
     tilemap_demo: Handle<TilemapDemoMeta>,
     /// Localization asset
-    localization: Handle<Localization>,
+    localization: Handle<LocalizationAsset>,
 }
 
 /// Atlas information.
@@ -122,13 +122,9 @@ fn menu_system(
     egui_ctx: ResMut<EguiCtx>,
     mut sessions: ResMut<Sessions>,
     mut session_options: ResMut<SessionOptions>,
-    // Get the root asset with the `Root` system param.
-    meta: Root<GameMeta>,
-    assets: Res<AssetServer>,
+    // Get the localization field from our `GameMeta`
+    localization: Localization<GameMeta>,
 ) {
-    // TODO: Investigate ways to create a localization system param.
-    let localization = assets.get(meta.localization);
-
     // Render the menu.
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
@@ -348,10 +344,8 @@ fn back_to_menu_ui(
     egui_ctx: ResMut<EguiCtx>,
     mut sessions: ResMut<Sessions>,
     mut session_options: ResMut<SessionOptions>,
-    meta: Root<GameMeta>,
-    assets: Res<AssetServer>,
+    localization: Localization<GameMeta>,
 ) {
-    let localization = assets.get(meta.localization);
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
         .show(&egui_ctx, |ui| {

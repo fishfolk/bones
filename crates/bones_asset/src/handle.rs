@@ -1,6 +1,7 @@
 use std::{alloc::Layout, any::TypeId, marker::PhantomData, sync::OnceLock};
 
 use bones_schema::{prelude::*, raw_fns::*};
+use bones_utils::{parking_lot::RwLock, HashMap};
 use ulid::Ulid;
 
 /// A typed handle to an asset.
@@ -81,59 +82,102 @@ impl UntypedHandle {
 ///
 /// This allows the asset loader to distinguish when a `SomeStruct(u128)` schema layout should be
 /// deserialized as a normal struct or as an asset handle.
-///
-/// It doesn't need to contain any data, because it's very presense in a schema's [`TypeDatas`]
-/// indicates that the schema represents a handle.
-#[derive(HasSchema, Clone, Copy, Default, Debug)]
-#[schema(opaque)]
-pub struct SchemaAssetHandle;
-
-/// Helper to avoid typing the duplicate implementations of [`HasSchema`] for typed and untyped
-/// handles.
-macro_rules! schema_impl_for_handle {
-    () => {
-        fn schema() -> &'static bones_schema::Schema {
-            static S: OnceLock<&'static Schema> = OnceLock::new();
-            // This is a hack to make sure that `Ulid` has the memory representation we
-            // expect. It is extremely unlike, but possible that this would otherwise be
-            // unsound in the event that Rust picks a weird representation for the
-            // `Ulid(u128)` struct, which doesn't have a `#[repr(C)]` or
-            // `#[repr(transparent)]` annotation.
-            assert_eq!(
-                Layout::new::<Ulid>(),
-                Layout::new::<u128>(),
-                "ULID memory layout is unexpected! Bad Rust compiler! 😡"
-            );
-            S.get_or_init(|| {
-                SCHEMA_REGISTRY.register(SchemaData {
-                    type_id: Some(TypeId::of::<Self>()),
-                    kind: SchemaKind::Struct(StructSchemaInfo {
-                        fields: vec![StructFieldInfo {
-                            name: Some("id".into()),
-                            schema: u128::schema(),
-                        }],
-                    }),
-                    clone_fn: Some(<Self as RawClone>::raw_clone),
-                    drop_fn: None,
-                    default_fn: Some(<Self as RawDefault>::raw_default),
-                    eq_fn: Some(<Self as RawEq>::raw_eq),
-                    hash_fn: Some(<Self as RawHash>::raw_hash),
-                    type_data: {
-                        let mut td = bones_schema::alloc::SchemaTypeMap::default();
-                        td.insert(SchemaAssetHandle);
-                        td
-                    },
-                })
-            })
-        }
-    };
+#[derive(HasSchema, Clone, Copy, Debug)]
+#[schema(opaque, no_default)]
+pub struct SchemaAssetHandle {
+    /// The schema of the type pointed to by the handle, if this is not an [`UntypedHandle`].
+    pub schema: Option<&'static Schema>,
 }
 
 // SAFE: We return a valid schema.
-unsafe impl<T: Sync + Send + 'static> HasSchema for Handle<T> {
-    schema_impl_for_handle!();
+unsafe impl<T: HasSchema> HasSchema for Handle<T> {
+    fn schema() -> &'static bones_schema::Schema {
+        static S: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
+        // This is a hack to make sure that `Ulid` has the memory representation we
+        // expect. It is extremely unlike, but possible that this would otherwise be
+        // unsound in the event that Rust picks a weird representation for the
+        // `Ulid(u128)` struct, which doesn't have a `#[repr(C)]` or
+        // `#[repr(transparent)]` annotation.
+        assert_eq!(
+            Layout::new::<Ulid>(),
+            Layout::new::<u128>(),
+            "ULID memory layout is unexpected! Bad Rust compiler! 😡"
+        );
+
+        let map = S.get_or_init(|| {
+            RwLock::new(HashMap::default())
+        });
+
+        let existing_schema = { map.read().get(&TypeId::of::<T>()).copied() };
+
+        if let Some(existing_schema) = existing_schema {
+            existing_schema
+        } else {
+            let schema = SCHEMA_REGISTRY.register(SchemaData {
+                type_id: Some(TypeId::of::<Self>()),
+                kind: SchemaKind::Struct(StructSchemaInfo {
+                    fields: vec![StructFieldInfo {
+                        name: Some("id".into()),
+                        schema: u128::schema(),
+                    }],
+                }),
+                clone_fn: Some(<Self as RawClone>::raw_clone),
+                drop_fn: None,
+                default_fn: Some(<Self as RawDefault>::raw_default),
+                eq_fn: Some(<Self as RawEq>::raw_eq),
+                hash_fn: Some(<Self as RawHash>::raw_hash),
+                type_data: {
+                    let mut td = bones_schema::alloc::SchemaTypeMap::default();
+                    td.insert(SchemaAssetHandle {
+                        schema: Some(T::schema()),
+                    });
+                    td
+                },
+            });
+
+            {
+                let mut map = map.write();
+                map.insert(TypeId::of::<T>(), schema);
+            }
+
+            schema
+        }
+    }
 }
 // SAFE: We return a valid schema.
 unsafe impl HasSchema for UntypedHandle {
-    schema_impl_for_handle!();
+    fn schema() -> &'static bones_schema::Schema {
+        static S: OnceLock<&'static Schema> = OnceLock::new();
+        // This is a hack to make sure that `Ulid` has the memory representation we
+        // expect. It is extremely unlike, but possible that this would otherwise be
+        // unsound in the event that Rust picks a weird representation for the
+        // `Ulid(u128)` struct, which doesn't have a `#[repr(C)]` or
+        // `#[repr(transparent)]` annotation.
+        assert_eq!(
+            Layout::new::<Ulid>(),
+            Layout::new::<u128>(),
+            "ULID memory layout is unexpected! Bad Rust compiler! 😡"
+        );
+        S.get_or_init(|| {
+            SCHEMA_REGISTRY.register(SchemaData {
+                type_id: Some(TypeId::of::<Self>()),
+                kind: SchemaKind::Struct(StructSchemaInfo {
+                    fields: vec![StructFieldInfo {
+                        name: Some("id".into()),
+                        schema: u128::schema(),
+                    }],
+                }),
+                clone_fn: Some(<Self as RawClone>::raw_clone),
+                drop_fn: None,
+                default_fn: Some(<Self as RawDefault>::raw_default),
+                eq_fn: Some(<Self as RawEq>::raw_eq),
+                hash_fn: Some(<Self as RawHash>::raw_hash),
+                type_data: {
+                    let mut td = bones_schema::alloc::SchemaTypeMap::default();
+                    td.insert(SchemaAssetHandle { schema: None });
+                    td
+                },
+            })
+        })
+    }
 }

@@ -56,7 +56,7 @@ impl AssetServerExt for &mut bones_lib::prelude::AssetServer {
 
         #[cfg(feature = "localization")]
         {
-            self.register_asset::<Localization>()
+            self.register_asset::<LocalizationAsset>()
                 .register_asset::<FluentBundleAsset>()
                 .register_asset::<FluentResourceAsset>();
         }

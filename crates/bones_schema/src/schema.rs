@@ -71,6 +71,22 @@ pub unsafe trait HasSchema: Sync + Send + 'static {
             Err(SchemaMismatchError)
         }
     }
+
+    /// Converts a reference of `T` to a [`SchemaRef`]
+    fn as_schema_ref(&self) -> SchemaRef
+    where
+        Self: Sized,
+    {
+        SchemaRef::new(self)
+    }
+
+    /// Converts a reference of `T` to a [`SchemaRefMut`]
+    fn as_schema_mut(&mut self) -> SchemaRefMut
+    where
+        Self: Sized,
+    {
+        SchemaRefMut::new(self)
+    }
 }
 
 // Export the `Schema` type so it appears in this module. It is defined in the registry module so
