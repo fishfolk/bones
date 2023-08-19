@@ -136,7 +136,7 @@ fn menu_system(
                 ui.heading(localization.get("title"));
                 ui.add_space(20.0);
 
-                if ui.button("Sprite Demo").clicked() {
+                if ui.button(localization.get("sprite-demo")).clicked() {
                     // Delete the menu world
                     session_options.delete = true;
 
@@ -146,7 +146,7 @@ fn menu_system(
                         .install_plugin(sprite_demo_plugin);
                 }
 
-                if ui.button("Atlas Demo").clicked() {
+                if ui.button(localization.get("atlas-demo")).clicked() {
                     // Delete the menu world
                     session_options.delete = true;
 
@@ -156,7 +156,7 @@ fn menu_system(
                         .install_plugin(atlas_demo_plugin);
                 }
 
-                if ui.button("Tilemap Demo").clicked() {
+                if ui.button(localization.get("tilemap-demo")).clicked() {
                     // Delete the menu world
                     session_options.delete = true;
 
@@ -166,7 +166,7 @@ fn menu_system(
                         .install_plugin(tilemap_demo_plugin);
                 }
 
-                if ui.button("Path2d Demo").clicked() {
+                if ui.button(localization.get("path2d-demo")).clicked() {
                     // Delete the menu world
                     session_options.delete = true;
 
@@ -346,13 +346,16 @@ fn back_to_menu_ui(
     egui_ctx: ResMut<EguiCtx>,
     mut sessions: ResMut<Sessions>,
     mut session_options: ResMut<SessionOptions>,
+    meta: Root<GameMeta>,
+    assets: Res<AssetServer>,
 ) {
+    let localization = assets.get(meta.localization);
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
         .show(&egui_ctx, |ui| {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
                 ui.add_space(20.0);
-                if ui.button("Back to Menu").clicked() {
+                if ui.button(localization.get("back-to-menu")).clicked() {
                     session_options.delete = true;
                     sessions.create("menu").install_plugin(menu_plugin);
                 }
