@@ -101,7 +101,7 @@ struct Image {
 /// Our custom loader for image assets.
 struct ImageAssetLoader;
 impl AssetLoader for ImageAssetLoader {
-    fn load(&self, bytes: Vec<u8>) -> anyhow::Result<SchemaBox> {
+    fn load(&self, _ctx: AssetLoadCtx, bytes: &[u8]) -> anyhow::Result<SchemaBox> {
         // We're not going to bother actually loading the image.
         Ok(SchemaBox::new(Image {
             data: bytes.to_vec(),

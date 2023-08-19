@@ -14,14 +14,14 @@ use bones_framework::prelude::*;
 // Allow asset to be loaded from "game.yaml" assets.
 #[type_data(metadata_asset("game"))]
 struct GameMeta {
-    /// The title shown on the menu.
-    title: String,
     /// The image for the sprite demo
     sprite_demo: Handle<Image>,
     /// Character information that will be loaded from a separate asset file.
     atlas_demo: Handle<AtlasDemoMeta>,
     /// The tilemap demo metadata.
     tilemap_demo: Handle<TilemapDemoMeta>,
+    /// Localization asset
+    localization: Handle<Localization>,
 }
 
 /// Atlas information.
@@ -69,10 +69,7 @@ fn main() {
         // Get a bevy app for running our game
         .app()
         // We can add our own bevy plugins now
-        .add_plugins((
-            FrameTimeDiagnosticsPlugin,
-            LogDiagnosticsPlugin::default(),
-        ))
+        .add_plugins((FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin::default()))
         // And run the bevy app
         .run()
 }
@@ -126,15 +123,17 @@ fn menu_system(
     mut sessions: ResMut<Sessions>,
     mut session_options: ResMut<SessionOptions>,
     // Get the root asset with the `Root` system param.
-    game_meta: Root<GameMeta>,
+    meta: Root<GameMeta>,
+    assets: Res<AssetServer>,
 ) {
+    let localization = assets.get(meta.localization);
     // Render the menu.
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
         .show(&egui_ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(20.0);
-                ui.heading(&game_meta.title);
+                ui.heading(localization.get("title"));
                 ui.add_space(20.0);
 
                 if ui.button("Sprite Demo").clicked() {

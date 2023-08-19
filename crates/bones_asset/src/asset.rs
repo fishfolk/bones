@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use bones_utils::prelude::*;
 use semver::VersionReq;
@@ -161,10 +161,34 @@ pub struct AssetInfo {
     pub path: PathBuf,
 }
 
+/// Context provided to custom asset loaders in the [`AssetLoader::load`] method.
+pub struct AssetLoadCtx<'a> {
+    /// The asset server.
+    pub asset_server: &'a mut AssetServer,
+    /// The pack that the asset is being loaded from.
+    pub pack: Option<&'a str>,
+    /// The path that the asset is being loaded from.
+    pub path: &'a Path,
+    /// The [`Cid`]s of the assets this asset depends on.
+    ///
+    /// This is automatically updated when calling [`AssetLoadCtx::load_asset`].
+    pub dependencies: &'a mut Vec<Cid>,
+}
+
+impl AssetLoadCtx<'_> {
+    /// Load another asset as a child of this asset.
+    pub fn load_asset(&mut self, path: &Path) -> anyhow::Result<UntypedHandle> {
+        let handle = self.asset_server.load_asset(path, self.pack)?;
+        let cid = self.asset_server.store.asset_ids.get(&handle).unwrap();
+        self.dependencies.push(*cid);
+        Ok(handle)
+    }
+}
+
 /// A custom assset loader.
 pub trait AssetLoader: Sync + Send + 'static {
     /// Load the asset from raw bytes.
-    fn load(&self, bytes: Vec<u8>) -> anyhow::Result<SchemaBox>;
+    fn load(&self, ctx: AssetLoadCtx, bytes: &[u8]) -> anyhow::Result<SchemaBox>;
 }
 
 /// The kind of asset a type represents.

@@ -5,9 +5,12 @@ use bones_lib::prelude::*;
 /// Module prelude.
 pub mod prelude {
     pub use super::{
-        audio::*, camera::*, color::*, line::*, sprite::*, tilemap::*, transform::*, ui::*,
-        Renderer, RendererApi,
+        audio::*, camera::*, color::*, line::*, sprite::*, tilemap::*, transform::*, Renderer,
+        RendererApi,
     };
+
+    #[cfg(feature = "ui")]
+    pub use super::ui::*;
 }
 
 pub mod audio;
@@ -17,6 +20,8 @@ pub mod line;
 pub mod sprite;
 pub mod tilemap;
 pub mod transform;
+
+#[cfg(feature = "ui")]
 pub mod ui;
 
 /// Trait for the interface exposed by external bones renderers.

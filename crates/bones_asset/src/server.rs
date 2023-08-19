@@ -59,6 +59,21 @@ impl std::fmt::Display for IncompatibleGameVersionError {
     }
 }
 
+#[derive(Debug)]
+struct LoaderNotFound {
+    name: String,
+}
+impl std::fmt::Display for LoaderNotFound {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Schema/loader not found for schema/extension: {}",
+            self.name
+        )
+    }
+}
+impl std::error::Error for LoaderNotFound {}
+
 impl AssetServer {
     /// Initialize a new [`AssetServer`].
     pub fn new<Io: AssetIo + 'static>(io: Io, version: Version) -> Self {
@@ -236,15 +251,37 @@ impl AssetServer {
     }
 
     /// Load the asset
-    fn load_asset(&mut self, path: &Path, pack: Option<&str>) -> anyhow::Result<UntypedHandle> {
+    pub fn load_asset(&mut self, path: &Path, pack: Option<&str>) -> anyhow::Result<UntypedHandle> {
         let contents = self
             .io
             .load_file(pack, path)
             .context(format!("Could not load asset file: {path:?}"))?;
+
+        // Try to load a metadata asset if it has a YAML/JSON extension, if that doesn't work, and
+        // it has a schema not found error, try to load a data asset for the same path, if that
+        // doesn't work and it is an extension not found error, return the metadata error message.
         let partial = if path_is_metadata(path) {
-            self.load_metadata_asset(path, pack, contents)
+            match self.load_metadata_asset(path, pack, &contents) {
+                Err(meta_err) => {
+                    if meta_err.downcast_ref::<LoaderNotFound>().is_some() {
+                        match self.load_data_asset(path, pack, &contents) {
+                            Err(data_err) => {
+                                if data_err.downcast_ref::<LoaderNotFound>().is_some() {
+                                    Err(meta_err)
+                                } else {
+                                    Err(data_err)
+                                }
+                            }
+                            ok => ok,
+                        }
+                    } else {
+                        Err(meta_err)
+                    }
+                }
+                ok => ok,
+            }
         } else {
-            self.load_data_asset(path, pack, contents)
+            self.load_data_asset(path, pack, &contents)
         }?;
         let loaded_asset = LoadedAsset {
             cid: partial.cid,
@@ -271,7 +308,7 @@ impl AssetServer {
         &mut self,
         path: &Path,
         pack: Option<&str>,
-        contents: Vec<u8>,
+        contents: &[u8],
     ) -> anyhow::Result<PartialAsset> {
         // Get the schema for the asset
         let filename = path
@@ -279,12 +316,11 @@ impl AssetServer {
             .ok_or_else(|| anyhow::format_err!("Invalid asset filename"))?
             .to_str()
             .ok_or_else(|| anyhow::format_err!("Invalid unicode in filename"))?;
-        let (_name, schema_name) = filename
+        let before_extension = filename.rsplit_once('.').unwrap().0;
+        let schema_name = before_extension
             .rsplit_once('.')
-            .unwrap()
-            .0
-            .rsplit_once('.')
-            .ok_or_else(|| anyhow::format_err!("Missing schema name in asset filename"))?;
+            .map(|x| x.1)
+            .unwrap_or(before_extension);
         let schema = *self
             .asset_types
             .iter()
@@ -295,11 +331,13 @@ impl AssetServer {
                     _ => false,
                 }
             })
-            .ok_or_else(|| anyhow::format_err!("Schema not found: {schema_name}"))?;
+            .ok_or_else(|| LoaderNotFound {
+                name: schema_name.into(),
+            })?;
         let mut dependencies = Vec::new();
 
         let mut cid = Cid::default();
-        cid.update(&contents);
+        cid.update(contents);
         let loader = MetaAssetLoadCtx {
             server: self,
             path,
@@ -308,10 +346,10 @@ impl AssetServer {
             dependencies: &mut dependencies,
         };
         let data = if path.extension().unwrap().to_str().unwrap() == "json" {
-            let mut deserializer = serde_json::Deserializer::from_slice(&contents);
+            let mut deserializer = serde_json::Deserializer::from_slice(contents);
             loader.deserialize(&mut deserializer)?
         } else {
-            let deserializer = serde_yaml::Deserializer::from_slice(&contents);
+            let deserializer = serde_yaml::Deserializer::from_slice(contents);
             loader.deserialize(deserializer)?
         };
 
@@ -331,8 +369,8 @@ impl AssetServer {
     fn load_data_asset(
         &mut self,
         path: &Path,
-        _pack: Option<&str>,
-        contents: Vec<u8>,
+        pack: Option<&str>,
+        contents: &[u8],
     ) -> anyhow::Result<PartialAsset> {
         // Get the schema for the asset
         let filename = path
@@ -348,7 +386,10 @@ impl AssetServer {
                 let asset_kind = schema.type_data.get::<AssetKind>().unwrap();
                 match &asset_kind {
                     AssetKind::Custom { extensions, loader } => {
-                        if extensions.iter().any(|ext| ext == extension) {
+                        if extensions
+                            .iter()
+                            .any(|ext| ext == extension || ext == filename)
+                        {
                             Some(loader)
                         } else {
                             None
@@ -357,18 +398,26 @@ impl AssetServer {
                     _ => None,
                 }
             })
-            .ok_or_else(|| {
-                anyhow::format_err!("Schema loader for extension not found: {extension}")
+            .ok_or_else(|| LoaderNotFound {
+                name: extension.into(),
             })?;
 
+        let mut dependencies = Vec::new();
         let mut cid = Cid::default();
-        cid.update(&contents);
-        let sbox = loader.load(contents)?;
+        cid.update(contents);
+
+        let ctx = AssetLoadCtx {
+            asset_server: self,
+            path,
+            pack,
+            dependencies: &mut dependencies,
+        };
+        let sbox = loader.load(ctx, contents)?;
 
         Ok(PartialAsset {
             cid,
             data: sbox,
-            dependencies: default(),
+            dependencies,
         })
     }
 

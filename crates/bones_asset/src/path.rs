@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-/// Take `path`, treat it as a path relative to `base_path`, normalize it, and update `self`
+/// Take `path`, treat it as a path relative to `base_path`, normalize it, and return a new path
 /// with the result.
 pub fn normalize_path_relative_to(path: &Path, base_path: &Path) -> PathBuf {
     fn normalize_path(path: &std::path::Path) -> std::path::PathBuf {
