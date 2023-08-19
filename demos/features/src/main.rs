@@ -101,7 +101,6 @@ pub fn menu_plugin(session: &mut Session) {
         // Install the bones_framework default plugins for this session
         .install_plugin(DefaultPlugin)
         // And add our systems.
-        .stages
         .add_system_to_stage(Update, menu_system)
         .add_startup_system(menu_startup);
 }

@@ -23,10 +23,12 @@ use std::fmt::Debug;
 use crate::prelude::*;
 
 /// A bones game. This includes all of the game worlds, and systems.
+#[derive(Deref, DerefMut)]
 pub struct Session {
     /// The ECS world for the core.
     pub world: World,
     /// The system
+    #[deref]
     pub stages: SystemStages,
     /// Whether or not this session should have it's systems run.
     pub active: bool,
