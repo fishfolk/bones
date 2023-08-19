@@ -109,35 +109,39 @@ impl BonesBevyRenderer {
             .init_resource::<BonesImageIds>();
 
         {
-            // Configure the AssetIO
-            let io = bones::FileAssetIo {
-                core_dir: self.asset_dir.clone(),
-                packs_dir: self.packs_dir.clone(),
-            };
-            let mut asset_server = self.game.asset_server();
-            asset_server.set_io(io);
-
-            // Load the game assets
-            asset_server
-                .load_assets()
-                .expect("Could not load game assets");
-
-            // Take all loaded image assets and conver them to external images that reference bevy handles
             let mut bones_image_ids = BonesImageIds::default();
-            let mut bevy_images = app.world.resource_mut::<Assets<Image>>();
-            let mut next_id = 0;
-            for asset in asset_server.store.assets.values_mut() {
-                if let Ok(image) = asset.data.try_cast_mut::<bones::Image>() {
-                    let mut taken_image = bones::Image::External(0); // Dummy value temporarily
-                    std::mem::swap(image, &mut taken_image);
-                    if let bones::Image::Data(data) = taken_image {
-                        let handle = bevy_images.add(Image::from_dynamic(data, true));
-                        bones_image_ids.insert(next_id, handle);
-                        *image = bones::Image::External(next_id);
-                        next_id += 1;
+            let mut asset_server = self.game.asset_server();
+
+            if !asset_server.asset_types.is_empty() {
+                // Configure the AssetIO
+                let io = bones::FileAssetIo {
+                    core_dir: self.asset_dir.clone(),
+                    packs_dir: self.packs_dir.clone(),
+                };
+                asset_server.set_io(io);
+
+                // Load the game assets
+                asset_server
+                    .load_assets()
+                    .expect("Could not load game assets");
+
+                // Take all loaded image assets and conver them to external images that reference bevy handles
+                let mut bevy_images = app.world.resource_mut::<Assets<Image>>();
+                let mut next_id = 0;
+                for asset in asset_server.store.assets.values_mut() {
+                    if let Ok(image) = asset.data.try_cast_mut::<bones::Image>() {
+                        let mut taken_image = bones::Image::External(0); // Dummy value temporarily
+                        std::mem::swap(image, &mut taken_image);
+                        if let bones::Image::Data(data) = taken_image {
+                            let handle = bevy_images.add(Image::from_dynamic(data, true));
+                            bones_image_ids.insert(next_id, handle);
+                            *image = bones::Image::External(next_id);
+                            next_id += 1;
+                        }
                     }
                 }
             }
+
             app.insert_resource(bones_image_ids);
         }
 
