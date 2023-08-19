@@ -126,7 +126,9 @@ fn menu_system(
     meta: Root<GameMeta>,
     assets: Res<AssetServer>,
 ) {
+    // TODO: Investigate ways to create a localization system param.
     let localization = assets.get(meta.localization);
+
     // Render the menu.
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
