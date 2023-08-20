@@ -80,6 +80,7 @@ impl ComponentStores {
             .ok_or(EcsError::NotInitialized)?
             .borrow();
 
+        // SOUND: ComponentStore<T> is repr(transparent) over UntypedComponent store.
         let atomicref = AtomicRef::map(atomicref, |x| unsafe {
             std::mem::transmute::<&UntypedComponentStore, &ComponentStore<T>>(x)
         });
@@ -90,14 +91,15 @@ impl ComponentStores {
     /// Borrow a component store.
     /// # Errors
     /// Errors if the component store has not been initialized yet.
-    pub fn get_mut<T: HasSchema>(&mut self) -> Result<AtomicRefMut<ComponentStore<T>>, EcsError> {
+    pub fn get_mut<T: HasSchema>(&self) -> Result<AtomicRefMut<ComponentStore<T>>, EcsError> {
         let id = T::schema().id();
         let atomicref = self
             .components
-            .get_mut(&id)
+            .get(&id)
             .ok_or(EcsError::NotInitialized)?
             .borrow_mut();
 
+        // SOUND: ComponentStore<T> is repr(transparent) over UntypedComponent store.
         let atomicref = AtomicRefMut::map(atomicref, |x| unsafe {
             std::mem::transmute::<&mut UntypedComponentStore, &mut ComponentStore<T>>(x)
         });
