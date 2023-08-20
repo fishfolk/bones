@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use quote::{quote, quote_spanned, spanned::Spanned, ToTokens};
+use quote::{format_ident, quote, quote_spanned, spanned::Spanned};
 
 /// Helper macro to bail out of the macro with a compile error.
 macro_rules! throw {
@@ -9,6 +9,13 @@ macro_rules! throw {
             compile_error!($err);
         ).into();
     };
+}
+
+/// Returns whether or not the passed-in attribute is a simple attribute with no arguments with a
+/// name that matches `name`.
+fn is_simple_named_attr(attr: &venial::Attribute, name: &str) -> bool {
+    attr.get_single_path_segment() == Some(&format_ident!("{name}"))
+        && attr.get_value_tokens().is_empty()
 }
 
 /// Derive macro for deriving [`Deref`] on structs with one field.
@@ -46,7 +53,7 @@ pub fn derive_deref(input: TokenStream) -> TokenStream {
                     let mut info = None;
                     for (field, _) in named.fields.iter() {
                         for attr in &field.attributes {
-                            if attr.to_token_stream().to_string() == "#[deref]" {
+                            if is_simple_named_attr(attr, "deref") {
                                 if info.is_some() {
                                     throw!(attr, "Only one field may have the #[deref] attribute");
                                 } else {
@@ -122,7 +129,7 @@ pub fn derive_deref_mut(input: TokenStream) -> TokenStream {
                     let mut info = None;
                     for (field, _) in named.fields.iter() {
                         for attr in &field.attributes {
-                            if attr.to_token_stream().to_string() == "#[deref]" {
+                            if is_simple_named_attr(attr, "deref") {
                                 if info.is_some() {
                                     throw!(attr, "Only one field may have the #[deref] attribute");
                                 } else {

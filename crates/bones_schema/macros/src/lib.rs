@@ -187,11 +187,16 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         .into();
     }
 
-    if !input
-        .attributes()
-        .iter()
-        .any(|attr| quote!(#attr).to_string() == "#[repr(C)]")
-    {
+    if !input.attributes().iter().any(|attr| {
+        attr.get_single_path_segment() == Some(&format_ident!("repr")) && {
+            let value = attr.get_value_tokens();
+            value.len() == 1
+                && match &value[0] {
+                    TokenTree2::Ident(i) => i == &format_ident!("C"),
+                    _ => false,
+                }
+        }
+    }) {
         throw!(
             input.name(),
             "Type must be either #[repr(C)] or have a #[schema(opaque)] annotation."

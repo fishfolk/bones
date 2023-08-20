@@ -180,7 +180,6 @@ fn menu_system(
 fn sprite_demo_plugin(session: &mut Session) {
     session
         .install_plugin(DefaultPlugin)
-        .stages
         .add_startup_system(sprite_demo_startup)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
@@ -210,7 +209,6 @@ fn sprite_demo_startup(
 fn tilemap_demo_plugin(session: &mut Session) {
     session
         .install_plugin(DefaultPlugin)
-        .stages
         .add_startup_system(tilemap_startup_system)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
@@ -257,7 +255,6 @@ fn tilemap_startup_system(
 fn atlas_demo_plugin(session: &mut Session) {
     session
         .install_plugin(DefaultPlugin)
-        .stages
         .add_startup_system(atlas_demo_startup)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
@@ -305,7 +302,6 @@ fn atlas_demo_startup(
 fn path2d_demo_plugin(session: &mut Session) {
     session
         .install_plugin(DefaultPlugin)
-        .stages
         .add_startup_system(path2d_demo_startup)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
