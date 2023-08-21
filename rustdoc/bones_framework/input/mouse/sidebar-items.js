@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["MouseButton","MouseScrollUnit"],"struct":["MouseButtonInput","MouseInputs","MouseScrollInput"]};

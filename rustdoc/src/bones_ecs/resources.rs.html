@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/bones_ecs/src/resources.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>resources.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-6827029ac823cab7.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-ebce58d0a40c3431.css"><link rel="stylesheet" disabled href="../../static.files/dark-f23faae4a2daf9a6.css"><link rel="stylesheet" disabled href="../../static.files/ayu-8af5e100b21cd173.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-c55e1eb52e1886b4.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../bones_ecs/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_ecs/src/resources.rs`."><title>resources.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.1 (eb26296b5 2023-08-03)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../bones_ecs/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -299,51 +299,9 @@
 <a href="#299" id="299">299</a>
 <a href="#300" id="300">300</a>
 <a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a>
-<a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
-<a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
-<a href="#324" id="324">324</a>
-<a href="#325" id="325">325</a>
-<a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
-<a href="#329" id="329">329</a>
-<a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-</pre><pre class="rust"><code><span class="doccomment">//! World resource storage.
+</pre></div><pre class="rust"><code><span class="doccomment">//! World resource storage.
 
-</span><span class="kw">use </span>std::{
-    alloc::{<span class="self">self</span>, Layout},
-    any::TypeId,
-    io::Write,
-    marker::PhantomData,
-    mem,
-    ptr::NonNull,
-    sync::Arc,
-};
+</span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
@@ -355,128 +313,54 @@
 /// should use [`Resources`] instead.
 </span><span class="attr">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>UntypedResources {
-    resources: UlidMap&lt;UntypedResource&gt;,
-}
-
-<span class="doccomment">/// Used to construct an [`UntypedResource`].
-</span><span class="kw">pub struct </span>UntypedResourceInfo {
-    <span class="doccomment">/// The memory layout of the resource
-    </span><span class="kw">pub </span>layout: Layout,
-    <span class="doccomment">/// Cell containing the raw pointer to the resource&#39;s data
-    </span><span class="comment">// TODO: Evaluate possibility of avoiding an `Arc` here, and just passing references with a
-    // lifetime for acessing it, instead of cloning the Arc like we do here.
-    </span><span class="kw">pub </span>cell: Arc&lt;AtomicRefCell&lt;<span class="kw-2">*mut </span>u8&gt;&gt;,
-    <span class="doccomment">/// A function that may be called to clone the resource from one pointer to another.
-    </span><span class="kw">pub </span>clone_fn: <span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn</span>(<span class="kw-2">*const </span>u8, <span class="kw-2">*mut </span>u8),
-    <span class="doccomment">/// An optional function that will be called to drop the resource.
-    </span><span class="kw">pub </span>drop_fn: <span class="prelude-ty">Option</span>&lt;<span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn</span>(<span class="kw-2">*mut </span>u8)&gt;,
+    resources: HashMap&lt;SchemaId, UntypedAtomicResource&gt;,
 }
 
 <span class="doccomment">/// An untyped resource that may be inserted into [`UntypedResources`].
-</span><span class="kw">pub struct </span>UntypedResource {
-    layout: Layout,
-    cell: Arc&lt;AtomicRefCell&lt;<span class="kw-2">*mut </span>u8&gt;&gt;,
-    clone_fn: <span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn</span>(<span class="kw-2">*const </span>u8, <span class="kw-2">*mut </span>u8),
-    drop_fn: <span class="prelude-ty">Option</span>&lt;<span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn</span>(<span class="kw-2">*mut </span>u8)&gt;,
+</span><span class="attr">#[derive(Deref, DerefMut)]
+</span><span class="kw">pub struct </span>UntypedAtomicResource {
+    <span class="attr">#[deref]
+    </span>cell: Arc&lt;AtomicRefCell&lt;SchemaBox&gt;&gt;,
+    schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
 }
 
-<span class="kw">impl </span>UntypedResource {
-    <span class="doccomment">/// Create a new [`UntypedResource`] from raw [`UntypedResourceInfo`].
-    ///
-    /// # Safety
-    ///
-    /// - The implementations for `info.clone_fn` and `info.drop_fn` must not do anything unsound
-    ///   when given valid pointers to clone or drop.
-    /// - The `info.cell` must contain a pointer that is writable and points to data with a layout
-    ///   matching `info.layout`.
-    </span><span class="kw">pub unsafe fn </span>new_raw(info: UntypedResourceInfo) -&gt; <span class="self">Self </span>{
-        UntypedResource {
-            layout: info.layout,
-            cell: info.cell,
-            clone_fn: info.clone_fn,
-            drop_fn: info.drop_fn,
-        }
-    }
-
-    <span class="doccomment">/// Creates a new [`UntypedResource`] from an instance of a Rust type.
-    ///
-    /// This is the safest way to construct a valid [`UntypedResource`].
-    </span><span class="kw">pub fn </span>new&lt;T: Clone + Sync + Send&gt;(resource: T) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>layout = Layout::new::&lt;T&gt;();
-
-        <span class="kw">let </span>ptr = Box::into_raw(Box::new(resource)) <span class="kw">as </span><span class="kw-2">*mut </span>u8;
-
+<span class="kw">impl </span>UntypedAtomicResource {
+    <span class="doccomment">/// Creates a new [`UntypedAtomicResource`] storing the given data.
+    </span><span class="kw">pub fn </span>new(resource: SchemaBox) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            cell: Arc::new(AtomicRefCell::new(ptr)),
-            clone_fn: T::raw_clone,
-            drop_fn: <span class="prelude-val">Some</span>(T::raw_drop),
-            layout,
+            schema: resource.schema(),
+            cell: Arc::new(AtomicRefCell::new(resource)),
         }
+    }
+
+    <span class="doccomment">/// Create a new [`UntypedAtomicResource`] for the given schema, initially populated with the default
+    /// value for the schema.
+    </span><span class="kw">pub fn </span>from_schema(schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            cell: Arc::new(AtomicRefCell::new(SchemaBox::default(schema))),
+            schema,
+        }
+    }
+
+    <span class="doccomment">/// Get another [`UntypedAtomicResource`] that points to the same data.
+    </span><span class="kw">pub fn </span>clone_cell(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; UntypedAtomicResource {
+        <span class="self">Self </span>{
+            cell: <span class="self">self</span>.cell.clone(),
+            schema: <span class="self">self</span>.schema,
+        }
+    }
+
+    <span class="doccomment">/// Get the schema of the resource.
+    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+        <span class="self">self</span>.schema
     }
 }
 
-<span class="kw">unsafe impl </span>Sync <span class="kw">for </span>UntypedResource {}
-<span class="kw">unsafe impl </span>Send <span class="kw">for </span>UntypedResource {}
-
-<span class="kw">impl </span>Clone <span class="kw">for </span>UntypedResource {
+<span class="kw">impl </span>Clone <span class="kw">for </span>UntypedAtomicResource {
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>prev_ptr = <span class="self">self</span>.cell.borrow();
-        <span class="kw">let </span>new_ptr = <span class="kw">if </span><span class="self">self</span>.layout.size() == <span class="number">0 </span>{
-            NonNull::&lt;u8&gt;::dangling().as_ptr()
-        } <span class="kw">else </span>{
-            <span class="comment">// SAFE: Non-zero size for layout
-            </span><span class="kw">unsafe </span>{ std::alloc::alloc(<span class="self">self</span>.layout) }
-        };
-
-        <span class="kw">if </span>new_ptr.is_null() {
-            <span class="macro">writeln!</span>(
-                std::io::stderr(),
-                <span class="string">&quot;Error alloating memory while cloning resource&quot;
-            </span>)
-            .ok();
-            std::process::abort();
-        }
-
-        <span class="comment">// SAFE: UntypedResource can only be constructed with an unsafe function where the user
-        // promises not to do anything unsound while dropping.
-        //
-        // And our source prev_ptr is valid, and the new_ptr is properly aligned and writable.
-        </span><span class="kw">unsafe </span>{
-            (<span class="self">self</span>.clone_fn)(<span class="kw-2">*</span>prev_ptr, new_ptr);
-        }
-
         <span class="self">Self </span>{
-            cell: Arc::new(AtomicRefCell::new(new_ptr)),
-            clone_fn: <span class="self">self</span>.clone_fn,
-            drop_fn: <span class="self">self</span>.drop_fn,
-            layout: <span class="self">self</span>.layout,
-        }
-    }
-}
-
-<span class="kw">impl </span>Drop <span class="kw">for </span>UntypedResource {
-    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(drop_fn) = <span class="self">self</span>.drop_fn {
-            <span class="kw">let </span>null_cell = Arc::new(AtomicRefCell::new(std::ptr::null_mut()));
-            <span class="kw">let </span>cell = mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.cell, null_cell);
-
-            <span class="kw">let </span>ptr = Arc::try_unwrap(cell)
-                .expect(
-                    <span class="string">&quot;You must drop all references to Resoruces before dropping `UntypedResources`&quot;</span>,
-                )
-                .into_inner();
-
-            <span class="comment">// SAFE: UntypedResource can only be constructed with an unsafe function where the user
-            // promises not to do anything unsound while dropping.
-            //
-            // And our ptr is valid.
-            </span><span class="kw">unsafe </span>{
-                drop_fn(ptr);
-
-                <span class="kw">if </span><span class="self">self</span>.layout.size() != <span class="number">0 </span>{
-                    alloc::dealloc(ptr, <span class="self">self</span>.layout);
-                }
-            }
+            cell: Arc::new(AtomicRefCell::new(<span class="self">self</span>.cell.borrow().clone())),
+            schema: <span class="self">self</span>.schema,
         }
     }
 }
@@ -487,19 +371,44 @@
         <span class="self">Self</span>::default()
     }
 
-    <span class="doccomment">/// Insert a new resource
-    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, uuid: Ulid, resource: UntypedResource) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedResource&gt; {
-        <span class="self">self</span>.resources.insert(uuid, resource)
+    <span class="doccomment">/// Insert a resource.
+    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: SchemaBox) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedAtomicResource&gt; {
+        <span class="kw">let </span>id = resource.schema().id();
+        <span class="self">self</span>.resources
+            .insert(id, UntypedAtomicResource::new(resource))
     }
 
-    <span class="doccomment">/// Get a cell containing the resource data pointer for the given ID
-    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, uuid: Ulid) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;AtomicRefCell&lt;<span class="kw-2">*mut </span>u8&gt;&gt;&gt; {
-        <span class="self">self</span>.resources.get(<span class="kw-2">&amp;</span>uuid).map(|x| x.cell.clone())
+    <span class="doccomment">/// Insert a resource.
+    </span><span class="kw">pub fn </span>insert_cell(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        resource: UntypedAtomicResource,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedAtomicResource&gt; {
+        <span class="kw">let </span>id = resource.cell.borrow().schema().id();
+        <span class="self">self</span>.resources.insert(id, resource)
     }
 
-    <span class="doccomment">/// Remove a resource
-    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, uuid: Ulid) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedResource&gt; {
-        <span class="self">self</span>.resources.remove(<span class="kw-2">&amp;</span>uuid)
+    <span class="doccomment">/// Get a cell containing the resource data pointer for the given ID.
+    </span><span class="kw">pub fn </span>get_cell(<span class="kw-2">&amp;</span><span class="self">self</span>, schema_id: SchemaId) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedAtomicResource&gt; {
+        <span class="self">self</span>.resources.get(<span class="kw-2">&amp;</span>schema_id).map(|x| x.clone_cell())
+    }
+
+    <span class="doccomment">/// Get a reference to an untyped resource.
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, schema_id: SchemaId) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicRef&lt;SchemaBox&gt;&gt; {
+        <span class="self">self</span>.resources
+            .get(<span class="kw-2">&amp;</span>schema_id)
+            .map(|x| AtomicRefCell::borrow(<span class="kw-2">&amp;</span>x.cell))
+    }
+
+    <span class="doccomment">/// Get a mutable reference to an untyped resource.
+    </span><span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, schema_id: SchemaId) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicRefMut&lt;SchemaBox&gt;&gt; {
+        <span class="self">self</span>.resources
+            .get(<span class="kw-2">&amp;</span>schema_id)
+            .map(|x| AtomicRefCell::borrow_mut(<span class="kw-2">&amp;</span>x.cell))
+    }
+
+    <span class="doccomment">/// Remove a resource.
+    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: SchemaId) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedAtomicResource&gt; {
+        <span class="self">self</span>.resources.remove(<span class="kw-2">&amp;</span>id)
     }
 }
 
@@ -509,7 +418,6 @@
 </span><span class="attr">#[derive(Clone, Default)]
 </span><span class="kw">pub struct </span>Resources {
     untyped: UntypedResources,
-    type_ids: UlidMap&lt;TypeId&gt;,
 }
 
 <span class="kw">impl </span>Resources {
@@ -519,68 +427,49 @@
     }
 
     <span class="doccomment">/// Insert a resource.
-    ///
-    /// # Panics
-    ///
-    /// Panics if you try to insert a Rust type with a different [`TypeId`], but the same
-    /// [`TypeUlid`] as another resource in the store.
-    </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>insert&lt;T: TypedEcsData&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: T) {
-        <span class="self">self</span>.try_insert(resource).unwrap();
+    </span><span class="kw">pub fn </span>insert&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: T) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;T&gt;&gt; {
+        <span class="self">self</span>.untyped
+            .insert(SchemaBox::new(resource))
+            .map(|x| AtomicResource::from_untyped(x))
     }
 
-    <span class="doccomment">/// Try to insert a resource.
-    ///
-    /// # Errors
-    ///
-    /// Errors if you try to insert a Rust type with a different [`TypeId`], but the same
-    /// [`TypeUlid`] as another resource in the store.
-    </span><span class="kw">pub fn </span>try_insert&lt;T: TypedEcsData&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), EcsError&gt; {
-        <span class="kw">let </span>uuid = T::ULID;
-        <span class="kw">let </span>type_id = TypeId::of::&lt;T&gt;();
-
-        <span class="kw">match </span><span class="self">self</span>.type_ids.entry(uuid) {
-            std::collections::hash_map::Entry::Occupied(entry) =&gt; {
-                <span class="kw">if </span>entry.get() != <span class="kw-2">&amp;</span>type_id {
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(EcsError::TypeUlidCollision);
-                }
-
-                <span class="self">self</span>.untyped.insert(uuid, UntypedResource::new(resource));
-            }
-            std::collections::hash_map::Entry::Vacant(entry) =&gt; {
-                entry.insert(type_id);
-                <span class="self">self</span>.untyped.insert(uuid, UntypedResource::new(resource));
-            }
-        }
-
-        <span class="prelude-val">Ok</span>(())
+    <span class="doccomment">/// Insert a resource cell.
+    </span><span class="kw">pub fn </span>insert_cell&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: AtomicResource&lt;T&gt;) {
+        <span class="self">self</span>.untyped.insert_cell(resource.untyped);
     }
 
-    <span class="doccomment">/// Get a resource handle from the store.
-    ///
-    /// This is not the resource itself, but a handle, may be cloned cheaply.
-    ///
-    /// In order to access the resource you must call [`borrow()`][AtomicResource::borrow] or
-    /// [`borrow_mut()`][AtomicResource::borrow_mut] on the returned value.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the resource does not exist in the store.
-    </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>get&lt;T: TypedEcsData&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicResource&lt;T&gt; {
-        <span class="self">self</span>.try_get().unwrap()
+    <span class="doccomment">/// Borrow a resource.
+    </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicRef&lt;T&gt;&gt; {
+        <span class="self">self</span>.untyped.get(T::schema().id()).map(|sbox| {
+            AtomicRef::map(sbox, |sbox| {
+                <span class="comment">// SOUND: schema matches as checked by retreiving from the untyped store by the schema
+                // ID.
+                </span><span class="kw">unsafe </span>{ sbox.as_ref().deref() }
+            })
+        })
+    }
+
+    <span class="doccomment">/// Mutably borrow a resource.
+    </span><span class="kw">pub fn </span>get_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicRefMut&lt;T&gt;&gt; {
+        <span class="self">self</span>.untyped.get_mut(T::schema().id()).map(|sbox| {
+            AtomicRefMut::map(sbox, |sbox| {
+                <span class="comment">// SOUND: schema matches as checked by retreiving from the untyped store by the
+                // schema ID.
+                </span><span class="kw">unsafe </span>{ sbox.as_mut().deref_mut() }
+            })
+        })
     }
 
     <span class="doccomment">/// Check whether or not a resource is in the store.
     ///
     /// See [get()][Self::get]
-    </span><span class="kw">pub fn </span>contains&lt;T: TypedEcsData&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="self">self</span>.untyped.resources.contains_key(<span class="kw-2">&amp;</span>T::ULID)
+    </span><span class="kw">pub fn </span>contains&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.untyped.resources.contains_key(<span class="kw-2">&amp;</span>T::schema().id())
     }
 
-    <span class="doccomment">/// Gets a resource handle from the store if it exists.
-    </span><span class="kw">pub fn </span>try_get&lt;T: TypedEcsData&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;T&gt;&gt; {
-        <span class="kw">let </span>untyped = <span class="self">self</span>.untyped.get(T::ULID)<span class="question-mark">?</span>;
+    <span class="doccomment">/// Gets a clone of the resource cell for the resource of the given type.
+    </span><span class="kw">pub fn </span>get_cell&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;T&gt;&gt; {
+        <span class="kw">let </span>untyped = <span class="self">self</span>.untyped.get_cell(T::schema().id())<span class="question-mark">?</span>;
 
         <span class="prelude-val">Some</span>(AtomicResource {
             untyped,
@@ -608,28 +497,72 @@
 ///
 /// To access the resource you must borrow it with either [`borrow()`][Self::borrow] or
 /// [`borrow_mut()`][Self::borrow_mut].
-</span><span class="kw">pub struct </span>AtomicResource&lt;T: TypedEcsData&gt; {
-    untyped: Arc&lt;AtomicRefCell&lt;<span class="kw-2">*mut </span>u8&gt;&gt;,
+</span><span class="kw">pub struct </span>AtomicResource&lt;T: HasSchema&gt; {
+    untyped: UntypedAtomicResource,
     _phantom: PhantomData&lt;T&gt;,
 }
+<span class="kw">impl</span>&lt;T: HasSchema + Debug&gt; Debug <span class="kw">for </span>AtomicResource&lt;T&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        f.write_str(<span class="string">&quot;AtomicResource(&quot;</span>)<span class="question-mark">?</span>;
+        T::fmt(<span class="self">self</span>.untyped.cell.borrow().cast_ref(), f)<span class="question-mark">?</span>;
+        f.write_str(<span class="string">&quot;)&quot;</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
+}
 
-<span class="kw">impl</span>&lt;T: TypedEcsData&gt; AtomicResource&lt;T&gt; {
+<span class="kw">impl</span>&lt;T: HasSchema + Default&gt; Default <span class="kw">for </span>AtomicResource&lt;T&gt; {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            untyped: UntypedAtomicResource::new(SchemaBox::new(T::default())),
+            _phantom: Default::default(),
+        }
+    }
+}
+
+<span class="kw">impl</span>&lt;T: HasSchema&gt; AtomicResource&lt;T&gt; {
+    <span class="doccomment">/// Create a new atomic resource.
+    ///
+    /// This can be inserted into a world by calling `world.resources.insert_cell`.
+    </span><span class="kw">pub fn </span>new(data: T) -&gt; <span class="self">Self </span>{
+        AtomicResource {
+            untyped: UntypedAtomicResource::new(SchemaBox::new(data)),
+            _phantom: PhantomData,
+        }
+    }
+
+    <span class="doccomment">/// Clone this atomic resource, returning a handle to the same resource data.
+    </span><span class="kw">pub fn </span>clone_cell(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            untyped: <span class="self">self</span>.untyped.clone_cell(),
+            _phantom: PhantomData,
+        }
+    }
+
+    <span class="doccomment">/// Create from an [`UntypedAtomicResource`].
+    </span><span class="kw">pub fn </span>from_untyped(untyped: UntypedAtomicResource) -&gt; <span class="self">Self </span>{
+        <span class="macro">assert_eq!</span>(T::schema(), untyped.schema);
+        AtomicResource {
+            untyped,
+            _phantom: PhantomData,
+        }
+    }
+
     <span class="doccomment">/// Lock the resource for reading.
     ///
     /// This returns a read guard, very similar to an [`RwLock`][std::sync::RwLock].
     </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicRef&lt;T&gt; {
-        <span class="kw">let </span>borrow = <span class="self">self</span>.untyped.borrow();
-        <span class="comment">// SAFE: We know that the data pointer is valid for type T.
-        </span>AtomicRef::map(borrow, |data| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>data.cast::&lt;T&gt;() })
+        <span class="kw">let </span>borrow = AtomicRefCell::borrow(<span class="kw-2">&amp;</span><span class="self">self</span>.untyped);
+        <span class="comment">// SOUND: We know that the data pointer is valid for type T.
+        </span>AtomicRef::map(borrow, |data| <span class="kw">unsafe </span>{ data.as_ref().deref() })
     }
 
     <span class="doccomment">/// Lock the resource for read-writing.
     ///
     /// This returns a write guard, very similar to an [`RwLock`][std::sync::RwLock].
     </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicRefMut&lt;T&gt; {
-        <span class="kw">let </span>borrow = <span class="self">self</span>.untyped.borrow_mut();
-        <span class="comment">// SAFE: We know that the data pointer is valid for type T.
-        </span>AtomicRefMut::map(borrow, |data| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>data.cast::&lt;T&gt;() })
+        <span class="kw">let </span>borrow = AtomicRefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.untyped);
+        <span class="comment">// SOUND: We know that the data pointer is valid for type T.
+        </span>AtomicRefMut::map(borrow, |data| <span class="kw">unsafe </span>{ data.as_mut().deref_mut() })
     }
 }
 
@@ -639,34 +572,32 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>sanity_check() {
-        <span class="attr">#[derive(TypeUlid, Clone, Debug)]
-        #[ulid = <span class="string">&quot;01GNDJJ42DY5GSP9PGXPGF65GE&quot;</span>]
-        </span><span class="kw">struct </span>A(Vec&lt;u32&gt;);
+        <span class="attr">#[derive(HasSchema, Clone, Debug, Default)]
+        #[repr(C)]
+        </span><span class="kw">struct </span>A(String);
 
-        <span class="attr">#[derive(TypeUlid, Clone, Debug)]
-        #[ulid = <span class="string">&quot;01GNDJJDS0JRRN6TP3S89R4FQB&quot;</span>]
+        <span class="attr">#[derive(HasSchema, Clone, Debug, Default)]
+        #[repr(C)]
         </span><span class="kw">struct </span>B(u32);
 
         <span class="kw">let </span><span class="kw-2">mut </span>resources = Resources::new();
 
-        resources.insert(A(<span class="macro">vec!</span>[<span class="number">3</span>, <span class="number">2</span>, <span class="number">1</span>]));
-        <span class="macro">assert_eq!</span>(resources.get::&lt;A&gt;().borrow_mut().<span class="number">0</span>, <span class="macro">vec!</span>[<span class="number">3</span>, <span class="number">2</span>, <span class="number">1</span>]);
+        resources.insert(A(String::from(<span class="string">&quot;hi&quot;</span>)));
+        <span class="macro">assert_eq!</span>(resources.get::&lt;A&gt;().unwrap().<span class="number">0</span>, <span class="string">&quot;hi&quot;</span>);
 
         <span class="kw">let </span>r2 = resources.clone();
 
-        resources.insert(A(<span class="macro">vec!</span>[<span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>]));
-        resources.insert(A(<span class="macro">vec!</span>[<span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>]));
-        <span class="macro">assert_eq!</span>(resources.get::&lt;A&gt;().borrow().<span class="number">0</span>, <span class="macro">vec!</span>[<span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>]);
+        resources.insert(A(String::from(<span class="string">&quot;bye&quot;</span>)));
+        resources.insert(A(String::from(<span class="string">&quot;world&quot;</span>)));
+        <span class="macro">assert_eq!</span>(resources.get::&lt;A&gt;().unwrap().<span class="number">0</span>, <span class="string">&quot;world&quot;</span>);
 
-        <span class="comment">// TODO: Split into more focused test for cloning
-        </span><span class="macro">assert_eq!</span>(r2.get::&lt;A&gt;().borrow().<span class="number">0</span>, <span class="macro">vec!</span>[<span class="number">3</span>, <span class="number">2</span>, <span class="number">1</span>]);
+        <span class="macro">assert_eq!</span>(r2.get::&lt;A&gt;().unwrap().<span class="number">0</span>, <span class="string">&quot;hi&quot;</span>);
 
         resources.insert(B(<span class="number">1</span>));
-        <span class="macro">assert_eq!</span>(resources.get::&lt;B&gt;().borrow().<span class="number">0</span>, <span class="number">1</span>);
+        <span class="macro">assert_eq!</span>(resources.get::&lt;B&gt;().unwrap().<span class="number">0</span>, <span class="number">1</span>);
         resources.insert(B(<span class="number">2</span>));
-        <span class="macro">assert_eq!</span>(resources.get::&lt;B&gt;().borrow().<span class="number">0</span>, <span class="number">2</span>);
-        <span class="macro">assert_eq!</span>(resources.get::&lt;A&gt;().borrow().<span class="number">0</span>, <span class="macro">vec!</span>[<span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>]);
+        <span class="macro">assert_eq!</span>(resources.get::&lt;B&gt;().unwrap().<span class="number">0</span>, <span class="number">2</span>);
+        <span class="macro">assert_eq!</span>(resources.get::&lt;A&gt;().unwrap().<span class="number">0</span>, <span class="string">&quot;world&quot;</span>);
     }
 }
-</code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.1 (d5a82bbd2 2023-02-07)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</code></pre></div></section></main></body></html>

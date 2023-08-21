@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/bones_ecs/src/system.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>system.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-6827029ac823cab7.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-ebce58d0a40c3431.css"><link rel="stylesheet" disabled href="../../static.files/dark-f23faae4a2daf9a6.css"><link rel="stylesheet" disabled href="../../static.files/ayu-8af5e100b21cd173.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-c55e1eb52e1886b4.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../bones_ecs/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_ecs/src/system.rs`."><title>system.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.1 (eb26296b5 2023-08-03)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../bones_ecs/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -434,9 +434,108 @@
 <a href="#434" id="434">434</a>
 <a href="#435" id="435">435</a>
 <a href="#436" id="436">436</a>
-</pre><pre class="rust"><code><span class="doccomment">//! Implements the system API for the ECS.
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Implements the system API for the ECS.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+</span><span class="kw">use </span>std::sync::Arc;
+
+<span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+
+<span class="attr">#[derive(Deref, DerefMut)]
+</span><span class="kw">struct </span>Test {
+    s: String,
+}
 
 <span class="doccomment">/// Struct used to run a system function using the world.
 </span><span class="kw">pub struct </span>System&lt;Out = ()&gt; {
@@ -568,8 +667,22 @@
 }
 
 <span class="doccomment">/// [`SystemParam`] for getting read access to a resource.
-</span><span class="kw">pub struct </span>Res&lt;<span class="lifetime">&#39;a</span>, T: TypedEcsData + FromWorld&gt;(AtomicRef&lt;<span class="lifetime">&#39;a</span>, T&gt;);
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: TypedEcsData + Default&gt; std::ops::Deref <span class="kw">for </span>Res&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+///
+/// Use [`Res`] if you want to automatically initialize the resource.
+</span><span class="kw">pub struct </span>Res&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt;(AtomicRef&lt;<span class="lifetime">&#39;a</span>, T&gt;);
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; std::ops::Deref <span class="kw">for </span>Res&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    <span class="kw">type </span>Target = T;
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
+}
+
+<span class="doccomment">/// [`SystemParam`] for getting read access to a resource and initialzing it if it doesn&#39;t already
+/// exist.
+///
+/// Use [`Res`] if you don&#39;t want to automatically initialize the resource.
+</span><span class="kw">pub struct </span>ResInit&lt;<span class="lifetime">&#39;a</span>, T: HasSchema + FromWorld&gt;(AtomicRef&lt;<span class="lifetime">&#39;a</span>, T&gt;);
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema + FromWorld&gt; std::ops::Deref <span class="kw">for </span>ResInit&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">type </span>Target = T;
     <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
@@ -577,29 +690,54 @@
 }
 
 <span class="doccomment">/// [`SystemParam`] for getting mutable access to a resource.
-</span><span class="kw">pub struct </span>ResMut&lt;<span class="lifetime">&#39;a</span>, T: TypedEcsData + FromWorld&gt;(AtomicRefMut&lt;<span class="lifetime">&#39;a</span>, T&gt;);
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: TypedEcsData + FromWorld&gt; std::ops::Deref <span class="kw">for </span>ResMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+///
+/// Use [`ResMutInit`] if you want to automatically initialize the resource.
+</span><span class="kw">pub struct </span>ResMut&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt;(AtomicRefMut&lt;<span class="lifetime">&#39;a</span>, T&gt;);
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; std::ops::Deref <span class="kw">for </span>ResMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">type </span>Target = T;
     <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
     </span>}
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: TypedEcsData + FromWorld&gt; std::ops::DerefMut <span class="kw">for </span>ResMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; std::ops::DerefMut <span class="kw">for </span>ResMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Target {
         <span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">0
     </span>}
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: TypedEcsData + FromWorld&gt; SystemParam <span class="kw">for </span>Res&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+<span class="doccomment">/// [`SystemParam`] for getting mutable access to a resource and initializing it if it doesn&#39;t
+/// already exist.
+///
+/// Use [`ResMut`] if you don&#39;t want to automatically initialize the resource.
+</span><span class="kw">pub struct </span>ResMutInit&lt;<span class="lifetime">&#39;a</span>, T: HasSchema + FromWorld&gt;(AtomicRefMut&lt;<span class="lifetime">&#39;a</span>, T&gt;);
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema + FromWorld&gt; std::ops::Deref <span class="kw">for </span>ResMutInit&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    <span class="kw">type </span>Target = T;
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
+}
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema + FromWorld&gt; std::ops::DerefMut <span class="kw">for </span>ResMutInit&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">0
+    </span>}
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; SystemParam <span class="kw">for </span>Res&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">type </span>State = AtomicResource&lt;T&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = Res&lt;<span class="lifetime">&#39;p</span>, T&gt;;
 
-    <span class="kw">fn </span>initialize(world: <span class="kw-2">&amp;mut </span>World) {
-        world.init_resource::&lt;T&gt;()
-    }
+    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
 
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
-        world.resource::&lt;T&gt;()
+        world.resources.get_cell::&lt;T&gt;().unwrap_or_else(|| {
+            <span class="macro">panic!</span>(
+                <span class="string">&quot;Resource of type `{}` not in world. \
+                You may need to insert or initialize the resource or use \
+                `ResInit` instead of `Res` to automatically initialize the \
+                resource with the default value.&quot;</span>,
+                std::any::type_name::&lt;T&gt;()
+            )
+        })
     }
 
     <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
@@ -607,16 +745,41 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: TypedEcsData + FromWorld&gt; SystemParam <span class="kw">for </span>ResMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema + FromWorld&gt; SystemParam <span class="kw">for </span>ResInit&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">type </span>State = AtomicResource&lt;T&gt;;
-    <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = ResMut&lt;<span class="lifetime">&#39;p</span>, T&gt;;
+    <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = ResInit&lt;<span class="lifetime">&#39;p</span>, T&gt;;
 
     <span class="kw">fn </span>initialize(world: <span class="kw-2">&amp;mut </span>World) {
-        world.init_resource::&lt;T&gt;();
+        <span class="kw">if </span>!world.resources.contains::&lt;T&gt;() {
+            world.init_resource::&lt;T&gt;();
+        }
     }
 
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
-        world.resource::&lt;T&gt;()
+        world.resources.get_cell::&lt;T&gt;().unwrap()
+    }
+
+    <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
+        ResInit(state.borrow())
+    }
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; SystemParam <span class="kw">for </span>ResMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    <span class="kw">type </span>State = AtomicResource&lt;T&gt;;
+    <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = ResMut&lt;<span class="lifetime">&#39;p</span>, T&gt;;
+
+    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
+
+    <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
+        world.resources.get_cell::&lt;T&gt;().unwrap_or_else(|| {
+            <span class="macro">panic!</span>(
+                <span class="string">&quot;Resource of type `{}` not in world. \
+                You may need to insert or initialize the resource or use \
+                `ResInit` instead of `Res` to automatically initialize the \
+                resource with the default value.&quot;</span>,
+                std::any::type_name::&lt;T&gt;()
+            )
+        })
     }
 
     <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
@@ -624,13 +787,32 @@
     }
 }
 
-<span class="doccomment">/// [`SystemParam`] for getting read access to a [`ComponentStore`].
-</span><span class="kw">pub type </span>Comp&lt;<span class="lifetime">&#39;a</span>, T&gt; = AtomicComponentStoreRef&lt;<span class="lifetime">&#39;a</span>, T&gt;;
-<span class="doccomment">/// [`SystemParam`] for getting mutable access to a [`ComponentStore`].
-</span><span class="kw">pub type </span>CompMut&lt;<span class="lifetime">&#39;a</span>, T&gt; = AtomicComponentStoreRefMut&lt;<span class="lifetime">&#39;a</span>, T&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema + FromWorld&gt; SystemParam <span class="kw">for </span>ResMutInit&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    <span class="kw">type </span>State = AtomicResource&lt;T&gt;;
+    <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = ResMutInit&lt;<span class="lifetime">&#39;p</span>, T&gt;;
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: TypedEcsData&gt; SystemParam <span class="kw">for </span>Comp&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    <span class="kw">type </span>State = AtomicComponentStore&lt;T&gt;;
+    <span class="kw">fn </span>initialize(world: <span class="kw-2">&amp;mut </span>World) {
+        <span class="kw">if </span>!world.resources.contains::&lt;T&gt;() {
+            world.init_resource::&lt;T&gt;();
+        }
+    }
+
+    <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
+        world.resources.get_cell::&lt;T&gt;().unwrap()
+    }
+
+    <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
+        ResMutInit(state.borrow_mut())
+    }
+}
+
+<span class="doccomment">/// [`SystemParam`] for getting read access to a [`ComponentStore`].
+</span><span class="kw">pub type </span>Comp&lt;<span class="lifetime">&#39;a</span>, T&gt; = AtomicRef&lt;<span class="lifetime">&#39;a</span>, ComponentStore&lt;T&gt;&gt;;
+<span class="doccomment">/// [`SystemParam`] for getting mutable access to a [`ComponentStore`].
+</span><span class="kw">pub type </span>CompMut&lt;<span class="lifetime">&#39;a</span>, T&gt; = AtomicRefMut&lt;<span class="lifetime">&#39;a</span>, ComponentStore&lt;T&gt;&gt;;
+
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; SystemParam <span class="kw">for </span>Comp&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    <span class="kw">type </span>State = Arc&lt;AtomicRefCell&lt;ComponentStore&lt;T&gt;&gt;&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = Comp&lt;<span class="lifetime">&#39;p</span>, T&gt;;
 
     <span class="kw">fn </span>initialize(world: <span class="kw-2">&amp;mut </span>World) {
@@ -638,7 +820,7 @@
     }
 
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
-        world.components.get::&lt;T&gt;()
+        world.components.get_cell::&lt;T&gt;().unwrap()
     }
 
     <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
@@ -646,8 +828,8 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: TypedEcsData&gt; SystemParam <span class="kw">for </span>CompMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    <span class="kw">type </span>State = AtomicComponentStore&lt;T&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; SystemParam <span class="kw">for </span>CompMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    <span class="kw">type </span>State = Arc&lt;AtomicRefCell&lt;ComponentStore&lt;T&gt;&gt;&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = CompMut&lt;<span class="lifetime">&#39;p</span>, T&gt;;
 
     <span class="kw">fn </span>initialize(world: <span class="kw-2">&amp;mut </span>World) {
@@ -655,7 +837,7 @@
     }
 
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
-        world.components.get::&lt;T&gt;()
+        world.components.get_cell::&lt;T&gt;().unwrap()
     }
 
     <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
@@ -782,8 +964,8 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>convert_system() {
         <span class="kw">fn </span>tmp(
-            _var1: AtomicComponentStoreRef&lt;u32&gt;,
-            _var2: AtomicComponentStoreRef&lt;u64&gt;,
+            _var1: AtomicRef&lt;ComponentStore&lt;u32&gt;&gt;,
+            _var2: AtomicRef&lt;ComponentStore&lt;u64&gt;&gt;,
             _var3: Res&lt;i32&gt;,
             _var4: ResMut&lt;i64&gt;,
         ) -&gt; SystemResult {
@@ -839,36 +1021,37 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>system_replace_resource() {
-        <span class="attr">#[derive(Default, TypeUlid, Clone, PartialEq, Eq, Debug)]
-        #[ulid = <span class="string">&quot;01GNDP03R29SDA1S009KTQF18Y&quot;</span>]
+        <span class="attr">#[derive(Default, HasSchema, Clone, PartialEq, Eq, Debug)]
+        #[schema(opaque)]
         </span><span class="kw">pub struct </span>A;
-        <span class="attr">#[derive(Default, TypeUlid, Clone, Debug)]
-        #[ulid = <span class="string">&quot;01GNDP0C73TAV0TDKZZB39NQ8C&quot;</span>]
+        <span class="attr">#[derive(Default, HasSchema, Clone, Debug)]
+        #[schema(opaque)]
         </span><span class="kw">pub struct </span>B {
             x: u32,
         }
         <span class="kw">let </span><span class="kw-2">mut </span>world = World::default();
-        <span class="kw">let </span><span class="kw-2">mut </span>my_system = (|_a: Res&lt;A&gt;, <span class="kw-2">mut </span>b: ResMut&lt;B&gt;| {
+        <span class="kw">let </span><span class="kw-2">mut </span>my_system = (|_a: ResInit&lt;A&gt;, <span class="kw-2">mut </span>b: ResMutInit&lt;B&gt;| {
             <span class="kw">let </span>b2 = B { x: <span class="number">45 </span>};
             <span class="kw-2">*</span>b = b2;
             <span class="prelude-val">Ok</span>(())
         })
         .system();
 
-        <span class="macro">assert!</span>(world.resources.try_get::&lt;B&gt;().is_none());
+        <span class="macro">assert!</span>(world.resources.get_cell::&lt;B&gt;().is_none());
         my_system.initialize(<span class="kw-2">&amp;mut </span>world);
 
-        <span class="kw">let </span>res = world.resource::&lt;B&gt;();
-        <span class="macro">assert_eq!</span>(res.borrow().x, <span class="number">0</span>);
+        {
+            <span class="kw">let </span>res = world.resource::&lt;B&gt;();
+            <span class="macro">assert_eq!</span>(res.x, <span class="number">0</span>);
+        }
 
         my_system.run(<span class="kw-2">&amp;</span>world).unwrap();
 
         <span class="kw">let </span>res = world.resource::&lt;B&gt;();
-        <span class="macro">assert_eq!</span>(res.borrow().x, <span class="number">45</span>);
+        <span class="macro">assert_eq!</span>(res.x, <span class="number">45</span>);
 
         <span class="kw">let </span>res = world.resource::&lt;A&gt;();
-        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>res.borrow(), A);
+        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>res, A);
     }
 }
-</code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.1 (d5a82bbd2 2023-02-07)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</code></pre></div></section></main></body></html>

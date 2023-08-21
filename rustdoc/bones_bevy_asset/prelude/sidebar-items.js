@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"derive":[["TypeUlid","Derive macro for the `TypeUlid` trait."]],"mod":[["bones","Bones lib prelude"]],"trait":[["TypeUlid","Associates a [`Ulid`] ID to a Rust type."]]};

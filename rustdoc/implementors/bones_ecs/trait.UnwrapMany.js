@@ -1,6 +1,5 @@
 (function() {var implementors = {
-"bones_bevy_asset":[],
 "bones_ecs":[],
-"bones_lib":[],
-"bones_render":[]
+"bones_framework":[],
+"bones_lib":[]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

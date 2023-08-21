@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"derive":[["TypeUlid","Derive macro for the `TypeUlid` trait."]],"struct":[["Ulid","A Ulid is a unique 128-bit lexicographically sortable identifier"]],"trait":[["TypeUlid","Associates a [`Ulid`] ID to a Rust type."],["TypeUlidDynamic","Allows reading a type’s [`Ulid`] from the context of a trait object when the concrete Rust type is not known at compile time."]]};
+window.SIDEBAR_ITEMS = {"derive":["TypeUlid"],"struct":["Ulid"],"trait":["TypeUlid","TypeUlidDynamic"]};

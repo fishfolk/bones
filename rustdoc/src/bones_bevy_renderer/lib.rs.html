@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/bones_bevy_renderer/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-6827029ac823cab7.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-ebce58d0a40c3431.css"><link rel="stylesheet" disabled href="../../static.files/dark-f23faae4a2daf9a6.css"><link rel="stylesheet" disabled href="../../static.files/ayu-8af5e100b21cd173.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-c55e1eb52e1886b4.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../bones_bevy_renderer/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_bevy_renderer/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_bevy_renderer" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.1 (eb26296b5 2023-08-03)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../bones_bevy_renderer/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -596,531 +596,762 @@
 <a href="#596" id="596">596</a>
 <a href="#597" id="597">597</a>
 <a href="#598" id="598">598</a>
-</pre><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
 </span><span class="comment">// This cfg_attr is needed because `rustdoc::all` includes lints not supported on stable
 </span><span class="attr">#![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
 
-</span><span class="kw">use </span>std::marker::PhantomData;
+</span><span class="kw">use </span>std::path::PathBuf;
 
-<span class="kw">use </span>bevy::{prelude::<span class="kw-2">*</span>, render::camera::ScalingMode};
+<span class="kw">pub use </span>bevy;
+
+<span class="kw">use </span>bevy::{
+    input::{
+        keyboard::KeyboardInput,
+        mouse::{MouseButtonInput, MouseMotion, MouseWheel},
+    },
+    prelude::<span class="kw-2">*</span>,
+    render::{camera::ScalingMode, Extract, RenderApp},
+    sprite::{extract_sprites, ExtractedSprite, ExtractedSprites, SpriteSystem},
+    utils::HashMap,
+};
+<span class="kw">use </span>bevy_egui::EguiContext;
+<span class="kw">use </span>glam::<span class="kw-2">*</span>;
+
 <span class="kw">use </span>bevy_prototype_lyon::prelude <span class="kw">as </span>lyon;
-<span class="kw">use </span>bevy_simple_tilemap::{prelude::TileMapBundle, Tile, TileFlags, TileMap};
-<span class="kw">use </span>bones_lib::prelude::{<span class="self">self </span><span class="kw">as </span>bones, BitSet, IntoBevy};
+<span class="kw">use </span>bones_framework::prelude <span class="kw">as </span>bones;
+<span class="kw">use </span>prelude::convert::{IntoBevy, IntoBones};
 
 <span class="doccomment">/// The prelude
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use crate</span>::<span class="kw-2">*</span>;
 }
 
-<span class="kw">mod </span>asset;
-
-<span class="doccomment">/// This is a trait that must be implemented for your Bevy resource containing the bones
-/// [`World`][bones::World].
-///
-/// It gives the [`BonesRendererPlugin`] a way to know how to read the bones world from your world
-/// resource.
-</span><span class="kw">pub trait </span>HasBonesWorld: Resource {
-    <span class="doccomment">/// Return a mutable reference to the bones world stored by the resource.
-    </span><span class="kw">fn </span>world(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>bones::World;
-}
-
-<span class="doccomment">/// The bones renderer plugin.
-///
-/// This will render the bones world stored in the resource of type `W`.
-</span><span class="kw">pub struct </span>BonesRendererPlugin&lt;W: HasBonesWorld&gt; {
-    <span class="doccomment">/// Whether or not to synchronize the [`Time`] resource automatically with Bevy.
-    ///
-    /// This defaults to `true`, but may be set to `false` if you use a custom time step.
-    </span><span class="kw">pub </span>sync_time: bool,
-    <span class="attr">#[doc(hidden)]
-    </span><span class="kw">pub </span>_phantom: PhantomData&lt;W&gt;,
-}
-
-<span class="kw">impl</span>&lt;W: HasBonesWorld&gt; BonesRendererPlugin&lt;W&gt; {
-    <span class="doccomment">/// Initialize the plugin with the `sync_time` option set to the provided value.
-    </span><span class="kw">pub fn </span>with_sync_time(sync_time: bool) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            sync_time,
-            _phantom: PhantomData,
-        }
-    }
-}
-
-<span class="kw">impl</span>&lt;W: HasBonesWorld&gt; Default <span class="kw">for </span>BonesRendererPlugin&lt;W&gt; {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            sync_time: <span class="bool-val">true</span>,
-            _phantom: default(),
-        }
-    }
-}
-
-<span class="kw">impl</span>&lt;W: HasBonesWorld&gt; BonesRendererPlugin&lt;W&gt; {
-    <span class="doccomment">/// Create a new [`BonesRendererPlugin`] instance.
-    </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
-        default()
-    }
-}
+<span class="kw">mod </span>convert;
 
 <span class="doccomment">/// Marker component for entities that are rendered in Bevy for bones.
 </span><span class="attr">#[derive(Component)]
 </span><span class="kw">pub struct </span>BevyBonesEntity;
 
-<span class="doccomment">/// [`StageLabel`] for stages added by bones to the Bevy world.
-</span><span class="attr">#[derive(StageLabel)]
-</span><span class="kw">pub enum </span>BonesStage {
-    <span class="doccomment">/// This stage is run after [`CoreStage::First`] to synchronize the bevy `Time` resource with
-    /// the bones one.
-    </span>SyncTime,
-    <span class="doccomment">/// This is the stage where the plugin reads the bones world adds bevy sprites, tiles, etc. to
-    /// be rendered.
-    </span>SyncRender,
+<span class="doccomment">/// Renderer for [`bones_framework`] [`Game`][bones::Game]s using Bevy.
+</span><span class="attr">#[derive(Resource)]
+</span><span class="kw">pub struct </span>BonesBevyRenderer {
+    <span class="doccomment">/// Whether or not to use nearest-neighbor sampling for textures.
+    </span><span class="kw">pub </span>pixel_art: bool,
+    <span class="doccomment">/// The bones game to run.
+    </span><span class="kw">pub </span>game: bones::Game,
+    <span class="doccomment">/// The version of the game, used for the asset loader.
+    </span><span class="kw">pub </span>game_version: bones::Version,
+    <span class="doccomment">/// The path to load assets from.
+    </span><span class="kw">pub </span>asset_dir: PathBuf,
+    <span class="doccomment">/// The path to load asset packs from.
+    </span><span class="kw">pub </span>packs_dir: PathBuf,
 }
 
-<span class="kw">impl</span>&lt;W: HasBonesWorld&gt; Plugin <span class="kw">for </span>BonesRendererPlugin&lt;W&gt; {
-    <span class="kw">fn </span>build(<span class="kw-2">&amp;</span><span class="self">self</span>, app: <span class="kw-2">&amp;mut </span>App) {
-        app.add_plugin(bevy_simple_tilemap::plugin::SimpleTileMapPlugin)
-            .add_plugin(lyon::ShapePlugin)
-            <span class="comment">// Install the asset loader for .atlas.yaml files.
-            </span>.add_asset_loader(asset::TextureAtlasLoader)
-            <span class="comment">// Add the world sync systems
-            </span>.add_stage_before(
-                CoreStage::PostUpdate,
-                BonesStage::SyncRender,
-                SystemStage::parallel(),
-            )
-            .add_stage_after(
-                CoreStage::First,
-                BonesStage::SyncTime,
-                SystemStage::single_threaded(),
-            )
-            .add_system_to_stage(BonesStage::SyncRender, sync_sprites::&lt;W&gt;)
-            .add_system_to_stage(BonesStage::SyncRender, sync_path2ds::&lt;W&gt;)
-            .add_system_to_stage(BonesStage::SyncRender, sync_atlas_sprites::&lt;W&gt;)
-            .add_system_to_stage(BonesStage::SyncRender, sync_cameras::&lt;W&gt;)
-            .add_system_to_stage(BonesStage::SyncRender, sync_clear_color::&lt;W&gt;)
-            .add_system_to_stage(BonesStage::SyncRender, sync_tilemaps::&lt;W&gt;);
-
-        <span class="kw">if </span><span class="self">self</span>.sync_time {
-            app.add_system_to_stage(BonesStage::SyncTime, sync_time::&lt;W&gt;);
-        }
+<span class="doccomment">/// Resource containing the entity spawned for all of the bones game renderables.
+</span><span class="attr">#[derive(Resource)]
+</span><span class="kw">pub struct </span>BonesGameEntity(<span class="kw">pub </span>Entity);
+<span class="kw">impl </span>FromWorld <span class="kw">for </span>BonesGameEntity {
+    <span class="kw">fn </span>from_world(world: <span class="kw-2">&amp;mut </span>World) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(world.spawn(VisibilityBundle::default()).id())
     }
 }
 
-<span class="kw">fn </span>sync_clear_color&lt;W: HasBonesWorld&gt;(
-    <span class="kw-2">mut </span>clear_color: ResMut&lt;ClearColor&gt;,
-    world_resource: <span class="prelude-ty">Option</span>&lt;ResMut&lt;W&gt;&gt;,
-) {
-    <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
-        <span class="kw">return</span>;
-    };
-    <span class="kw">let </span>world = world_resource.world();
-    world.init_resource::&lt;bones::ClearColor&gt;();
-
-    <span class="kw">let </span>bones_clear_color = world.resource::&lt;bones::ClearColor&gt;();
-    <span class="kw">let </span>bones_clear_color = bones_clear_color.borrow();
-
-    clear_color.<span class="number">0 </span>= bones_clear_color.<span class="number">0</span>.into_bevy()
+<span class="doccomment">/// Resource mapping bones image IDs to their bevy handles.
+</span><span class="attr">#[derive(Resource, Default, Debug, Deref, DerefMut)]
+</span><span class="kw">pub struct </span>BonesImageIds {
+    <span class="attr">#[deref]
+    </span>map: HashMap&lt;u32, Handle&lt;Image&gt;&gt;,
+    next_id: u32,
 }
 
-<span class="doccomment">/// The system that renders the bones world.
-</span><span class="kw">fn </span>sync_sprites&lt;W: HasBonesWorld&gt;(
-    <span class="kw-2">mut </span>commands: Commands,
-    world_resource: <span class="prelude-ty">Option</span>&lt;ResMut&lt;W&gt;&gt;,
-    <span class="kw-2">mut </span>bevy_bones_sprites: Query&lt;
-        (Entity, <span class="kw-2">&amp;mut </span>Handle&lt;Image&gt;, <span class="kw-2">&amp;mut </span>Sprite, <span class="kw-2">&amp;mut </span>Transform),
-        With&lt;BevyBonesEntity&gt;,
-    &gt;,
-) {
-    <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
-        bevy_bones_sprites.for_each(|(e, ..)| commands.entity(e).despawn());
-        <span class="kw">return</span>;
-    };
-
-    <span class="kw">let </span>world = world_resource.world();
-
-    <span class="comment">// TODO: Evaluate cost of calling this every frame
-    </span>world.components.init::&lt;bones::Sprite&gt;();
-    world.components.init::&lt;bones::Transform&gt;();
-
-    <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
-    <span class="kw">let </span>entities = entities.borrow();
-    <span class="kw">let </span>sprites = world.components.get::&lt;bones::Sprite&gt;();
-    <span class="kw">let </span>sprites = sprites.borrow();
-    <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;();
-    <span class="kw">let </span>transforms = transforms.borrow();
-
-    <span class="comment">// Sync sprites
-    </span><span class="kw">let </span><span class="kw-2">mut </span>sprites_bitset = sprites.bitset().clone();
-    sprites_bitset.bit_and(transforms.bitset());
-    <span class="kw">let </span><span class="kw-2">mut </span>bones_sprite_entity_iter = entities.iter_with_bitset(<span class="kw-2">&amp;</span>sprites_bitset);
-    <span class="kw">for </span>(bevy_ent, <span class="kw-2">mut </span>image, <span class="kw-2">mut </span>sprite, <span class="kw-2">mut </span>transform) <span class="kw">in </span><span class="kw-2">&amp;mut </span>bevy_bones_sprites {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(bones_ent) = bones_sprite_entity_iter.next() {
-            <span class="kw">let </span>bones_sprite = sprites.get(bones_ent).unwrap();
-            <span class="kw">let </span>bones_transform = transforms.get(bones_ent).unwrap();
-
-            sprite.flip_x = bones_sprite.flip_x;
-            sprite.flip_y = bones_sprite.flip_y;
-            sprite.color = bones_sprite.color.into_bevy();
-            <span class="kw-2">*</span>image = bones_sprite.image.get_bevy_handle_untyped().typed();
-            <span class="kw-2">*</span>transform = bones_transform.into_bevy();
-        } <span class="kw">else </span>{
-            commands.entity(bevy_ent).despawn();
-        }
-    }
-    <span class="kw">for </span>bones_ent <span class="kw">in </span>bones_sprite_entity_iter {
-        <span class="kw">let </span>bones_sprite = sprites.get(bones_ent).unwrap();
-        <span class="kw">let </span>bones_transform = transforms.get(bones_ent).unwrap();
-
-        commands.spawn((
-            SpriteBundle {
-                texture: bones_sprite.image.get_bevy_handle_untyped().typed(),
-                transform: bones_transform.into_bevy(),
-                ..default()
-            },
-            BevyBonesEntity,
-        ));
-    }
-}
-
-<span class="doccomment">/// The system that renders the bones world.
-</span><span class="kw">fn </span>sync_atlas_sprites&lt;W: HasBonesWorld&gt;(
-    <span class="kw-2">mut </span>commands: Commands,
-    world_resource: <span class="prelude-ty">Option</span>&lt;ResMut&lt;W&gt;&gt;,
-    <span class="kw-2">mut </span>bevy_bones_atlases: Query&lt;
-        (
-            Entity,
-            <span class="kw-2">&amp;mut </span>Handle&lt;TextureAtlas&gt;,
-            <span class="kw-2">&amp;mut </span>TextureAtlasSprite,
-            <span class="kw-2">&amp;mut </span>Transform,
-        ),
-        With&lt;BevyBonesEntity&gt;,
-    &gt;,
-) {
-    <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
-        bevy_bones_atlases.for_each(|(e, ..)| commands.entity(e).despawn());
-        <span class="kw">return</span>;
-    };
-
-    <span class="kw">let </span>world = world_resource.world();
-
-    world.components.init::&lt;bones::AtlasSprite&gt;();
-    world.components.init::&lt;bones::Transform&gt;();
-
-    <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
-    <span class="kw">let </span>entities = entities.borrow();
-    <span class="kw">let </span>atlas_sprites = world.components.get::&lt;bones::AtlasSprite&gt;();
-    <span class="kw">let </span>atlas_sprites = atlas_sprites.borrow();
-    <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;();
-    <span class="kw">let </span>transforms = transforms.borrow();
-
-    <span class="comment">// Sync atlas sprites
-    </span><span class="kw">let </span><span class="kw-2">mut </span>atlas_bitset = atlas_sprites.bitset().clone();
-    atlas_bitset.bit_and(transforms.bitset());
-    <span class="kw">let </span><span class="kw-2">mut </span>bones_atlas_sprite_entity_iter = entities.iter_with_bitset(<span class="kw-2">&amp;</span>atlas_bitset);
-    <span class="kw">for </span>(bevy_ent, <span class="kw-2">mut </span>image, <span class="kw-2">mut </span>atlas_sprite, <span class="kw-2">mut </span>transform) <span class="kw">in </span><span class="kw-2">&amp;mut </span>bevy_bones_atlases {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(bones_ent) = bones_atlas_sprite_entity_iter.next() {
-            <span class="kw">let </span>bones_atlas = atlas_sprites.get(bones_ent).unwrap();
-            <span class="kw">let </span>bones_transform = transforms.get(bones_ent).unwrap();
-
-            <span class="kw-2">*</span>image = bones_atlas.atlas.get_bevy_handle_untyped().typed();
-            <span class="kw-2">*</span>transform = bones_transform.into_bevy();
-
-            atlas_sprite.index = bones_atlas.index;
-            atlas_sprite.flip_x = bones_atlas.flip_x;
-            atlas_sprite.flip_y = bones_atlas.flip_y;
-            atlas_sprite.color = bones_atlas.color.into_bevy();
-        } <span class="kw">else </span>{
-            commands.entity(bevy_ent).despawn();
-        }
-    }
-    <span class="kw">for </span>bones_ent <span class="kw">in </span>bones_atlas_sprite_entity_iter {
-        <span class="kw">let </span>bones_atlas = atlas_sprites.get(bones_ent).unwrap();
-        <span class="kw">let </span>bones_transform = transforms.get(bones_ent).unwrap();
-
-        commands.spawn((
-            SpriteSheetBundle {
-                texture_atlas: bones_atlas.atlas.get_bevy_handle_untyped().typed(),
-                transform: bones_transform.into_bevy(),
-                ..default()
-            },
-            BevyBonesEntity,
-        ));
-    }
-}
-
-<span class="doccomment">/// The system that renders the bones world.
-</span><span class="kw">fn </span>sync_cameras&lt;W: HasBonesWorld&gt;(
-    <span class="kw-2">mut </span>commands: Commands,
-    world_resource: <span class="prelude-ty">Option</span>&lt;ResMut&lt;W&gt;&gt;,
-    <span class="kw-2">mut </span>bevy_bones_cameras: Query&lt;
-        (
-            Entity,
-            <span class="kw-2">&amp;mut </span>Camera,
-            <span class="kw-2">&amp;mut </span>OrthographicProjection,
-            <span class="kw-2">&amp;mut </span>Transform,
-        ),
-        With&lt;BevyBonesEntity&gt;,
-    &gt;,
-) {
-    <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
-        bevy_bones_cameras.for_each(|(e, ..)| commands.entity(e).despawn());
-        <span class="kw">return</span>;
-    };
-
-    <span class="kw">let </span>world = world_resource.world();
-
-    world.components.init::&lt;bones::Transform&gt;();
-    world.components.init::&lt;bones::Camera&gt;();
-
-    <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
-    <span class="kw">let </span>entities = entities.borrow();
-    <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;();
-    <span class="kw">let </span>transforms = transforms.borrow();
-    <span class="kw">let </span>cameras = world.components.get::&lt;bones::Camera&gt;();
-    <span class="kw">let </span>cameras = cameras.borrow();
-
-    <span class="comment">// Sync cameras
-    </span><span class="kw">let </span><span class="kw-2">mut </span>cameras_bitset = cameras.bitset().clone();
-    cameras_bitset.bit_and(transforms.bitset());
-    <span class="kw">let </span><span class="kw-2">mut </span>bones_camera_entity_iter = entities.iter_with_bitset(<span class="kw-2">&amp;</span>cameras_bitset);
-    <span class="kw">for </span>(bevy_ent, <span class="kw-2">mut </span>camera, <span class="kw-2">mut </span>projection, <span class="kw-2">mut </span>transform) <span class="kw">in </span><span class="kw-2">&amp;mut </span>bevy_bones_cameras {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(bones_ent) = bones_camera_entity_iter.next() {
-            <span class="kw">let </span>bones_camera = cameras.get(bones_ent).unwrap();
-            <span class="kw">let </span>bones_transform = transforms.get(bones_ent).unwrap();
-
-            camera.is_active = bones_camera.active;
-            <span class="kw">match </span>projection.scaling_mode {
-                ScalingMode::FixedVertical(height) <span class="kw">if </span>height != bones_camera.height =&gt; {
-                    projection.scaling_mode = ScalingMode::FixedVertical(bones_camera.height)
-                }
-                <span class="kw">_ </span>=&gt; (),
+<span class="kw">impl </span>BonesImageIds {
+    <span class="doccomment">/// Load all bones images into bevy.
+    </span><span class="kw">pub fn </span>load_bones_images(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        bones_assets: <span class="kw-2">&amp;mut </span>bones::AssetServer,
+        bevy_images: <span class="kw-2">&amp;mut </span>Assets&lt;Image&gt;,
+    ) {
+        <span class="kw">for </span>asset <span class="kw">in </span>bones_assets.store.assets.values_mut() {
+            <span class="kw">if let </span><span class="prelude-val">Ok</span>(image) = asset.data.try_cast_mut::&lt;bones::Image&gt;() {
+                <span class="self">self</span>.load_bones_image(image, bevy_images)
             }
-            camera.viewport = bones_camera
-                .viewport
-                .map(|x| bevy::render::camera::Viewport {
-                    physical_position: x.position,
-                    physical_size: x.size,
-                    depth: x.depth_min..x.depth_max,
-                });
-
-            <span class="kw-2">*</span>transform = bones_transform.into_bevy();
-        } <span class="kw">else </span>{
-            commands.entity(bevy_ent).despawn();
         }
     }
-    <span class="kw">for </span>bones_ent <span class="kw">in </span>bones_camera_entity_iter {
-        <span class="kw">let </span>bones_camera = cameras.get(bones_ent).unwrap();
-        <span class="kw">let </span>bones_transform = transforms.get(bones_ent).unwrap();
 
-        commands.spawn((
-            Camera2dBundle {
-                camera: Camera {
-                    is_active: bones_camera.active,
-                    ..default()
-                },
-                projection: OrthographicProjection {
-                    scaling_mode: ScalingMode::FixedVertical(bones_camera.height),
-                    ..default()
-                },
-                transform: bones_transform.into_bevy(),
-                ..default()
-            },
-            BevyBonesEntity,
-        ));
+    <span class="doccomment">/// Load a bones image into bevy.
+    </span><span class="kw">pub fn </span>load_bones_image(<span class="kw-2">&amp;mut </span><span class="self">self</span>, image: <span class="kw-2">&amp;mut </span>bones::Image, bevy_images: <span class="kw-2">&amp;mut </span>Assets&lt;Image&gt;) {
+        <span class="kw">let </span><span class="self">Self </span>{ map, next_id } = <span class="self">self</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>taken_image = bones::Image::External(<span class="number">0</span>); <span class="comment">// Dummy value temporarily
+        </span>std::mem::swap(image, <span class="kw-2">&amp;mut </span>taken_image);
+        <span class="kw">if let </span>bones::Image::Data(data) = taken_image {
+            <span class="kw">let </span>handle = bevy_images.add(Image::from_dynamic(data, <span class="bool-val">true</span>));
+            map.insert(<span class="kw-2">*</span>next_id, handle);
+            <span class="kw-2">*</span>image = bones::Image::External(<span class="kw-2">*</span>next_id);
+            <span class="kw-2">*</span>next_id += <span class="number">1</span>;
+        }
     }
 }
 
-<span class="kw">fn </span>sync_tilemaps&lt;W: HasBonesWorld&gt;(
-    <span class="kw-2">mut </span>commands: Commands,
-    world_resource: <span class="prelude-ty">Option</span>&lt;ResMut&lt;W&gt;&gt;,
-    <span class="kw-2">mut </span>bevy_bones_tile_layers: Query&lt;
-        (
-            Entity,
-            <span class="kw-2">&amp;mut </span>TileMap,
-            <span class="kw-2">&amp;mut </span>Handle&lt;TextureAtlas&gt;,
-            <span class="kw-2">&amp;mut </span>Transform,
-        ),
-        With&lt;BevyBonesEntity&gt;,
-    &gt;,
-    atlas_assets: Res&lt;Assets&lt;TextureAtlas&gt;&gt;,
-) {
-    <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
-        bevy_bones_tile_layers.for_each(|(e, ..)| commands.entity(e).despawn());
-        <span class="kw">return</span>;
-    };
+<span class="doccomment">/// Bevy resource that contains the info for the bones game that is being rendered.
+</span><span class="attr">#[derive(Resource)]
+</span><span class="kw">pub struct </span>BonesData {
+    <span class="doccomment">/// The bones game.
+    </span><span class="kw">pub </span>game: bones::Game,
+    <span class="doccomment">/// The bones asset server cell.
+    </span><span class="kw">pub </span>asset_server: bones::AtomicResource&lt;bones::AssetServer&gt;,
+}
 
-    <span class="kw">let </span>world = world_resource.world();
+<span class="kw">impl </span>BonesBevyRenderer {
+    <span class="comment">// TODO: Create a better builder pattern struct for `BonesBevyRenderer`.
+    </span><span class="doccomment">/// Create a new [`BonesBevyRenderer`] for the provided game.
+    </span><span class="kw">pub fn </span>new(game: bones::Game) -&gt; <span class="self">Self </span>{
+        BonesBevyRenderer {
+            pixel_art: <span class="bool-val">true</span>,
+            game,
+            game_version: bones::Version::new(<span class="number">0</span>, <span class="number">1</span>, <span class="number">0</span>),
+            asset_dir: PathBuf::from(<span class="string">&quot;assets&quot;</span>),
+            packs_dir: PathBuf::from(<span class="string">&quot;packs&quot;</span>),
+        }
+    }
 
-    world.components.init::&lt;bones::Tile&gt;();
-    world.components.init::&lt;bones::TileLayer&gt;();
+    <span class="doccomment">/// Return a bevy [`App`] configured to run the bones game.
+    </span><span class="kw">pub fn </span>app(<span class="self">self</span>) -&gt; App {
+        <span class="kw">let </span><span class="kw-2">mut </span>app = App::new();
 
-    <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
-    <span class="kw">let </span>entities = entities.borrow();
-    <span class="kw">let </span>tiles = world.components.get::&lt;bones::Tile&gt;();
-    <span class="kw">let </span>tiles = tiles.borrow();
-    <span class="kw">let </span>tile_layers = world.components.get::&lt;bones::TileLayer&gt;();
-    <span class="kw">let </span>tile_layers = tile_layers.borrow();
-    <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;();
-    <span class="kw">let </span>transforms = transforms.borrow();
+        <span class="comment">// Initialize Bevy plugins we use
+        </span><span class="kw">let </span><span class="kw-2">mut </span>plugins = DefaultPlugins.build();
+        <span class="kw">if </span><span class="self">self</span>.pixel_art {
+            plugins = plugins.set(ImagePlugin::default_nearest());
+        }
 
-    <span class="comment">// Sync tile layers
-    </span><span class="kw">let </span><span class="kw-2">mut </span>tile_layers_bitset = tile_layers.bitset().clone();
-    tile_layers_bitset.bit_and(transforms.bitset());
+        app.add_plugins(plugins)
+            .add_plugins((bevy_egui::EguiPlugin, lyon::ShapePlugin))
+            .insert_resource({
+                <span class="kw">let </span><span class="kw-2">mut </span>egui_settings = bevy_egui::EguiSettings::default();
+                <span class="kw">if </span><span class="self">self</span>.pixel_art {
+                    egui_settings.use_nearest_descriptor();
+                }
+                egui_settings
+            })
+            .init_resource::&lt;BonesImageIds&gt;();
 
-    <span class="kw">let </span><span class="kw-2">mut </span>bones_tile_layer_entity_iter = entities.iter_with_bitset(<span class="kw-2">&amp;</span>tile_layers_bitset);
-    <span class="kw">for </span>(bevy_ent, <span class="kw-2">mut </span>tile_map, <span class="kw-2">mut </span>atlas, <span class="kw-2">mut </span>transform) <span class="kw">in </span><span class="kw-2">&amp;mut </span>bevy_bones_tile_layers {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(bones_ent) = bones_tile_layer_entity_iter.next() {
-            <span class="kw">let </span>bones_tile_layer = tile_layers.get(bones_ent).unwrap();
-            <span class="kw">let </span>bones_transform = transforms.get(bones_ent).unwrap();
+        {
+            <span class="kw">let </span><span class="kw-2">mut </span>bones_image_ids = BonesImageIds::default();
+            <span class="kw">let </span><span class="kw-2">mut </span>asset_server = <span class="self">self</span>.game.asset_server();
+            <span class="kw">let </span><span class="kw-2">mut </span>bevy_images = app.world.resource_mut::&lt;Assets&lt;Image&gt;&gt;();
 
-            <span class="kw-2">*</span>atlas = bones_tile_layer.atlas.get_bevy_handle_untyped().typed();
-            <span class="kw-2">*</span>transform = bones_transform.into_bevy();
-            transform.translation += bones_tile_layer.tile_size.extend(<span class="number">0.0</span>) / <span class="number">2.0</span>;
+            <span class="kw">if </span>!asset_server.asset_types.is_empty() {
+                <span class="attr">#[cfg(not(target_arch = <span class="string">&quot;wasm32&quot;</span>))]
+                </span>{
+                    <span class="comment">// Configure the AssetIO
+                    </span><span class="kw">let </span>io = bones::FileAssetIo::new(<span class="kw-2">&amp;</span><span class="self">self</span>.asset_dir, <span class="kw-2">&amp;</span><span class="self">self</span>.packs_dir, <span class="bool-val">true</span>);
+                    asset_server.set_io(io);
 
-            <span class="kw">let </span><span class="prelude-val">Some</span>(texture_atlas) = atlas_assets.get(<span class="kw-2">&amp;</span>atlas) <span class="kw">else </span>{ <span class="kw">continue</span>; };
-            <span class="kw">let </span>atlas_grid_size = texture_atlas.size / texture_atlas.textures[<span class="number">0</span>].size();
-            <span class="kw">let </span>max_tile_idx = (atlas_grid_size.x * atlas_grid_size.y) <span class="kw">as </span>u32 - <span class="number">1</span>;
+                    <span class="comment">// Load the game assets
+                    </span>asset_server
+                        .load_assets()
+                        .expect(<span class="string">&quot;Could not load game assets&quot;</span>);
 
-            <span class="kw">let </span>grid_size = bones_tile_layer.grid_size;
-            <span class="kw">let </span>tile_iter = bones_tile_layer
-                .tiles
+                    <span class="comment">// Take all loaded image assets and conver them to external images that reference bevy handles
+                    </span>bones_image_ids.load_bones_images(<span class="kw-2">&amp;mut </span>asset_server, <span class="kw-2">&amp;mut </span>bevy_images);
+                }
+                <span class="attr">#[cfg(target_arch = <span class="string">&quot;wasm32&quot;</span>)]
+                </span>{
+                    bones_image_ids.load_bones_images(<span class="kw-2">&amp;mut </span>asset_server, <span class="kw-2">&amp;mut </span>bevy_images);
+                    <span class="comment">// TODO: Implement WASM asset loader.
+                    </span><span class="macro">unimplemented!</span>(<span class="string">&quot;WASM asset loading is not implemented yet.&quot;</span>);
+                }
+            }
+
+            app.insert_resource(bones_image_ids);
+        }
+
+        <span class="comment">// Insert the bones data
+        </span>app.insert_resource(BonesData {
+            asset_server: <span class="self">self</span>.game.asset_server.clone_cell(),
+            game: <span class="self">self</span>.game,
+        })
+        .init_resource::&lt;BonesGameEntity&gt;();
+
+        <span class="comment">// Add the world sync systems
+        </span>app.add_systems(
+            Update,
+            (
+                <span class="comment">// Collect input and run world simulation
+                </span>get_bones_input.pipe(step_bones_game),
+                <span class="comment">// Synchronize bones render components with the Bevy world.
+                </span>(
+                    sync_egui_settings,
+                    sync_clear_color,
+                    sync_cameras,
+                    sync_bones_path2ds,
+                ),
+            )
+                .chain(),
+        );
+
+        <span class="kw">if let </span><span class="prelude-val">Ok</span>(render_app) = app.get_sub_app_mut(RenderApp) {
+            render_app.add_systems(
+                ExtractSchedule,
+                (extract_bones_sprites, extract_bones_tilemaps)
+                    .in_set(SpriteSystem::ExtractSprites)
+                    .after(extract_sprites),
+            );
+        }
+
+        app
+    }
+}
+
+<span class="kw">fn </span>get_bones_input(
+    <span class="kw-2">mut </span>mouse_button_input_events: EventReader&lt;MouseButtonInput&gt;,
+    <span class="kw-2">mut </span>mouse_motion_events: EventReader&lt;MouseMotion&gt;,
+    <span class="kw-2">mut </span>mouse_wheel_events: EventReader&lt;MouseWheel&gt;,
+    <span class="kw-2">mut </span>keyboard_events: EventReader&lt;KeyboardInput&gt;,
+) -&gt; (bones::MouseInputs, bones::KeyboardInputs) {
+    <span class="comment">// TODO: investigate possible ways to avoid allocating vectors every frame for event lists.
+    </span>(
+        bones::MouseInputs {
+            movement: mouse_motion_events
                 .iter()
-                .enumerate()
-                .map(|(idx, entity)| {
-                    <span class="kw">let </span>y = idx <span class="kw">as </span>u32 / grid_size.x;
-                    <span class="kw">let </span>x = idx <span class="kw">as </span>u32 - (y * grid_size.x);
-                    <span class="kw">let </span>tile = entity
-                        .map(|e| {
-                            <span class="kw">let </span>tile = tiles.get(e)<span class="question-mark">?</span>;
-                            <span class="prelude-val">Some</span>(Tile {
-                                sprite_index: (tile.idx <span class="kw">as </span>u32).min(max_tile_idx),
-                                color: default(),
-                                flags: <span class="kw">if </span>tile.flip_x {
-                                    TileFlags::FLIP_X
-                                } <span class="kw">else </span>{
-                                    TileFlags::empty()
-                                } | <span class="kw">if </span>tile.flip_y {
-                                    TileFlags::FLIP_Y
-                                } <span class="kw">else </span>{
-                                    TileFlags::empty()
-                                },
-                            })
-                        })
-                        .flatten();
-                    (IVec3::new(x <span class="kw">as </span>i32, y <span class="kw">as </span>i32, <span class="number">0</span>), tile)
+                .last()
+                .map(|x| x.delta)
+                .unwrap_or_default(),
+            wheel_events: mouse_wheel_events
+                .iter()
+                .map(|event| bones::MouseScrollInput {
+                    unit: event.unit.into_bones(),
+                    movement: Vec2::new(event.x, event.y),
+                })
+                .collect(),
+            button_events: mouse_button_input_events
+                .iter()
+                .map(|event| bones::MouseButtonInput {
+                    button: event.button.into_bones(),
+                    state: event.state.into_bones(),
+                })
+                .collect(),
+        },
+        bones::KeyboardInputs {
+            keys: keyboard_events
+                .iter()
+                .map(|event| bones::KeyboardInput {
+                    scan_code: event.scan_code,
+                    key_code: event.key_code.map(|x| x.into_bones()),
+                    button_state: event.state.into_bones(),
+                })
+                .collect(),
+        },
+    )
+}
+
+<span class="doccomment">/// System to step the bones simulation.
+</span><span class="kw">fn </span>step_bones_game(
+    In((mouse_inputs, keyboard_inputs)): In&lt;(bones::MouseInputs, bones::KeyboardInputs)&gt;,
+    world: <span class="kw-2">&amp;mut </span>World,
+) {
+    world.resource_scope(|world: <span class="kw-2">&amp;mut </span>World, <span class="kw-2">mut </span>data: Mut&lt;BonesData&gt;| {
+        world.resource_scope(
+            |world: <span class="kw-2">&amp;mut </span>World, <span class="kw-2">mut </span>bones_image_ids: Mut&lt;BonesImageIds&gt;| {
+                world.resource_scope(|world: <span class="kw-2">&amp;mut </span>World, <span class="kw-2">mut </span>bevy_images: Mut&lt;Assets&lt;Image&gt;&gt;| {
+                    <span class="kw">let </span>egui_ctx = {
+                        <span class="kw">let </span><span class="kw-2">mut </span>egui_query =
+                            world.query_filtered::&lt;<span class="kw-2">&amp;mut </span>EguiContext, With&lt;Window&gt;&gt;();
+                        <span class="kw">let </span><span class="kw-2">mut </span>egui_ctx = egui_query.get_single_mut(world).unwrap();
+                        egui_ctx.get_mut().clone()
+                    };
+                    <span class="kw">let </span>BonesData { game, asset_server } = <span class="kw-2">&amp;mut *</span>data;
+                    <span class="kw">let </span>bevy_time = world.resource::&lt;Time&gt;();
+
+                    <span class="kw">let </span>mouse_inputs = bones::AtomicResource::new(mouse_inputs);
+                    <span class="kw">let </span>keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
+
+                    <span class="comment">// Reload assets if necessary
+                    </span>game.asset_server()
+                        .handle_asset_changes(|asset_server, handle| {
+                            <span class="kw">let </span>asset = asset_server.get_untyped_mut(handle).unwrap();
+
+                            <span class="kw">if let </span><span class="prelude-val">Ok</span>(image) = asset.data.try_cast_mut::&lt;bones::Image&gt;() {
+                                bones_image_ids.load_bones_image(image, <span class="kw-2">&amp;mut </span>bevy_images);
+                            }
+                        });
+
+                    <span class="comment">// Step the game simulation
+                    </span>game.step(|bones_world| {
+                        <span class="comment">// Insert egui context if not present
+                        </span><span class="kw">if </span>!bones_world
+                            .resources
+                            .contains::&lt;bones_framework::render::ui::EguiCtx&gt;()
+                        {
+                            bones_world
+                                .resources
+                                .insert(bones_framework::render::ui::EguiCtx(egui_ctx.clone()));
+                        }
+
+                        <span class="comment">// Update bones time
+                        </span>{
+                            <span class="comment">// Initialize the time resource if it doesn&#39;t exist.
+                            </span><span class="kw">if </span>!bones_world.resources.contains::&lt;bones::Time&gt;() {
+                                bones_world.init_resource::&lt;bones::Time&gt;();
+                            }
+
+                            <span class="kw">let </span><span class="kw-2">mut </span>time = bones_world.resource_mut::&lt;bones::Time&gt;();
+
+                            <span class="comment">// Use the Bevy time if it&#39;s available, otherwise use the default time.
+                            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(instant) = bevy_time.last_update() {
+                                time.update_with_instant(instant);
+                            } <span class="kw">else </span>{
+                                time.update();
+                            }
+                        }
+
+                        <span class="comment">// Insert asset server if not present
+                        </span><span class="kw">if </span>!bones_world.resources.contains::&lt;bones::AssetServer&gt;() {
+                            bones_world.resources.insert_cell(asset_server.clone_cell());
+                        }
+
+                        <span class="comment">// Update the inputs.
+                        </span>bones_world.resources.insert_cell(mouse_inputs.clone_cell());
+                        bones_world
+                            .resources
+                            .insert_cell(keyboard_inputs.clone_cell());
+                    });
                 });
-
-            tile_map.clear();
-            tile_map.set_tiles(tile_iter);
-
-            <span class="comment">// TODO: This is probably a bug in bevy_simple_tilemap. If the tilemap atlas has been
-            // changed, and one of the tiles in the map had a tile index greater than the max tile
-            // count in the new atlas, the map renderer will panic.
-            //
-            // This shouldn&#39;t happen because we made sure to `clear()` the tiles and ensured that
-            // all the new tile indexes are clamped, but apparently the chunks are updated a frame
-            // late or otherwise just evaluated before our tile changes take effect, so we must
-            // clamp the tiles indexes directly on the chunks as well.
-            </span>tile_map.chunks.iter_mut().for_each(|(<span class="kw">_</span>, chunk)| {
-                chunk
-                    .tiles
-                    .iter_mut()
-                    .flatten()
-                    .for_each(|x| x.sprite_index = x.sprite_index.min(max_tile_idx))
-            });
-        } <span class="kw">else </span>{
-            commands.entity(bevy_ent).despawn();
-        }
-    }
-    <span class="kw">for </span>bones_ent <span class="kw">in </span>bones_tile_layer_entity_iter {
-        <span class="kw">let </span>bones_tile_layer = tile_layers.get(bones_ent).unwrap();
-        <span class="kw">let </span>bones_transform = transforms.get(bones_ent).unwrap();
-
-        <span class="kw">let </span><span class="kw-2">mut </span>tile_map = TileMap::default();
-
-        <span class="kw">let </span>grid_size = bones_tile_layer.grid_size;
-        <span class="kw">let </span>tile_iter = bones_tile_layer
-            .tiles
-            .iter()
-            .enumerate()
-            .map(|(idx, entity)| {
-                <span class="kw">let </span>y = idx <span class="kw">as </span>u32 / grid_size.x;
-                <span class="kw">let </span>x = idx <span class="kw">as </span>u32 - (y * grid_size.x);
-                <span class="kw">let </span>tile = entity
-                    .map(|e| {
-                        <span class="kw">let </span>tile = tiles.get(e)<span class="question-mark">?</span>;
-                        <span class="prelude-val">Some</span>(Tile {
-                            sprite_index: tile.idx <span class="kw">as _</span>,
-                            color: default(),
-                            flags: <span class="kw">if </span>tile.flip_x {
-                                TileFlags::FLIP_X
-                            } <span class="kw">else </span>{
-                                TileFlags::empty()
-                            } | <span class="kw">if </span>tile.flip_y {
-                                TileFlags::FLIP_Y
-                            } <span class="kw">else </span>{
-                                TileFlags::empty()
-                            },
-                        })
-                    })
-                    .flatten();
-                (IVec3::new(x <span class="kw">as </span>i32, y <span class="kw">as </span>i32, <span class="number">0</span>), tile)
-            });
-
-        tile_map.set_tiles(tile_iter);
-
-        <span class="kw">let </span><span class="kw-2">mut </span>transform = bones_transform.into_bevy();
-        transform.translation += bones_tile_layer.tile_size.extend(<span class="number">0.0</span>) / <span class="number">2.0</span>;
-        commands.spawn((
-            TileMapBundle {
-                tilemap: tile_map,
-                transform,
-                ..default()
             },
-            BevyBonesEntity,
-        ));
+        );
+    });
+}
+
+<span class="kw">fn </span>sync_clear_color(<span class="kw-2">mut </span>clear_color: ResMut&lt;ClearColor&gt;, <span class="kw-2">mut </span>data: ResMut&lt;BonesData&gt;) {
+    <span class="kw">let </span>game = <span class="kw-2">&amp;mut </span>data.game;
+
+    <span class="kw">for </span>name <span class="kw">in </span><span class="kw-2">&amp;</span>game.sorted_session_keys {
+        <span class="kw">let </span>session = game.sessions.get(<span class="kw-2">*</span>name).unwrap();
+        <span class="kw">if </span>!session.visible {
+            <span class="kw">continue</span>;
+        }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(bones_clear_color) = session.world.get_resource::&lt;bones::ClearColor&gt;() {
+            clear_color.<span class="number">0 </span>= bones_clear_color.<span class="number">0</span>.into_bevy();
+        }
     }
 }
 
-<span class="doccomment">/// The system that renders the bones world.
-</span><span class="kw">fn </span>sync_path2ds&lt;W: HasBonesWorld&gt;(
+<span class="kw">fn </span>sync_egui_settings(
+    data: Res&lt;BonesData&gt;,
+    <span class="kw-2">mut </span>bevy_egui_settings: ResMut&lt;bevy_egui::EguiSettings&gt;,
+) {
+    <span class="kw">let </span>game = <span class="kw-2">&amp;</span>data.game;
+
+    <span class="kw">for </span>session_name <span class="kw">in </span><span class="kw-2">&amp;</span>game.sorted_session_keys {
+        <span class="kw">let </span>session = game.sessions.get(<span class="kw-2">*</span>session_name).unwrap();
+        <span class="kw">let </span>world = <span class="kw-2">&amp;</span>session.world;
+
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(settings) = world.get_resource::&lt;bones::EguiSettings&gt;() {
+            bevy_egui_settings.scale_factor = settings.scale;
+        }
+    }
+}
+
+<span class="attr">#[derive(Resource, Deref, DerefMut)]
+</span><span class="kw">struct </span>CameraBuffer(Vec&lt;(bones::Camera, bones::Transform)&gt;);
+
+<span class="doccomment">/// Sync bones cameras with Bevy
+</span><span class="kw">fn </span>sync_cameras(
+    data: Res&lt;BonesData&gt;,
     <span class="kw-2">mut </span>commands: Commands,
-    world_resource: <span class="prelude-ty">Option</span>&lt;ResMut&lt;W&gt;&gt;,
+    <span class="kw-2">mut </span>bevy_bones_cameras: Query&lt;Entity, (With&lt;BevyBonesEntity&gt;, With&lt;Camera&gt;)&gt;,
+) {
+    <span class="kw">let </span>game = <span class="kw-2">&amp;</span>data.game;
+
+    <span class="comment">// Collect the bevy cameras that we&#39;ve created for the bones game
+    </span><span class="kw">let </span><span class="kw-2">mut </span>bevy_bones_cameras = bevy_bones_cameras.iter_mut();
+
+    <span class="comment">// Create a helper callback to add/update a bones camera into the bevy world
+    </span><span class="kw">let </span><span class="kw-2">mut </span>add_bones_camera = |bones_camera: <span class="kw-2">&amp;</span>bones::Camera,
+                                bones_transform: <span class="kw-2">&amp;</span>bones::Transform| {
+        <span class="comment">// Get or spawn an entity for the camera
+        </span><span class="kw">let </span><span class="kw-2">mut </span>camera_ent = <span class="kw">match </span>bevy_bones_cameras.next() {
+            <span class="prelude-val">Some</span>(ent) =&gt; commands.entity(ent),
+            <span class="prelude-val">None </span>=&gt; commands.spawn((Camera2dBundle::default(), BevyBonesEntity)),
+        };
+
+        <span class="comment">// Insert our updated components on the camera
+        </span>camera_ent.insert((
+            Camera {
+                is_active: bones_camera.active,
+                viewport: bones_camera.viewport.map(|x| x.into_bevy()),
+                order: bones_camera.priority <span class="kw">as </span>isize,
+                ..default()
+            },
+            OrthographicProjection {
+                scaling_mode: ScalingMode::FixedVertical(bones_camera.height),
+                ..default()
+            },
+            bones_transform.into_bevy(),
+        ));
+    };
+
+    <span class="comment">// Loop through all sessions
+    </span><span class="kw">for </span>session_name <span class="kw">in </span><span class="kw-2">&amp;</span>game.sorted_session_keys {
+        <span class="kw">let </span>session = game.sessions.get(<span class="kw-2">*</span>session_name).unwrap();
+        <span class="kw">if </span>!session.visible {
+            <span class="kw">continue</span>;
+        }
+
+        <span class="kw">let </span>world = <span class="kw-2">&amp;</span>session.world;
+
+        <span class="comment">// Skip worlds without cameras and transforms
+        </span><span class="kw">if </span>!(world.components.get_cell::&lt;bones::Transform&gt;().is_ok()
+            &amp;&amp; world.components.get_cell::&lt;bones::Camera&gt;().is_ok())
+        {
+            <span class="kw">continue</span>;
+        }
+
+        <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
+        <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;().unwrap();
+        <span class="kw">let </span>cameras = world.components.get::&lt;bones::Camera&gt;().unwrap();
+
+        <span class="comment">// Sync cameras
+        </span><span class="kw">for </span>(_ent, (transform, camera)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>transforms, <span class="kw-2">&amp;</span>cameras)) {
+            <span class="comment">// Add each camera to the bevy world
+            </span>add_bones_camera(camera, transform)
+        }
+    }
+
+    <span class="comment">// Delete any remaining bevy cameras that don&#39;t have bones equivalents.
+    </span><span class="kw">for </span>remaining_ent <span class="kw">in </span>bevy_bones_cameras {
+        commands.entity(remaining_ent).despawn()
+    }
+}
+
+<span class="kw">fn </span>extract_bones_sprites(
+    <span class="kw-2">mut </span>extracted_sprites: ResMut&lt;ExtractedSprites&gt;,
+    data: Extract&lt;Res&lt;BonesData&gt;&gt;,
+    bones_image_ids: Extract&lt;Res&lt;BonesImageIds&gt;&gt;,
+    bones_renderable_entity: Extract&lt;Res&lt;BonesGameEntity&gt;&gt;,
+) {
+    <span class="kw">let </span>game = <span class="kw-2">&amp;</span>data.game;
+    <span class="kw">let </span>bones_assets = data.asset_server.borrow();
+
+    <span class="kw">for </span>session_name <span class="kw">in </span><span class="kw-2">&amp;</span>game.sorted_session_keys {
+        <span class="kw">let </span>session = game.sessions.get(<span class="kw-2">*</span>session_name).unwrap();
+        <span class="kw">if </span>!session.visible {
+            <span class="kw">continue</span>;
+        }
+
+        <span class="kw">let </span>world = <span class="kw-2">&amp;</span>session.world;
+
+        <span class="comment">// Skip worlds without cameras and transforms
+        </span><span class="kw">if </span>!(world.components.get_cell::&lt;bones::Transform&gt;().is_ok()
+            &amp;&amp; world.components.get_cell::&lt;bones::Camera&gt;().is_ok()
+            &amp;&amp; (world.components.get_cell::&lt;bones::Sprite&gt;().is_ok()
+                || world.components.get_cell::&lt;bones::AtlasSprite&gt;().is_ok()))
+        {
+            <span class="kw">continue</span>;
+        }
+
+        <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
+        <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;().unwrap();
+
+        <span class="comment">// Extract normal sprites
+        </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(sprites) = world.components.get::&lt;bones::Sprite&gt;() {
+            <span class="kw">for </span>(<span class="kw">_</span>, (sprite, transform)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>sprites, <span class="kw-2">&amp;</span>transforms)) {
+                <span class="kw">let </span>sprite_image = bones_assets.get(sprite.image);
+                <span class="kw">let </span>image_id = <span class="kw">if let </span>bones::Image::External(id) = sprite_image {
+                    <span class="kw-2">*</span>id
+                } <span class="kw">else </span>{
+                    <span class="macro">panic!</span>(
+                        <span class="string">&quot;Images added at runtime not supported yet, \
+                please open an issue.&quot;
+                    </span>);
+                };
+                extracted_sprites.sprites.push(ExtractedSprite {
+                    entity: bones_renderable_entity.<span class="number">0</span>,
+                    transform: transform.into_bevy().into(),
+                    color: sprite.color.into_bevy(),
+                    rect: <span class="prelude-val">None</span>,
+                    custom_size: <span class="prelude-val">None</span>,
+                    image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
+                    flip_x: sprite.flip_x,
+                    flip_y: sprite.flip_y,
+                    anchor: Vec2::ZERO,
+                })
+            }
+        }
+
+        <span class="comment">// Extract atlas sprites
+        </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(atlas_sprites) = world.components.get::&lt;bones::AtlasSprite&gt;() {
+            <span class="kw">for </span>(<span class="kw">_</span>, (atlas_sprite, transform)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>atlas_sprites, <span class="kw-2">&amp;</span>transforms))
+            {
+                <span class="kw">let </span>atlas = bones_assets.get(atlas_sprite.atlas);
+                <span class="kw">let </span>atlas_image = bones_assets.get(atlas.image);
+                <span class="kw">let </span>image_id = <span class="kw">if let </span>bones::Image::External(id) = atlas_image {
+                    <span class="kw-2">*</span>id
+                } <span class="kw">else </span>{
+                    <span class="macro">panic!</span>(
+                        <span class="string">&quot;Images added at runtime not supported yet, \
+                        please open an issue.&quot;
+                    </span>);
+                };
+                <span class="kw">let </span>index = atlas_sprite.index;
+                <span class="kw">let </span>y = index / atlas.columns;
+                <span class="kw">let </span>x = index - (y * atlas.columns);
+                <span class="kw">let </span>cell = Vec2::new(x <span class="kw">as </span>f32, y <span class="kw">as </span>f32);
+                <span class="kw">let </span>current_padding = atlas.padding
+                    * Vec2::new(<span class="kw">if </span>x &gt; <span class="number">0 </span>{ <span class="number">1.0 </span>} <span class="kw">else </span>{ <span class="number">0.0 </span>}, <span class="kw">if </span>y &gt; <span class="number">0 </span>{ <span class="number">1.0 </span>} <span class="kw">else </span>{ <span class="number">0.0 </span>});
+                <span class="kw">let </span>min = (atlas.tile_size + current_padding) * cell + atlas.offset;
+                <span class="kw">let </span>rect = Rect {
+                    min,
+                    max: min + atlas.tile_size,
+                };
+                extracted_sprites.sprites.push(ExtractedSprite {
+                    entity: bones_renderable_entity.<span class="number">0</span>,
+                    transform: transform.into_bevy().into(),
+                    color: atlas_sprite.color.into_bevy(),
+                    rect: <span class="prelude-val">Some</span>(rect),
+                    custom_size: <span class="prelude-val">None</span>,
+                    image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
+                    flip_x: atlas_sprite.flip_x,
+                    flip_y: atlas_sprite.flip_y,
+                    anchor: Vec2::ZERO,
+                })
+            }
+        }
+    }
+}
+
+<span class="kw">fn </span>extract_bones_tilemaps(
+    <span class="kw-2">mut </span>extracted_sprites: ResMut&lt;ExtractedSprites&gt;,
+    data: Extract&lt;Res&lt;BonesData&gt;&gt;,
+    bones_image_ids: Extract&lt;Res&lt;BonesImageIds&gt;&gt;,
+    bones_renderable_entity: Extract&lt;Res&lt;BonesGameEntity&gt;&gt;,
+) {
+    <span class="kw">let </span>game = <span class="kw-2">&amp;</span>data.game;
+    <span class="kw">let </span>bones_assets = data.asset_server.borrow();
+
+    <span class="kw">for </span>session_name <span class="kw">in </span><span class="kw-2">&amp;</span>game.sorted_session_keys {
+        <span class="kw">let </span>session = game.sessions.get(<span class="kw-2">*</span>session_name).unwrap();
+        <span class="kw">if </span>!session.visible {
+            <span class="kw">continue</span>;
+        }
+
+        <span class="kw">let </span>world = <span class="kw-2">&amp;</span>session.world;
+
+        <span class="comment">// Skip worlds without cameras renderable tile layers
+        </span><span class="kw">if </span>!(world.components.get_cell::&lt;bones::Transform&gt;().is_ok()
+            &amp;&amp; world.components.get_cell::&lt;bones::Camera&gt;().is_ok()
+            &amp;&amp; world.components.get_cell::&lt;bones::TileLayer&gt;().is_ok())
+        {
+            <span class="kw">continue</span>;
+        }
+
+        <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
+        <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;().unwrap();
+        <span class="kw">let </span>tile_layers = world.components.get::&lt;bones::TileLayer&gt;().unwrap();
+        <span class="kw">let </span>tiles = world.components.get::&lt;bones::Tile&gt;().unwrap();
+
+        <span class="comment">// Extract tiles as sprites
+        </span><span class="kw">for </span>(<span class="kw">_</span>, (tile_layer, transform)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>tile_layers, <span class="kw-2">&amp;</span>transforms)) {
+            <span class="kw">let </span>atlas = bones_assets.get(tile_layer.atlas);
+            <span class="kw">let </span>atlas_image = bones_assets.get(atlas.image);
+            <span class="kw">let </span>image_id = <span class="kw">if let </span>bones::Image::External(id) = atlas_image {
+                <span class="kw-2">*</span>id
+            } <span class="kw">else </span>{
+                <span class="macro">panic!</span>(
+                    <span class="string">&quot;Images added at runtime not supported yet, \
+                        please open an issue.&quot;
+                </span>);
+            };
+
+            <span class="kw">for </span>(tile_pos_idx, tile_ent) <span class="kw">in </span>tile_layer.tiles.iter().enumerate() {
+                <span class="kw">let </span><span class="prelude-val">Some</span>(tile_ent) = tile_ent <span class="kw">else </span>{ <span class="kw">continue </span>};
+                <span class="kw">let </span>tile = tiles.get(<span class="kw-2">*</span>tile_ent).unwrap();
+
+                <span class="kw">let </span>tile_pos = tile_layer.pos(tile_pos_idx <span class="kw">as </span>u32);
+                <span class="kw">let </span>tile_offset = tile_pos.as_vec2() * tile_layer.tile_size;
+
+                <span class="kw">let </span>sprite_idx = tile.idx;
+                <span class="kw">let </span>y = sprite_idx / atlas.columns;
+                <span class="kw">let </span>x = sprite_idx - (y * atlas.columns);
+                <span class="kw">let </span>cell = Vec2::new(x <span class="kw">as </span>f32, y <span class="kw">as </span>f32);
+                <span class="kw">let </span>current_padding = atlas.padding
+                    * Vec2::new(<span class="kw">if </span>x &gt; <span class="number">0 </span>{ <span class="number">1.0 </span>} <span class="kw">else </span>{ <span class="number">0.0 </span>}, <span class="kw">if </span>y &gt; <span class="number">0 </span>{ <span class="number">1.0 </span>} <span class="kw">else </span>{ <span class="number">0.0 </span>});
+                <span class="kw">let </span>min = (atlas.tile_size + current_padding) * cell + atlas.offset;
+                <span class="kw">let </span>rect = Rect {
+                    min,
+                    max: min + atlas.tile_size,
+                };
+                <span class="kw">let </span><span class="kw-2">mut </span>transform = transform.into_bevy();
+                transform.translation += tile_offset.extend(<span class="number">0.0</span>);
+                extracted_sprites.sprites.push(ExtractedSprite {
+                    entity: bones_renderable_entity.<span class="number">0</span>,
+                    transform: transform.into(),
+                    color: Color::WHITE,
+                    rect: <span class="prelude-val">Some</span>(rect),
+                    custom_size: <span class="prelude-val">None</span>,
+                    image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
+                    flip_x: tile.flip_x,
+                    flip_y: tile.flip_y,
+                    anchor: Vec2::ZERO,
+                })
+            }
+        }
+    }
+}
+
+<span class="kw">fn </span>sync_bones_path2ds(
+    data: Res&lt;BonesData&gt;,
+    <span class="kw-2">mut </span>commands: Commands,
     <span class="kw-2">mut </span>bevy_bones_path2ds: Query&lt;
-        (Entity, <span class="kw-2">&amp;mut </span>lyon::Path, <span class="kw-2">&amp;mut </span>lyon::DrawMode, <span class="kw-2">&amp;mut </span>Transform),
+        (Entity, <span class="kw-2">&amp;mut </span>lyon::Path, <span class="kw-2">&amp;mut </span>lyon::Stroke, <span class="kw-2">&amp;mut </span>Transform),
         With&lt;BevyBonesEntity&gt;,
     &gt;,
 ) {
-    <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
-        bevy_bones_path2ds.for_each(|(e, ..)| commands.entity(e).despawn());
-        <span class="kw">return</span>;
-    };
+    <span class="kw">let </span>game = <span class="kw-2">&amp;</span>data.game;
 
-    <span class="kw">let </span>world = world_resource.world();
+    <span class="comment">// Collect the bevy path2ds that we&#39;ve created for the bones game
+    </span><span class="kw">let </span><span class="kw-2">mut </span>bevy_bones_path2ds = bevy_bones_path2ds.iter_mut();
 
-    world.components.init::&lt;bones::Path2d&gt;();
-    world.components.init::&lt;bones::Transform&gt;();
+    <span class="comment">// Create a helper callback to add/update a bones path2d into the bevy world
+    </span><span class="kw">let </span><span class="kw-2">mut </span>add_bones_path2d = |bones_path2d: <span class="kw-2">&amp;</span>bones::Path2d,
+                                bones_transform: <span class="kw-2">&amp;</span>bones::Transform| {
+        <span class="comment">// Get or create components for the entity
+        </span><span class="kw">let </span><span class="kw-2">mut </span>new_components = <span class="prelude-val">None</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>existing_components;
+        <span class="kw">let </span>(path, stroke, transform) = <span class="kw">match </span>bevy_bones_path2ds.next() {
+            <span class="prelude-val">Some</span>((_ent, path, stroke, transform)) =&gt; {
+                existing_components = (path, stroke, transform);
+                <span class="kw">let </span>(path, stroke, transform) = <span class="kw-2">&amp;mut </span>existing_components;
+                (<span class="kw-2">&amp;mut **</span>path, <span class="kw-2">&amp;mut **</span>stroke, <span class="kw-2">&amp;mut **</span>transform)
+            }
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw">let </span>bundle = lyon::ShapeBundle::default();
+                new_components = <span class="prelude-val">Some</span>((
+                    bundle.path,
+                    lyon::Stroke::new(Color::default(), <span class="number">1.0</span>),
+                    bundle.transform,
+                ));
+                <span class="kw">let </span>(path, stroke, transform) = new_components.as_mut().unwrap();
+                (path, stroke, transform)
+            }
+        };
 
-    <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
-    <span class="kw">let </span>entities = entities.borrow();
-    <span class="kw">let </span>path2ds = world.components.get::&lt;bones::Path2d&gt;();
-    <span class="kw">let </span>path2ds = path2ds.borrow();
-    <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;();
-    <span class="kw">let </span>transforms = transforms.borrow();
-
-    <span class="kw">fn </span>get_bevy_components(
-        bones_path2d: <span class="kw-2">&amp;</span>bones::Path2d,
-        bones_transform: <span class="kw-2">&amp;</span>bones::Transform,
-    ) -&gt; (lyon::DrawMode, lyon::Path, Transform) {
-        <span class="kw">let </span>draw_mode = lyon::DrawMode::Stroke(lyon::StrokeMode::new(
-            bones_path2d.color.into_bevy(),
-            bones_path2d.thickness,
-        ));
-        <span class="kw">let </span>new_path = bones_path2d
+        <span class="comment">// Update the components
+        </span><span class="kw-2">*</span>stroke = lyon::Stroke::new(bones_path2d.color.into_bevy(), bones_path2d.thickness);
+        <span class="kw-2">*</span>path = bones_path2d
             .points
             .iter()
             .copied()
@@ -1134,65 +1365,53 @@
                 builder
             })
             .build();
-
-        <span class="kw">let </span><span class="kw-2">mut </span>transform = bones_transform.into_bevy();
+        <span class="kw-2">*</span>transform = bones_transform.into_bevy();
         <span class="comment">// Offset the path towards the camera slightly to make sure it renders on top of a
         // sprite/etc. if it is applied to an entity with both a sprite and a path.
         </span>transform.translation.z += <span class="number">0.0001</span>;
-        (draw_mode, new_path, transform)
-    }
 
-    <span class="comment">// Sync paths
-    </span><span class="kw">let </span><span class="kw-2">mut </span>path2ds_bitset = path2ds.bitset().clone();
-    path2ds_bitset.bit_and(transforms.bitset());
-    <span class="kw">let </span><span class="kw-2">mut </span>bones_sprite_entity_iter = entities.iter_with_bitset(<span class="kw-2">&amp;</span>path2ds_bitset);
-    <span class="kw">for </span>(bevy_ent, <span class="kw-2">mut </span>path, <span class="kw-2">mut </span>draw_mode, <span class="kw-2">mut </span>transform) <span class="kw">in </span><span class="kw-2">&amp;mut </span>bevy_bones_path2ds {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(bones_ent) = bones_sprite_entity_iter.next() {
-            <span class="kw">let </span>bones_path2d = path2ds.get(bones_ent).unwrap();
-            <span class="kw">let </span>bones_transform = transforms.get(bones_ent).unwrap();
+        <span class="comment">// Spawn the shape if it doesn&#39;t already exist
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>((path, stroke, transform)) = new_components {
+            commands
+                .spawn(lyon::ShapeBundle {
+                    path,
+                    transform,
+                    ..default()
+                })
+                .insert(stroke)
+                .insert(BevyBonesEntity);
+        }
+    };
 
-            (<span class="kw-2">*</span>draw_mode, <span class="kw-2">*</span>path, <span class="kw-2">*</span>transform) = get_bevy_components(bones_path2d, bones_transform);
-        } <span class="kw">else </span>{
-            commands.entity(bevy_ent).despawn();
+    <span class="kw">for </span>session_name <span class="kw">in </span><span class="kw-2">&amp;</span>game.sorted_session_keys {
+        <span class="kw">let </span>session = game.sessions.get(<span class="kw-2">*</span>session_name).unwrap();
+        <span class="kw">if </span>!session.visible {
+            <span class="kw">continue</span>;
+        }
+
+        <span class="kw">let </span>world = <span class="kw-2">&amp;</span>session.world;
+
+        <span class="comment">// Skip worlds without cameras renderable tile layers
+        </span><span class="kw">if </span>!(world.components.get_cell::&lt;bones::Transform&gt;().is_ok()
+            &amp;&amp; world.components.get_cell::&lt;bones::Camera&gt;().is_ok()
+            &amp;&amp; world.components.get_cell::&lt;bones::Path2d&gt;().is_ok())
+        {
+            <span class="kw">continue</span>;
+        }
+
+        <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
+        <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;().unwrap();
+        <span class="kw">let </span>path2ds = world.components.get::&lt;bones::Path2d&gt;().unwrap();
+
+        <span class="comment">// Extract tiles as sprites
+        </span><span class="kw">for </span>(<span class="kw">_</span>, (path2d, transform)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>path2ds, <span class="kw-2">&amp;</span>transforms)) {
+            add_bones_path2d(path2d, transform);
         }
     }
-    <span class="kw">for </span>bones_ent <span class="kw">in </span>bones_sprite_entity_iter {
-        <span class="kw">let </span>bones_path2d = path2ds.get(bones_ent).unwrap();
-        <span class="kw">let </span>bones_transform = transforms.get(bones_ent).unwrap();
 
-        <span class="kw">let </span>(draw_mode, path, transform) = get_bevy_components(bones_path2d, bones_transform);
-
-        commands.spawn((
-            lyon::GeometryBuilder::build_as(<span class="kw-2">&amp;</span>path, draw_mode, transform),
-            BevyBonesEntity,
-        ));
+    <span class="comment">// Despawn extra path 2ds
+    </span><span class="kw">for </span>(ent, ..) <span class="kw">in </span>bevy_bones_path2ds {
+        commands.entity(ent).despawn()
     }
 }
-
-<span class="doccomment">/// The system that renders the bones world.
-</span><span class="kw">fn </span>sync_time&lt;W: HasBonesWorld&gt;(
-    world_resource: <span class="prelude-ty">Option</span>&lt;ResMut&lt;W&gt;&gt;,
-    bevy_time: Res&lt;bevy::prelude::Time&gt;,
-) {
-    <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>world_resource) = world_resource <span class="kw">else </span>{
-        <span class="kw">return</span>;
-    };
-    <span class="kw">let </span>world = world_resource.world();
-
-    <span class="comment">// Initialize the time resource if it doesn&#39;t exist.
-    </span><span class="kw">if </span>world.get_resource::&lt;bones_lib::prelude::Time&gt;().is_none() {
-        world.init_resource::&lt;bones_lib::prelude::Time&gt;();
-    }
-
-    <span class="kw">let </span>time = world.resource::&lt;bones_lib::prelude::Time&gt;();
-    <span class="kw">let </span><span class="kw-2">mut </span>time = time.borrow_mut();
-
-    <span class="comment">// Use the Bevy time if it&#39;s available, otherwise use the default time.
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(instant) = bevy_time.last_update() {
-        time.update_with_instant(instant);
-    } <span class="kw">else </span>{
-        time.update();
-    }
-}
-</code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_bevy_renderer" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.1 (d5a82bbd2 2023-02-07)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</code></pre></div></section></main></body></html>

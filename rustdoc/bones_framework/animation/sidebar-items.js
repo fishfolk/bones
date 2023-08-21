@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["animate_sprites","plugin","update_animation_banks"],"struct":["AnimatedSprite","AnimationBankSprite"]};

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/bones_ecs/src/components/iterator.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>iterator.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-6827029ac823cab7.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-ebce58d0a40c3431.css"><link rel="stylesheet" disabled href="../../../static.files/dark-f23faae4a2daf9a6.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-8af5e100b21cd173.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-c55e1eb52e1886b4.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../bones_ecs/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_ecs/src/components/iterator.rs`."><title>iterator.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.1 (eb26296b5 2023-08-03)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../bones_ecs/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -108,102 +108,19 @@
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-</pre><pre class="rust"><code><span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// Read-only iterator over components matching a given bitset
-</span><span class="kw">pub struct </span>ComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    iter: UntypedComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>&gt;,
-    _phantom: PhantomData&lt;T&gt;,
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T&gt; ComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    <span class="doccomment">/// # Safety
-    /// The untyped iterator must be valid for type T.
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>new(iter: UntypedComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            iter,
-            _phantom: PhantomData,
-        }
-    }
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: <span class="lifetime">&#39;static</span>&gt; Iterator <span class="kw">for </span>ComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T;
-
-    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
-        <span class="self">self</span>.iter
-            .next()
-            <span class="comment">// SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
-            // is valid for type T.
-            </span>.map(|x| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(x <span class="kw">as </span><span class="kw-2">*const </span>T) })
-    }
-}
+</span><span class="kw">pub type </span>ComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>, T&gt; =
+    std::iter::Map&lt;UntypedComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>&gt;, <span class="kw">for</span>&lt;<span class="lifetime">&#39;b</span>&gt; <span class="kw">fn</span>(SchemaRef&lt;<span class="lifetime">&#39;b</span>&gt;) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>T&gt;;
 
 <span class="doccomment">/// Mutable iterator over components matching a given bitset
-</span><span class="kw">pub struct </span>ComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    iter: UntypedComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>&gt;,
-    _phantom: PhantomData&lt;T&gt;,
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T&gt; ComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    <span class="doccomment">/// # Safety
-    /// The untyped iterator must be valid for type T.
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>new(iter: UntypedComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            iter,
-            _phantom: PhantomData,
-        }
-    }
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: <span class="lifetime">&#39;static</span>&gt; Iterator <span class="kw">for </span>ComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>T;
-
-    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
-        <span class="self">self</span>.iter
-            .next()
-            <span class="comment">// SAFE: It is unsafe to construct this iterator, and user affirms that untyped iterator
-            // is valid for type T.
-            </span>.map(|x| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(x <span class="kw">as </span><span class="kw-2">*mut </span>T) })
-    }
-}
+</span><span class="kw">pub type </span>ComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>, T&gt; = std::iter::Map&lt;
+    UntypedComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>&gt;,
+    <span class="kw">for</span>&lt;<span class="lifetime">&#39;b</span>&gt; <span class="kw">fn</span>(SchemaRefMut&lt;<span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;b</span>&gt;) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span>T,
+&gt;;
 
 <span class="doccomment">/// Iterates over components using a provided bitset. Each time the bitset has a 1 in index i, the
 /// iterator will fetch data from the storage at index i and return it.
@@ -214,10 +131,9 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>UntypedComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = <span class="kw-2">*const </span>u8;
+    <span class="kw">type </span>Item = SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;;
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>max_id = <span class="self">self</span>.components.max_id;
-        <span class="kw">let </span>size = <span class="self">self</span>.components.layout.size();
         <span class="kw">while </span>!(<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id)
             &amp;&amp; <span class="self">self</span>.components.bitset.bit_test(<span class="self">self</span>.current_id))
             &amp;&amp; <span class="self">self</span>.current_id &lt;= max_id
@@ -225,9 +141,16 @@
             <span class="self">self</span>.current_id += <span class="number">1</span>;
         }
         <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt;= max_id {
-            <span class="kw">let </span>offset = <span class="self">self</span>.current_id * size;
             <span class="comment">// SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
-            </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.components.storage.as_ptr().add(offset) })
+            </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{
+                SchemaRef::from_ptr_schema(
+                    <span class="self">self</span>.components
+                        .storage
+                        .unchecked_idx(<span class="self">self</span>.current_id)
+                        .as_ptr(),
+                    <span class="self">self</span>.components.schema,
+                )
+            })
         } <span class="kw">else </span>{
             <span class="prelude-val">None
         </span>};
@@ -245,10 +168,9 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>UntypedComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = <span class="kw-2">*mut </span>u8;
+    <span class="kw">type </span>Item = SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;;
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>max_id = <span class="self">self</span>.components.max_id;
-        <span class="kw">let </span>size = <span class="self">self</span>.components.layout.size();
         <span class="kw">while </span>!(<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id)
             &amp;&amp; <span class="self">self</span>.components.bitset.bit_test(<span class="self">self</span>.current_id))
             &amp;&amp; <span class="self">self</span>.current_id &lt;= max_id
@@ -256,9 +178,17 @@
             <span class="self">self</span>.current_id += <span class="number">1</span>;
         }
         <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt;= max_id {
-            <span class="kw">let </span>offset = <span class="self">self</span>.current_id * size;
-            <span class="comment">// SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
-            </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.components.storage.as_mut_ptr().add(offset) })
+            <span class="comment">// SAFE: We know that the index is within bounds, and we know that the pointer will be
+            // valid for the new lifetime.
+            </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{
+                SchemaRefMut::from_ptr_schema(
+                    <span class="self">self</span>.components
+                        .storage
+                        .unchecked_idx_mut(<span class="self">self</span>.current_id)
+                        .as_ptr(),
+                    <span class="self">self</span>.components.schema,
+                )
+            })
         } <span class="kw">else </span>{
             <span class="prelude-val">None
         </span>};
@@ -271,8 +201,8 @@
 </span><span class="kw">mod </span>test {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="attr">#[derive(Clone, TypeUlid)]
-    #[ulid = <span class="string">&quot;01GNZ7A42K6KTPTFEQ3T445DNZ&quot;</span>]
+    <span class="attr">#[derive(Clone, HasSchema, Default)]
+    #[schema(opaque)]
     </span><span class="kw">struct </span>A;
 
     <span class="attr">#[test]
@@ -288,5 +218,4 @@
         <span class="macro">assert_eq!</span>(components.iter_mut_with_bitset(bitset).count(), <span class="number">0</span>);
     }
 }
-</code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.1 (d5a82bbd2 2023-02-07)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</code></pre></div></section></main></body></html>

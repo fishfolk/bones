@@ -1,3 +1,0 @@
-(function() {var implementors = {
-"bones_bevy_renderer":[["impl StageLabel for <a class=\"enum\" href=\"bones_bevy_renderer/enum.BonesStage.html\" title=\"enum bones_bevy_renderer::BonesStage\">BonesStage</a><span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;Self: 'static,</span>"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

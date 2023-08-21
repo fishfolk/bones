@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/bones_ecs/src/world.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>world.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-6827029ac823cab7.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-ebce58d0a40c3431.css"><link rel="stylesheet" disabled href="../../static.files/dark-f23faae4a2daf9a6.css"><link rel="stylesheet" disabled href="../../static.files/ayu-8af5e100b21cd173.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-c55e1eb52e1886b4.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../bones_ecs/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_ecs/src/world.rs`."><title>world.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-f3501f0f5ae15dfb.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.1 (eb26296b5 2023-08-03)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-f0540c1d82cde29b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../bones_ecs/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -328,13 +328,7 @@
 <a href="#328" id="328">328</a>
 <a href="#329" id="329">329</a>
 <a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-</pre><pre class="rust"><code><span class="doccomment">//! Contains the ECS [`World`].
+</pre></div><pre class="rust"><code><span class="doccomment">//! Contains the ECS [`World`].
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
@@ -348,9 +342,14 @@
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>World {
     <span class="doccomment">/// Stores the world resources.
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) resources: Resources,
+    </span><span class="kw">pub </span>resources: Resources,
     <span class="doccomment">/// Stores the world components.
     </span><span class="kw">pub </span>components: ComponentStores,
+}
+<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>World {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">&quot;World&quot;</span>).finish()
+    }
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>World {
@@ -380,8 +379,7 @@
     /// This will remove the component storage for all killed entities, and allow their slots to be
     /// re-used for any new entities.
     </span><span class="kw">pub fn </span>maintain(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">let </span>entities = <span class="self">self</span>.resources.get::&lt;Entities&gt;();
-        <span class="kw">let </span><span class="kw-2">mut </span>entities = entities.borrow_mut();
+        <span class="kw">let </span><span class="kw-2">mut </span>entities = <span class="self">self</span>.resources.get_mut::&lt;Entities&gt;().unwrap();
 
         <span class="kw">for </span>components <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.components.components.values_mut() {
             <span class="kw">let </span><span class="kw-2">mut </span>components = components.borrow_mut();
@@ -390,7 +388,7 @@
                 <span class="comment">// Safe: We don&#39;t provide an out pointer, so it doesn&#39;t overlap the component&#39;s
                 // internal storage.
                 </span><span class="kw">unsafe </span>{
-                    components.remove(entity, <span class="prelude-val">None</span>);
+                    components.remove_raw(entity, <span class="prelude-val">None</span>);
                 }
             }
         }
@@ -429,47 +427,56 @@
     }
 
     <span class="doccomment">/// Initialize a resource of type `T` by inserting it&#39;s default value.
-    </span><span class="kw">pub fn </span>init_resource&lt;R: TypedEcsData + FromWorld&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    </span><span class="kw">pub fn </span>init_resource&lt;R: HasSchema + FromWorld&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">if </span>!<span class="self">self</span>.resources.contains::&lt;R&gt;() {
             <span class="kw">let </span>value = R::from_world(<span class="self">self</span>);
-            <span class="self">self</span>.resources.insert(value)
+            <span class="self">self</span>.resources.insert(value);
         }
     }
 
     <span class="doccomment">/// Insert a resource.
-    ///
-    /// # Panics
-    ///
-    /// Panics if you try to insert a Rust type with a different [`std::any::TypeId`], but the same
-    /// [`TypeUlid`] as another resource in the store.
-    </span><span class="kw">pub fn </span>insert_resource&lt;R: TypedEcsData&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: R) {
+    </span><span class="kw">pub fn </span>insert_resource&lt;R: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: R) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;R&gt;&gt; {
         <span class="self">self</span>.resources.insert(resource)
     }
 
-    <span class="doccomment">/// Get a resource handle from the store.
-    ///
-    /// This is not the resource itself, but a handle, may be cloned cheaply.
-    ///
-    /// In order to access the resource you must call [`borrow()`][AtomicResource::borrow] or
-    /// [`borrow_mut()`][AtomicResource::borrow_mut] on the returned value.
-    ///
+    <span class="doccomment">/// Borrow a resource from the world.
     /// # Panics
-    ///
     /// Panics if the resource does not exist in the store.
-    </span><span class="kw">pub fn </span>resource&lt;R: TypedEcsData&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicResource&lt;R&gt; {
-        <span class="kw">match </span><span class="self">self</span>.resources.try_get::&lt;R&gt;() {
+    </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicRef&lt;T&gt; {
+        <span class="kw">match </span><span class="self">self</span>.resources.get::&lt;T&gt;() {
             <span class="prelude-val">Some</span>(r) =&gt; r,
             <span class="prelude-val">None </span>=&gt; <span class="macro">panic!</span>(
                 <span class="string">&quot;Requested resource {} does not exist in the `World`.
                 Did you forget to add it using `world.insert_resource` / `world.init_resource`?&quot;</span>,
-                std::any::type_name::&lt;R&gt;()
+                std::any::type_name::&lt;T&gt;()
             ),
         }
     }
 
-    <span class="doccomment">/// Gets a resource handle from the store if it exists.
-    </span><span class="kw">pub fn </span>get_resource&lt;R: TypedEcsData&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;R&gt;&gt; {
-        <span class="self">self</span>.resources.try_get::&lt;R&gt;()
+    <span class="doccomment">/// Borrow a resource from the world.
+    /// # Panics
+    /// Panics if the resource does not exist in the store.
+    </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; AtomicRefMut&lt;T&gt; {
+        <span class="kw">match </span><span class="self">self</span>.resources.get_mut::&lt;T&gt;() {
+            <span class="prelude-val">Some</span>(r) =&gt; r,
+            <span class="prelude-val">None </span>=&gt; <span class="macro">panic!</span>(
+                <span class="string">&quot;Requested resource {} does not exist in the `World`.
+                Did you forget to add it using `world.insert_resource` / `world.init_resource`?&quot;</span>,
+                std::any::type_name::&lt;T&gt;()
+            ),
+        }
+    }
+
+    <span class="doccomment">/// Borrow a resource from the world, if it exists.
+    </span><span class="kw">pub fn </span>get_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicRef&lt;T&gt;&gt; {
+        <span class="self">self</span>.resources.get()
+    }
+
+    <span class="doccomment">/// Borrow a resource from the world, if it exists.
+    </span><span class="kw">pub fn </span>get_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicRefMut&lt;T&gt;&gt; {
+        <span class="self">self</span>.resources.get_mut()
     }
 }
 
@@ -494,16 +501,16 @@
 
     <span class="kw">use </span><span class="kw">super</span>::FromWorld;
 
-    <span class="attr">#[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
-    #[ulid = <span class="string">&quot;01GNDN2QYC1TRE763R54HVWZ0W&quot;</span>]
+    <span class="attr">#[derive(Clone, HasSchema, Debug, Eq, PartialEq, Default)]
+    #[repr(C)]
     </span><span class="kw">struct </span>Pos(i32, i32);
 
-    <span class="attr">#[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
-    #[ulid = <span class="string">&quot;01GNDN3HCY2F1SGYE8Z0GGDMXB&quot;</span>]
+    <span class="attr">#[derive(Clone, HasSchema, Debug, Eq, PartialEq, Default)]
+    #[repr(C)]
     </span><span class="kw">struct </span>Vel(i32, i32);
 
-    <span class="attr">#[derive(Clone, TypeUlid, Debug, Eq, PartialEq)]
-    #[ulid = <span class="string">&quot;01GNDN3QJD1SP7ANTZ0TG6Q804&quot;</span>]
+    <span class="attr">#[derive(Clone, HasSchema, Debug, Eq, PartialEq, Default)]
+    #[schema(opaque)]
     </span><span class="kw">struct </span>Marker;
 
     <span class="comment">// Sets up the world with a couple entities.
@@ -616,23 +623,6 @@
     }
 
     <span class="attr">#[test]
-    #[should_panic(expected = <span class="string">&quot;TypeUlidCollision&quot;</span>)]
-    </span><span class="kw">fn </span>no_duplicate_component_uuids() {
-        <span class="attr">#[derive(Clone, TypeUlid)]
-        #[ulid = <span class="string">&quot;01GNDN440Q4FYH34TY8MV8CTTB&quot;</span>]
-        </span><span class="kw">struct </span>A;
-
-        <span class="doccomment">/// This struct has the same UUID as struct [`A`]. Big no no!!
-        </span><span class="attr">#[derive(Clone, TypeUlid)]
-        #[ulid = <span class="string">&quot;01GNDN440Q4FYH34TY8MV8CTTB&quot;</span>]
-        </span><span class="kw">struct </span>B;
-
-        <span class="kw">let </span><span class="kw-2">mut </span>w = World::default();
-        w.components.init::&lt;A&gt;();
-        w.components.init::&lt;B&gt;();
-    }
-
-    <span class="attr">#[test]
     </span><span class="kw">fn </span>world_is_send() {
         send(World::new())
     }
@@ -643,17 +633,16 @@
     //  From World
     // ============
 
-    </span><span class="attr">#[derive(Clone, TypeUlid)]
-    #[ulid = <span class="string">&quot;01GRWJV4NRXY9NJBBDMD2D9QK3&quot;</span>]
+    </span><span class="attr">#[derive(Clone, HasSchema, Default)]
+    #[schema(opaque)]
     </span><span class="kw">struct </span>TestResource(u32);
 
-    <span class="attr">#[derive(Clone, TypeUlid)]
-    #[ulid = <span class="string">&quot;01GRWJW44YGNSXQ81W395J0D52&quot;</span>]
+    <span class="attr">#[derive(Clone, HasSchema)]
+    #[schema(opaque, no_default)]
     </span><span class="kw">struct </span>TestFromWorld(u32);
     <span class="kw">impl </span>FromWorld <span class="kw">for </span>TestFromWorld {
         <span class="kw">fn </span>from_world(world: <span class="kw-2">&amp;mut </span>World) -&gt; <span class="self">Self </span>{
             <span class="kw">let </span>b = world.resource::&lt;TestResource&gt;();
-            <span class="kw">let </span>b = b.borrow();
             <span class="self">Self</span>(b.<span class="number">0</span>)
         }
     }
@@ -666,9 +655,7 @@
         w.insert_resource(TestResource(<span class="number">1</span>));
 
         <span class="kw">let </span>resource = w.resource::&lt;TestFromWorld&gt;();
-        <span class="kw">let </span>resource = resource.borrow();
         <span class="macro">assert_eq!</span>(resource.<span class="number">0</span>, <span class="number">0</span>);
     }
 }
-</code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.1 (d5a82bbd2 2023-02-07)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</code></pre></div></section></main></body></html>

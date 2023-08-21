@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["animation","glam","input","lib","localization","params","prelude","render"],"struct":["DefaultPlugin"],"trait":["AssetServerExt"]};
