@@ -75,7 +75,7 @@ impl UntypedHandle {
 // Schema implementations
 //
 
-/// [Type data][TypeDatas] for asset handles.
+/// [Type data][SchemaData::type_data] for asset handles.
 ///
 /// This allows the asset loader to distinguish when a `SomeStruct(u128)` schema layout should be
 /// deserialized as a normal struct or as an asset handle.

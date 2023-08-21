@@ -311,7 +311,7 @@ pub enum Primitive {
 
 /// Trait implemented for types that can produce an instance of themselves from a Rust type.
 ///
-/// This is useful for [type datas][`TypeDatas`], which may be derived for a type if the type data
+/// This is useful for [type datas][`SchemaData::type_data`], which may be derived for a type if the type data
 /// implements [`FromType`] for type that is deriving it.
 pub trait FromType<T> {
     /// Return the data for the type.

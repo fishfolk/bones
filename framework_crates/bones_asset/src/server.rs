@@ -103,7 +103,7 @@ impl AssetServer {
 
     /// Set the [`AssetIo`] implementation.
     ///
-    /// This should almost always be called before calling [`load_assets()`].
+    /// This should almost always be called before calling [`load_assets()`][Self::load_assets].
     pub fn set_io<Io: AssetIo + 'static>(&mut self, io: Io) {
         self.io = Box::new(io);
     }

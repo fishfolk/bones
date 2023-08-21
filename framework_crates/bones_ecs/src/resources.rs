@@ -24,7 +24,7 @@ pub struct UntypedAtomicResource {
 }
 
 impl UntypedAtomicResource {
-    /// Creates a new [`UntypedResource`] storing the given data.
+    /// Creates a new [`UntypedAtomicResource`] storing the given data.
     pub fn new(resource: SchemaBox) -> Self {
         Self {
             schema: resource.schema(),
@@ -32,7 +32,7 @@ impl UntypedAtomicResource {
         }
     }
 
-    /// Create a new [`UntypedResource`] for the given schema, initially populated with the default
+    /// Create a new [`UntypedAtomicResource`] for the given schema, initially populated with the default
     /// value for the schema.
     pub fn from_schema(schema: &'static Schema) -> Self {
         Self {
