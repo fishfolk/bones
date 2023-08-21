@@ -125,10 +125,7 @@ fn main() -> anyhow::Result<()> {
     // Create a FileAssetIo to load assets from the filesystem.
     //
     // We can implement different AssetIo implementations for things web builds or other use-cases.
-    let io = FileAssetIo {
-        core_dir,
-        packs_dir,
-    };
+    let io = FileAssetIo::new(&core_dir, &packs_dir, true);
 
     // Create an asset server that we can load the assets with. We must provide our AssetIo
     // implementation, and the version of our game, which is used to determine if asset packs are

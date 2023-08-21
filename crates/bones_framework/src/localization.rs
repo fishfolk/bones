@@ -57,8 +57,12 @@ impl LocalizationAsset {
     /// Get a localized message.
     pub fn get(&self, id: &str) -> Cow<'_, str> {
         let b = &self.current_bundle.0;
-        let Some(message) = b.get_message(id) else { return Cow::from("") };
-        let Some(value) = message.value() else { return Cow::from("") };
+        let Some(message) = b.get_message(id) else {
+            return Cow::from("");
+        };
+        let Some(value) = message.value() else {
+            return Cow::from("");
+        };
 
         // TODO: Log localization formatting errors.
         //
@@ -70,8 +74,12 @@ impl LocalizationAsset {
     /// Get a localized message with the provided arguments.
     pub fn get_with<'a>(&'a self, id: &'a str, args: &'a FluentArgs) -> Cow<'a, str> {
         let b = &self.current_bundle.0;
-        let Some(message) = b.get_message(id) else { return Cow::from("") };
-        let Some(value) = message.value() else { return Cow::from("") };
+        let Some(message) = b.get_message(id) else {
+            return Cow::from("");
+        };
+        let Some(value) = message.value() else {
+            return Cow::from("");
+        };
 
         b.format_pattern(value, Some(args), &mut vec![])
     }
@@ -178,7 +186,7 @@ impl AssetLoader for FluentResourceLoader {
 struct FluentBundleLoader;
 impl AssetLoader for FluentBundleLoader {
     fn load(&self, mut ctx: AssetLoadCtx, bytes: &[u8]) -> anyhow::Result<SchemaBox> {
-        let self_path = ctx.path;
+        let self_path = ctx.loc.path;
         #[derive(serde::Serialize, serde::Deserialize)]
         struct BundleMeta {
             pub locales: Vec<LanguageIdentifier>,
@@ -207,7 +215,7 @@ impl AssetLoader for FluentBundleLoader {
 struct LocalizationLoader;
 impl AssetLoader for LocalizationLoader {
     fn load(&self, mut ctx: AssetLoadCtx, bytes: &[u8]) -> anyhow::Result<SchemaBox> {
-        let self_path = ctx.path;
+        let self_path = ctx.loc.path;
         #[derive(serde::Serialize, serde::Deserialize)]
         struct LocalizationMeta {
             pub locales: Vec<PathBuf>,

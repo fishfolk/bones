@@ -114,10 +114,7 @@ impl BonesBevyRenderer {
 
             if !asset_server.asset_types.is_empty() {
                 // Configure the AssetIO
-                let io = bones::FileAssetIo {
-                    core_dir: self.asset_dir.clone(),
-                    packs_dir: self.packs_dir.clone(),
-                };
+                let io = bones::FileAssetIo::new(&self.asset_dir, &self.packs_dir, true);
                 asset_server.set_io(io);
 
                 // Load the game assets
@@ -240,6 +237,12 @@ fn step_bones_game(
 
         let mouse_inputs = bones::AtomicResource::new(mouse_inputs);
         let keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
+
+        // Reload assets if necessary
+        game.asset_server().handle_asset_changes(|e| {
+            dbg!(e);
+            // TODO: re-load bevy images that have changed.
+        });
 
         // Step the game simulation
         game.step(|bones_world| {

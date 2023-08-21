@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::OnceLock,
+};
 
 use bones_utils::prelude::*;
 use semver::VersionReq;
@@ -92,6 +95,8 @@ pub struct AssetServer {
     pub asset_types: Vec<&'static Schema>,
     /// Lists the packs that have not been loaded due to an incompatible game version.
     pub incompabile_packs: HashMap<String, PackfileMeta>,
+    /// Channel fro the [`AssetIo`] implementation that is used to detect asset changes.
+    pub asset_changes: OnceLock<Option<async_channel::Receiver<AssetLoc>>>,
 }
 
 impl Default for AssetServer {
@@ -99,9 +104,10 @@ impl Default for AssetServer {
         Self {
             game_version: Version::new(0, 0, 0),
             io: Box::new(DummyIo::new([])),
-            store: Default::default(),
-            asset_types: Default::default(),
-            incompabile_packs: Default::default(),
+            store: default(),
+            asset_types: default(),
+            incompabile_packs: default(),
+            asset_changes: default(),
         }
     }
 }
@@ -122,6 +128,10 @@ pub struct AssetStore {
     pub asset_ids: HashMap<UntypedHandle, Cid>,
     /// Maps asset content IDs, to loaded assets.
     pub assets: HashMap<Cid, LoadedAsset>,
+    /// Maps the asset [`AssetLoc`] to it's handle.
+    pub path_handles: HashMap<AssetLoc, UntypedHandle>,
+    /// List of assets that depend on the given assets.
+    pub reverse_dependencies: HashMap<Cid, HashSet<Cid>>,
 
     /// The core asset pack, if it's been loaded.
     pub core_pack: Option<AssetPack>,
@@ -129,6 +139,58 @@ pub struct AssetStore {
     pub packs: HashMap<AssetPackSpec, AssetPack>,
     /// Maps the directory names of asset packs to their [`AssetPackSpec`].
     pub pack_dirs: HashMap<String, AssetPackSpec>,
+}
+
+/// Contains that path to an asset, and the pack_dir that it was loaded from.
+///
+/// A pack of [`None`] means that it was loaded from the core pack.
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+pub struct AssetLoc {
+    /// The path to the asset in it's pack.
+    pub path: PathBuf,
+    /// The pack_dir of the pack that the asset is in.
+    pub pack: Option<String>,
+}
+
+impl AssetLoc {
+    /// Borrow as an [`AssetLocRef`].
+    pub fn as_ref(&self) -> AssetLocRef {
+        AssetLocRef {
+            pack: self.pack.as_deref(),
+            path: &self.path,
+        }
+    }
+}
+
+impl From<&AssetLocRef<'_>> for AssetLoc {
+    fn from(value: &AssetLocRef<'_>) -> Self {
+        AssetLoc {
+            path: value.path.to_owned(),
+            pack: value.pack.map(|x| x.to_owned()),
+        }
+    }
+}
+
+/// A borrowed version of [`AssetLoc`].
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Copy)]
+pub struct AssetLocRef<'a> {
+    /// The path to the asset in it's pack.
+    pub path: &'a Path,
+    /// The pack_dir of the pack that the asset is in.
+    pub pack: Option<&'a str>,
+}
+
+impl<'a> From<(&'a Path, Option<&'a str>)> for AssetLocRef<'a> {
+    fn from((path, pack): (&'a Path, Option<&'a str>)) -> Self {
+        Self { pack, path }
+    }
+}
+
+impl AssetLocRef<'_> {
+    /// Clone data to an owned [`AssetLoc`].
+    pub fn to_owned(&self) -> AssetLoc {
+        self.into()
+    }
 }
 
 /// An asset that has been loaded.
@@ -140,11 +202,9 @@ pub struct LoadedAsset {
     /// dependencies.
     pub cid: Cid,
     /// The asset pack this was loaded from, or [`None`] if it is from the default pack.
-    pub pack: Option<AssetPackSpec>,
-    /// The name of the directory this pack was loaded from, unless it is from the default pack.
-    pub pack_dir: Option<String>,
-    /// The path in the asset pack that this asset is from.
-    pub path: PathBuf,
+    pub pack_spec: Option<AssetPackSpec>,
+    /// The pack and path the asset was loaded from.
+    pub loc: AssetLoc,
     /// The content IDs of any assets needed by this asset as a dependency.
     pub dependencies: Vec<Cid>,
     /// The loaded data of the asset.
@@ -165,10 +225,8 @@ pub struct AssetInfo {
 pub struct AssetLoadCtx<'a> {
     /// The asset server.
     pub asset_server: &'a mut AssetServer,
-    /// The pack that the asset is being loaded from.
-    pub pack: Option<&'a str>,
-    /// The path that the asset is being loaded from.
-    pub path: &'a Path,
+    /// The location of the asset.
+    pub loc: AssetLocRef<'a>,
     /// The [`Cid`]s of the assets this asset depends on.
     ///
     /// This is automatically updated when calling [`AssetLoadCtx::load_asset`].
@@ -178,7 +236,10 @@ pub struct AssetLoadCtx<'a> {
 impl AssetLoadCtx<'_> {
     /// Load another asset as a child of this asset.
     pub fn load_asset(&mut self, path: &Path) -> anyhow::Result<UntypedHandle> {
-        let handle = self.asset_server.load_asset(path, self.pack)?;
+        let handle = self.asset_server.load_asset(AssetLocRef {
+            path,
+            pack: self.loc.pack,
+        })?;
         let cid = self.asset_server.store.asset_ids.get(&handle).unwrap();
         self.dependencies.push(*cid);
         Ok(handle)

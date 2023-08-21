@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 
 use bones_utils::HashMap;
 
+use crate::{AssetLoc, AssetLocRef};
+
 /// [`AssetIo`] is a trait that is implemented for backends capable of loading all the games assets
 /// and returning the raw bytes stored in asset files.
 pub trait AssetIo: Sync + Send {
@@ -15,19 +17,10 @@ pub trait AssetIo: Sync + Send {
     ///
     /// The `pack_folder` is the name of a folder returned by
     /// [`enumerate_packs()`][Self::enumerate_packs], or [`None`] to refer to the core pack.
-    fn load_file(&self, pack_folder: Option<&str>, path: &Path) -> anyhow::Result<Vec<u8>>;
+    fn load_file(&self, loc: AssetLocRef) -> anyhow::Result<Vec<u8>>;
 
     /// Subscribe to asset changes.
-    fn watch(&self) -> Option<async_channel::Receiver<AssetChange>>;
-}
-
-/// Change event returned by [`AssetIo::watch`].
-#[derive(Clone, Debug)]
-pub struct AssetChange {
-    /// The path of the asset that changed.
-    pub path: PathBuf,
-    /// The pack that the changed asset was in, or [`None`] if it was the core pack.
-    pub pack: Option<String>,
+    fn watch(&self) -> Option<async_channel::Receiver<AssetLoc>>;
 }
 
 /// [`AssetIo`] implementation that loads from the filesystem.
@@ -37,6 +30,83 @@ pub struct FileAssetIo {
     pub core_dir: PathBuf,
     /// The directory to load the asset packs from.
     pub packs_dir: PathBuf,
+    /// Receiver for asset changed events.
+    pub change_events: Option<async_channel::Receiver<AssetLoc>>,
+    /// Filesystem watcher if enabled.
+    pub watcher: Option<Box<dyn notify::Watcher + Sync + Send>>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl FileAssetIo {
+    /// Create a new [`FileAssetIo`].
+    pub fn new(core_dir: &Path, packs_dir: &Path, watch: bool) -> Self {
+        let cwd = std::env::current_dir().unwrap();
+        let core_dir = cwd.join(core_dir);
+        let packs_dir = cwd.join(packs_dir);
+        let mut watcher = None;
+        let mut change_events = None;
+        if watch {
+            use notify::{RecursiveMode, Result, Watcher};
+            let (sender, receiver) = async_channel::bounded(20);
+
+            let core_dir_ = core_dir.clone();
+            let packs_dir_ = packs_dir.clone();
+            notify::recommended_watcher(move |res: Result<notify::Event>| {
+                match res {
+                    Ok(event) => match &event.kind {
+                        notify::EventKind::Create(_) | notify::EventKind::Modify(_) => {
+                            for path in event.paths {
+                                let (path, pack) = if let Ok(path) = path.strip_prefix(&core_dir_) {
+                                    (path, None)
+                                } else if let Ok(path) = path.strip_prefix(&packs_dir_) {
+                                    let pack =
+                                        path.iter().next().unwrap().to_str().unwrap().to_string();
+                                    let path = path.strip_prefix(&pack).unwrap();
+                                    (path, Some(pack))
+                                } else {
+                                    continue;
+                                };
+                                sender
+                                    .send_blocking(AssetLoc {
+                                        path: path.into(),
+                                        pack,
+                                    })
+                                    .unwrap();
+                            }
+                        }
+                        _ => (),
+                    },
+                    // TODO: Log `bones_asset` errors with tracing.
+                    //
+                    // Also see the unwrap_or_else line below, which needs an error log.
+                    Err(e) => eprintln!("watch error: {e:?}"),
+                }
+            })
+            .and_then(|mut w| {
+                if core_dir.exists() {
+                    w.watch(&core_dir, RecursiveMode::Recursive)?;
+                }
+                if packs_dir.exists() {
+                    w.watch(&packs_dir, RecursiveMode::Recursive)?;
+                }
+
+                watcher = Some(Box::new(w) as _);
+                change_events = Some(receiver);
+                Ok(())
+            })
+            .map_err(|e| {
+                eprintln!("watch error: {e:?}");
+                // See todo above: log error message.
+            })
+            .ok();
+        }
+        Self {
+            core_dir: core_dir.clone(),
+            packs_dir: packs_dir.clone(),
+            change_events,
+            watcher,
+        }
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -67,18 +137,17 @@ impl AssetIo for FileAssetIo {
         Ok(dirs)
     }
 
-    fn load_file(&self, pack_folder: Option<&str>, path: &Path) -> anyhow::Result<Vec<u8>> {
-        let base_dir = match pack_folder {
+    fn load_file(&self, loc: AssetLocRef) -> anyhow::Result<Vec<u8>> {
+        let base_dir = match loc.pack {
             Some(folder) => self.packs_dir.join(folder),
             None => self.core_dir.clone(),
         };
-        let path = base_dir.join(path);
+        let path = base_dir.join(loc.path);
         Ok(std::fs::read(path)?)
     }
 
-    fn watch(&self) -> Option<async_channel::Receiver<AssetChange>> {
-        // TODO: Implement filesystem watcher for asset loader.
-        None
+    fn watch(&self) -> Option<async_channel::Receiver<AssetLoc>> {
+        self.change_events.clone()
     }
 }
 
@@ -106,31 +175,27 @@ impl AssetIo for DummyIo {
         Ok(self.packs.keys().cloned().collect())
     }
 
-    fn load_file(
-        &self,
-        pack_folder: Option<&str>,
-        path: &std::path::Path,
-    ) -> anyhow::Result<Vec<u8>> {
+    fn load_file(&self, loc: AssetLocRef) -> anyhow::Result<Vec<u8>> {
         let err = || {
             anyhow::format_err!(
                 "File not found: `{:?}` in pack `{:?}`",
-                path,
-                pack_folder.unwrap_or("[core]")
+                loc.path,
+                loc.pack.as_deref().unwrap_or("[core]")
             )
         };
-        if let Some(pack_folder) = pack_folder {
+        if let Some(pack_folder) = loc.pack {
             self.packs
                 .get(pack_folder)
                 .ok_or_else(err)?
-                .get(path)
+                .get(loc.path)
                 .cloned()
                 .ok_or_else(err)
         } else {
-            self.core.get(path).cloned().ok_or_else(err)
+            self.core.get(loc.path).cloned().ok_or_else(err)
         }
     }
 
-    fn watch(&self) -> Option<async_channel::Receiver<AssetChange>> {
+    fn watch(&self) -> Option<async_channel::Receiver<AssetLoc>> {
         None
     }
 }
