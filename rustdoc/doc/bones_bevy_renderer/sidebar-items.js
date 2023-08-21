@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["prelude"],"struct":["BevyBonesEntity","BonesBevyRenderer","BonesData","BonesGameEntity","BonesImageIds"]};

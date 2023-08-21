@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["bones_asset","bones_bevy_renderer","bones_ecs","bones_framework","bones_lib","bones_matchmaker","bones_matchmaker_proto","bones_schema","bones_schema_macros","bones_utils","bones_utils_macros","demo_assets_minimal","demo_features","demo_hello_world","quinn_runtime_bevy","type_ulid","type_ulid_macros"];
