@@ -12,6 +12,7 @@ serde = ["dep:serde", "hashbrown/serde"]
 
 [dependencies]
 bones_utils_macros = { version = "0.2", path = "./macros" }
+smallvec    = "1.11"
 fxhash      = "0.2"
 hashbrown   = { version = "0.14" }
 ulid        = "1.0"

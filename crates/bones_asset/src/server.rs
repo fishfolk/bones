@@ -221,11 +221,14 @@ impl AssetServer {
     ///
     /// This must be called or asset changes will be ignored. Additionally, the [`AssetIo`]
     /// implementation must be able to detect asset changes or this will do nothing.
-    pub fn handle_asset_changes<F: FnMut(UntypedHandle)>(&mut self, mut handle_change: F) {
+    pub fn handle_asset_changes<F: FnMut(&mut AssetServer, UntypedHandle)>(
+        &mut self,
+        mut handle_change: F,
+    ) {
         if let Some(receiver) = self.asset_changes.get_or_init(|| self.io.watch()).clone() {
             while let Ok(loc) = receiver.try_recv() {
                 match self.load_asset_forced(loc.as_ref()) {
-                    Ok(handle) => handle_change(handle),
+                    Ok(handle) => handle_change(self, handle),
                     Err(_) => {
                         // TODO: Handle/log asset error.
                         continue;
@@ -353,8 +356,7 @@ impl AssetServer {
             data: partial.data,
         };
 
-        // TODO: use a smallvec to avoid allocation.
-        let mut to_reload = Vec::new();
+        let mut reverse_deps = SmallVec::<[_; 16]>::new();
         let handle = *self
             .store
             .path_handles
@@ -364,18 +366,28 @@ impl AssetServer {
                 // Remove the old asset data
                 let cid = self.store.asset_ids.remove(handle).unwrap();
                 let previous_asset = self.store.assets.remove(&cid).unwrap();
+
+                // Remove the previous asset's reverse dependencies
                 for dep in previous_asset.dependencies {
-                    dbg!(("prev", dep));
-                    if let Some(depending_asset) = self.store.assets.get(&dep) {
-                        to_reload.push(depending_asset.loc.clone());
+                    self.store
+                        .reverse_dependencies
+                        .get_mut(&dep)
+                        .unwrap()
+                        .remove(&cid);
+                }
+
+                // Reload the assets that depended on the previous asset.
+                if let Some(rev_deps) = self.store.reverse_dependencies.get(&cid) {
+                    for dep in rev_deps {
+                        reverse_deps.push(self.store.assets.get(dep).unwrap().loc.clone());
                     }
-                    // TODO: Think about whether we need to prune the reverse dependencies here.
                 }
             })
             // Otherwise, create a new handle
             .or_insert(UntypedHandle { rid: Ulid::new() });
+
+        // Update reverse dependencies
         for dep in &loaded_asset.dependencies {
-            dbg!(dep, &loaded_asset.loc);
             self.store
                 .reverse_dependencies
                 .entry(*dep)
@@ -386,8 +398,8 @@ impl AssetServer {
         self.store.asset_ids.insert(handle, partial.cid);
         self.store.assets.insert(partial.cid, loaded_asset);
 
-        for loc in to_reload {
-            dbg!(&loc);
+        // Reload any assets that depended on this asset before it was reloaded
+        for loc in reverse_deps {
             self.load_asset_forced(loc.as_ref())?;
         }
 
@@ -510,9 +522,15 @@ impl AssetServer {
     }
 
     /// Borrow a [`LoadedAsset`] associated to the given handle.
-    pub fn get_untyped(&self, handle: &UntypedHandle) -> Option<&LoadedAsset> {
-        let cid = self.store.asset_ids.get(handle)?;
+    pub fn get_untyped(&self, handle: UntypedHandle) -> Option<&LoadedAsset> {
+        let cid = self.store.asset_ids.get(&handle)?;
         self.store.assets.get(cid)
+    }
+
+    /// Borrow a [`LoadedAsset`] associated to the given handle.
+    pub fn get_untyped_mut(&mut self, handle: UntypedHandle) -> Option<&mut LoadedAsset> {
+        let cid = self.store.asset_ids.get(&handle)?;
+        self.store.assets.get_mut(cid)
     }
 
     /// Read the core asset pack.

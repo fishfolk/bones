@@ -63,7 +63,39 @@ impl FromWorld for BonesGameEntity {
 
 /// Resource mapping bones image IDs to their bevy handles.
 #[derive(Resource, Default, Debug, Deref, DerefMut)]
-pub struct BonesImageIds(HashMap<u32, Handle<Image>>);
+pub struct BonesImageIds {
+    #[deref]
+    map: HashMap<u32, Handle<Image>>,
+    next_id: u32,
+}
+
+impl BonesImageIds {
+    /// Load all bones images into bevy.
+    pub fn load_bones_images(
+        &mut self,
+        bones_assets: &mut bones::AssetServer,
+        bevy_images: &mut Assets<Image>,
+    ) {
+        for asset in bones_assets.store.assets.values_mut() {
+            if let Ok(image) = asset.data.try_cast_mut::<bones::Image>() {
+                self.load_bones_image(image, bevy_images)
+            }
+        }
+    }
+
+    /// Load a bones image into bevy.
+    pub fn load_bones_image(&mut self, image: &mut bones::Image, bevy_images: &mut Assets<Image>) {
+        let Self { map, next_id } = self;
+        let mut taken_image = bones::Image::External(0); // Dummy value temporarily
+        std::mem::swap(image, &mut taken_image);
+        if let bones::Image::Data(data) = taken_image {
+            let handle = bevy_images.add(Image::from_dynamic(data, true));
+            map.insert(*next_id, handle);
+            *image = bones::Image::External(*next_id);
+            *next_id += 1;
+        }
+    }
+}
 
 /// Bevy resource that contains the info for the bones game that is being rendered.
 #[derive(Resource)]
@@ -124,19 +156,7 @@ impl BonesBevyRenderer {
 
                 // Take all loaded image assets and conver them to external images that reference bevy handles
                 let mut bevy_images = app.world.resource_mut::<Assets<Image>>();
-                let mut next_id = 0;
-                for asset in asset_server.store.assets.values_mut() {
-                    if let Ok(image) = asset.data.try_cast_mut::<bones::Image>() {
-                        let mut taken_image = bones::Image::External(0); // Dummy value temporarily
-                        std::mem::swap(image, &mut taken_image);
-                        if let bones::Image::Data(data) = taken_image {
-                            let handle = bevy_images.add(Image::from_dynamic(data, true));
-                            bones_image_ids.insert(next_id, handle);
-                            *image = bones::Image::External(next_id);
-                            next_id += 1;
-                        }
-                    }
-                }
+                bones_image_ids.load_bones_images(&mut asset_server, &mut *bevy_images);
             }
 
             app.insert_resource(bones_image_ids);
@@ -227,63 +247,74 @@ fn step_bones_game(
     world: &mut World,
 ) {
     world.resource_scope(|world: &mut World, mut data: Mut<BonesData>| {
-        let egui_ctx = {
-            let mut egui_query = world.query_filtered::<&mut EguiContext, With<Window>>();
-            let mut egui_ctx = egui_query.get_single_mut(world).unwrap();
-            egui_ctx.get_mut().clone()
-        };
-        let BonesData { game, asset_server } = &mut *data;
-        let bevy_time = world.resource::<Time>();
+        world.resource_scope(
+            |world: &mut World, mut bones_image_ids: Mut<BonesImageIds>| {
+                world.resource_scope(|world: &mut World, mut bevy_images: Mut<Assets<Image>>| {
+                    let egui_ctx = {
+                        let mut egui_query =
+                            world.query_filtered::<&mut EguiContext, With<Window>>();
+                        let mut egui_ctx = egui_query.get_single_mut(world).unwrap();
+                        egui_ctx.get_mut().clone()
+                    };
+                    let BonesData { game, asset_server } = &mut *data;
+                    let bevy_time = world.resource::<Time>();
 
-        let mouse_inputs = bones::AtomicResource::new(mouse_inputs);
-        let keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
+                    let mouse_inputs = bones::AtomicResource::new(mouse_inputs);
+                    let keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
 
-        // Reload assets if necessary
-        game.asset_server().handle_asset_changes(|e| {
-            dbg!(e);
-            // TODO: re-load bevy images that have changed.
-        });
+                    // Reload assets if necessary
+                    game.asset_server()
+                        .handle_asset_changes(|asset_server, handle| {
+                            let asset = asset_server.get_untyped_mut(handle).unwrap();
 
-        // Step the game simulation
-        game.step(|bones_world| {
-            // Insert egui context if not present
-            if !bones_world
-                .resources
-                .contains::<bones_framework::render::ui::EguiCtx>()
-            {
-                bones_world
-                    .resources
-                    .insert(bones_framework::render::ui::EguiCtx(egui_ctx.clone()));
-            }
+                            if let Ok(image) = asset.data.try_cast_mut::<bones::Image>() {
+                                bones_image_ids.load_bones_image(image, &mut *bevy_images);
+                            }
+                        });
 
-            // Update bones time
-            {
-                // Initialize the time resource if it doesn't exist.
-                if !bones_world.resources.contains::<bones::Time>() {
-                    bones_world.init_resource::<bones::Time>();
-                }
+                    // Step the game simulation
+                    game.step(|bones_world| {
+                        // Insert egui context if not present
+                        if !bones_world
+                            .resources
+                            .contains::<bones_framework::render::ui::EguiCtx>()
+                        {
+                            bones_world
+                                .resources
+                                .insert(bones_framework::render::ui::EguiCtx(egui_ctx.clone()));
+                        }
 
-                let mut time = bones_world.resource_mut::<bones::Time>();
+                        // Update bones time
+                        {
+                            // Initialize the time resource if it doesn't exist.
+                            if !bones_world.resources.contains::<bones::Time>() {
+                                bones_world.init_resource::<bones::Time>();
+                            }
 
-                // Use the Bevy time if it's available, otherwise use the default time.
-                if let Some(instant) = bevy_time.last_update() {
-                    time.update_with_instant(instant);
-                } else {
-                    time.update();
-                }
-            }
+                            let mut time = bones_world.resource_mut::<bones::Time>();
 
-            // Insert asset server if not present
-            if !bones_world.resources.contains::<bones::AssetServer>() {
-                bones_world.resources.insert_cell(asset_server.clone_cell());
-            }
+                            // Use the Bevy time if it's available, otherwise use the default time.
+                            if let Some(instant) = bevy_time.last_update() {
+                                time.update_with_instant(instant);
+                            } else {
+                                time.update();
+                            }
+                        }
 
-            // Update the inputs.
-            bones_world.resources.insert_cell(mouse_inputs.clone_cell());
-            bones_world
-                .resources
-                .insert_cell(keyboard_inputs.clone_cell());
-        });
+                        // Insert asset server if not present
+                        if !bones_world.resources.contains::<bones::AssetServer>() {
+                            bones_world.resources.insert_cell(asset_server.clone_cell());
+                        }
+
+                        // Update the inputs.
+                        bones_world.resources.insert_cell(mouse_inputs.clone_cell());
+                        bones_world
+                            .resources
+                            .insert_cell(keyboard_inputs.clone_cell());
+                    });
+                });
+            },
+        );
     });
 }
 

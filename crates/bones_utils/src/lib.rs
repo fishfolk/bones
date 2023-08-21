@@ -22,6 +22,7 @@ macro_rules! pub_use {
         pub use fxhash;
         pub use hashbrown;
         pub use maybe_owned::*;
+        pub use smallvec::*;
         pub use parking_lot;
         pub use branches::{likely, unlikely};
     };

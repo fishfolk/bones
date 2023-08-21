@@ -14,5 +14,4 @@ bevy_tasks     = "0.10"
 futures-lite   = "1.0"
 pin-project    = "1.0"
 quinn          = { version = "0.10", default-features = false, features = ["native-certs", "tls-rustls"] }
-quinn-proto    = { version = "0.10", default-features = false }
 quinn-udp      = { version = "0.4", default-features = false }
