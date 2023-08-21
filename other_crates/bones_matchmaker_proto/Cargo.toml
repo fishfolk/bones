@@ -1,0 +1,11 @@
+[package]
+name                 = "bones_matchmaker_proto"
+description          = "Network protocol types for the Bones matchmaking server."
+version              = "0.2.0"
+authors.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }

@@ -4,27 +4,28 @@
 [licenses]
 unlicensed = "deny"
 allow = [
-    "MIT",
-    "Apache-2.0",
-    "Unlicense",
-    "Zlib",
-    "Apache-2.0 WITH LLVM-exception",
-    "Unicode-DFS-2016",
-    "BSD-3-Clause",
-    "BSL-1.0",
-    "MIT-0",
-    "OFL-1.1",
-    "LicenseRef-UFL-1.0",
-    "CC0-1.0",
-    "ISC",
-    "BSD-2-Clause",
-    # TODO: Validate that it is not a problem for us to have MPL licensed dependencies.
-    "MPL-2.0",
-    "OpenSSL",
+  "MIT",
+  "Apache-2.0",
+  "Unlicense",
+  "Zlib",
+  "Apache-2.0 WITH LLVM-exception",
+  "Unicode-DFS-2016",
+  "BSD-3-Clause",
+  "BSL-1.0",
+  "MIT-0",
+  "OFL-1.1",
+  "LicenseRef-UFL-1.0",
+  "CC0-1.0",
+  "ISC",
+  "BSD-2-Clause",
+  "OpenSSL",
 ]
 default = "deny"
 
 [sources.allow-org]
-github = [
-    "fishfolk",
-]
+github = ["fishfolk"]
+
+[[licenses.clarify]]
+name          = "ring"
+expression    = "MIT AND ISC AND OpenSSL"
+license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]

@@ -1,0 +1,20 @@
+# This is an example player asset.
+# In Rust it is represented by the PlayerMeta struct.
+
+name: Jane
+age: 20
+atlas: ./jane.atlas.yaml
+avatar: ./avatar.png
+stats:
+  speed: 70
+  # Left out fields like `intelligence` from the `PlayerMetaStats` struct,
+  # will be set to their default value. In the case of PlayerMetaStats,
+  # we have set the default value to 20.
+
+animations:
+  run:
+    fps: 3.0
+    frames: [1, 2, 3]
+  jump:
+    fps: 2.0
+    frames: [3, 4, 5]

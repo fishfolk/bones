@@ -1,0 +1,19 @@
+[package]
+name                    = "bones_lib"
+description             = "The Bones game development library."
+version.workspace       = true
+authors.workspace       = true
+edition.workspace       = true
+license.workspace       = true
+repository.workspace    = true
+documentation.workspace = true
+categories.workspace    = true
+keywords.workspace      = true
+
+[features]
+default = []
+glam    = ["bones_ecs/glam"]
+
+[dependencies]
+bones_ecs   = { version = "0.3", path = "../bones_ecs" }
+bones_asset = { version = "0.3", path = "../bones_asset" }

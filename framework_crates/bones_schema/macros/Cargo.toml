@@ -1,0 +1,19 @@
+[package]
+name                    = "bones_schema_macros"
+description             = "Macros for the bones_schema crate."
+version.workspace       = true
+authors.workspace       = true
+edition.workspace       = true
+license.workspace       = true
+repository.workspace    = true
+documentation.workspace = true
+categories.workspace    = true
+keywords.workspace      = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0"
+quote       = "1.0"
+venial      = "0.5"

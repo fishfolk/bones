@@ -1,29 +1,21 @@
-[package]
-authors     = ["The Fish Folks & Spicy Lobster Developers"]
-description = "Opinionated game meta-engine built on Bevy"
-edition     = "2021"
-license     = "MIT OR Apache-2.0"
-name        = "bones_lib"
-repository  = "https://github.com/fishfolk/bones"
-version     = "0.2.0"
-
 [workspace]
-members = [".", "crates/*"]
+resolver        = "2"
+members         = ["framework_crates/*", "other_crates/*", "demos/*"]
+default-members = ["framework_crates/*"]
+
+[workspace.package]
+edition       = "2021"
+version       = "0.3.0"
+rust-version  = "1.71"
+readme        = "README.md"
+homepage      = "https://fishfolk.org/development/bones/introduction/"
+repository    = "https://github.com/fishfolk/bones"
+documentation = "https://fishfolk.github.io/bones/rustdoc/bones_framework/index.html"
+description   = "The bones game development framework."
+license       = "MIT OR Apache-2.0"
+authors       = ["The Fish Folk & Spicy Lobster Developers"]
+categories    = ["game-development", "game-engines", "wasm", "data-structures"]
+keywords      = ["bones", "bevy", "scripting", "ecs", "framework"]
 
 [profile.release]
 lto = true
-
-[features]
-bevy  = ["bones_asset/bevy", "bones_render/bevy", "dep:bones_bevy_utils"]
-serde = ["dep:serde", "bones_render/serde", "bones_ecs/serde"]
-
-[dependencies]
-bones_asset      = { version = "^0.2.0", path = "./crates/bones_asset" }
-bones_bevy_utils = { version = "^0.2.0", path = "./crates/bones_bevy_utils", optional = true }
-bones_ecs        = { version = "^0.2.0", path = "./crates/bones_ecs" }
-bones_input      = { version = "^0.2.0", path = "./crates/bones_input" }
-bones_render     = { version = "^0.2.0", path = "./crates/bones_render" }
-type_ulid        = { version = "^0.2.0", path = "./crates/type_ulid" }
-
-noise = "0.8"
-serde = { version = "1.0", features = ["derive"], optional = true }

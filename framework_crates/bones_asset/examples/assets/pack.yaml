@@ -1,0 +1,2 @@
+# The Core asset pack YAML simply defines the path to root asset to load.
+root: ./root.game.yaml

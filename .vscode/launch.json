@@ -1,0 +1,535 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bones_asset'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bones_asset"
+                ],
+                "filter": {
+                    "name": "bones_asset",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'tutorial'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=tutorial",
+                    "--package=bones_asset"
+                ],
+                "filter": {
+                    "name": "tutorial",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'tutorial'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=tutorial",
+                    "--package=bones_asset"
+                ],
+                "filter": {
+                    "name": "tutorial",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bones_schema'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--features",
+                    "glam",
+                    "--package=bones_schema"
+                ],
+                "filter": {
+                    "name": "bones_schema",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'schema_derive'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=schema_derive",
+                    "--package=bones_schema"
+                ],
+                "filter": {
+                    "name": "schema_derive",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'schema_derive'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=schema_derive",
+                    "--package=bones_schema"
+                ],
+                "filter": {
+                    "name": "schema_derive",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'custom_type_data'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=custom_type_data",
+                    "--package=bones_schema"
+                ],
+                "filter": {
+                    "name": "custom_type_data",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'custom_type_data'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=custom_type_data",
+                    "--package=bones_schema"
+                ],
+                "filter": {
+                    "name": "custom_type_data",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'trybuild'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=trybuild",
+                    "--package=bones_schema"
+                ],
+                "filter": {
+                    "name": "trybuild",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'tests'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=tests",
+                    "--package=bones_schema"
+                ],
+                "filter": {
+                    "name": "tests",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bones_utils'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bones_utils"
+                ],
+                "filter": {
+                    "name": "bones_utils",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bones_bevy_renderer'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bones_bevy_renderer"
+                ],
+                "filter": {
+                    "name": "bones_bevy_renderer",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bones_framework'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bones_framework"
+                ],
+                "filter": {
+                    "name": "bones_framework",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bones_lib'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bones_lib"
+                ],
+                "filter": {
+                    "name": "bones_lib",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bones_ecs'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bones_ecs"
+                ],
+                "filter": {
+                    "name": "bones_ecs",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'pos_vel'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=pos_vel",
+                    "--package=bones_ecs"
+                ],
+                "filter": {
+                    "name": "pos_vel",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'pos_vel'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=pos_vel",
+                    "--package=bones_ecs"
+                ],
+                "filter": {
+                    "name": "pos_vel",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bones_bevy_utils'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bones_bevy_utils"
+                ],
+                "filter": {
+                    "name": "bones_bevy_utils",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bones_matchmaker'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bones_matchmaker"
+                ],
+                "filter": {
+                    "name": "bones_matchmaker",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'bones_matchmaker'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=bones_matchmaker",
+                    "--package=bones_matchmaker"
+                ],
+                "filter": {
+                    "name": "bones_matchmaker",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'bones_matchmaker'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=bones_matchmaker",
+                    "--package=bones_matchmaker"
+                ],
+                "filter": {
+                    "name": "bones_matchmaker",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'matchmaker_client'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=matchmaker_client",
+                    "--package=bones_matchmaker"
+                ],
+                "filter": {
+                    "name": "matchmaker_client",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'matchmaker_client'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=matchmaker_client",
+                    "--package=bones_matchmaker"
+                ],
+                "filter": {
+                    "name": "matchmaker_client",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bones_matchmaker_proto'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bones_matchmaker_proto"
+                ],
+                "filter": {
+                    "name": "bones_matchmaker_proto",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'quinn_runtime_bevy'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=quinn_runtime_bevy"
+                ],
+                "filter": {
+                    "name": "quinn_runtime_bevy",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'type_ulid'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=type_ulid"
+                ],
+                "filter": {
+                    "name": "type_ulid",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'simple_game'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=simple_game",
+                    "--package=simple_game"
+                ],
+                "filter": {
+                    "name": "simple_game",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}/demos/simple_game"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'simple_game'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=simple_game",
+                    "--package=simple_game"
+                ],
+                "filter": {
+                    "name": "simple_game",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
