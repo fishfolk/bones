@@ -1,21 +1,24 @@
 [package]
-authors     = ["The Fish Folk & Spicy Lobster Developers"]
-description = "Bevy plugin for rendering bones_lib games."
-edition     = "2021"
-license     = "MIT OR Apache-2.0"
-name        = "bones_bevy_renderer"
-repository  = "https://github.com/fishfolk/bones"
-version     = "0.2.0"
+name                    = "bones_bevy_renderer"
+description             = "Bevy rendering implementation for the bones_framework."
+version.workspace       = true
+authors.workspace       = true
+edition.workspace       = true
+license.workspace       = true
+repository.workspace    = true
+documentation.workspace = true
+categories.workspace    = true
+keywords.workspace      = true
 
 [features]
 default = ["webgl2"]
-webgl2 = ["bevy/webgl2"]
+webgl2  = ["bevy/webgl2"]
 
 [dependencies]
 bones_framework = { version = "^0.2.0", path = "../bones_framework" }
 
-bevy_egui     = "0.21"
-glam          = { version = "0.24", features = ["serde"] }
+bevy_egui           = "0.21"
+glam                = { version = "0.24", features = ["serde"] }
 bevy_prototype_lyon = "0.9"
 
 [dependencies.bevy]

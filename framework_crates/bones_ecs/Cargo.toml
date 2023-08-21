@@ -1,20 +1,18 @@
 [package]
-authors = [
-    "Joël Lupien (Jojolepro) <jojolepro@jojolepro.com>",
-    "Fish Folk & Spicy Lobster Developers",
-]
-categories = ["game-engines"]
-description = "A tiny but very powerful ECS framework."
-edition = "2021"
-keywords = ["game", "ecs"]
-license = "Apache-2.0"
-name = "bones_ecs"
-repository = "https://github.com/fishfolk/bones"
-version = "0.2.0"
+name                    = "bones_ecs"
+description             = "A simple and flexible Entity Component System."
+version.workspace       = true
+authors.workspace       = true
+edition.workspace       = true
+license.workspace       = true
+repository.workspace    = true
+documentation.workspace = true
+categories.workspace    = true
+keywords.workspace      = true
 
 [features]
 default = ["keysize16"]
-glam = ["dep:glam", "dep:paste", "bones_schema/glam"]
+glam    = ["dep:glam", "dep:paste", "bones_schema/glam"]
 
 keysize16 = []
 keysize20 = []
@@ -22,15 +20,15 @@ keysize24 = []
 keysize32 = []
 
 [dependencies]
-bones_utils = { version = "0.1.0", path = "../bones_utils" }
+bones_utils  = { version = "0.1.0", path = "../bones_utils" }
 bones_schema = { version = "0.1.0", path = "../bones_schema" }
 
 anyhow         = "1.0"
 atomic_refcell = "0.1"
-bitset-core = "0.1"
-thiserror   = "1.0"
-glam        = { version = "0.24", optional = true }
-paste       = { version = "1.0", optional = true }
+bitset-core    = "0.1"
+thiserror      = "1.0"
+glam           = { version = "0.24", optional = true }
+paste          = { version = "1.0", optional = true }
 
 [dev-dependencies]
 glam = "0.24"

@@ -1,11 +1,14 @@
 [package]
-authors     = ["The Fish Folk & Spicy Lobster Developers"]
-description = "Macros for the bones_schemaish crate."
-edition     = "2021"
-license     = "MIT OR Apache-2.0"
-name        = "bones_schema_macros"
-repository  = "https://github.com/fishfolk/bones"
-version     = "0.1.0"
+name                    = "bones_schema_macros"
+description             = "Macros for the bones_schema crate."
+version.workspace       = true
+authors.workspace       = true
+edition.workspace       = true
+license.workspace       = true
+repository.workspace    = true
+documentation.workspace = true
+categories.workspace    = true
+keywords.workspace      = true
 
 [lib]
 proc-macro = true

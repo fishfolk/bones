@@ -1,11 +1,11 @@
 [package]
-authors     = ["The Fish Folk & Spicy Lobster Developers"]
-description = "Quinn runtime implementation built on Bevy's IO task pool."
-edition     = "2021"
-license     = "MIT OR Apache-2.0"
-name        = "quinn_runtime_bevy"
-repository  = "https://github.com/fishfolk/bones"
-version     = "0.2.0"
+name                 = "quinn_runtime_bevy"
+description          = "Quinn runtime implementation built on Bevy's IO task pool."
+version.workspace    = true
+authors.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
 
 [dependencies]
 async-executor = "1.4"

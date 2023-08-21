@@ -1,16 +1,18 @@
 [package]
-name = "bones_utils_macros"
-description = "Bones utility macros"
-version = "0.2.0"
-edition = "2021"
-authors = ["The Fish Folk & Spicy Lobster Developers"]
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/fishfolk/bones"
+name                    = "bones_utils_macros"
+description             = "Macros used in bones_utils."
+version.workspace       = true
+authors.workspace       = true
+edition.workspace       = true
+license.workspace       = true
+repository.workspace    = true
+documentation.workspace = true
+categories.workspace    = true
+keywords.workspace      = true
 
 [lib]
 proc-macro = true
 
 [dependencies]
-quote = "1.0"
+quote  = "1.0"
 venial = "0.5"
-

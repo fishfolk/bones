@@ -1,11 +1,14 @@
 [package]
-authors     = ["The Fish Folk & Spicy Lobster Developers"]
-description = "Simple reflection system based on the #[repr(C)] memory layout."
-edition     = "2021"
-license     = "MIT OR Apache-2.0"
-name        = "bones_schema"
-repository  = "https://github.com/fishfolk/bones"
-version     = "0.1.0"
+name                    = "bones_schema"
+description             = "Simple runtime reflection system designed for scripting."
+version.workspace       = true
+authors.workspace       = true
+edition.workspace       = true
+license.workspace       = true
+repository.workspace    = true
+documentation.workspace = true
+categories.workspace    = true
+keywords.workspace      = true
 
 [features]
 default = ["derive"]
@@ -20,14 +23,14 @@ paste       = "1.0"
 
 # Optional deps
 bones_schema_macros = { version = "0.1", path = "./macros", optional = true }
-glam                 = { version = "0.24", optional = true }
-serde                = { version = "1.0", features = ["derive"], optional = true }
-sptr                 = "0.3"
+glam                = { version = "0.24", optional = true }
+serde               = { version = "1.0", features = ["derive"], optional = true }
+sptr                = "0.3"
 
 [[test]]
-name = "tests"
+name              = "tests"
 required-features = ["glam"]
 
 [dev-dependencies]
-serde_yaml  = "0.9"
-trybuild = "1.0"
+serde_yaml = "0.9"
+trybuild   = "1.0"

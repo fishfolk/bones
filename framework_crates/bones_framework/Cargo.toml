@@ -1,11 +1,14 @@
 [package]
-authors     = ["The Fish Folk & Spicy Lobster Developers"]
-description = "Bones framework for making games."
-edition     = "2021"
-license     = "MIT OR Apache-2.0"
-name        = "bones_framework"
-repository  = "https://github.com/fishfolk/bones"
-version     = "0.2.0"
+name                    = "bones_framework"
+description             = "The Bones game development framework."
+version.workspace       = true
+authors.workspace       = true
+edition.workspace       = true
+license.workspace       = true
+repository.workspace    = true
+documentation.workspace = true
+categories.workspace    = true
+keywords.workspace      = true
 
 [features]
 default = ["image_png", "ui", "localization"]
@@ -43,21 +46,21 @@ document-features = ["dep:document-features"]
 
 [dependencies]
 # Bones
-bones_lib = { version = "0.2", path = "../bones_lib", features = ["glam"] }
+bones_lib = { version = "0.3", path = "../bones_lib", features = ["glam"] }
 
 # Other
-glam = "0.24"
+glam      = "0.24"
 thiserror = "1.0"
-instant = "0.1"
-hex = "0.4"
-tracing = "0.1"
+instant   = "0.1"
+hex       = "0.4"
+tracing   = "0.1"
 
 # Input
 gilrs = "0.10"
 
 # Assets
 serde_yaml = "0.9"
-serde = { version = "1.0", features = ["derive"] }
+serde      = { version = "1.0", features = ["derive"] }
 
 # Sprite
 image = { version = "0.24", default-features = false }
@@ -66,11 +69,11 @@ image = { version = "0.24", default-features = false }
 egui = { version = "0.22", optional = true }
 
 # Localization
-fluent-bundle = { version = "0.15", optional = true }
+fluent-bundle  = { version = "0.15", optional = true }
 fluent-langneg = { version = "0.13", optional = true }
-intl-memoizer = { version = "0.5", optional = true }
-unic-langid = { version = "0.9", features = ["serde"], optional = true }
-sys-locale = { version = "0.3", optional = true }
+intl-memoizer  = { version = "0.5", optional = true }
+unic-langid    = { version = "0.9", features = ["serde"], optional = true }
+sys-locale     = { version = "0.3", optional = true }
 
 # API docs
 document-features = { version = "0.2", optional = true }

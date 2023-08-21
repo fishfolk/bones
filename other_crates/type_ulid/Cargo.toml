@@ -1,11 +1,11 @@
 [package]
-authors     = ["The Fish Folk & Spicy Lobster Developers"]
-description = "Trait for associating ULIDs with Rust types."
-edition     = "2021"
-license     = "MIT OR Apache-2.0"
-name        = "type_ulid"
-repository  = "https://github.com/fishfolk/bones"
-version     = "0.2.0"
+name                 = "type_ulid"
+description          = "Trait for associating ULIDs with Rust types."
+version.workspace    = true
+authors.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
 
 [features]
 default = ["std"]
