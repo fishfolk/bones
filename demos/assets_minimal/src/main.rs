@@ -41,7 +41,7 @@ fn main() {
 fn menu_system(
     egui_ctx: Res<EguiCtx>,
     // We can access our root asset by using the Root parameter.
-    meta: Root<GameMeta>
+    meta: Root<GameMeta>,
 ) {
     egui::CentralPanel::default()
         .frame(egui::Frame::none())

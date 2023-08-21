@@ -101,9 +101,7 @@ unsafe impl<T: HasSchema> HasSchema for Handle<T> {
             "ULID memory layout is unexpected! Bad Rust compiler! 😡"
         );
 
-        let map = S.get_or_init(|| {
-            RwLock::new(HashMap::default())
-        });
+        let map = S.get_or_init(|| RwLock::new(HashMap::default()));
 
         let existing_schema = { map.read().get(&TypeId::of::<T>()).copied() };
 

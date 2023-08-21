@@ -179,11 +179,11 @@ impl SchemaMap {
     /// The key's schema must match this map's key schema.
     pub unsafe fn get_ref_unchecked(&self, key: SchemaRef) -> Option<SchemaRef> {
         let Some(hash_fn) = self.key_schema.hash_fn else {
-                panic!("Key schema doesn't implement hash");
-            };
+            panic!("Key schema doesn't implement hash");
+        };
         let Some(eq_fn) = self.key_schema.eq_fn else {
-                panic!("Key schema doesn't implement eq");
-            };
+            panic!("Key schema doesn't implement eq");
+        };
         let key_ptr = key.as_ptr();
         // SOUND: caller asserts the key schema matches
         let raw_hash = unsafe { (hash_fn)(key_ptr) };
@@ -338,11 +338,11 @@ impl SchemaMap {
     /// The key schema must match the map's.
     pub unsafe fn remove_unchecked(&mut self, key: SchemaRef) -> Option<SchemaBox> {
         let Some(hash_fn) = self.key_schema.hash_fn else {
-                panic!("Key schema doesn't implement hash");
-            };
+            panic!("Key schema doesn't implement hash");
+        };
         let Some(eq_fn) = self.key_schema.eq_fn else {
-                panic!("Key schema doesn't implement eq");
-            };
+            panic!("Key schema doesn't implement eq");
+        };
         let key_ptr = key.as_ptr();
         // SOUND: caller asserts the key schema matches
         let hash = unsafe { (hash_fn)(key_ptr) };
