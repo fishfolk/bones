@@ -1,6 +1,37 @@
 [workspace]
-members = ["crates/*", "demos/*"]
 resolver = "2"
+members = [
+    "framework_crates/*",
+    "other_crates/*",
+    "demos/*"
+]
+default-members = [
+    "framework_crates/*"
+]
+
+[workspace.package]
+edition = "2021"
+version = "0.3.0"
+rust-version = "^1.71.0"
+readme = "README.md"
+homepage = "https://fishfolk.org/development/bones/introduction/"
+repository = "https://github.com/fishfolk/bones"
+documentation = "https://fishfolk.github.io/bones/rustdoc/bones_framework/index.html"
+license = "MIT or Apache2.0"
+authors = ["Bones Contributors"]
+categories = [
+    "game-development",
+    "game-engines",
+    "wasm",
+    "data-structures",
+]
+keywords = [
+    "bones",
+    "bevy",
+    "scripting",
+    "ecs",
+    "framework",
+]
 
 [profile.release]
 lto = true

@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use bones_utils::HashMap;
 
@@ -39,7 +39,7 @@ pub struct FileAssetIo {
 #[cfg(not(target_arch = "wasm32"))]
 impl FileAssetIo {
     /// Create a new [`FileAssetIo`].
-    pub fn new(core_dir: &Path, packs_dir: &Path, watch: bool) -> Self {
+    pub fn new(core_dir: &std::path::Path, packs_dir: &std::path::Path, watch: bool) -> Self {
         let cwd = std::env::current_dir().unwrap();
         let core_dir = cwd.join(core_dir);
         let packs_dir = cwd.join(packs_dir);

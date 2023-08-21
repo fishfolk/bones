@@ -271,11 +271,11 @@ impl Entities {
     ///
     /// ```
     /// # use bones_ecs::prelude::*;
-    /// # #[derive(Clone, TypeUlid)]
-    /// # #[ulid = "01GP1SVTTSR91P40B2W0XPQ1SN"]
+    /// # #[derive(HasSchema, Clone, Default)]
+    /// # #[repr(C)]
     /// # struct Pos { x: f32, y: f32 };
-    /// # #[derive(Clone, TypeUlid)]
-    /// # #[ulid = "01GP1SW3HYWEB2TY4S40ARMB1R"]
+    /// # #[derive(HasSchema, Clone, Default)]
+    /// # #[repr(C)]
     /// # struct Vel { x: f32, y: f32 };
     ///
     /// fn my_system(entities: Res<Entities>, mut pos: CompMut<Pos>, vel: Comp<Vel>) {

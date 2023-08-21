@@ -143,20 +143,29 @@ impl BonesBevyRenderer {
         {
             let mut bones_image_ids = BonesImageIds::default();
             let mut asset_server = self.game.asset_server();
+            let mut bevy_images = app.world.resource_mut::<Assets<Image>>();
 
             if !asset_server.asset_types.is_empty() {
-                // Configure the AssetIO
-                let io = bones::FileAssetIo::new(&self.asset_dir, &self.packs_dir, true);
-                asset_server.set_io(io);
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    // Configure the AssetIO
+                    let io = bones::FileAssetIo::new(&self.asset_dir, &self.packs_dir, true);
+                    asset_server.set_io(io);
 
-                // Load the game assets
-                asset_server
-                    .load_assets()
-                    .expect("Could not load game assets");
+                    // Load the game assets
+                    asset_server
+                        .load_assets()
+                        .expect("Could not load game assets");
 
-                // Take all loaded image assets and conver them to external images that reference bevy handles
-                let mut bevy_images = app.world.resource_mut::<Assets<Image>>();
-                bones_image_ids.load_bones_images(&mut asset_server, &mut bevy_images);
+                    // Take all loaded image assets and conver them to external images that reference bevy handles
+                    bones_image_ids.load_bones_images(&mut asset_server, &mut bevy_images);
+                }
+                #[cfg(target_arch = "wasm32")]
+                {
+                    bones_image_ids.load_bones_images(&mut asset_server, &mut bevy_images);
+                    // TODO: Implement WASM asset loader.
+                    unimplemented!("WASM asset loading is not implemented yet.");
+                }
             }
 
             app.insert_resource(bones_image_ids);

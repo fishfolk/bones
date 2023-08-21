@@ -279,6 +279,8 @@ pub enum AssetKind {
 /// This is meant to be used in a `type_data` attribute when deriving [`HasSchema`].
 ///
 /// ```
+/// # use bones_asset::prelude::*;
+/// # use glam::*;
 /// #[derive(HasSchema, Default, Clone)]
 /// #[type_data(metadata_asset("atlas"))]
 /// #[repr(C)]
@@ -300,13 +302,21 @@ pub fn metadata_asset(extension: &str) -> AssetKind {
 /// This is meant to be used in a `type_data` attribute when deriving [`HasSchema`].
 ///
 /// ```
+/// # use bones_asset::prelude::*;
 /// #[derive(HasSchema, Default, Clone)]
 /// #[type_data(asset_loader("png", PngLoader))]
 /// #[repr(C)]
 /// struct Image {
-///     data: Vec<u8>,
+///     data: SVec<u8>,
 ///     width: u32,
 ///     height: u32,
+/// }
+///
+/// struct PngLoader;
+/// impl AssetLoader for PngLoader {
+///     fn load(&self, ctx: AssetLoadCtx, data: &[u8]) -> anyhow::Result<SchemaBox> {
+///         todo!("Load PNG from data");
+///     }
 /// }
 /// ```
 pub fn asset_loader<L: AssetLoader, E: Into<AssetExtensions>>(

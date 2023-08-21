@@ -153,7 +153,7 @@ pub struct SchemaData {
     /// }
     ///
     /// #[derive(HasSchema, Default, Clone)]
-    /// #[type_datas(SomeTypeData)]
+    /// #[derive_type_data(SomeTypeData)]
     /// #[schema(opaque)]
     /// struct MyData;
     /// ```

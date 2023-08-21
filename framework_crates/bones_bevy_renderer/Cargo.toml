@@ -7,6 +7,10 @@ name        = "bones_bevy_renderer"
 repository  = "https://github.com/fishfolk/bones"
 version     = "0.2.0"
 
+[features]
+default = ["webgl2"]
+webgl2 = ["bevy/webgl2"]
+
 [dependencies]
 bones_framework = { version = "^0.2.0", path = "../bones_framework" }
 

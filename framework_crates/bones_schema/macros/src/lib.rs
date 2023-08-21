@@ -17,7 +17,7 @@ macro_rules! throw {
 /// ## Example
 ///
 /// ```ignore
-////// This is a custom type data.
+/// /// This is a custom type data.
 /// ///
 /// /// While it must implement [`HasSchema`] it is fine to just make it opaque.
 /// ///
@@ -56,7 +56,7 @@ macro_rules! throw {
 /// Currently it isn't possible to construct a struct that contains itself. For example, this will
 /// not work:
 ///
-/// ```rust
+/// ```ignore
 /// #[derive(HasSchema)]
 /// struct Data {
 ///     others: Vec<Data>,

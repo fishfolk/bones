@@ -91,7 +91,7 @@ impl Color {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_render::color::Color;
+    /// # use bones_framework::prelude::Color;
     /// let color = Color::hex("FF00FF").unwrap(); // fuchsia
     /// let color = Color::hex("FF00FF7F").unwrap(); // partially transparent fuchsia
     /// ```

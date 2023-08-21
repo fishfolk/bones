@@ -178,10 +178,12 @@ mod ser_de {
 
 #[cfg(test)]
 mod test {
-    use crate::LabeledId;
 
+    #[cfg(not(miri))]
     #[test]
     fn smoke() {
+        use crate::LabeledId;
+
         let id = LabeledId::new("asset").unwrap();
         let parsed: LabeledId = id.to_string().parse().unwrap();
 
