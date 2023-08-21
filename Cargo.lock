@@ -3322,7 +3322,7 @@ version = "0.2.0"
 dependencies = [
  "async-executor",
  "async-io",
- "bevy_tasks 0.10.1",
+ "bevy_tasks 0.11.2",
  "futures-lite",
  "pin-project",
  "quinn",
