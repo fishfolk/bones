@@ -17,6 +17,9 @@ pub struct UntypedComponentStore {
     pub(crate) schema: &'static Schema,
 }
 
+unsafe impl Sync for UntypedComponentStore {}
+unsafe impl Send for UntypedComponentStore {}
+
 impl Clone for UntypedComponentStore {
     fn clone(&self) -> Self {
         let size = self.schema.layout().size();

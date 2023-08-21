@@ -180,7 +180,7 @@ impl AssetIo for DummyIo {
             anyhow::format_err!(
                 "File not found: `{:?}` in pack `{:?}`",
                 loc.path,
-                loc.pack.as_deref().unwrap_or("[core]")
+                loc.pack.unwrap_or("[core]")
             )
         };
         if let Some(pack_folder) = loc.pack {

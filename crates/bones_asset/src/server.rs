@@ -318,7 +318,7 @@ impl AssetServer {
         // Try to load a metadata asset if it has a YAML/JSON extension, if that doesn't work, and
         // it has a schema not found error, try to load a data asset for the same path, if that
         // doesn't work and it is an extension not found error, return the metadata error message.
-        let partial = if path_is_metadata(&loc.path) {
+        let partial = if path_is_metadata(loc.path) {
             match self.load_metadata_asset(loc, &contents) {
                 Err(meta_err) => {
                     if meta_err.downcast_ref::<LoaderNotFound>().is_some() {

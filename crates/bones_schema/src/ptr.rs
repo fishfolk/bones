@@ -104,17 +104,24 @@ impl<'pointer> SchemaRef<'pointer> {
         match &self.schema.kind {
             SchemaKind::Struct(s) => {
                 let field_offsets = self.schema.field_offsets();
-                let Some((idx, offset)) = field_offsets.iter().enumerate().find_map(|(i, (name, offset))| {
-                        let matches = match idx {
-                            FieldIdx::Idx(n) => n == i,
-                            FieldIdx::Name(n) => name.as_deref() == Some(n),
-                        };
-                        if matches {
-                            Some((i, *offset))
-                        } else {
-                            None
-                        }
-                    }) else { return not_found };
+                let Some((idx, offset)) =
+                    field_offsets
+                        .iter()
+                        .enumerate()
+                        .find_map(|(i, (name, offset))| {
+                            let matches = match idx {
+                                FieldIdx::Idx(n) => n == i,
+                                FieldIdx::Name(n) => name.as_deref() == Some(n),
+                            };
+                            if matches {
+                                Some((i, *offset))
+                            } else {
+                                None
+                            }
+                        })
+                else {
+                    return not_found;
+                };
                 let field = &s.fields[idx];
 
                 Ok(SchemaRef {
@@ -270,7 +277,7 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
         schema: &'static Schema,
     ) -> SchemaRefMut<'pointer, 'parent> {
         Self {
-            ptr: PtrMut::new(NonNull::new_unchecked(ptr as *mut u8)),
+            ptr: PtrMut::new(NonNull::new_unchecked(ptr)),
             schema,
             parent_lifetime: PhantomData,
         }
@@ -303,17 +310,24 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
         match &self.schema.kind {
             SchemaKind::Struct(s) => {
                 let field_offsets = self.schema.field_offsets();
-                let Some((idx, offset)) = field_offsets.iter().enumerate().find_map(|(i, (name, offset))| {
-                        let matches = match idx {
-                            FieldIdx::Idx(n) => n == i,
-                            FieldIdx::Name(n) => name.as_deref() == Some(n),
-                        };
-                        if matches {
-                            Some((i, *offset))
-                        } else {
-                            None
-                        }
-                    }) else { return not_found };
+                let Some((idx, offset)) =
+                    field_offsets
+                        .iter()
+                        .enumerate()
+                        .find_map(|(i, (name, offset))| {
+                            let matches = match idx {
+                                FieldIdx::Idx(n) => n == i,
+                                FieldIdx::Name(n) => name.as_deref() == Some(n),
+                            };
+                            if matches {
+                                Some((i, *offset))
+                            } else {
+                                None
+                            }
+                        })
+                else {
+                    return not_found;
+                };
                 let field = &s.fields[idx];
 
                 // SOUND: here we clone our mutable pointer, and then offset it according to the

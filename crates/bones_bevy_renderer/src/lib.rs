@@ -156,7 +156,7 @@ impl BonesBevyRenderer {
 
                 // Take all loaded image assets and conver them to external images that reference bevy handles
                 let mut bevy_images = app.world.resource_mut::<Assets<Image>>();
-                bones_image_ids.load_bones_images(&mut asset_server, &mut *bevy_images);
+                bones_image_ids.load_bones_images(&mut asset_server, &mut bevy_images);
             }
 
             app.insert_resource(bones_image_ids);
@@ -268,7 +268,7 @@ fn step_bones_game(
                             let asset = asset_server.get_untyped_mut(handle).unwrap();
 
                             if let Ok(image) = asset.data.try_cast_mut::<bones::Image>() {
-                                bones_image_ids.load_bones_image(image, &mut *bevy_images);
+                                bones_image_ids.load_bones_image(image, &mut bevy_images);
                             }
                         });
 

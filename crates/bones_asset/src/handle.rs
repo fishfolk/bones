@@ -16,10 +16,7 @@ pub struct Handle<T> {
 // implement these traits.
 impl<T> Clone for Handle<T> {
     fn clone(&self) -> Self {
-        Self {
-            id: self.id,
-            phantom: self.phantom,
-        }
+        *self
     }
 }
 impl<T> Copy for Handle<T> {}
