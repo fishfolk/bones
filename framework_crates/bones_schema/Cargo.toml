@@ -17,12 +17,12 @@ derive  = ["bones_schema_macros"]
 glam    = ["dep:glam"]
 
 [dependencies]
-bones_utils = { version = "0.1", path = "../bones_utils" }
+bones_utils = { version = "0.3", path = "../bones_utils" }
 ulid        = { version = "1.0" }
 paste       = "1.0"
 
 # Optional deps
-bones_schema_macros = { version = "0.1", path = "./macros", optional = true }
+bones_schema_macros = { version = "0.3", path = "./macros", optional = true }
 glam                = { version = "0.24", optional = true }
 serde               = { version = "1.0", features = ["derive"], optional = true }
 sptr                = "0.3"

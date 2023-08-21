@@ -1,7 +1,7 @@
 [package]
 name                 = "bones_matchmaker"
 description          = "Simple matchmaking server for games."
-version.workspace    = true
+version              = "0.2.0"
 authors.workspace    = true
 edition.workspace    = true
 license.workspace    = true
@@ -9,7 +9,7 @@ repository.workspace = true
 
 [dependencies]
 anyhow                 = "1.0"
-bevy_tasks             = "0.11.0"
+bevy_tasks             = "0.11"
 bytes                  = "1.2"
 either                 = "1.8"
 futures-lite           = "1.12"
@@ -18,12 +18,12 @@ scc                    = "1.0"
 rcgen                  = "0.11"
 tracing                = "0.1"
 rand                   = "0.8"
-bones_matchmaker_proto = { version = "^0.2.0", path = "../bones_matchmaker_proto" }
+bones_matchmaker_proto = { version = "0.2", path = "../bones_matchmaker_proto" }
 clap                   = { version = "4.0", features = ["derive", "env"] }
 futures                = { version = "0.3", default-features = false, features = ["std", "async-await"] }
 postcard               = { version = "1.0", default-features = false, features = ["alloc"] }
 quinn                  = { version = "0.10", default-features = false, features = ["futures-io", "native-certs", "tls-rustls"] }
-quinn_runtime_bevy     = { version = "^0.2.0", path = "../quinn_runtime_bevy" }
+quinn_runtime_bevy     = { version = "0.3", path = "../quinn_runtime_bevy" }
 rustls                 = { version = "0.21", features = ["dangerous_configuration", "quic"] }
 serde                  = { version = "1.0", features = ["derive"] }
 tracing-subscriber     = { version = "0.3", features = ["env-filter"] }

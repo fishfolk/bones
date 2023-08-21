@@ -1,7 +1,7 @@
 [package]
 name                 = "quinn_runtime_bevy"
 description          = "Quinn runtime implementation built on Bevy's IO task pool."
-version.workspace    = true
+version              = "0.3.0"
 authors.workspace    = true
 edition.workspace    = true
 license.workspace    = true

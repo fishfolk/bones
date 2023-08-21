@@ -20,8 +20,8 @@ keysize24 = []
 keysize32 = []
 
 [dependencies]
-bones_utils  = { version = "0.1.0", path = "../bones_utils" }
-bones_schema = { version = "0.1.0", path = "../bones_schema" }
+bones_utils  = { version = "0.3", path = "../bones_utils" }
+bones_schema = { version = "0.3", path = "../bones_schema" }
 
 anyhow         = "1.0"
 atomic_refcell = "0.1"
