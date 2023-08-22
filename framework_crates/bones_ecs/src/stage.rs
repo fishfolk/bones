@@ -16,7 +16,9 @@ pub struct SystemStages {
 impl std::fmt::Debug for SystemStages {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SystemStages")
-            // TODO: add list of stages to the debug render for `SystemStages`.
+            // TODO: Add list of stages to the debug render for `SystemStages`.
+            // We can at least list the names of each stage for `SystemStages` debug
+            // implementation.
             .finish()
     }
 }

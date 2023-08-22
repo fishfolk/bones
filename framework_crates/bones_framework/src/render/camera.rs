@@ -6,7 +6,10 @@ use crate::prelude::*;
 ///
 /// The entity must also have a [`Transform`] component for the camera to render anything.
 #[derive(Clone, Copy, Debug, HasSchema)]
-#[schema(opaque)] // TODO: make repr(C) when `Option`s are supported.
+#[schema(opaque)]
+// TODO: make repr(C) when `Option`s are supported.
+// We don't have `Option` support in `bones_schema` right now.
+// Once we do, we can make this type `#[repr(C)]` instead of `#[schema(opaque)]`.
 pub struct Camera {
     /// The height of the camera in in-game pixels.
     ///

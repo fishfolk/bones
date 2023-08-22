@@ -2,7 +2,11 @@ use std::error::Error;
 
 /// The types of errors used throughout the ECS.
 // TODO: Re-evaluate `EcsError` variants.
-// Some of them may not be used anymore.
+// Some these error variants may not be used anymore. Also, I think most of the times
+// that we return `EcsError`, there is only one possible error that could occur for that function.
+// If that is the case in all situations, we should consider breaking each error type into it's
+// own struct, so that we aren't returning an enum with a bunch of errors that will never happen
+// for each function call.
 #[derive(Debug, thiserror::Error)]
 pub enum EcsError {
     /// A resource was not initialized in the [`World`][crate::World] but the

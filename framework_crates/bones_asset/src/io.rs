@@ -76,9 +76,9 @@ impl FileAssetIo {
                         }
                         _ => (),
                     },
-                    // TODO: Log `bones_asset` errors with tracing.
-                    //
-                    // Also see the unwrap_or_else line below, which needs an error log.
+                    // TODO: Log asset errors with tracing.
+                    // We should use the [`tracing`](https://docs.rs/tracing/latest/tracing/) crate
+                    // to log an error message here instead of using `eprintln!()`.
                     Err(e) => eprintln!("watch error: {e:?}"),
                 }
             })
@@ -96,7 +96,7 @@ impl FileAssetIo {
             })
             .map_err(|e| {
                 eprintln!("watch error: {e:?}");
-                // See todo above: log error message.
+                // TODO: Log asset errors with tracing.
             })
             .ok();
         }

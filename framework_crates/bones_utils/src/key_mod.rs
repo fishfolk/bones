@@ -1,4 +1,6 @@
-// TODO: Replace `Key` with `fstr` crate.
+// TODO: Replace `Key` with an inline string crate of some sort.
+// There are existing solutions such as `fstr` or `smol_str`, which bevy uses,
+// which we shold use instead of rolling our own.
 
 /// A small ascii byte array stored on the stack and used similarly to a string to represent things
 /// like animation keys, etc, without requring a heap allocation.

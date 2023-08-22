@@ -222,7 +222,14 @@ impl UntypedComponentStore {
     fn allocate_enough(&mut self, until: usize) {
         if self.storage.capacity() <= until {
             self.storage
-                // TODO: Determine a better policy for resizing component storage.
+                // TODO: Determine a better policy for resizing and pre-allocating component storage.
+                // Right now we double the size of the storage every time we run out. It seems like we
+                // might be able to come up with a smarter policy. On top of that we should
+                // be able to create a type data for components ( see
+                // `bones_framework::metadata_asset()` for example ) that lets you customize the resize
+                // and also pre-allocation strategy for the component. Right now we don't pre-allocate
+                // any memory, but that could be useful for components that know there will be a lot of
+                // them, such as bullets.
                 .resize((until + 1) * 2)
                 .unwrap();
         }

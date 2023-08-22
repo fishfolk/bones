@@ -165,6 +165,20 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                             default_fn: #default_fn,
                             drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
                             // TODO: Allow deriving `hash_fn` and `eq_fn` for `HasSchema`.
+                            // We need to come up with a strategy for deriving the `Hash` and `Eq`
+                            // functions. There are a couple ways of thinking about this. If the
+                            // struct is #[repr(C)] and all of it's fields implement hash and eq,
+                            // then we can automatically implement hash and EQ using all of the
+                            // field's implementations, without having to have the rust struct
+                            // actually implement either. On the other hand, we could have the rust
+                            // struct be required to derive hash and/or eq, and then we just use the
+                            // `RawHash` and `RawEq` traits to get the functions. I think that's
+                            // probably the right direction, but we need to come up with an
+                            // attribute syntax to tell the derive macro to use the Hash and Eq
+                            // rust implmentations. Bevy used `#[reflect(Hash)]`, and we already
+                            // have `#[schema(no_default)]` so maybe we just add a couple flags like
+                            // `#[schema(hash, eq)]` if you want to use the Rust structs
+                            // `Hash` and `Eq` impls.
                             eq_fn: None,
                             hash_fn: None,
                             kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {

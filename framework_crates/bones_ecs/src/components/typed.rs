@@ -51,7 +51,6 @@ impl<T: HasSchema> ComponentStore<T> {
     }
 
     // TODO: Replace ComponentStore functions with non-validating ones.
-    //
     // Right now functions like `insert`, `get`, and `get_mut` use the checked and panicing versions
     // of the `untyped` functions. These functions do an extra check to see that the schema matches,
     // but we've already validated that in the construction of the `ComponentStore`, so we should

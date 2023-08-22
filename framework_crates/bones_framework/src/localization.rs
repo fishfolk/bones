@@ -65,7 +65,6 @@ impl LocalizationAsset {
         };
 
         // TODO: Log localization formatting errors.
-        //
         // We need to find a way to log the errors without allocating every time we format:
         // https://github.com/projectfluent/fluent-rs/issues/323.
         b.format_pattern(value, None, &mut vec![])
