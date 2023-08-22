@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["FluentBundleAsset","FluentResourceAsset","Localization","LocalizationAsset","RootLocalizationFieldIdx"],"type":["FluentBundle"]};

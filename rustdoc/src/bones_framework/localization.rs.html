@@ -262,7 +262,6 @@
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
 <a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Localization module.
 
 </span><span class="kw">use </span>std::{
@@ -330,7 +329,6 @@
         };
 
         <span class="comment">// TODO: Log localization formatting errors.
-        //
         // We need to find a way to log the errors without allocating every time we format:
         // https://github.com/projectfluent/fluent-rs/issues/323.
         </span>b.format_pattern(value, <span class="prelude-val">None</span>, <span class="kw-2">&amp;mut </span><span class="macro">vec!</span>[])

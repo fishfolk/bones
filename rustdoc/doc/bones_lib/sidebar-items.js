@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["asset","ecs","prelude"],"struct":["DefaultSessionRunner","Game","Session","SessionOptions","Sessions"],"trait":["Plugin","SessionRunner"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["EcsError"],"mod":["atomic","bitset","components","entities","prelude","resources","stage","system","utils"],"struct":["World"],"trait":["FromWorld","UnwrapMany"]};

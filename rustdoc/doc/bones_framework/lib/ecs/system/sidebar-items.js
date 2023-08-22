@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["Res","ResInit","ResMut","ResMutInit","System"],"trait":["IntoSystem","SystemParam"],"type":["Comp","CompMut"]};

@@ -345,6 +345,8 @@
 <a href="#345" id="345">345</a>
 <a href="#346" id="346">346</a>
 <a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -438,7 +440,7 @@
             active: <span class="bool-val">true</span>,
             visible: <span class="bool-val">true</span>,
             priority: <span class="number">0</span>,
-            runner: Box::new(DefaultSessionRunner),
+            runner: Box::&lt;DefaultSessionRunner&gt;::default(),
         }
     }
 }
@@ -462,15 +464,17 @@
 
 <span class="doccomment">/// The default [`SessionRunner`], which just runs the systems once every time it is run.
 </span><span class="attr">#[derive(Default)]
-</span><span class="kw">pub struct </span>DefaultSessionRunner;
+</span><span class="kw">pub struct </span>DefaultSessionRunner {
+    <span class="doccomment">/// Whether or not the systems have been initialized yet.
+    </span><span class="kw">pub </span>has_init: bool,
+}
 <span class="kw">impl </span>SessionRunner <span class="kw">for </span>DefaultSessionRunner {
     <span class="kw">fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World, stages: <span class="kw-2">&amp;mut </span>SystemStages) -&gt; SystemResult {
-        <span class="comment">// TODO: evaluate cost of initializing systems.
-        //
-        // We need to find out how long it takes to initialize systems and decide whether or not it
-        // is worth finding a way to avoid doing it every step. The issue is finding a place to make
-        // sure the initialization happens for every system at least once.
-        </span>stages.initialize_systems(world);
+        <span class="comment">// Initialize systems if they have not been initialized yet.
+        </span><span class="kw">if </span>unlikely(!<span class="self">self</span>.has_init) {
+            <span class="self">self</span>.has_init = <span class="bool-val">true</span>;
+            stages.initialize_systems(world);
+        }
         stages.run(world)
     }
 }

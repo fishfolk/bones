@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["atlas_demo_plugin","atlas_demo_startup","back_to_menu_ui","create_game","main","menu_plugin","menu_startup","menu_system","path2d_demo_plugin","path2d_demo_startup","sprite_demo_plugin","sprite_demo_startup","tilemap_demo_plugin","tilemap_startup_system"],"struct":["AtlasDemoMeta","GameMeta","TileMeta","TilemapDemoMeta"]};

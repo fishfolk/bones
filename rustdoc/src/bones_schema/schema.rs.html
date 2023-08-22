@@ -404,6 +404,8 @@
 <a href="#404" id="404">404</a>
 <a href="#405" id="405">405</a>
 <a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! [`Schema`], [`HasSchema`], [`SchemaData`], and related types.
 
 </span><span class="kw">use </span>std::{alloc::Layout, any::TypeId, borrow::Cow};
@@ -528,8 +530,9 @@
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Deserialize))]
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(rename_all = <span class="string">&quot;snake_case&quot;</span>))]
 </span><span class="comment">// TODO: Add name fields to `SchemaData`.
-//
-// We may want to to have both &quot;full&quot; names and &quot;short&quot; names.
+// We may want to to have both &quot;full&quot; names and &quot;short&quot; names. We have to think about whether or not
+// we want to have some sort of a module path type or just make the full name include the module
+// path in whatever way it wants to.
 </span><span class="kw">pub struct </span>SchemaData {
     <span class="doccomment">/// The kind of schema.
     </span><span class="kw">pub </span>kind: SchemaKind,
@@ -668,9 +671,10 @@
     <span class="doccomment">/// The schema of the field.
     </span><span class="kw">pub </span>schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
     <span class="comment">// TODO: Investigate adding attribute info to `StructFieldInfo`.
-    //
-    // This would allow custom type datas to read and respond to custom attributes on fields as
-    // well.
+    // It could be very useful if the derive macro could capture custom attribute data for struct
+    // fields and put it into the schema data. This would allow type data implementations that
+    // implement `FromType` to have access to custom attributes that could be used to modify various
+    // behavior, without requiring a new macro.
 </span>}
 
 <span class="doccomment">/// A type of primitive.

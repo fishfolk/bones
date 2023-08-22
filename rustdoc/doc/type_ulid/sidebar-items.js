@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"derive":["TypeUlid"],"struct":["Ulid"],"trait":["TypeUlid","TypeUlidDynamic"]};

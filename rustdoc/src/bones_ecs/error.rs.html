@@ -30,11 +30,19 @@
 <a href="#30" id="30">30</a>
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::error::Error;
 
 <span class="doccomment">/// The types of errors used throughout the ECS.
 </span><span class="comment">// TODO: Re-evaluate `EcsError` variants.
-// Some of them may not be used anymore.
+// Some these error variants may not be used anymore. Also, I think most of the times
+// that we return `EcsError`, there is only one possible error that could occur for that function.
+// If that is the case in all situations, we should consider breaking each error type into it&#39;s
+// own struct, so that we aren&#39;t returning an enum with a bunch of errors that will never happen
+// for each function call.
 </span><span class="attr">#[derive(Debug, thiserror::Error)]
 </span><span class="kw">pub enum </span>EcsError {
     <span class="doccomment">/// A resource was not initialized in the [`World`][crate::World] but the

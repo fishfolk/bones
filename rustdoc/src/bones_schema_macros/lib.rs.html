@@ -309,6 +309,13 @@
 <a href="#309" id="309">309</a>
 <a href="#310" id="310">310</a>
 <a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>proc_macro2::{TokenStream <span class="kw">as </span>TokenStream2, TokenTree <span class="kw">as </span>TokenTree2};
 <span class="kw">use </span>quote::{format_ident, quote, quote_spanned, spanned::Spanned};
@@ -375,13 +382,6 @@
 /// ```
 ///
 /// If this is a problem for your use-case, please open an issue.
-</span><span class="comment">// TODO: Figure out why HasSchema derives with #[repr(C)] break Rust analyzer.
-//
-// For some reason deriving HasSchema on something with the `#[repr(C)]` mode breaks the type
-// inferrence in rust analyzer for many uses of it, particulary in bones ECS system parameters like
-// `Res&lt;T&gt;`, etc.
-//
-// This doesn&#39;t have the same issue for `#[schema(opaquea)]` types.
 </span><span class="attr">#[proc_macro_derive(HasSchema, attributes(schema, derive_type_data, type_data))]
 </span><span class="kw">pub fn </span>derive_has_schema(input: TokenStream) -&gt; TokenStream {
     <span class="kw">let </span>input = venial::parse_declaration(input.into()).unwrap();
@@ -483,6 +483,20 @@
                             default_fn: #default_fn,
                             drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawDrop&gt;::raw_drop),
                             <span class="comment">// TODO: Allow deriving `hash_fn` and `eq_fn` for `HasSchema`.
+                            // We need to come up with a strategy for deriving the `Hash` and `Eq`
+                            // functions. There are a couple ways of thinking about this. If the
+                            // struct is #[repr(C)] and all of it&#39;s fields implement hash and eq,
+                            // then we can automatically implement hash and EQ using all of the
+                            // field&#39;s implementations, without having to have the rust struct
+                            // actually implement either. On the other hand, we could have the rust
+                            // struct be required to derive hash and/or eq, and then we just use the
+                            // `RawHash` and `RawEq` traits to get the functions. I think that&#39;s
+                            // probably the right direction, but we need to come up with an
+                            // attribute syntax to tell the derive macro to use the Hash and Eq
+                            // rust implmentations. Bevy used `#[reflect(Hash)]`, and we already
+                            // have `#[schema(no_default)]` so maybe we just add a couple flags like
+                            // `#[schema(hash, eq)]` if you want to use the Rust structs
+                            // `Hash` and `Eq` impls.
                             </span>eq_fn: <span class="prelude-val">None</span>,
                             hash_fn: <span class="prelude-val">None</span>,
                             kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {

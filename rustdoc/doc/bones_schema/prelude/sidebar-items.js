@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"derive":["HasSchema"],"enum":["Primitive","SchemaKind"],"struct":["Schema","SchemaData","SchemaLayoutInfo","StructFieldInfo","StructSchemaInfo","Ulid"],"trait":["FromType","HasSchema"]};

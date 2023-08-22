@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["ComponentStore","ComponentStores","UntypedComponentBitsetIterator","UntypedComponentBitsetIteratorMut","UntypedComponentStore","UntypedComponentStoreIter","UntypedComponentStoreIterMut"],"type":["ComponentBitsetIterator","ComponentBitsetIteratorMut"]};

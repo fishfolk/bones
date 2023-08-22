@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["ResizableAlloc","ResizableAllocIter","ResizableAllocIterMut","SMap","SVec","SVecIter","SVecIterMut","SchemaMap","SchemaTypeMap","SchemaVec","SchemaVecIter","SchemaVecIterMut"],"trait":["LayoutExt"]};

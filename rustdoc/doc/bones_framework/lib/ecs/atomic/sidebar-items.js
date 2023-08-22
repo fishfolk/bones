@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["AtomicRef","AtomicRefCell","AtomicRefMut","BorrowError","BorrowMutError"]};

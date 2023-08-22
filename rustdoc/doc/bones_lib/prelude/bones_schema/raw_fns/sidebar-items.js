@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"trait":["RawClone","RawDefault","RawDrop","RawEq","RawHash"]};

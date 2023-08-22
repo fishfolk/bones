@@ -315,6 +315,8 @@
 <a href="#315" id="315">315</a>
 <a href="#316" id="316">316</a>
 <a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Implementation of stage abstraction for running collections of systems over a [`World`].
 
 </span><span class="kw">use </span>std::collections::VecDeque;
@@ -333,7 +335,9 @@
 <span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>SystemStages {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
         f.debug_struct(<span class="string">&quot;SystemStages&quot;</span>)
-            <span class="comment">// TODO: add list of stages to the debug render for `SystemStages`.
+            <span class="comment">// TODO: Add list of stages to the debug render for `SystemStages`.
+            // We can at least list the names of each stage for `SystemStages` debug
+            // implementation.
             </span>.finish()
     }
 }
