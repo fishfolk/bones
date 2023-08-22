@@ -91,7 +91,7 @@ impl Default for Session {
             active: true,
             visible: true,
             priority: 0,
-            runner: Box::new(DefaultSessionRunner),
+            runner: Box::<DefaultSessionRunner>::default(),
         }
     }
 }
@@ -115,15 +115,17 @@ pub trait SessionRunner: Sync + Send + 'static {
 
 /// The default [`SessionRunner`], which just runs the systems once every time it is run.
 #[derive(Default)]
-pub struct DefaultSessionRunner;
+pub struct DefaultSessionRunner {
+    /// Whether or not the systems have been initialized yet.
+    pub has_init: bool,
+}
 impl SessionRunner for DefaultSessionRunner {
     fn step(&mut self, world: &mut World, stages: &mut SystemStages) -> SystemResult {
-        // TODO: evaluate cost of initializing systems.
-        //
-        // We need to find out how long it takes to initialize systems and decide whether or not it
-        // is worth finding a way to avoid doing it every step. The issue is finding a place to make
-        // sure the initialization happens for every system at least once.
-        stages.initialize_systems(world);
+        // Initialize systems if they have not been initialized yet.
+        if unlikely(!self.has_init) {
+            self.has_init = true;
+            stages.initialize_systems(world);
+        }
         stages.run(world)
     }
 }
