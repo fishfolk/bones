@@ -46,6 +46,7 @@ jobs:
       - name: 🔨 Build Rustdoc
         run: |
           cargo doc --workspace --no-deps
+          rm -rf target/doc-dist
           mkdir -p target/doc-dist
           mv target/doc target/doc-dist/rustdoc
 
