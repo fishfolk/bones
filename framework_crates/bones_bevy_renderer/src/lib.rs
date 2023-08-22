@@ -108,6 +108,8 @@ pub struct BonesData {
 
 impl BonesBevyRenderer {
     // TODO: Create a better builder pattern struct for `BonesBevyRenderer`.
+    // We want to use a nice builder-pattern struct for `BonesBevyRenderer` so that it is easier
+    // to set options like the `pixel_art` flag or the `game_version`.
     /// Create a new [`BonesBevyRenderer`] for the provided game.
     pub fn new(game: bones::Game) -> Self {
         BonesBevyRenderer {

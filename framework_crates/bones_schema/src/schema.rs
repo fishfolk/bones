@@ -122,8 +122,9 @@ impl Schema {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 // TODO: Add name fields to `SchemaData`.
-//
-// We may want to to have both "full" names and "short" names.
+// We may want to to have both "full" names and "short" names. We have to think about whether or not
+// we want to have some sort of a module path type or just make the full name include the module
+// path in whatever way it wants to.
 pub struct SchemaData {
     /// The kind of schema.
     pub kind: SchemaKind,
@@ -262,9 +263,10 @@ pub struct StructFieldInfo {
     /// The schema of the field.
     pub schema: &'static Schema,
     // TODO: Investigate adding attribute info to `StructFieldInfo`.
-    //
-    // This would allow custom type datas to read and respond to custom attributes on fields as
-    // well.
+    // It could be very useful if the derive macro could capture custom attribute data for struct
+    // fields and put it into the schema data. This would allow type data implementations that
+    // implement `FromType` to have access to custom attributes that could be used to modify various
+    // behavior, without requiring a new macro.
 }
 
 /// A type of primitive.

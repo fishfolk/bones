@@ -87,7 +87,9 @@ pub trait QueryItem {
 }
 
 // TODO: Implement optional component query iterators.
-
+// We don't have the ability to do `entities.iter_with(Option<&my_comp>)`, but we should
+// be able to implement a `QueryItem` for that so that you can iterate over entities that
+// _might_ have a component.
 impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
     type Iter = ComponentBitsetIterator<'a, T>;
     fn apply_bitset(&self, bitset: &mut BitSetVec) {

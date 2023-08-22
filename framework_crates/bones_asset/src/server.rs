@@ -210,7 +210,11 @@ impl AssetServer {
             id: meta.id,
             version: meta.version,
             game_version: meta.game_version,
-            // TODO: load & import schemas that are defined in asset packs.
+            // TODO: Load & import schemas that are defined in asset packs.
+            // This is medium-sized effort. The idea is that asset packs shoudl be able to
+            // create YAML files that describe a `SchemaData`. This schema data should get
+            // registered with a file extension name, just like a Rust metadata asset does
+            // so that that schema can be used to load assets.
             schemas: default(),
             import_schemas: default(),
             root: root_handle,
@@ -230,7 +234,7 @@ impl AssetServer {
                 match self.load_asset_forced(loc.as_ref()) {
                     Ok(handle) => handle_change(self, handle),
                     Err(_) => {
-                        // TODO: Handle/log asset error.
+                        // TODO: Log asset errors with tracing.
                         continue;
                     }
                 };
@@ -742,7 +746,10 @@ mod metadata {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            // TODO: write a really nice error message for this.
+            // TODO: Write very verbose error messages for metadata asset deserializers.
+            // The schema describes the type that we are trying to deserialize, so we should
+            // use that information to format a nice-to-read error message that documents
+            // what data it's expecting.
             write!(
                 formatter,
                 "asset metadata matching the schema: {:#?}",
@@ -820,7 +827,7 @@ mod metadata {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            // TODO: write a really nice error message for this.
+            // TODO: Write very verbose error messages for metadata asset deserializers.
             write!(
                 formatter,
                 "asset metadata matching the schema: {:#?}",
@@ -863,7 +870,7 @@ mod metadata {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            // TODO: write a really nice error message for this.
+            // TODO: Write very verbose error messages for metadata asset deserializers.
             write!(
                 formatter,
                 "asset metadata matching the schema: {:#?}",

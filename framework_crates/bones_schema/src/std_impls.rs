@@ -130,7 +130,11 @@ mod impl_glam {
                     clone_fn: Some(<Self as RawClone>::raw_clone),
                     drop_fn: Some(<Self as RawDrop>::raw_drop),
                     default_fn: Some(<Self as RawDefault>::raw_default),
-                    // TODO: Implement hash and eq for `Quat`.
+                    // TODO: Get the schema `hash_fn` and `eq_fn` for the `Quat` type.
+                    // Quats don't implement hash and eq by default because of floating point number
+                    // issues, so we'll have to use a workaround like `CustomRawFns` below to create
+                    // valid implementations of Hash and Eq over the floating points inside the
+                    // Quat.
                     hash_fn: None,
                     eq_fn: None,
                     type_data: Default::default(),
@@ -190,6 +194,8 @@ mod impl_glam {
     schema_impl_glam_vecs!(F64, f64, DVec);
 
     // TODO: Implement `HasSchema` for glam matrix types.
+    // We need to implement `HasSchema` for the matrix types, just like we did with the vector
+    // types.
 
     macro_rules! custom_fns_impl_bvec {
         ($ty:ident) => {
