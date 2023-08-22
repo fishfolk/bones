@@ -591,6 +591,13 @@
 <a href="#591" id="591">591</a>
 <a href="#592" id="592">592</a>
 <a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>bones_schema::alloc::ResizableAlloc;
@@ -815,7 +822,14 @@
     </span><span class="kw">fn </span>allocate_enough(<span class="kw-2">&amp;mut </span><span class="self">self</span>, until: usize) {
         <span class="kw">if </span><span class="self">self</span>.storage.capacity() &lt;= until {
             <span class="self">self</span>.storage
-                <span class="comment">// TODO: Determine a better policy for resizing component storage.
+                <span class="comment">// TODO: Determine a better policy for resizing and pre-allocating component storage.
+                // Right now we double the size of the storage every time we run out. It seems like we
+                // might be able to come up with a smarter policy. On top of that we should
+                // be able to create a type data for components ( see
+                // `bones_framework::metadata_asset()` for example ) that lets you customize the resize
+                // and also pre-allocation strategy for the component. Right now we don&#39;t pre-allocate
+                // any memory, but that could be useful for components that know there will be a lot of
+                // them, such as bullets.
                 </span>.resize((until + <span class="number">1</span>) * <span class="number">2</span>)
                 .unwrap();
         }

@@ -277,9 +277,9 @@
                         }
                         <span class="kw">_ </span>=&gt; (),
                     },
-                    <span class="comment">// TODO: Log `bones_asset` errors with tracing.
-                    //
-                    // Also see the unwrap_or_else line below, which needs an error log.
+                    <span class="comment">// TODO: Log asset errors with tracing.
+                    // We should use the [`tracing`](https://docs.rs/tracing/latest/tracing/) crate
+                    // to log an error message here instead of using `eprintln!()`.
                     </span><span class="prelude-val">Err</span>(e) =&gt; <span class="macro">eprintln!</span>(<span class="string">&quot;watch error: {e:?}&quot;</span>),
                 }
             })
@@ -297,7 +297,7 @@
             })
             .map_err(|e| {
                 <span class="macro">eprintln!</span>(<span class="string">&quot;watch error: {e:?}&quot;</span>);
-                <span class="comment">// See todo above: log error message.
+                <span class="comment">// TODO: Log asset errors with tracing.
             </span>})
             .ok();
         }

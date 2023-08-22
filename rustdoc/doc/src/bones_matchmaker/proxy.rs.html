@@ -139,6 +139,8 @@
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::format_err;
 <span class="kw">use </span>bevy_tasks::IoTaskPool;
 <span class="kw">use </span>bones_matchmaker_proto::{MatchInfo, RecvProxyMessage, SendProxyMessage};
@@ -224,6 +226,8 @@
 
         <span class="comment">// Spawn task for handling the client&#39;s unreliable messages
         // TODO: De-duplicate matchmaker proxy code if possible.
+        // These two task pool spawns have very similar code. It could be good to de-duplicate
+        // it if possible.
         </span>task_pool
             .spawn(<span class="kw">async move </span>{
                 <span class="kw">let </span>result = <span class="kw">async </span>{

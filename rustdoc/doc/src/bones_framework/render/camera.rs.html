@@ -70,6 +70,9 @@
 <a href="#70" id="70">70</a>
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Camera components.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -78,7 +81,10 @@
 ///
 /// The entity must also have a [`Transform`] component for the camera to render anything.
 </span><span class="attr">#[derive(Clone, Copy, Debug, HasSchema)]
-#[schema(opaque)] </span><span class="comment">// TODO: make repr(C) when `Option`s are supported.
+#[schema(opaque)]
+</span><span class="comment">// TODO: make repr(C) when `Option`s are supported.
+// We don&#39;t have `Option` support in `bones_schema` right now.
+// Once we do, we can make this type `#[repr(C)]` instead of `#[schema(opaque)]`.
 </span><span class="kw">pub struct </span>Camera {
     <span class="doccomment">/// The height of the camera in in-game pixels.
     ///

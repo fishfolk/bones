@@ -706,6 +706,8 @@
 <a href="#706" id="706">706</a>
 <a href="#707" id="707">707</a>
 <a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -816,6 +818,8 @@
 
 <span class="kw">impl </span>BonesBevyRenderer {
     <span class="comment">// TODO: Create a better builder pattern struct for `BonesBevyRenderer`.
+    // We want to use a nice builder-pattern struct for `BonesBevyRenderer` so that it is easier
+    // to set options like the `pixel_art` flag or the `game_version`.
     </span><span class="doccomment">/// Create a new [`BonesBevyRenderer`] for the provided game.
     </span><span class="kw">pub fn </span>new(game: bones::Game) -&gt; <span class="self">Self </span>{
         BonesBevyRenderer {
