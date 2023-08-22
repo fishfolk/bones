@@ -52,10 +52,6 @@ impl ComponentStores {
     }
 
     /// Get the components of a certain type
-    // TODO: Attempt to refactor component store so we can avoid the two-step borrow process.
-    //
-    // With resources we were able to avoid this step, but component stores are structured
-    // differently and might need more work.
     pub fn get_cell<T: HasSchema>(&self) -> Result<AtomicComponentStore<T>, EcsError> {
         let untyped = self.get_cell_by_schema_id(T::schema().id())?;
 
