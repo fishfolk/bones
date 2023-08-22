@@ -1,3 +1,0 @@
-use_squash_merge = true
-cut_body_after   = "_ _ _"
-status           = ["Lint commit message", "Check Rust formatting", "Clippy correctness checks (%)", "Build Docs", "Miri tests"]
