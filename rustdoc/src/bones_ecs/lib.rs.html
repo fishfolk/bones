@@ -111,7 +111,7 @@
     //! Atomic Refcells are from the [`atomic_refcell`] crate.
     //!
     //! [`atomic_refcell`]: https://docs.rs/atomic_refcell
-    </span><span class="kw">pub use </span>atomic_refcell::<span class="kw-2">*</span>;
+    </span><span class="kw">pub use </span>atomicell::<span class="kw-2">*</span>;
 }
 <span class="kw">pub mod </span>bitset;
 <span class="kw">pub mod </span>components;
@@ -132,7 +132,7 @@
 <span class="doccomment">/// The prelude.
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use </span>{
-        atomic_refcell::<span class="kw-2">*</span>, bitset_core::BitSet, bones_schema::prelude::<span class="kw-2">*</span>, bones_utils::prelude::<span class="kw-2">*</span>,
+        atomicell::<span class="kw-2">*</span>, bitset_core::BitSet, bones_schema::prelude::<span class="kw-2">*</span>, bones_utils::prelude::<span class="kw-2">*</span>,
     };
 
     <span class="kw">pub use crate</span>::{

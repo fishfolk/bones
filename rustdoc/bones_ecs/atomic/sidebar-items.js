@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["AtomicRef","AtomicRefCell","AtomicRefMut","BorrowError","BorrowMutError"]};
+window.SIDEBAR_ITEMS = {"mod":["borrow"],"struct":["AtomicCell","Ref","RefMut"]};

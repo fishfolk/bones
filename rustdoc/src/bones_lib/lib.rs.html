@@ -505,7 +505,7 @@
     }
 
     <span class="doccomment">/// Borrow the asset server.
-    </span><span class="kw">pub fn </span>asset_server(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicRefMut&lt;AssetServer&gt; {
+    </span><span class="kw">pub fn </span>asset_server(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;AssetServer&gt; {
         <span class="self">self</span>.asset_server.borrow_mut()
     }
 

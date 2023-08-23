@@ -620,7 +620,7 @@
 ///
 /// This is a shortcut for [`ResMut&lt;CommandQueue&gt;`].
 </span><span class="attr">#[derive(Deref, DerefMut)]
-</span><span class="kw">pub struct </span>Commands&lt;<span class="lifetime">&#39;a</span>&gt;(AtomicRefMut&lt;<span class="lifetime">&#39;a</span>, CommandQueue&gt;);
+</span><span class="kw">pub struct </span>Commands&lt;<span class="lifetime">&#39;a</span>&gt;(RefMut&lt;<span class="lifetime">&#39;a</span>, CommandQueue&gt;);
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; SystemParam <span class="kw">for </span>Commands&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">type </span>State = AtomicResource&lt;CommandQueue&gt;;

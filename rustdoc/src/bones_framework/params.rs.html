@@ -22,14 +22,12 @@
 <a href="#22" id="22">22</a>
 <a href="#23" id="23">23</a>
 <a href="#24" id="24">24</a>
-<a href="#25" id="25">25</a>
-<a href="#26" id="26">26</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bones ECS system parameters.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// Get the root asset of the core asset pack and cast it to type `T`.
-</span><span class="kw">pub struct </span>Root&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt;(AtomicRef&lt;<span class="lifetime">&#39;a</span>, T&gt;);
+</span><span class="kw">pub struct </span>Root&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt;(Ref&lt;<span class="lifetime">&#39;a</span>, T&gt;);
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; std::ops::Deref <span class="kw">for </span>Root&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">type </span>Target = T;
     <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
@@ -45,9 +43,7 @@
         world.resources.get_cell::&lt;AssetServer&gt;().unwrap()
     }
     <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
-        Root(AtomicRef::map(state.borrow(), |asset_server| {
-            asset_server.root()
-        }))
+        Root(Ref::map(state.borrow(), |asset_server| asset_server.root()))
     }
 }
 </code></pre></div></section></main></body></html>

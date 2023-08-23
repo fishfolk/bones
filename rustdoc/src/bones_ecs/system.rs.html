@@ -669,7 +669,7 @@
 <span class="doccomment">/// [`SystemParam`] for getting read access to a resource.
 ///
 /// Use [`Res`] if you want to automatically initialize the resource.
-</span><span class="kw">pub struct </span>Res&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt;(AtomicRef&lt;<span class="lifetime">&#39;a</span>, T&gt;);
+</span><span class="kw">pub struct </span>Res&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt;(Ref&lt;<span class="lifetime">&#39;a</span>, T&gt;);
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; std::ops::Deref <span class="kw">for </span>Res&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">type </span>Target = T;
     <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
@@ -681,7 +681,7 @@
 /// exist.
 ///
 /// Use [`Res`] if you don&#39;t want to automatically initialize the resource.
-</span><span class="kw">pub struct </span>ResInit&lt;<span class="lifetime">&#39;a</span>, T: HasSchema + FromWorld&gt;(AtomicRef&lt;<span class="lifetime">&#39;a</span>, T&gt;);
+</span><span class="kw">pub struct </span>ResInit&lt;<span class="lifetime">&#39;a</span>, T: HasSchema + FromWorld&gt;(Ref&lt;<span class="lifetime">&#39;a</span>, T&gt;);
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema + FromWorld&gt; std::ops::Deref <span class="kw">for </span>ResInit&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">type </span>Target = T;
     <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
@@ -692,7 +692,7 @@
 <span class="doccomment">/// [`SystemParam`] for getting mutable access to a resource.
 ///
 /// Use [`ResMutInit`] if you want to automatically initialize the resource.
-</span><span class="kw">pub struct </span>ResMut&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt;(AtomicRefMut&lt;<span class="lifetime">&#39;a</span>, T&gt;);
+</span><span class="kw">pub struct </span>ResMut&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt;(RefMut&lt;<span class="lifetime">&#39;a</span>, T&gt;);
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; std::ops::Deref <span class="kw">for </span>ResMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">type </span>Target = T;
     <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
@@ -709,7 +709,7 @@
 /// already exist.
 ///
 /// Use [`ResMut`] if you don&#39;t want to automatically initialize the resource.
-</span><span class="kw">pub struct </span>ResMutInit&lt;<span class="lifetime">&#39;a</span>, T: HasSchema + FromWorld&gt;(AtomicRefMut&lt;<span class="lifetime">&#39;a</span>, T&gt;);
+</span><span class="kw">pub struct </span>ResMutInit&lt;<span class="lifetime">&#39;a</span>, T: HasSchema + FromWorld&gt;(RefMut&lt;<span class="lifetime">&#39;a</span>, T&gt;);
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema + FromWorld&gt; std::ops::Deref <span class="kw">for </span>ResMutInit&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">type </span>Target = T;
     <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
@@ -807,12 +807,12 @@
 }
 
 <span class="doccomment">/// [`SystemParam`] for getting read access to a [`ComponentStore`].
-</span><span class="kw">pub type </span>Comp&lt;<span class="lifetime">&#39;a</span>, T&gt; = AtomicRef&lt;<span class="lifetime">&#39;a</span>, ComponentStore&lt;T&gt;&gt;;
+</span><span class="kw">pub type </span>Comp&lt;<span class="lifetime">&#39;a</span>, T&gt; = Ref&lt;<span class="lifetime">&#39;a</span>, ComponentStore&lt;T&gt;&gt;;
 <span class="doccomment">/// [`SystemParam`] for getting mutable access to a [`ComponentStore`].
-</span><span class="kw">pub type </span>CompMut&lt;<span class="lifetime">&#39;a</span>, T&gt; = AtomicRefMut&lt;<span class="lifetime">&#39;a</span>, ComponentStore&lt;T&gt;&gt;;
+</span><span class="kw">pub type </span>CompMut&lt;<span class="lifetime">&#39;a</span>, T&gt; = RefMut&lt;<span class="lifetime">&#39;a</span>, ComponentStore&lt;T&gt;&gt;;
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; SystemParam <span class="kw">for </span>Comp&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    <span class="kw">type </span>State = Arc&lt;AtomicRefCell&lt;ComponentStore&lt;T&gt;&gt;&gt;;
+    <span class="kw">type </span>State = Arc&lt;AtomicCell&lt;ComponentStore&lt;T&gt;&gt;&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = Comp&lt;<span class="lifetime">&#39;p</span>, T&gt;;
 
     <span class="kw">fn </span>initialize(world: <span class="kw-2">&amp;mut </span>World) {
@@ -829,7 +829,7 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; SystemParam <span class="kw">for </span>CompMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-    <span class="kw">type </span>State = Arc&lt;AtomicRefCell&lt;ComponentStore&lt;T&gt;&gt;&gt;;
+    <span class="kw">type </span>State = Arc&lt;AtomicCell&lt;ComponentStore&lt;T&gt;&gt;&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = CompMut&lt;<span class="lifetime">&#39;p</span>, T&gt;;
 
     <span class="kw">fn </span>initialize(world: <span class="kw-2">&amp;mut </span>World) {
@@ -964,8 +964,8 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>convert_system() {
         <span class="kw">fn </span>tmp(
-            _var1: AtomicRef&lt;ComponentStore&lt;u32&gt;&gt;,
-            _var2: AtomicRef&lt;ComponentStore&lt;u64&gt;&gt;,
+            _var1: Ref&lt;ComponentStore&lt;u32&gt;&gt;,
+            _var2: Ref&lt;ComponentStore&lt;u64&gt;&gt;,
             _var3: Res&lt;i32&gt;,
             _var4: ResMut&lt;i64&gt;,
         ) -&gt; SystemResult {
