@@ -156,7 +156,7 @@ impl Game {
     }
 
     /// Borrow the asset server.
-    pub fn asset_server(&self) -> AtomicRefMut<AssetServer> {
+    pub fn asset_server(&self) -> RefMut<AssetServer> {
         self.asset_server.borrow_mut()
     }
 

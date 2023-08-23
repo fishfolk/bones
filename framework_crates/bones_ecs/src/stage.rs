@@ -301,7 +301,7 @@ impl CommandQueue {
 ///
 /// This is a shortcut for [`ResMut<CommandQueue>`].
 #[derive(Deref, DerefMut)]
-pub struct Commands<'a>(AtomicRefMut<'a, CommandQueue>);
+pub struct Commands<'a>(RefMut<'a, CommandQueue>);
 
 impl<'a> SystemParam for Commands<'a> {
     type State = AtomicResource<CommandQueue>;

@@ -141,7 +141,7 @@ pub trait SystemParam: Sized {
 /// [`SystemParam`] for getting read access to a resource.
 ///
 /// Use [`Res`] if you want to automatically initialize the resource.
-pub struct Res<'a, T: HasSchema>(AtomicRef<'a, T>);
+pub struct Res<'a, T: HasSchema>(Ref<'a, T>);
 impl<'a, T: HasSchema> std::ops::Deref for Res<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
@@ -153,7 +153,7 @@ impl<'a, T: HasSchema> std::ops::Deref for Res<'a, T> {
 /// exist.
 ///
 /// Use [`Res`] if you don't want to automatically initialize the resource.
-pub struct ResInit<'a, T: HasSchema + FromWorld>(AtomicRef<'a, T>);
+pub struct ResInit<'a, T: HasSchema + FromWorld>(Ref<'a, T>);
 impl<'a, T: HasSchema + FromWorld> std::ops::Deref for ResInit<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
@@ -164,7 +164,7 @@ impl<'a, T: HasSchema + FromWorld> std::ops::Deref for ResInit<'a, T> {
 /// [`SystemParam`] for getting mutable access to a resource.
 ///
 /// Use [`ResMutInit`] if you want to automatically initialize the resource.
-pub struct ResMut<'a, T: HasSchema>(AtomicRefMut<'a, T>);
+pub struct ResMut<'a, T: HasSchema>(RefMut<'a, T>);
 impl<'a, T: HasSchema> std::ops::Deref for ResMut<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
@@ -181,7 +181,7 @@ impl<'a, T: HasSchema> std::ops::DerefMut for ResMut<'a, T> {
 /// already exist.
 ///
 /// Use [`ResMut`] if you don't want to automatically initialize the resource.
-pub struct ResMutInit<'a, T: HasSchema + FromWorld>(AtomicRefMut<'a, T>);
+pub struct ResMutInit<'a, T: HasSchema + FromWorld>(RefMut<'a, T>);
 impl<'a, T: HasSchema + FromWorld> std::ops::Deref for ResMutInit<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
@@ -279,12 +279,12 @@ impl<'a, T: HasSchema + FromWorld> SystemParam for ResMutInit<'a, T> {
 }
 
 /// [`SystemParam`] for getting read access to a [`ComponentStore`].
-pub type Comp<'a, T> = AtomicRef<'a, ComponentStore<T>>;
+pub type Comp<'a, T> = Ref<'a, ComponentStore<T>>;
 /// [`SystemParam`] for getting mutable access to a [`ComponentStore`].
-pub type CompMut<'a, T> = AtomicRefMut<'a, ComponentStore<T>>;
+pub type CompMut<'a, T> = RefMut<'a, ComponentStore<T>>;
 
 impl<'a, T: HasSchema> SystemParam for Comp<'a, T> {
-    type State = Arc<AtomicRefCell<ComponentStore<T>>>;
+    type State = Arc<AtomicCell<ComponentStore<T>>>;
     type Param<'p> = Comp<'p, T>;
 
     fn initialize(world: &mut World) {
@@ -301,7 +301,7 @@ impl<'a, T: HasSchema> SystemParam for Comp<'a, T> {
 }
 
 impl<'a, T: HasSchema> SystemParam for CompMut<'a, T> {
-    type State = Arc<AtomicRefCell<ComponentStore<T>>>;
+    type State = Arc<AtomicCell<ComponentStore<T>>>;
     type Param<'p> = CompMut<'p, T>;
 
     fn initialize(world: &mut World) {
@@ -436,8 +436,8 @@ mod tests {
     #[test]
     fn convert_system() {
         fn tmp(
-            _var1: AtomicRef<ComponentStore<u32>>,
-            _var2: AtomicRef<ComponentStore<u64>>,
+            _var1: Ref<ComponentStore<u32>>,
+            _var2: Ref<ComponentStore<u64>>,
             _var3: Res<i32>,
             _var4: ResMut<i64>,
         ) -> SystemResult {

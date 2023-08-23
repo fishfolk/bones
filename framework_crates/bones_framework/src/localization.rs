@@ -91,7 +91,7 @@ impl LocalizationAsset {
 #[derive(Deref, DerefMut)]
 pub struct Localization<'a, T> {
     #[deref]
-    asset: AtomicRef<'a, LocalizationAsset>,
+    asset: Ref<'a, LocalizationAsset>,
     _phantom: PhantomData<T>,
 }
 
@@ -147,7 +147,7 @@ impl<T: HasSchema> SystemParam for Localization<'_, T> {
             idx.expect(ERR)
         });
 
-        let asset = AtomicRef::map(asset_server, |asset_server| {
+        let asset = Ref::map(asset_server, |asset_server| {
             let root = asset_server.root::<T>().as_schema_ref();
             let handle = root
                 .get_field(*field_idx)

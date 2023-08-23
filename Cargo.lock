@@ -329,6 +329,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "112ef6b3f6cb3cb6fc5b6b494ef7a848492cff1ab0ef4de10b0f7d572861c905"
 
 [[package]]
+name = "atomicell"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "157342dd84c64f16899b4b16c1fb2cce54b887990362aac3c590b3d13810890f"
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1074,7 +1080,7 @@ name = "bones_ecs"
 version = "0.3.0"
 dependencies = [
  "anyhow",
- "atomic_refcell",
+ "atomicell",
  "bitset-core",
  "bones_schema",
  "bones_utils",

@@ -113,7 +113,7 @@ impl World {
     /// # Panics
     /// Panics if the resource does not exist in the store.
     #[track_caller]
-    pub fn resource<T: HasSchema>(&self) -> AtomicRef<T> {
+    pub fn resource<T: HasSchema>(&self) -> Ref<T> {
         match self.resources.get::<T>() {
             Some(r) => r,
             None => panic!(
@@ -128,7 +128,7 @@ impl World {
     /// # Panics
     /// Panics if the resource does not exist in the store.
     #[track_caller]
-    pub fn resource_mut<T: HasSchema>(&mut self) -> AtomicRefMut<T> {
+    pub fn resource_mut<T: HasSchema>(&mut self) -> RefMut<T> {
         match self.resources.get_mut::<T>() {
             Some(r) => r,
             None => panic!(
@@ -140,12 +140,12 @@ impl World {
     }
 
     /// Borrow a resource from the world, if it exists.
-    pub fn get_resource<T: HasSchema>(&self) -> Option<AtomicRef<T>> {
+    pub fn get_resource<T: HasSchema>(&self) -> Option<Ref<T>> {
         self.resources.get()
     }
 
     /// Borrow a resource from the world, if it exists.
-    pub fn get_resource_mut<T: HasSchema>(&mut self) -> Option<AtomicRefMut<T>> {
+    pub fn get_resource_mut<T: HasSchema>(&mut self) -> Option<RefMut<T>> {
         self.resources.get_mut()
     }
 }
