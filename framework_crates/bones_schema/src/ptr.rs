@@ -1,13 +1,8 @@
 //! Schema-aware smart pointers.
 
 use std::{
-    alloc::{handle_alloc_error, Layout},
-    any::TypeId,
-    hash::Hash,
-    marker::PhantomData,
-    mem::MaybeUninit,
-    ptr::NonNull,
-    sync::OnceLock,
+    alloc::handle_alloc_error, any::TypeId, hash::Hash, marker::PhantomData, mem::MaybeUninit,
+    ptr::NonNull, sync::OnceLock,
 };
 
 use crate::{
@@ -423,7 +418,6 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
 pub struct SchemaBox {
     ptr: OwningPtr<'static>,
     schema: &'static Schema,
-    layout: Layout,
 }
 unsafe impl Sync for SchemaBox {}
 unsafe impl Send for SchemaBox {}
@@ -431,7 +425,6 @@ impl std::fmt::Debug for SchemaBox {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SchemaBox")
             .field("schema", &self.schema)
-            .field("layout", &self.layout)
             .finish_non_exhaustive()
     }
 }
@@ -469,20 +462,20 @@ impl Clone for SchemaBox {
             )
         });
 
-        let new_ptr = if self.layout.size() == 0 {
+        let layout = self.schema.layout();
+        let new_ptr = if layout.size() == 0 {
             NonNull::<u8>::dangling().as_ptr()
         } else {
             // SOUND: Non-zero size for layout
-            unsafe { std::alloc::alloc(self.layout) }
+            unsafe { std::alloc::alloc(layout) }
         };
         let new_ptr = unsafe {
             (clone_fn)(self.ptr.as_ref().as_ptr(), new_ptr);
-            OwningPtr::new(NonNull::new(new_ptr).unwrap_or_else(|| handle_alloc_error(self.layout)))
+            OwningPtr::new(NonNull::new(new_ptr).unwrap_or_else(|| handle_alloc_error(layout)))
         };
         Self {
             ptr: new_ptr,
             schema: self.schema,
-            layout: self.layout,
         }
     }
 }
@@ -618,11 +611,7 @@ impl SchemaBox {
             OwningPtr::new(NonNull::new(ptr).unwrap_or_else(|| handle_alloc_error(layout)))
         };
 
-        Self {
-            ptr,
-            schema,
-            layout,
-        }
+        Self { ptr, schema }
     }
 
     /// Create a new [`SchemaBox`] for a type with a [`Schema`] that has a
@@ -680,11 +669,7 @@ impl SchemaBox {
     ///
     /// - You must insure that the pointer is valid for the given schema.
     pub unsafe fn from_raw_parts(ptr: OwningPtr<'static>, schema: &'static Schema) -> Self {
-        Self {
-            ptr,
-            layout: schema.layout(),
-            schema,
-        }
+        Self { ptr, schema }
     }
 
     /// Deallocate the memory stored in the box, but don't run the destructor.
@@ -747,7 +732,7 @@ impl SchemaBox {
     /// Deallocate the memory in the box.
     unsafe fn dealloc(&mut self) {
         if self.schema.layout().size() > 0 {
-            std::alloc::dealloc(self.ptr.as_ptr(), self.layout)
+            std::alloc::dealloc(self.ptr.as_ptr(), self.schema.layout())
         }
     }
 
