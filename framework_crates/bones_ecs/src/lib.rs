@@ -9,7 +9,7 @@ pub mod atomic {
     //! Atomic Refcells are from the [`atomic_refcell`] crate.
     //!
     //! [`atomic_refcell`]: https://docs.rs/atomic_refcell
-    pub use atomic_refcell::*;
+    pub use atomicell::*;
 }
 pub mod bitset;
 pub mod components;
@@ -30,7 +30,7 @@ pub use world::{FromWorld, World};
 /// The prelude.
 pub mod prelude {
     pub use {
-        atomic_refcell::*, bitset_core::BitSet, bones_schema::prelude::*, bones_utils::prelude::*,
+        atomicell::*, bitset_core::BitSet, bones_schema::prelude::*, bones_utils::prelude::*,
     };
 
     pub use crate::{

@@ -12,7 +12,7 @@ pub use iterator::*;
 pub use typed::*;
 pub use untyped::*;
 
-type AtomicComponentStore<T> = Arc<AtomicRefCell<ComponentStore<T>>>;
+type AtomicComponentStore<T> = Arc<AtomicCell<ComponentStore<T>>>;
 
 /// A collection of [`ComponentStore<T>`].
 ///
@@ -20,7 +20,7 @@ type AtomicComponentStore<T> = Arc<AtomicRefCell<ComponentStore<T>>>;
 /// initialized for that world.
 #[derive(Default)]
 pub struct ComponentStores {
-    pub(crate) components: HashMap<SchemaId, Arc<AtomicRefCell<UntypedComponentStore>>>,
+    pub(crate) components: HashMap<SchemaId, Arc<AtomicCell<UntypedComponentStore>>>,
 }
 
 // SOUND: all of the functions for ComponentStores requires that the types stored implement Sync +
@@ -46,9 +46,9 @@ impl ComponentStores {
     /// Initialize component storage for type `T`.
     pub fn init<T: HasSchema>(&mut self) {
         let schema = T::schema();
-        self.components.entry(schema.id()).or_insert_with(|| {
-            Arc::new(AtomicRefCell::new(UntypedComponentStore::for_type::<T>()))
-        });
+        self.components
+            .entry(schema.id())
+            .or_insert_with(|| Arc::new(AtomicCell::new(UntypedComponentStore::for_type::<T>())));
     }
 
     /// Get the components of a certain type
@@ -59,8 +59,8 @@ impl ComponentStores {
         // `UntypedComponentStore`.
         unsafe {
             Ok(std::mem::transmute::<
-                Arc<AtomicRefCell<UntypedComponentStore>>,
-                Arc<AtomicRefCell<ComponentStore<T>>>,
+                Arc<AtomicCell<UntypedComponentStore>>,
+                Arc<AtomicCell<ComponentStore<T>>>,
             >(untyped))
         }
     }
@@ -68,7 +68,7 @@ impl ComponentStores {
     /// Borrow a component store.
     /// # Errors
     /// Errors if the component store has not been initialized yet.
-    pub fn get<T: HasSchema>(&self) -> Result<AtomicRef<ComponentStore<T>>, EcsError> {
+    pub fn get<T: HasSchema>(&self) -> Result<Ref<ComponentStore<T>>, EcsError> {
         let id = T::schema().id();
         let atomicref = self
             .components
@@ -77,7 +77,7 @@ impl ComponentStores {
             .borrow();
 
         // SOUND: ComponentStore<T> is repr(transparent) over UntypedComponent store.
-        let atomicref = AtomicRef::map(atomicref, |x| unsafe {
+        let atomicref = Ref::map(atomicref, |x| unsafe {
             std::mem::transmute::<&UntypedComponentStore, &ComponentStore<T>>(x)
         });
 
@@ -87,7 +87,7 @@ impl ComponentStores {
     /// Borrow a component store.
     /// # Errors
     /// Errors if the component store has not been initialized yet.
-    pub fn get_mut<T: HasSchema>(&self) -> Result<AtomicRefMut<ComponentStore<T>>, EcsError> {
+    pub fn get_mut<T: HasSchema>(&self) -> Result<RefMut<ComponentStore<T>>, EcsError> {
         let id = T::schema().id();
         let atomicref = self
             .components
@@ -96,7 +96,7 @@ impl ComponentStores {
             .borrow_mut();
 
         // SOUND: ComponentStore<T> is repr(transparent) over UntypedComponent store.
-        let atomicref = AtomicRefMut::map(atomicref, |x| unsafe {
+        let atomicref = RefMut::map(atomicref, |x| unsafe {
             std::mem::transmute::<&mut UntypedComponentStore, &mut ComponentStore<T>>(x)
         });
 
@@ -107,7 +107,7 @@ impl ComponentStores {
     pub fn get_cell_by_schema_id(
         &self,
         id: SchemaId,
-    ) -> Result<Arc<AtomicRefCell<UntypedComponentStore>>, EcsError> {
+    ) -> Result<Arc<AtomicCell<UntypedComponentStore>>, EcsError> {
         self.components
             .get(&id)
             .cloned()

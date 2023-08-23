@@ -2,6 +2,8 @@
 
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
+use atomicell::borrow::{AtomicBorrow, AtomicBorrowMut};
+
 use crate::prelude::*;
 
 /// Storage for un-typed resources.
@@ -16,10 +18,8 @@ pub struct UntypedResources {
 }
 
 /// An untyped resource that may be inserted into [`UntypedResources`].
-#[derive(Deref, DerefMut)]
 pub struct UntypedAtomicResource {
-    #[deref]
-    cell: Arc<AtomicRefCell<SchemaBox>>,
+    cell: Arc<AtomicCell<SchemaBox>>,
     schema: &'static Schema,
 }
 
@@ -28,7 +28,7 @@ impl UntypedAtomicResource {
     pub fn new(resource: SchemaBox) -> Self {
         Self {
             schema: resource.schema(),
-            cell: Arc::new(AtomicRefCell::new(resource)),
+            cell: Arc::new(AtomicCell::new(resource)),
         }
     }
 
@@ -36,7 +36,7 @@ impl UntypedAtomicResource {
     /// value for the schema.
     pub fn from_schema(schema: &'static Schema) -> Self {
         Self {
-            cell: Arc::new(AtomicRefCell::new(SchemaBox::default(schema))),
+            cell: Arc::new(AtomicCell::new(SchemaBox::default(schema))),
             schema,
         }
     }
@@ -49,16 +49,64 @@ impl UntypedAtomicResource {
         }
     }
 
+    /// Borrow the resource.
+    pub fn borrow(&self) -> AtomicSchemaRef {
+        // SOUND: we keep the borrow along with the reference.
+        let (reference, borrow) = unsafe { Ref::into_split(self.cell.borrow()) };
+        let schema_ref = reference.as_ref();
+        AtomicSchemaRef { schema_ref, borrow }
+    }
+
+    /// Mutably borrow the resource.
+    pub fn borrow_mut(&self) -> AtomicSchemaRefMut {
+        // SOUND: we keep the borrow along with the reference.
+        let (reference, borrow) = unsafe { RefMut::into_split(self.cell.borrow_mut()) };
+        let schema_ref = reference.as_mut();
+        AtomicSchemaRefMut { schema_ref, borrow }
+    }
+
     /// Get the schema of the resource.
     pub fn schema(&self) -> &'static Schema {
         self.schema
     }
 }
 
+/// An atomic borrow of a [`SchemaRef`].
+#[derive(Deref)]
+pub struct AtomicSchemaRef<'a> {
+    #[deref]
+    schema_ref: SchemaRef<'a>,
+    borrow: AtomicBorrow<'a>,
+}
+
+impl<'a> AtomicSchemaRef<'a> {
+    /// # Safety
+    /// You must know that T represents the data in the [`SchemaRef`].
+    pub unsafe fn deref<T>(self) -> Ref<'a, T> {
+        Ref::with_borrow(self.schema_ref.deref(), self.borrow)
+    }
+}
+
+/// An atomic borrow of a [`SchemaRefMut`].
+#[derive(Deref, DerefMut)]
+pub struct AtomicSchemaRefMut<'a> {
+    #[deref]
+    schema_ref: SchemaRefMut<'a, 'a>,
+    borrow: AtomicBorrowMut<'a>,
+}
+
+impl<'a> AtomicSchemaRefMut<'a> {
+    /// # Safety
+    /// You must know that T represents the data in the [`SchemaRefMut`].
+    pub unsafe fn deref_mut<T>(self) -> RefMut<'a, T> {
+        RefMut::with_borrow(self.schema_ref.deref_mut(), self.borrow)
+    }
+}
+
 impl Clone for UntypedAtomicResource {
     fn clone(&self) -> Self {
         Self {
-            cell: Arc::new(AtomicRefCell::new(self.cell.borrow().clone())),
+            cell: Arc::new(AtomicCell::new((*self.cell.borrow()).clone())),
             schema: self.schema,
         }
     }
@@ -82,7 +130,7 @@ impl UntypedResources {
         &mut self,
         resource: UntypedAtomicResource,
     ) -> Option<UntypedAtomicResource> {
-        let id = resource.cell.borrow().schema().id();
+        let id = resource.schema().id();
         self.resources.insert(id, resource)
     }
 
@@ -92,17 +140,13 @@ impl UntypedResources {
     }
 
     /// Get a reference to an untyped resource.
-    pub fn get(&self, schema_id: SchemaId) -> Option<AtomicRef<SchemaBox>> {
-        self.resources
-            .get(&schema_id)
-            .map(|x| AtomicRefCell::borrow(&x.cell))
+    pub fn get(&self, schema_id: SchemaId) -> Option<AtomicSchemaRef> {
+        self.resources.get(&schema_id).map(|x| x.borrow())
     }
 
     /// Get a mutable reference to an untyped resource.
-    pub fn get_mut(&mut self, schema_id: SchemaId) -> Option<AtomicRefMut<SchemaBox>> {
-        self.resources
-            .get(&schema_id)
-            .map(|x| AtomicRefCell::borrow_mut(&x.cell))
+    pub fn get_mut(&mut self, schema_id: SchemaId) -> Option<AtomicSchemaRefMut> {
+        self.resources.get(&schema_id).map(|x| x.borrow_mut())
     }
 
     /// Remove a resource.
@@ -138,24 +182,18 @@ impl Resources {
     }
 
     /// Borrow a resource.
-    pub fn get<T: HasSchema>(&self) -> Option<AtomicRef<T>> {
-        self.untyped.get(T::schema().id()).map(|sbox| {
-            AtomicRef::map(sbox, |sbox| {
-                // SOUND: schema matches as checked by retreiving from the untyped store by the schema
-                // ID.
-                unsafe { sbox.as_ref().deref() }
-            })
+    pub fn get<T: HasSchema>(&self) -> Option<Ref<T>> {
+        self.untyped.get(T::schema().id()).map(|x| {
+            // SOUND: untyped resources returns data matching the schema of T.
+            unsafe { x.deref() }
         })
     }
 
     /// Mutably borrow a resource.
-    pub fn get_mut<T: HasSchema>(&mut self) -> Option<AtomicRefMut<T>> {
-        self.untyped.get_mut(T::schema().id()).map(|sbox| {
-            AtomicRefMut::map(sbox, |sbox| {
-                // SOUND: schema matches as checked by retreiving from the untyped store by the
-                // schema ID.
-                unsafe { sbox.as_mut().deref_mut() }
-            })
+    pub fn get_mut<T: HasSchema>(&mut self) -> Option<RefMut<T>> {
+        self.untyped.get_mut(T::schema().id()).map(|x| {
+            // SOUND: untyped resources returns data matching the schema of T.
+            unsafe { x.deref_mut() }
         })
     }
 
@@ -249,19 +287,19 @@ impl<T: HasSchema> AtomicResource<T> {
     /// Lock the resource for reading.
     ///
     /// This returns a read guard, very similar to an [`RwLock`][std::sync::RwLock].
-    pub fn borrow(&self) -> AtomicRef<T> {
-        let borrow = AtomicRefCell::borrow(&self.untyped);
+    pub fn borrow(&self) -> Ref<T> {
+        let borrow = self.untyped.borrow();
         // SOUND: We know that the data pointer is valid for type T.
-        AtomicRef::map(borrow, |data| unsafe { data.as_ref().deref() })
+        unsafe { borrow.deref() }
     }
 
     /// Lock the resource for read-writing.
     ///
     /// This returns a write guard, very similar to an [`RwLock`][std::sync::RwLock].
-    pub fn borrow_mut(&self) -> AtomicRefMut<T> {
-        let borrow = AtomicRefCell::borrow_mut(&self.untyped);
+    pub fn borrow_mut(&self) -> RefMut<T> {
+        let borrow = self.untyped.borrow_mut();
         // SOUND: We know that the data pointer is valid for type T.
-        AtomicRefMut::map(borrow, |data| unsafe { data.as_mut().deref_mut() })
+        unsafe { borrow.deref_mut() }
     }
 }
 
@@ -297,5 +335,29 @@ mod test {
         resources.insert(B(2));
         assert_eq!(resources.get::<B>().unwrap().0, 2);
         assert_eq!(resources.get::<A>().unwrap().0, "world");
+    }
+
+    #[test]
+    fn untyped_resources_no_rewrite() {
+        let mut store = UntypedResources::default();
+
+        // Create two datas with different types.
+        let data1 = SchemaBox::new(0usize);
+        let data1_schema = data1.schema();
+        let mut data2 = SchemaBox::new(String::from("bad_data"));
+
+        {
+            // Try to "cheat" and overwrite the the data1 resource with data of a different type.
+            store.insert(data1);
+            let data1_cell = store.get_cell(data1_schema.id()).unwrap();
+            let mut data1_borrow = data1_cell.borrow_mut();
+            // This can't actually write to data1, it just changes the reference we have.
+            *data1_borrow = data2.as_mut();
+        }
+
+        // Validate that data1 is unchanged
+        let data1_cell = store.get_cell(data1_schema.id()).unwrap();
+        let data1_borrow = data1_cell.borrow();
+        assert_eq!(data1_borrow.cast::<usize>(), &0);
     }
 }
