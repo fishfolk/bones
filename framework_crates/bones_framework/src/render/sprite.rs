@@ -41,7 +41,6 @@ pub struct Atlas {
 
 /// A 2D sprite component
 #[derive(Clone, HasSchema, Debug, Default)]
-#[repr(C)]
 pub struct Sprite {
     /// The sprite's color tint
     pub color: Color,
@@ -58,7 +57,6 @@ pub struct Sprite {
 /// Represents one or more [`Atlas`]s stacked on top of each other, and possibly animated through a
 /// range of frames out of the atlas.
 #[derive(Debug, Default, Clone, HasSchema)]
-#[repr(C)]
 pub struct AtlasSprite {
     /// The sprite's color tint
     pub color: Color,

@@ -160,6 +160,13 @@ impl<'pointer> SchemaRef<'pointer> {
 
 /// An untyped mutable reference that knows the [`Schema`] of the pointee and that can be cast to a matching
 /// type.
+// TODO: Re-evaluate whether or not it is necessary to have two lifetimes for `SchemaRefMut`.
+// I believe the current implementation is sound, and the extra liftime is not a huge annoyance, but
+// it would be good to simplify if possible. See the comment below on `parent_lifetime` for a
+// description of the purpose of the second lifetime. We need to maintain the effect of the
+// lifetime, but we might be able to do that by using the '`pointer` lifetime to represent the
+// `'parent` lifetime when necessary. **Note:** This is a little more advanced rust than "normal".
+// This is not a beginner issue.
 pub struct SchemaRefMut<'pointer, 'parent> {
     ptr: PtrMut<'pointer>,
     schema: &'static Schema,

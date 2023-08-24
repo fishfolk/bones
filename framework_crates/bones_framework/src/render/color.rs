@@ -9,8 +9,6 @@ use crate::prelude::*;
 /// Color type.
 #[derive(Clone, Copy, Debug, HasSchema)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[schema(opaque)]
-#[repr(C)]
 pub enum Color {
     /// sRGBA color
     Rgba {

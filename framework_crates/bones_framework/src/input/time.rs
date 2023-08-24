@@ -18,7 +18,6 @@ pub use timer::*;
 /// A clock that tracks how much it has advanced (and how much real time has elapsed) since
 /// its previous update and since its creation.
 #[derive(Clone, Copy, Debug, HasSchema)]
-#[schema(opaque)]
 pub struct Time {
     startup: Instant,
     last_update: Option<Instant>,

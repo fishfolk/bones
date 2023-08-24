@@ -6,7 +6,6 @@ use crate::prelude::*;
 ///
 /// The entity must also have a [`Transform`] component for the camera to render anything.
 #[derive(Clone, Copy, Debug, HasSchema)]
-#[schema(opaque)]
 // TODO: make repr(C) when `Option`s are supported.
 // We don't have `Option` support in `bones_schema` right now.
 // Once we do, we can make this type `#[repr(C)]` instead of `#[schema(opaque)]`.
@@ -56,7 +55,6 @@ impl Default for Camera {
 
 /// Resource for controlling the clear color.
 #[derive(Deref, DerefMut, Clone, Copy, HasSchema, Default)]
-#[schema(opaque)]
 pub struct ClearColor(pub Color);
 
 /// Utility function that spawns the camera in a default position.

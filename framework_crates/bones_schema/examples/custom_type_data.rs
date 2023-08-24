@@ -6,7 +6,6 @@ use bones_schema::prelude::*;
 ///
 /// In this case we want to store the name of the type in our custom type data.
 #[derive(HasSchema, Clone, Default)]
-#[schema(opaque)]
 struct TypeName(String);
 
 /// In order to make [`TypeName`] derivable, we must implement [`FromType`] for it.

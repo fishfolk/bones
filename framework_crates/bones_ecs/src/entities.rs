@@ -47,7 +47,6 @@ impl Entity {
 /// It also holds a list of entities that were recently killed, which allows to remove components of
 /// deleted entities at the end of a game frame.
 #[derive(Clone, HasSchema)]
-#[schema(opaque)]
 pub struct Entities {
     /// Bitset containing all living entities
     alive: BitSetVec,

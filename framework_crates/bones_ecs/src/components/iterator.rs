@@ -92,7 +92,6 @@ mod test {
     use super::*;
 
     #[derive(Clone, HasSchema, Default)]
-    #[schema(opaque)]
     struct A;
 
     #[test]

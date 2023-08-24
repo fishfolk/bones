@@ -4,7 +4,6 @@ use crate::prelude::*;
 
 /// Resource containing the keyboard input events detected on the current frame.
 #[derive(HasSchema, Clone, Debug, Default)]
-#[schema(opaque)]
 pub struct KeyboardInputs {
     /// The key events that have been detected this frame.
     pub keys: Vec<KeyboardInput>,

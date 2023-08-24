@@ -268,7 +268,6 @@ impl StageLabel for CoreStage {
 ///
 /// You can use [`Commands`] as a [`SystemParam`] as a shortcut to [`ResMut<CommandQueue>`].
 #[derive(Debug, HasSchema, Default)]
-#[schema(opaque)]
 pub struct CommandQueue {
     /// The system queue that will be run at the end of the stage
     pub queue: VecDeque<System>,

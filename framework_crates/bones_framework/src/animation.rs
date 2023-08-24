@@ -17,7 +17,6 @@ pub fn plugin(core: &mut Session) {
 
 /// Component that may be added to entities with an [`AtlasSprite`] to animate them.
 #[derive(Clone, HasSchema, Debug)]
-#[schema(opaque)]
 pub struct AnimatedSprite {
     /// The current frame in the animation.
     pub index: usize,
@@ -44,7 +43,6 @@ fn default_true() -> bool {
 /// This is great for players or other sprites that will change through different, named animations
 /// at different times.
 #[derive(Clone, HasSchema, Debug, Default)]
-#[schema(opaque)]
 pub struct AnimationBankSprite {
     /// The current animation.
     pub current: Key,

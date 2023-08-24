@@ -4,7 +4,6 @@ use crate::prelude::*;
 
 /// A component for rendering a 2D line path, made up of a list of straight line segments.
 #[derive(Clone, Debug, HasSchema)]
-#[schema(opaque)]
 pub struct Path2d {
     /// The color of the path.
     pub color: Color,
