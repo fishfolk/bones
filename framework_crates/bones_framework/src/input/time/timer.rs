@@ -12,7 +12,6 @@ use super::stopwatch::Stopwatch;
 ///
 /// Paused timers will not have elapsed time increased.
 #[derive(Clone, Debug, Default, HasSchema)]
-#[schema(opaque)]
 pub struct Timer {
     finished: bool,
     mode: TimerMode,

@@ -12,7 +12,6 @@ pub struct AudioSource;
 
 /// Resource containing the audio event queue.
 #[derive(Default, HasSchema, Clone, Debug)]
-#[schema(opaque)]
 pub struct AudioEvents {
     /// List of audio events that haven't been handled by the audio system yet.
     pub queue: VecDeque<AudioEvent>,

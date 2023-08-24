@@ -180,7 +180,6 @@ mod tests {
     struct Vel(i32, i32);
 
     #[derive(Clone, HasSchema, Debug, Eq, PartialEq, Default)]
-    #[schema(opaque)]
     struct Marker;
 
     // Sets up the world with a couple entities.
@@ -304,7 +303,6 @@ mod tests {
     // ============
 
     #[derive(Clone, HasSchema, Default)]
-    #[schema(opaque)]
     struct TestResource(u32);
 
     #[derive(Clone, HasSchema)]

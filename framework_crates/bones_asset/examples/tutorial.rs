@@ -91,7 +91,6 @@ struct PluginMeta {
 #[derive(HasSchema, Debug, Clone, Default)]
 // We specify the file extensions and the asset loader to use to load the asset.
 #[type_data(asset_loader(["png", "jpg"], ImageAssetLoader))]
-#[schema(opaque)]
 struct Image {
     data: Vec<u8>,
     width: u32,

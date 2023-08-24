@@ -494,10 +494,8 @@ mod tests {
     #[test]
     fn system_replace_resource() {
         #[derive(Default, HasSchema, Clone, PartialEq, Eq, Debug)]
-        #[schema(opaque)]
         pub struct A;
         #[derive(Default, HasSchema, Clone, Debug)]
-        #[schema(opaque)]
         pub struct B {
             x: u32,
         }

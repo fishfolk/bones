@@ -4,7 +4,6 @@ use crate::prelude::*;
 
 /// The mouse inputs made this frame.
 #[derive(HasSchema, Clone, Debug, Default)]
-#[schema(opaque)]
 pub struct MouseInputs {
     /// The movement of the mouse this frame.
     pub movement: Vec2,

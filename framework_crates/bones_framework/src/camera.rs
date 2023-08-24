@@ -16,7 +16,6 @@ pub fn plugin(core: &mut Session) {
 
 /// Resource providing a noise source for [`CameraShake`] entities to use.
 #[derive(Clone, HasSchema)]
-#[schema(opaque)]
 pub struct ShakeNoise(pub noise::permutationtable::PermutationTable);
 
 impl Default for ShakeNoise {
@@ -95,7 +94,6 @@ impl CameraShake {
 
 /// Queue that can be used to send camera trauma events.
 #[derive(Default, Clone, HasSchema)]
-#[schema(opaque)]
 pub struct CameraTraumaEvents {
     /// The event queue.
     pub queue: VecDeque<f32>,

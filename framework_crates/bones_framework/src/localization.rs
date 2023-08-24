@@ -98,7 +98,6 @@ pub struct Localization<'a, T> {
 /// Internal resource used to cache the field of the root asset containing the localization resource
 /// for the [`Localization`] parameter.
 #[derive(HasSchema, Default, Clone)]
-#[schema(opaque)]
 pub struct RootLocalizationFieldIdx(OnceLock<usize>);
 
 impl<T: HasSchema> SystemParam for Localization<'_, T> {

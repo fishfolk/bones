@@ -4,7 +4,6 @@ use crate::prelude::*;
 
 /// A tilemap layer component.
 #[derive(Clone, Debug, HasSchema, Default)]
-#[schema(opaque)]
 pub struct TileLayer {
     /// The vector of tile slots in this layer.
     pub tiles: Vec<Option<Entity>>,

@@ -23,8 +23,7 @@ macro_rules! throw {
 /// ///
 /// /// In this case we want to store the name of the type in our custom type data.
 /// #[derive(HasSchema, Clone, Default)]
-/// #[schema(opaque)]
-/// struct TypeName(String);
+/// /// struct TypeName(String);
 ///
 /// /// In order to make [`TypeName`] derivable, we must implement [`FromType`] for it.
 /// impl<T> FromType<T> for TypeName {
@@ -137,9 +136,19 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 
     let schema_flags = get_flags_for_attr("schema");
 
-    let is_opaque = schema_flags.iter().any(|x| x.as_str() == "opaque");
     let no_clone = schema_flags.iter().any(|x| x.as_str() == "no_clone");
     let no_default = schema_flags.iter().any(|x| x.as_str() == "no_default");
+    let repr_c = input.attributes().iter().any(|attr| {
+        attr.get_single_path_segment() == Some(&format_ident!("repr")) && {
+            let value = attr.get_value_tokens();
+            value.len() == 1
+                && match &value[0] {
+                    TokenTree2::Ident(i) => i == &format_ident!("C"),
+                    _ => false,
+                }
+        }
+    });
+    let is_opaque = schema_flags.iter().any(|x| x.as_str() == "opaque") || !repr_c;
 
     let clone_fn = if no_clone {
         quote!(None)
@@ -192,22 +201,6 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
             }
         }
         .into();
-    }
-
-    if !input.attributes().iter().any(|attr| {
-        attr.get_single_path_segment() == Some(&format_ident!("repr")) && {
-            let value = attr.get_value_tokens();
-            value.len() == 1
-                && match &value[0] {
-                    TokenTree2::Ident(i) => i == &format_ident!("C"),
-                    _ => false,
-                }
-        }
-    }) {
-        throw!(
-            input.name(),
-            "Type must be either #[repr(C)] or have a #[schema(opaque)] annotation."
-        );
     }
 
     let schema_kind = match input {

@@ -144,7 +144,6 @@ pub struct SchemaData {
     /// ```rust
     /// # use bones_schema::prelude::*;
     /// #[derive(HasSchema, Default, Clone)]
-    /// #[schema(opaque)]
     /// struct SomeTypeData;
     ///
     /// impl<T> FromType<T> for SomeTypeData {
@@ -155,7 +154,6 @@ pub struct SchemaData {
     ///
     /// #[derive(HasSchema, Default, Clone)]
     /// #[derive_type_data(SomeTypeData)]
-    /// #[schema(opaque)]
     /// struct MyData;
     /// ```
     pub type_data: SchemaTypeMap,

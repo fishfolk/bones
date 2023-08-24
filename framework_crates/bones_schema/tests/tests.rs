@@ -26,7 +26,6 @@ struct DataC {
 struct Zst;
 
 #[derive(HasSchema, Debug, Clone, Default)]
-#[schema(opaque)]
 struct OpaqueZst;
 
 #[test]

@@ -256,7 +256,6 @@ impl Game {
 ///
 /// Each session shares the same [`Entities`].
 #[derive(HasSchema, Default, Debug)]
-#[schema(opaque)]
 pub struct Sessions {
     entities: AtomicResource<Entities>,
     map: HashMap<Key, Session>,
