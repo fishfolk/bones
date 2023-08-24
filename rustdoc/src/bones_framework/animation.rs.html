@@ -123,8 +123,6 @@
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Animation utilities and systems.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -144,7 +142,6 @@
 
 <span class="doccomment">/// Component that may be added to entities with an [`AtlasSprite`] to animate them.
 </span><span class="attr">#[derive(Clone, HasSchema, Debug)]
-#[schema(opaque)]
 </span><span class="kw">pub struct </span>AnimatedSprite {
     <span class="doccomment">/// The current frame in the animation.
     </span><span class="kw">pub </span>index: usize,
@@ -171,7 +168,6 @@
 /// This is great for players or other sprites that will change through different, named animations
 /// at different times.
 </span><span class="attr">#[derive(Clone, HasSchema, Debug, Default)]
-#[schema(opaque)]
 </span><span class="kw">pub struct </span>AnimationBankSprite {
     <span class="doccomment">/// The current animation.
     </span><span class="kw">pub </span>current: Key,

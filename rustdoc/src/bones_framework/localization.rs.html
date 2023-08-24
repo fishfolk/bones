@@ -261,7 +261,6 @@
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Localization module.
 
 </span><span class="kw">use </span>std::{
@@ -362,7 +361,6 @@
 <span class="doccomment">/// Internal resource used to cache the field of the root asset containing the localization resource
 /// for the [`Localization`] parameter.
 </span><span class="attr">#[derive(HasSchema, Default, Clone)]
-#[schema(opaque)]
 </span><span class="kw">pub struct </span>RootLocalizationFieldIdx(OnceLock&lt;usize&gt;);
 
 <span class="kw">impl</span>&lt;T: HasSchema&gt; SystemParam <span class="kw">for </span>Localization&lt;<span class="lifetime">&#39;_</span>, T&gt; {

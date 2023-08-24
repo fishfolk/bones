@@ -45,7 +45,6 @@
 <a href="#45" id="45">45</a>
 <a href="#46" id="46">46</a>
 <a href="#47" id="47">47</a>
-<a href="#48" id="48">48</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Audio components.
 
 </span><span class="kw">use </span>std::collections::VecDeque;
@@ -60,7 +59,6 @@
 
 <span class="doccomment">/// Resource containing the audio event queue.
 </span><span class="attr">#[derive(Default, HasSchema, Clone, Debug)]
-#[schema(opaque)]
 </span><span class="kw">pub struct </span>AudioEvents {
     <span class="doccomment">/// List of audio events that haven&#39;t been handled by the audio system yet.
     </span><span class="kw">pub </span>queue: VecDeque&lt;AudioEvent&gt;,

@@ -55,14 +55,12 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Mouse input resource.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// The mouse inputs made this frame.
 </span><span class="attr">#[derive(HasSchema, Clone, Debug, Default)]
-#[schema(opaque)]
 </span><span class="kw">pub struct </span>MouseInputs {
     <span class="doccomment">/// The movement of the mouse this frame.
     </span><span class="kw">pub </span>movement: Vec2,

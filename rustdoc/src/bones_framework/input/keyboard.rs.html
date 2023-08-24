@@ -378,14 +378,12 @@
 <a href="#378" id="378">378</a>
 <a href="#379" id="379">379</a>
 <a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Keyboard input resource.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// Resource containing the keyboard input events detected on the current frame.
 </span><span class="attr">#[derive(HasSchema, Clone, Debug, Default)]
-#[schema(opaque)]
 </span><span class="kw">pub struct </span>KeyboardInputs {
     <span class="doccomment">/// The key events that have been detected this frame.
     </span><span class="kw">pub </span>keys: Vec&lt;KeyboardInput&gt;,

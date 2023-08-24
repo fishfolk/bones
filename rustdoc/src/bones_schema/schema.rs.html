@@ -404,8 +404,6 @@
 <a href="#404" id="404">404</a>
 <a href="#405" id="405">405</a>
 <a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! [`Schema`], [`HasSchema`], [`SchemaData`], and related types.
 
 </span><span class="kw">use </span>std::{alloc::Layout, any::TypeId, borrow::Cow};
@@ -552,7 +550,6 @@
     /// ```rust
     /// # use bones_schema::prelude::*;
     /// #[derive(HasSchema, Default, Clone)]
-    /// #[schema(opaque)]
     /// struct SomeTypeData;
     ///
     /// impl&lt;T&gt; FromType&lt;T&gt; for SomeTypeData {
@@ -563,7 +560,6 @@
     ///
     /// #[derive(HasSchema, Default, Clone)]
     /// #[derive_type_data(SomeTypeData)]
-    /// #[schema(opaque)]
     /// struct MyData;
     /// ```
     </span><span class="kw">pub </span>type_data: SchemaTypeMap,

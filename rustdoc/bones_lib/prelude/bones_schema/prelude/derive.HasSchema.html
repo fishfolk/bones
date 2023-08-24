@@ -13,10 +13,9 @@
 ///
 /// In this case we want to store the name of the type in our custom type data.
 </span><span class="attr">#[derive(HasSchema, Clone, Default)]
-#[schema(opaque)]
-</span><span class="kw">struct </span>TypeName(String);
+</span><span class="doccomment">/// struct TypeName(String);
 
-<span class="doccomment">/// In order to make [`TypeName`] derivable, we must implement [`FromType`] for it.
+/// In order to make [`TypeName`] derivable, we must implement [`FromType`] for it.
 </span><span class="kw">impl</span>&lt;T&gt; FromType&lt;T&gt; <span class="kw">for </span>TypeName {
     <span class="kw">fn </span>from_type() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(std::any::type_name::&lt;T&gt;().to_string())

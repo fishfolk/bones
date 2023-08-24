@@ -31,14 +31,12 @@
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
 <a href="#33" id="33">33</a>
-<a href="#34" id="34">34</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Line rendering, useful for debugging.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// A component for rendering a 2D line path, made up of a list of straight line segments.
 </span><span class="attr">#[derive(Clone, Debug, HasSchema)]
-#[schema(opaque)]
 </span><span class="kw">pub struct </span>Path2d {
     <span class="doccomment">/// The color of the path.
     </span><span class="kw">pub </span>color: Color,

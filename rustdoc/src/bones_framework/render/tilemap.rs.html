@@ -84,14 +84,12 @@
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
-<a href="#87" id="87">87</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Tile map rendering components.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// A tilemap layer component.
 </span><span class="attr">#[derive(Clone, Debug, HasSchema, Default)]
-#[schema(opaque)]
 </span><span class="kw">pub struct </span>TileLayer {
     <span class="doccomment">/// The vector of tile slots in this layer.
     </span><span class="kw">pub </span>tiles: Vec&lt;<span class="prelude-ty">Option</span>&lt;Entity&gt;&gt;,

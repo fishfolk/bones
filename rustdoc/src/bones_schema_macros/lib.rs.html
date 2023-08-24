@@ -309,13 +309,6 @@
 <a href="#309" id="309">309</a>
 <a href="#310" id="310">310</a>
 <a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>proc_macro2::{TokenStream <span class="kw">as </span>TokenStream2, TokenTree <span class="kw">as </span>TokenTree2};
 <span class="kw">use </span>quote::{format_ident, quote, quote_spanned, spanned::Spanned};
@@ -341,8 +334,7 @@
 /// ///
 /// /// In this case we want to store the name of the type in our custom type data.
 /// #[derive(HasSchema, Clone, Default)]
-/// #[schema(opaque)]
-/// struct TypeName(String);
+/// /// struct TypeName(String);
 ///
 /// /// In order to make [`TypeName`] derivable, we must implement [`FromType`] for it.
 /// impl&lt;T&gt; FromType&lt;T&gt; for TypeName {
@@ -455,9 +447,19 @@
 
     <span class="kw">let </span>schema_flags = get_flags_for_attr(<span class="string">&quot;schema&quot;</span>);
 
-    <span class="kw">let </span>is_opaque = schema_flags.iter().any(|x| x.as_str() == <span class="string">&quot;opaque&quot;</span>);
     <span class="kw">let </span>no_clone = schema_flags.iter().any(|x| x.as_str() == <span class="string">&quot;no_clone&quot;</span>);
     <span class="kw">let </span>no_default = schema_flags.iter().any(|x| x.as_str() == <span class="string">&quot;no_default&quot;</span>);
+    <span class="kw">let </span>repr_c = input.attributes().iter().any(|attr| {
+        attr.get_single_path_segment() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">format_ident!</span>(<span class="string">&quot;repr&quot;</span>)) &amp;&amp; {
+            <span class="kw">let </span>value = attr.get_value_tokens();
+            value.len() == <span class="number">1
+                </span>&amp;&amp; <span class="kw">match </span><span class="kw-2">&amp;</span>value[<span class="number">0</span>] {
+                    TokenTree2::Ident(i) =&gt; i == <span class="kw-2">&amp;</span><span class="macro">format_ident!</span>(<span class="string">&quot;C&quot;</span>),
+                    <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+                }
+        }
+    });
+    <span class="kw">let </span>is_opaque = schema_flags.iter().any(|x| x.as_str() == <span class="string">&quot;opaque&quot;</span>) || !repr_c;
 
     <span class="kw">let </span>clone_fn = <span class="kw">if </span>no_clone {
         <span class="macro">quote!</span>(<span class="prelude-val">None</span>)
@@ -510,22 +512,6 @@
             }
         }
         .into();
-    }
-
-    <span class="kw">if </span>!input.attributes().iter().any(|attr| {
-        attr.get_single_path_segment() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">format_ident!</span>(<span class="string">&quot;repr&quot;</span>)) &amp;&amp; {
-            <span class="kw">let </span>value = attr.get_value_tokens();
-            value.len() == <span class="number">1
-                </span>&amp;&amp; <span class="kw">match </span><span class="kw-2">&amp;</span>value[<span class="number">0</span>] {
-                    TokenTree2::Ident(i) =&gt; i == <span class="kw-2">&amp;</span><span class="macro">format_ident!</span>(<span class="string">&quot;C&quot;</span>),
-                    <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
-                }
-        }
-    }) {
-        <span class="macro">throw!</span>(
-            input.name(),
-            <span class="string">&quot;Type must be either #[repr(C)] or have a #[schema(opaque)] annotation.&quot;
-        </span>);
     }
 
     <span class="kw">let </span>schema_kind = <span class="kw">match </span>input {
