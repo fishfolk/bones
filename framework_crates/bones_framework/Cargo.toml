@@ -47,6 +47,7 @@ document-features = ["dep:document-features"]
 [dependencies]
 # Bones
 bones_lib = { version = "0.3", path = "../bones_lib", features = ["glam"] }
+bones_asset = { version = "0.3", path = "../bones_asset" }
 
 # Other
 glam      = "0.24"

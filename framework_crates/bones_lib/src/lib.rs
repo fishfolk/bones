@@ -6,15 +6,12 @@
 #![deny(rustdoc::all)]
 
 #[doc(inline)]
-pub use bones_asset as asset;
-#[doc(inline)]
 pub use bones_ecs as ecs;
 
 /// Bones lib prelude
 pub mod prelude {
     pub use crate::{
-        asset::prelude::*, ecs::prelude::*, Game, Plugin, Session, SessionOptions, SessionRunner,
-        Sessions,
+        ecs::prelude::*, Game, Plugin, Session, SessionOptions, SessionRunner, Sessions,
     };
 }
 
@@ -145,19 +142,60 @@ pub struct Game {
     /// These are only guaranteed to be sorted and up-to-date immediately after calling
     /// [`Game::step()`].
     pub sorted_session_keys: Vec<Key>,
-    /// The asset server cell.
-    pub asset_server: AtomicResource<AssetServer>,
+    /// Collection of resources that will have a shared instance of each be inserted into each
+    /// session automatically.
+    pub shared_resources: Vec<UntypedAtomicResource>,
 }
 
 impl Game {
-    /// Create an empty game.
+    /// Create an empty game with an asset server.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Borrow the asset server.
-    pub fn asset_server(&self) -> RefMut<AssetServer> {
-        self.asset_server.borrow_mut()
+    /// Get the shared resource of a given type out of this [`Game`]s shared resources.
+    pub fn shared_resource<T: HasSchema>(&self) -> Option<RefMut<T>> {
+        self.shared_resources
+            .iter()
+            .find(|x| x.schema() == T::schema())
+            .map(|x| x.borrow_mut().typed())
+    }
+
+    /// Get the shared resource cell of a given type out of this [`Game`]s shared resources.
+    pub fn shared_resource_cell<T: HasSchema>(&self) -> Option<AtomicResource<T>> {
+        self.shared_resources
+            .iter()
+            .find(|x| x.schema() == T::schema())
+            .map(|x| AtomicResource::from_untyped(x.clone_cell()))
+    }
+
+    /// Initialize a resource that will be shared across game sessions using it's [`Default`] value
+    /// if it is not already initialized, and borrow it for modification.
+    pub fn init_shared_resource<T: HasSchema + Default>(&mut self) -> RefMut<T> {
+        if !self
+            .shared_resources
+            .iter()
+            .any(|x| x.schema() == T::schema())
+        {
+            self.insert_shared_resource(T::default());
+        }
+        self.shared_resource::<T>().unwrap()
+    }
+
+    /// Insert a resource that will be shared across all game sessions.
+    pub fn insert_shared_resource<T: HasSchema + Default>(&mut self, resource: T) {
+        let resource = UntypedAtomicResource::new(SchemaBox::new(resource));
+
+        // Replace an existing resource of the same type.
+        for r in &mut self.shared_resources {
+            if r.schema() == T::schema() {
+                *r = resource;
+                return;
+            }
+        }
+
+        // Or insert a new resource if we couldn't find one
+        self.shared_resources.push(resource);
     }
 
     /// Step the game simulation.
@@ -185,12 +223,20 @@ impl Game {
 
             // If this session is active
             let options = if current_session.active {
-                // Make sure the asset server is inserted
-                if !current_session.world.resources.contains::<AssetServer>() {
-                    current_session
+                // Make sure session contains all of the shared resources
+                for r in &self.shared_resources {
+                    if !current_session
                         .world
                         .resources
-                        .insert_cell(self.asset_server.clone_cell());
+                        .untyped()
+                        .contains(r.schema().id())
+                    {
+                        current_session
+                            .world
+                            .resources
+                            .untyped_mut()
+                            .insert_cell(r.clone_cell());
+                    }
                 }
 
                 // Insert the session options

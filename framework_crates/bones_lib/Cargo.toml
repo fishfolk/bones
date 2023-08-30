@@ -16,4 +16,3 @@ glam    = ["bones_ecs/glam"]
 
 [dependencies]
 bones_ecs   = { version = "0.3", path = "../bones_ecs" }
-bones_asset = { version = "0.3", path = "../bones_asset" }

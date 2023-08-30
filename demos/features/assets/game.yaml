@@ -1,3 +1,4 @@
+menu_image: ./menu-image.png
 sprite_demo: ./sprite/fractal.png
 atlas_demo: ./atlas/atlas-demo.yaml
 tilemap_demo: ./tilemap/tilemap.yaml

@@ -10,6 +10,9 @@
 #[doc(inline)]
 pub use bones_lib as lib;
 
+#[doc(inline)]
+pub use bones_asset as asset;
+
 /// Math library.
 #[doc(inline)]
 pub use glam;
@@ -20,6 +23,8 @@ pub mod prelude {
         animation::*, input::prelude::*, params::*, render::prelude::*, AssetServerExt,
         DefaultPlugin,
     };
+    pub use bones_asset::anyhow::Context;
+    pub use bones_asset::prelude::*;
     pub use bones_lib::prelude::*;
     pub use glam::*;
 
@@ -43,12 +48,12 @@ impl lib::Plugin for DefaultPlugin {
     }
 }
 
-/// Extension trait for the bones [`AssetServer`][bones_lib::prelude::AssetServer].
+/// Extension trait for the bones [`AssetServer`][bones_asset::AssetServer].
 pub trait AssetServerExt {
     /// Register the default assets from `bones_framework`.
     fn register_default_assets(self) -> Self;
 }
-impl AssetServerExt for &mut bones_lib::prelude::AssetServer {
+impl AssetServerExt for &mut bones_asset::AssetServer {
     fn register_default_assets(self) -> Self {
         use crate::prelude::*;
 

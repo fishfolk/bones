@@ -74,22 +74,40 @@ impl BonesImageIds {
     pub fn load_bones_images(
         &mut self,
         bones_assets: &mut bones::AssetServer,
+        bones_egui_textures: &mut bones::EguiTextures,
         bevy_images: &mut Assets<Image>,
+        bevy_egui_textures: &mut bevy_egui::EguiUserTextures,
     ) {
-        for asset in bones_assets.store.assets.values_mut() {
+        for (handle, cid) in bones_assets.store.asset_ids.iter() {
+            let asset = bones_assets.store.assets.get_mut(cid).unwrap();
             if let Ok(image) = asset.data.try_cast_mut::<bones::Image>() {
-                self.load_bones_image(image, bevy_images)
+                self.load_bones_image(
+                    handle.typed(),
+                    image,
+                    bones_egui_textures,
+                    bevy_images,
+                    bevy_egui_textures,
+                )
             }
         }
     }
 
     /// Load a bones image into bevy.
-    pub fn load_bones_image(&mut self, image: &mut bones::Image, bevy_images: &mut Assets<Image>) {
+    pub fn load_bones_image(
+        &mut self,
+        bones_handle: bones::Handle<bones::Image>,
+        image: &mut bones::Image,
+        bones_egui_textures: &mut bones::EguiTextures,
+        bevy_images: &mut Assets<Image>,
+        bevy_egui_textures: &mut bevy_egui::EguiUserTextures,
+    ) {
         let Self { map, next_id } = self;
         let mut taken_image = bones::Image::External(0); // Dummy value temporarily
         std::mem::swap(image, &mut taken_image);
         if let bones::Image::Data(data) = taken_image {
             let handle = bevy_images.add(Image::from_dynamic(data, true));
+            let egui_texture = bevy_egui_textures.add_image(handle.clone());
+            bones_egui_textures.insert(bones_handle, egui_texture);
             map.insert(*next_id, handle);
             *image = bones::Image::External(*next_id);
             *next_id += 1;
@@ -103,7 +121,7 @@ pub struct BonesData {
     /// The bones game.
     pub game: bones::Game,
     /// The bones asset server cell.
-    pub asset_server: bones::AtomicResource<bones::AssetServer>,
+    pub asset_server: Option<bones::AtomicResource<bones::AssetServer>>,
 }
 
 impl BonesBevyRenderer {
@@ -122,7 +140,7 @@ impl BonesBevyRenderer {
     }
 
     /// Return a bevy [`App`] configured to run the bones game.
-    pub fn app(self) -> App {
+    pub fn app(mut self) -> App {
         let mut app = App::new();
 
         // Initialize Bevy plugins we use
@@ -142,10 +160,15 @@ impl BonesBevyRenderer {
             })
             .init_resource::<BonesImageIds>();
 
-        {
-            let mut bones_image_ids = BonesImageIds::default();
-            let mut asset_server = self.game.asset_server();
-            let mut bevy_images = app.world.resource_mut::<Assets<Image>>();
+        let mut bones_image_ids = BonesImageIds::default();
+        let mut bones_egui_textures = bones::EguiTextures::default();
+        'asset_load: {
+            let Some(mut asset_server) = self.game.shared_resource::<bones::AssetServer>() else {
+                break 'asset_load;
+            };
+            let world = app.world.cell();
+            let mut bevy_images = world.resource_mut::<Assets<Image>>();
+            let mut bevy_egui_textures = world.resource_mut::<bevy_egui::EguiUserTextures>();
 
             if !asset_server.asset_types.is_empty() {
                 #[cfg(not(target_arch = "wasm32"))]
@@ -160,22 +183,33 @@ impl BonesBevyRenderer {
                         .expect("Could not load game assets");
 
                     // Take all loaded image assets and conver them to external images that reference bevy handles
-                    bones_image_ids.load_bones_images(&mut asset_server, &mut bevy_images);
+                    bones_image_ids.load_bones_images(
+                        &mut asset_server,
+                        &mut bones_egui_textures,
+                        &mut bevy_images,
+                        &mut bevy_egui_textures,
+                    );
                 }
                 #[cfg(target_arch = "wasm32")]
                 {
-                    bones_image_ids.load_bones_images(&mut asset_server, &mut bevy_images);
+                    bones_image_ids.load_bones_images(
+                        &mut asset_server,
+                        &mut bones_egui_textures,
+                        &mut bevy_images,
+                        &mut bevy_egui_textures,
+                    );
                     // TODO: Implement WASM asset loader.
                     unimplemented!("WASM asset loading is not implemented yet.");
                 }
             }
-
-            app.insert_resource(bones_image_ids);
         }
+
+        self.game.insert_shared_resource(bones_egui_textures);
+        app.insert_resource(bones_image_ids);
 
         // Insert the bones data
         app.insert_resource(BonesData {
-            asset_server: self.game.asset_server.clone_cell(),
+            asset_server: self.game.shared_resource_cell::<bones::AssetServer>(),
             game: self.game,
         })
         .init_resource::<BonesGameEntity>();
@@ -257,76 +291,82 @@ fn step_bones_game(
     In((mouse_inputs, keyboard_inputs)): In<(bones::MouseInputs, bones::KeyboardInputs)>,
     world: &mut World,
 ) {
-    world.resource_scope(|world: &mut World, mut data: Mut<BonesData>| {
-        world.resource_scope(
-            |world: &mut World, mut bones_image_ids: Mut<BonesImageIds>| {
-                world.resource_scope(|world: &mut World, mut bevy_images: Mut<Assets<Image>>| {
-                    let egui_ctx = {
-                        let mut egui_query =
-                            world.query_filtered::<&mut EguiContext, With<Window>>();
-                        let mut egui_ctx = egui_query.get_single_mut(world).unwrap();
-                        egui_ctx.get_mut().clone()
-                    };
-                    let BonesData { game, asset_server } = &mut *data;
-                    let bevy_time = world.resource::<Time>();
+    let mut data = world.remove_resource::<BonesData>().unwrap();
+    let mut bones_image_ids = world.remove_resource::<BonesImageIds>().unwrap();
+    let mut bevy_egui_textures = world
+        .remove_resource::<bevy_egui::EguiUserTextures>()
+        .unwrap();
+    let mut bevy_images = world.remove_resource::<Assets<Image>>().unwrap();
 
-                    let mouse_inputs = bones::AtomicResource::new(mouse_inputs);
-                    let keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
+    let egui_ctx = {
+        let mut egui_query = world.query_filtered::<&mut EguiContext, With<Window>>();
+        let mut egui_ctx = egui_query.get_single_mut(world).unwrap();
+        egui_ctx.get_mut().clone()
+    };
+    let BonesData { game, .. } = &mut data;
+    let bevy_time = world.resource::<Time>();
 
-                    // Reload assets if necessary
-                    game.asset_server()
-                        .handle_asset_changes(|asset_server, handle| {
-                            let asset = asset_server.get_untyped_mut(handle).unwrap();
+    let mouse_inputs = bones::AtomicResource::new(mouse_inputs);
+    let keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
 
-                            if let Ok(image) = asset.data.try_cast_mut::<bones::Image>() {
-                                bones_image_ids.load_bones_image(image, &mut bevy_images);
-                            }
-                        });
+    // Reload assets if necessary
+    if let Some(mut asset_server) = game.shared_resource::<bones::AssetServer>() {
+        asset_server.handle_asset_changes(|asset_server, handle| {
+            let mut bones_egui_textures = game.shared_resource::<bones::EguiTextures>().unwrap();
+            let asset = asset_server.get_untyped_mut(handle).unwrap();
 
-                    // Step the game simulation
-                    game.step(|bones_world| {
-                        // Insert egui context if not present
-                        if !bones_world
-                            .resources
-                            .contains::<bones_framework::render::ui::EguiCtx>()
-                        {
-                            bones_world
-                                .resources
-                                .insert(bones_framework::render::ui::EguiCtx(egui_ctx.clone()));
-                        }
+            if let Ok(image) = asset.data.try_cast_mut::<bones::Image>() {
+                bones_image_ids.load_bones_image(
+                    handle.typed(),
+                    image,
+                    &mut bones_egui_textures,
+                    &mut bevy_images,
+                    &mut bevy_egui_textures,
+                );
+            }
+        })
+    }
 
-                        // Update bones time
-                        {
-                            // Initialize the time resource if it doesn't exist.
-                            if !bones_world.resources.contains::<bones::Time>() {
-                                bones_world.init_resource::<bones::Time>();
-                            }
+    // Step the game simulation
+    game.step(|bones_world| {
+        // Insert egui context if not present
+        if !bones_world
+            .resources
+            .contains::<bones_framework::render::ui::EguiCtx>()
+        {
+            bones_world
+                .resources
+                .insert(bones_framework::render::ui::EguiCtx(egui_ctx.clone()));
+        }
 
-                            let mut time = bones_world.resource_mut::<bones::Time>();
+        // Update bones time
+        {
+            // Initialize the time resource if it doesn't exist.
+            if !bones_world.resources.contains::<bones::Time>() {
+                bones_world.init_resource::<bones::Time>();
+            }
 
-                            // Use the Bevy time if it's available, otherwise use the default time.
-                            if let Some(instant) = bevy_time.last_update() {
-                                time.update_with_instant(instant);
-                            } else {
-                                time.update();
-                            }
-                        }
+            let mut time = bones_world.resource_mut::<bones::Time>();
 
-                        // Insert asset server if not present
-                        if !bones_world.resources.contains::<bones::AssetServer>() {
-                            bones_world.resources.insert_cell(asset_server.clone_cell());
-                        }
+            // Use the Bevy time if it's available, otherwise use the default time.
+            if let Some(instant) = bevy_time.last_update() {
+                time.update_with_instant(instant);
+            } else {
+                time.update();
+            }
+        }
 
-                        // Update the inputs.
-                        bones_world.resources.insert_cell(mouse_inputs.clone_cell());
-                        bones_world
-                            .resources
-                            .insert_cell(keyboard_inputs.clone_cell());
-                    });
-                });
-            },
-        );
+        // Update the inputs.
+        bones_world.resources.insert_cell(mouse_inputs.clone_cell());
+        bones_world
+            .resources
+            .insert_cell(keyboard_inputs.clone_cell());
     });
+
+    world.insert_resource(data);
+    world.insert_resource(bones_image_ids);
+    world.insert_resource(bevy_egui_textures);
+    world.insert_resource(bevy_images);
 }
 
 fn sync_clear_color(mut clear_color: ResMut<ClearColor>, mut data: ResMut<BonesData>) {
@@ -438,7 +478,10 @@ fn extract_bones_sprites(
     bones_renderable_entity: Extract<Res<BonesGameEntity>>,
 ) {
     let game = &data.game;
-    let bones_assets = data.asset_server.borrow();
+    let Some(bones_assets) = &data.asset_server else {
+        return;
+    };
+    let bones_assets = bones_assets.borrow();
 
     for session_name in &game.sorted_session_keys {
         let session = game.sessions.get(*session_name).unwrap();
@@ -534,7 +577,10 @@ fn extract_bones_tilemaps(
     bones_renderable_entity: Extract<Res<BonesGameEntity>>,
 ) {
     let game = &data.game;
-    let bones_assets = data.asset_server.borrow();
+    let Some(bones_assets) = &data.asset_server else {
+        return;
+    };
+    let bones_assets = bones_assets.borrow();
 
     for session_name in &game.sorted_session_keys {
         let session = game.sessions.get(*session_name).unwrap();

@@ -22,8 +22,11 @@ fn main() {
     // First create bones game.
     let mut game = Game::new();
 
-    // We must register all of our asset types before they can be loaded.
-    game.asset_server().register_asset::<GameMeta>();
+    game
+        // We initialize the asset server.
+        .init_shared_resource::<AssetServer>()
+        // We must register all of our asset types before they can be loaded.
+        .register_asset::<GameMeta>();
 
     // Create a new session for the game menu. Each session is it's own bones world with it's own
     // plugins, systems, and entities.
