@@ -14,6 +14,8 @@ use bones_framework::prelude::*;
 // Allow asset to be loaded from "game.yaml" assets.
 #[type_data(metadata_asset("game"))]
 struct GameMeta {
+    /// The image displayed on the menu.
+    menu_image: Handle<Image>,
     /// The image for the sprite demo
     sprite_demo: Handle<Image>,
     /// Character information that will be loaded from a separate asset file.
@@ -80,7 +82,7 @@ pub fn create_game() -> Game {
     let mut game = Game::new();
 
     // Configure the asset server
-    game.asset_server()
+    game.init_shared_resource::<AssetServer>()
         // Register the default asset types
         .register_default_assets()
         // Register our custom asset types
@@ -118,9 +120,11 @@ fn menu_startup(
 
 /// Our main menu system.
 fn menu_system(
+    meta: Root<GameMeta>,
     egui_ctx: ResMut<EguiCtx>,
     mut sessions: ResMut<Sessions>,
     mut session_options: ResMut<SessionOptions>,
+    egui_textures: Res<EguiTextures>,
     // Get the localization field from our `GameMeta`
     localization: Localization<GameMeta>,
 ) {
@@ -172,6 +176,13 @@ fn menu_system(
                         .create("path2d_demo")
                         .install_plugin(path2d_demo_plugin);
                 }
+
+                ui.add_space(40.0);
+
+                // When using a bones image in egui, we have to get it's corresponding egui texture
+                // from the egui textures resource.
+                ui.label("Bones Image Rendered in Egui");
+                ui.image(egui_textures.get(meta.menu_image), [100., 100.]);
             });
         });
 }

@@ -1093,6 +1093,7 @@ dependencies = [
 name = "bones_framework"
 version = "0.3.0"
 dependencies = [
+ "bones_asset",
  "bones_lib",
  "document-features",
  "egui",
@@ -1116,7 +1117,6 @@ dependencies = [
 name = "bones_lib"
 version = "0.3.0"
 dependencies = [
- "bones_asset",
  "bones_ecs",
 ]
 

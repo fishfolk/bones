@@ -6,17 +6,6 @@ use atomicell::borrow::{AtomicBorrow, AtomicBorrowMut};
 
 use crate::prelude::*;
 
-/// Storage for un-typed resources.
-///
-/// This is the backing data store used by [`Resources`].
-///
-/// Unless you are intending to do modding or otherwise need raw pointers to your resource data, you
-/// should use [`Resources`] instead.
-#[derive(Clone, Default)]
-pub struct UntypedResources {
-    resources: HashMap<SchemaId, UntypedAtomicResource>,
-}
-
 /// An untyped resource that may be inserted into [`UntypedResources`].
 pub struct UntypedAtomicResource {
     cell: Arc<AtomicCell<SchemaBox>>,
@@ -85,6 +74,14 @@ impl<'a> AtomicSchemaRef<'a> {
     pub unsafe fn deref<T>(self) -> Ref<'a, T> {
         Ref::with_borrow(self.schema_ref.deref(), self.borrow)
     }
+
+    /// Convert into typed [`Ref`]. This panics if the schema doesn't match.
+    #[track_caller]
+    pub fn typed<T: HasSchema>(self) -> Ref<'a, T> {
+        assert_eq!(T::schema(), self.schema(), "Schema mismatch");
+        // SOUND: we've checked for matching schema.
+        unsafe { self.deref() }
+    }
 }
 
 /// An atomic borrow of a [`SchemaRefMut`].
@@ -101,6 +98,14 @@ impl<'a> AtomicSchemaRefMut<'a> {
     pub unsafe fn deref_mut<T>(self) -> RefMut<'a, T> {
         RefMut::with_borrow(self.schema_ref.deref_mut(), self.borrow)
     }
+
+    /// Convert into typed [`RefMut`]. This panics if the schema doesn't match.
+    #[track_caller]
+    pub fn typed<T: HasSchema>(self) -> RefMut<'a, T> {
+        assert_eq!(T::schema(), self.schema(), "Schema mismatch");
+        // SOUND: we've checked for matching schema.
+        unsafe { self.deref_mut() }
+    }
 }
 
 impl Clone for UntypedAtomicResource {
@@ -110,6 +115,17 @@ impl Clone for UntypedAtomicResource {
             schema: self.schema,
         }
     }
+}
+
+/// Storage for un-typed resources.
+///
+/// This is the backing data store used by [`Resources`].
+///
+/// Unless you are intending to do modding or otherwise need raw pointers to your resource data, you
+/// should use [`Resources`] instead.
+#[derive(Clone, Default)]
+pub struct UntypedResources {
+    resources: HashMap<SchemaId, UntypedAtomicResource>,
 }
 
 impl UntypedResources {
@@ -123,6 +139,11 @@ impl UntypedResources {
         let id = resource.schema().id();
         self.resources
             .insert(id, UntypedAtomicResource::new(resource))
+    }
+
+    /// Check whether or not the resoruce with the given ID is present.
+    pub fn contains(&self, id: SchemaId) -> bool {
+        self.resources.contains_key(&id)
     }
 
     /// Insert a resource.

@@ -12,6 +12,14 @@ pub struct EguiCtx(pub egui::Context);
 #[derive(HasSchema, Clone, Debug, Default, Deref, DerefMut)]
 pub struct EguiTextures(pub HashMap<Handle<Image>, egui::TextureId>);
 
+impl EguiTextures {
+    /// Get the [`egui::TextureId`] for the given bones [`Handle<Image>`].
+    #[track_caller]
+    pub fn get(&self, handle: Handle<Image>) -> egui::TextureId {
+        *self.0.get(&handle).unwrap()
+    }
+}
+
 /// Resource for configuring egui rendering.
 #[derive(HasSchema, Clone, Debug)]
 #[repr(C)]
