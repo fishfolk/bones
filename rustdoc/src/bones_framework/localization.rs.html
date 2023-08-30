@@ -260,7 +260,6 @@
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Localization module.
 
 </span><span class="kw">use </span>std::{
@@ -271,12 +270,11 @@
     sync::{Arc, OnceLock},
 };
 
-<span class="kw">use </span>bones_lib::prelude::anyhow::Context;
+<span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+
 <span class="kw">use </span>fluent_bundle::{FluentArgs, FluentResource};
 <span class="kw">use </span>intl_memoizer::concurrent::IntlLangMemoizer;
 <span class="kw">use </span>unic_langid::LanguageIdentifier;
-
-<span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">pub use </span>fluent_bundle;
 <span class="kw">pub use </span>fluent_langneg;

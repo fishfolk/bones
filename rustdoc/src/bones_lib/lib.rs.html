@@ -346,6 +346,52 @@
 <a href="#346" id="346">346</a>
 <a href="#347" id="347">347</a>
 <a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -354,15 +400,12 @@
 #![deny(rustdoc::all)]
 
 #[doc(inline)]
-</span><span class="kw">pub use </span>bones_asset <span class="kw">as </span>asset;
-<span class="attr">#[doc(inline)]
 </span><span class="kw">pub use </span>bones_ecs <span class="kw">as </span>ecs;
 
 <span class="doccomment">/// Bones lib prelude
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use crate</span>::{
-        asset::prelude::<span class="kw-2">*</span>, ecs::prelude::<span class="kw-2">*</span>, Game, Plugin, Session, SessionOptions, SessionRunner,
-        Sessions,
+        ecs::prelude::<span class="kw-2">*</span>, Game, Plugin, Session, SessionOptions, SessionRunner, Sessions,
     };
 }
 
@@ -493,19 +536,60 @@
     /// These are only guaranteed to be sorted and up-to-date immediately after calling
     /// [`Game::step()`].
     </span><span class="kw">pub </span>sorted_session_keys: Vec&lt;Key&gt;,
-    <span class="doccomment">/// The asset server cell.
-    </span><span class="kw">pub </span>asset_server: AtomicResource&lt;AssetServer&gt;,
+    <span class="doccomment">/// Collection of resources that will have a shared instance of each be inserted into each
+    /// session automatically.
+    </span><span class="kw">pub </span>shared_resources: Vec&lt;UntypedAtomicResource&gt;,
 }
 
 <span class="kw">impl </span>Game {
-    <span class="doccomment">/// Create an empty game.
+    <span class="doccomment">/// Create an empty game with an asset server.
     </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::default()
     }
 
-    <span class="doccomment">/// Borrow the asset server.
-    </span><span class="kw">pub fn </span>asset_server(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;AssetServer&gt; {
-        <span class="self">self</span>.asset_server.borrow_mut()
+    <span class="doccomment">/// Get the shared resource of a given type out of this [`Game`]s shared resources.
+    </span><span class="kw">pub fn </span>shared_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
+        <span class="self">self</span>.shared_resources
+            .iter()
+            .find(|x| x.schema() == T::schema())
+            .map(|x| x.borrow_mut().typed())
+    }
+
+    <span class="doccomment">/// Get the shared resource cell of a given type out of this [`Game`]s shared resources.
+    </span><span class="kw">pub fn </span>shared_resource_cell&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;T&gt;&gt; {
+        <span class="self">self</span>.shared_resources
+            .iter()
+            .find(|x| x.schema() == T::schema())
+            .map(|x| AtomicResource::from_untyped(x.clone_cell()))
+    }
+
+    <span class="doccomment">/// Initialize a resource that will be shared across game sessions using it&#39;s [`Default`] value
+    /// if it is not already initialized, and borrow it for modification.
+    </span><span class="kw">pub fn </span>init_shared_resource&lt;T: HasSchema + Default&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;T&gt; {
+        <span class="kw">if </span>!<span class="self">self
+            </span>.shared_resources
+            .iter()
+            .any(|x| x.schema() == T::schema())
+        {
+            <span class="self">self</span>.insert_shared_resource(T::default());
+        }
+        <span class="self">self</span>.shared_resource::&lt;T&gt;().unwrap()
+    }
+
+    <span class="doccomment">/// Insert a resource that will be shared across all game sessions.
+    </span><span class="kw">pub fn </span>insert_shared_resource&lt;T: HasSchema + Default&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: T) {
+        <span class="kw">let </span>resource = UntypedAtomicResource::new(SchemaBox::new(resource));
+
+        <span class="comment">// Replace an existing resource of the same type.
+        </span><span class="kw">for </span>r <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.shared_resources {
+            <span class="kw">if </span>r.schema() == T::schema() {
+                <span class="kw-2">*</span>r = resource;
+                <span class="kw">return</span>;
+            }
+        }
+
+        <span class="comment">// Or insert a new resource if we couldn&#39;t find one
+        </span><span class="self">self</span>.shared_resources.push(resource);
     }
 
     <span class="doccomment">/// Step the game simulation.
@@ -533,12 +617,20 @@
 
             <span class="comment">// If this session is active
             </span><span class="kw">let </span>options = <span class="kw">if </span>current_session.active {
-                <span class="comment">// Make sure the asset server is inserted
-                </span><span class="kw">if </span>!current_session.world.resources.contains::&lt;AssetServer&gt;() {
-                    current_session
+                <span class="comment">// Make sure session contains all of the shared resources
+                </span><span class="kw">for </span>r <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.shared_resources {
+                    <span class="kw">if </span>!current_session
                         .world
                         .resources
-                        .insert_cell(<span class="self">self</span>.asset_server.clone_cell());
+                        .untyped()
+                        .contains(r.schema().id())
+                    {
+                        current_session
+                            .world
+                            .resources
+                            .untyped_mut()
+                            .insert_cell(r.clone_cell());
+                    }
                 }
 
                 <span class="comment">// Insert the session options

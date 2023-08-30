@@ -64,6 +64,11 @@
 <a href="#64" id="64">64</a>
 <a href="#65" id="65">65</a>
 <a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The bones framework for game development.
 //!
 </span><span class="attr">#![cfg_attr(feature = <span class="string">&quot;document-features&quot;</span>, doc = <span class="string">&quot;## Features&quot;</span>)]
@@ -76,6 +81,9 @@
 #[doc(inline)]
 </span><span class="kw">pub use </span>bones_lib <span class="kw">as </span>lib;
 
+<span class="attr">#[doc(inline)]
+</span><span class="kw">pub use </span>bones_asset <span class="kw">as </span>asset;
+
 <span class="doccomment">/// Math library.
 </span><span class="attr">#[doc(inline)]
 </span><span class="kw">pub use </span>glam;
@@ -86,6 +94,8 @@
         animation::<span class="kw-2">*</span>, input::prelude::<span class="kw-2">*</span>, params::<span class="kw-2">*</span>, render::prelude::<span class="kw-2">*</span>, AssetServerExt,
         DefaultPlugin,
     };
+    <span class="kw">pub use </span>bones_asset::anyhow::Context;
+    <span class="kw">pub use </span>bones_asset::prelude::<span class="kw-2">*</span>;
     <span class="kw">pub use </span>bones_lib::prelude::<span class="kw-2">*</span>;
     <span class="kw">pub use </span>glam::<span class="kw-2">*</span>;
 
@@ -109,12 +119,12 @@
     }
 }
 
-<span class="doccomment">/// Extension trait for the bones [`AssetServer`][bones_lib::prelude::AssetServer].
+<span class="doccomment">/// Extension trait for the bones [`AssetServer`][bones_asset::AssetServer].
 </span><span class="kw">pub trait </span>AssetServerExt {
     <span class="doccomment">/// Register the default assets from `bones_framework`.
     </span><span class="kw">fn </span>register_default_assets(<span class="self">self</span>) -&gt; <span class="self">Self</span>;
 }
-<span class="kw">impl </span>AssetServerExt <span class="kw">for </span><span class="kw-2">&amp;mut </span>bones_lib::prelude::AssetServer {
+<span class="kw">impl </span>AssetServerExt <span class="kw">for </span><span class="kw-2">&amp;mut </span>bones_asset::AssetServer {
     <span class="kw">fn </span>register_default_assets(<span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 

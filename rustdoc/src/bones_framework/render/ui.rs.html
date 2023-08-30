@@ -25,6 +25,14 @@
 <a href="#25" id="25">25</a>
 <a href="#26" id="26">26</a>
 <a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! UI resources &amp; components.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -38,6 +46,14 @@
 <span class="doccomment">/// Resource that maps image handles to their associated egui textures.
 </span><span class="attr">#[derive(HasSchema, Clone, Debug, Default, Deref, DerefMut)]
 </span><span class="kw">pub struct </span>EguiTextures(<span class="kw">pub </span>HashMap&lt;Handle&lt;Image&gt;, egui::TextureId&gt;);
+
+<span class="kw">impl </span>EguiTextures {
+    <span class="doccomment">/// Get the [`egui::TextureId`] for the given bones [`Handle&lt;Image&gt;`].
+    </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, handle: Handle&lt;Image&gt;) -&gt; egui::TextureId {
+        <span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.get(<span class="kw-2">&amp;</span>handle).unwrap()
+    }
+}
 
 <span class="doccomment">/// Resource for configuring egui rendering.
 </span><span class="attr">#[derive(HasSchema, Clone, Debug)]

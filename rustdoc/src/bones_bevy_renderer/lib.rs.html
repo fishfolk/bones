@@ -708,6 +708,52 @@
 <a href="#708" id="708">708</a>
 <a href="#709" id="709">709</a>
 <a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -784,22 +830,40 @@
     </span><span class="kw">pub fn </span>load_bones_images(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         bones_assets: <span class="kw-2">&amp;mut </span>bones::AssetServer,
+        bones_egui_textures: <span class="kw-2">&amp;mut </span>bones::EguiTextures,
         bevy_images: <span class="kw-2">&amp;mut </span>Assets&lt;Image&gt;,
+        bevy_egui_textures: <span class="kw-2">&amp;mut </span>bevy_egui::EguiUserTextures,
     ) {
-        <span class="kw">for </span>asset <span class="kw">in </span>bones_assets.store.assets.values_mut() {
+        <span class="kw">for </span>(handle, cid) <span class="kw">in </span>bones_assets.store.asset_ids.iter() {
+            <span class="kw">let </span>asset = bones_assets.store.assets.get_mut(cid).unwrap();
             <span class="kw">if let </span><span class="prelude-val">Ok</span>(image) = asset.data.try_cast_mut::&lt;bones::Image&gt;() {
-                <span class="self">self</span>.load_bones_image(image, bevy_images)
+                <span class="self">self</span>.load_bones_image(
+                    handle.typed(),
+                    image,
+                    bones_egui_textures,
+                    bevy_images,
+                    bevy_egui_textures,
+                )
             }
         }
     }
 
     <span class="doccomment">/// Load a bones image into bevy.
-    </span><span class="kw">pub fn </span>load_bones_image(<span class="kw-2">&amp;mut </span><span class="self">self</span>, image: <span class="kw-2">&amp;mut </span>bones::Image, bevy_images: <span class="kw-2">&amp;mut </span>Assets&lt;Image&gt;) {
+    </span><span class="kw">pub fn </span>load_bones_image(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        bones_handle: bones::Handle&lt;bones::Image&gt;,
+        image: <span class="kw-2">&amp;mut </span>bones::Image,
+        bones_egui_textures: <span class="kw-2">&amp;mut </span>bones::EguiTextures,
+        bevy_images: <span class="kw-2">&amp;mut </span>Assets&lt;Image&gt;,
+        bevy_egui_textures: <span class="kw-2">&amp;mut </span>bevy_egui::EguiUserTextures,
+    ) {
         <span class="kw">let </span><span class="self">Self </span>{ map, next_id } = <span class="self">self</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>taken_image = bones::Image::External(<span class="number">0</span>); <span class="comment">// Dummy value temporarily
         </span>std::mem::swap(image, <span class="kw-2">&amp;mut </span>taken_image);
         <span class="kw">if let </span>bones::Image::Data(data) = taken_image {
             <span class="kw">let </span>handle = bevy_images.add(Image::from_dynamic(data, <span class="bool-val">true</span>));
+            <span class="kw">let </span>egui_texture = bevy_egui_textures.add_image(handle.clone());
+            bones_egui_textures.insert(bones_handle, egui_texture);
             map.insert(<span class="kw-2">*</span>next_id, handle);
             <span class="kw-2">*</span>image = bones::Image::External(<span class="kw-2">*</span>next_id);
             <span class="kw-2">*</span>next_id += <span class="number">1</span>;
@@ -813,7 +877,7 @@
     <span class="doccomment">/// The bones game.
     </span><span class="kw">pub </span>game: bones::Game,
     <span class="doccomment">/// The bones asset server cell.
-    </span><span class="kw">pub </span>asset_server: bones::AtomicResource&lt;bones::AssetServer&gt;,
+    </span><span class="kw">pub </span>asset_server: <span class="prelude-ty">Option</span>&lt;bones::AtomicResource&lt;bones::AssetServer&gt;&gt;,
 }
 
 <span class="kw">impl </span>BonesBevyRenderer {
@@ -832,7 +896,7 @@
     }
 
     <span class="doccomment">/// Return a bevy [`App`] configured to run the bones game.
-    </span><span class="kw">pub fn </span>app(<span class="self">self</span>) -&gt; App {
+    </span><span class="kw">pub fn </span>app(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; App {
         <span class="kw">let </span><span class="kw-2">mut </span>app = App::new();
 
         <span class="comment">// Initialize Bevy plugins we use
@@ -852,10 +916,15 @@
             })
             .init_resource::&lt;BonesImageIds&gt;();
 
-        {
-            <span class="kw">let </span><span class="kw-2">mut </span>bones_image_ids = BonesImageIds::default();
-            <span class="kw">let </span><span class="kw-2">mut </span>asset_server = <span class="self">self</span>.game.asset_server();
-            <span class="kw">let </span><span class="kw-2">mut </span>bevy_images = app.world.resource_mut::&lt;Assets&lt;Image&gt;&gt;();
+        <span class="kw">let </span><span class="kw-2">mut </span>bones_image_ids = BonesImageIds::default();
+        <span class="kw">let </span><span class="kw-2">mut </span>bones_egui_textures = bones::EguiTextures::default();
+        <span class="lifetime">&#39;asset_load</span>: {
+            <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = <span class="self">self</span>.game.shared_resource::&lt;bones::AssetServer&gt;() <span class="kw">else </span>{
+                <span class="kw">break </span><span class="lifetime">&#39;asset_load</span>;
+            };
+            <span class="kw">let </span>world = app.world.cell();
+            <span class="kw">let </span><span class="kw-2">mut </span>bevy_images = world.resource_mut::&lt;Assets&lt;Image&gt;&gt;();
+            <span class="kw">let </span><span class="kw-2">mut </span>bevy_egui_textures = world.resource_mut::&lt;bevy_egui::EguiUserTextures&gt;();
 
             <span class="kw">if </span>!asset_server.asset_types.is_empty() {
                 <span class="attr">#[cfg(not(target_arch = <span class="string">&quot;wasm32&quot;</span>))]
@@ -870,22 +939,33 @@
                         .expect(<span class="string">&quot;Could not load game assets&quot;</span>);
 
                     <span class="comment">// Take all loaded image assets and conver them to external images that reference bevy handles
-                    </span>bones_image_ids.load_bones_images(<span class="kw-2">&amp;mut </span>asset_server, <span class="kw-2">&amp;mut </span>bevy_images);
+                    </span>bones_image_ids.load_bones_images(
+                        <span class="kw-2">&amp;mut </span>asset_server,
+                        <span class="kw-2">&amp;mut </span>bones_egui_textures,
+                        <span class="kw-2">&amp;mut </span>bevy_images,
+                        <span class="kw-2">&amp;mut </span>bevy_egui_textures,
+                    );
                 }
                 <span class="attr">#[cfg(target_arch = <span class="string">&quot;wasm32&quot;</span>)]
                 </span>{
-                    bones_image_ids.load_bones_images(<span class="kw-2">&amp;mut </span>asset_server, <span class="kw-2">&amp;mut </span>bevy_images);
+                    bones_image_ids.load_bones_images(
+                        <span class="kw-2">&amp;mut </span>asset_server,
+                        <span class="kw-2">&amp;mut </span>bones_egui_textures,
+                        <span class="kw-2">&amp;mut </span>bevy_images,
+                        <span class="kw-2">&amp;mut </span>bevy_egui_textures,
+                    );
                     <span class="comment">// TODO: Implement WASM asset loader.
                     </span><span class="macro">unimplemented!</span>(<span class="string">&quot;WASM asset loading is not implemented yet.&quot;</span>);
                 }
             }
-
-            app.insert_resource(bones_image_ids);
         }
+
+        <span class="self">self</span>.game.insert_shared_resource(bones_egui_textures);
+        app.insert_resource(bones_image_ids);
 
         <span class="comment">// Insert the bones data
         </span>app.insert_resource(BonesData {
-            asset_server: <span class="self">self</span>.game.asset_server.clone_cell(),
+            asset_server: <span class="self">self</span>.game.shared_resource_cell::&lt;bones::AssetServer&gt;(),
             game: <span class="self">self</span>.game,
         })
         .init_resource::&lt;BonesGameEntity&gt;();
@@ -967,76 +1047,82 @@
     In((mouse_inputs, keyboard_inputs)): In&lt;(bones::MouseInputs, bones::KeyboardInputs)&gt;,
     world: <span class="kw-2">&amp;mut </span>World,
 ) {
-    world.resource_scope(|world: <span class="kw-2">&amp;mut </span>World, <span class="kw-2">mut </span>data: Mut&lt;BonesData&gt;| {
-        world.resource_scope(
-            |world: <span class="kw-2">&amp;mut </span>World, <span class="kw-2">mut </span>bones_image_ids: Mut&lt;BonesImageIds&gt;| {
-                world.resource_scope(|world: <span class="kw-2">&amp;mut </span>World, <span class="kw-2">mut </span>bevy_images: Mut&lt;Assets&lt;Image&gt;&gt;| {
-                    <span class="kw">let </span>egui_ctx = {
-                        <span class="kw">let </span><span class="kw-2">mut </span>egui_query =
-                            world.query_filtered::&lt;<span class="kw-2">&amp;mut </span>EguiContext, With&lt;Window&gt;&gt;();
-                        <span class="kw">let </span><span class="kw-2">mut </span>egui_ctx = egui_query.get_single_mut(world).unwrap();
-                        egui_ctx.get_mut().clone()
-                    };
-                    <span class="kw">let </span>BonesData { game, asset_server } = <span class="kw-2">&amp;mut *</span>data;
-                    <span class="kw">let </span>bevy_time = world.resource::&lt;Time&gt;();
+    <span class="kw">let </span><span class="kw-2">mut </span>data = world.remove_resource::&lt;BonesData&gt;().unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>bones_image_ids = world.remove_resource::&lt;BonesImageIds&gt;().unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>bevy_egui_textures = world
+        .remove_resource::&lt;bevy_egui::EguiUserTextures&gt;()
+        .unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>bevy_images = world.remove_resource::&lt;Assets&lt;Image&gt;&gt;().unwrap();
 
-                    <span class="kw">let </span>mouse_inputs = bones::AtomicResource::new(mouse_inputs);
-                    <span class="kw">let </span>keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
+    <span class="kw">let </span>egui_ctx = {
+        <span class="kw">let </span><span class="kw-2">mut </span>egui_query = world.query_filtered::&lt;<span class="kw-2">&amp;mut </span>EguiContext, With&lt;Window&gt;&gt;();
+        <span class="kw">let </span><span class="kw-2">mut </span>egui_ctx = egui_query.get_single_mut(world).unwrap();
+        egui_ctx.get_mut().clone()
+    };
+    <span class="kw">let </span>BonesData { game, .. } = <span class="kw-2">&amp;mut </span>data;
+    <span class="kw">let </span>bevy_time = world.resource::&lt;Time&gt;();
 
-                    <span class="comment">// Reload assets if necessary
-                    </span>game.asset_server()
-                        .handle_asset_changes(|asset_server, handle| {
-                            <span class="kw">let </span>asset = asset_server.get_untyped_mut(handle).unwrap();
+    <span class="kw">let </span>mouse_inputs = bones::AtomicResource::new(mouse_inputs);
+    <span class="kw">let </span>keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
 
-                            <span class="kw">if let </span><span class="prelude-val">Ok</span>(image) = asset.data.try_cast_mut::&lt;bones::Image&gt;() {
-                                bones_image_ids.load_bones_image(image, <span class="kw-2">&amp;mut </span>bevy_images);
-                            }
-                        });
+    <span class="comment">// Reload assets if necessary
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = game.shared_resource::&lt;bones::AssetServer&gt;() {
+        asset_server.handle_asset_changes(|asset_server, handle| {
+            <span class="kw">let </span><span class="kw-2">mut </span>bones_egui_textures = game.shared_resource::&lt;bones::EguiTextures&gt;().unwrap();
+            <span class="kw">let </span>asset = asset_server.get_untyped_mut(handle).unwrap();
 
-                    <span class="comment">// Step the game simulation
-                    </span>game.step(|bones_world| {
-                        <span class="comment">// Insert egui context if not present
-                        </span><span class="kw">if </span>!bones_world
-                            .resources
-                            .contains::&lt;bones_framework::render::ui::EguiCtx&gt;()
-                        {
-                            bones_world
-                                .resources
-                                .insert(bones_framework::render::ui::EguiCtx(egui_ctx.clone()));
-                        }
+            <span class="kw">if let </span><span class="prelude-val">Ok</span>(image) = asset.data.try_cast_mut::&lt;bones::Image&gt;() {
+                bones_image_ids.load_bones_image(
+                    handle.typed(),
+                    image,
+                    <span class="kw-2">&amp;mut </span>bones_egui_textures,
+                    <span class="kw-2">&amp;mut </span>bevy_images,
+                    <span class="kw-2">&amp;mut </span>bevy_egui_textures,
+                );
+            }
+        })
+    }
 
-                        <span class="comment">// Update bones time
-                        </span>{
-                            <span class="comment">// Initialize the time resource if it doesn&#39;t exist.
-                            </span><span class="kw">if </span>!bones_world.resources.contains::&lt;bones::Time&gt;() {
-                                bones_world.init_resource::&lt;bones::Time&gt;();
-                            }
+    <span class="comment">// Step the game simulation
+    </span>game.step(|bones_world| {
+        <span class="comment">// Insert egui context if not present
+        </span><span class="kw">if </span>!bones_world
+            .resources
+            .contains::&lt;bones_framework::render::ui::EguiCtx&gt;()
+        {
+            bones_world
+                .resources
+                .insert(bones_framework::render::ui::EguiCtx(egui_ctx.clone()));
+        }
 
-                            <span class="kw">let </span><span class="kw-2">mut </span>time = bones_world.resource_mut::&lt;bones::Time&gt;();
+        <span class="comment">// Update bones time
+        </span>{
+            <span class="comment">// Initialize the time resource if it doesn&#39;t exist.
+            </span><span class="kw">if </span>!bones_world.resources.contains::&lt;bones::Time&gt;() {
+                bones_world.init_resource::&lt;bones::Time&gt;();
+            }
 
-                            <span class="comment">// Use the Bevy time if it&#39;s available, otherwise use the default time.
-                            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(instant) = bevy_time.last_update() {
-                                time.update_with_instant(instant);
-                            } <span class="kw">else </span>{
-                                time.update();
-                            }
-                        }
+            <span class="kw">let </span><span class="kw-2">mut </span>time = bones_world.resource_mut::&lt;bones::Time&gt;();
 
-                        <span class="comment">// Insert asset server if not present
-                        </span><span class="kw">if </span>!bones_world.resources.contains::&lt;bones::AssetServer&gt;() {
-                            bones_world.resources.insert_cell(asset_server.clone_cell());
-                        }
+            <span class="comment">// Use the Bevy time if it&#39;s available, otherwise use the default time.
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(instant) = bevy_time.last_update() {
+                time.update_with_instant(instant);
+            } <span class="kw">else </span>{
+                time.update();
+            }
+        }
 
-                        <span class="comment">// Update the inputs.
-                        </span>bones_world.resources.insert_cell(mouse_inputs.clone_cell());
-                        bones_world
-                            .resources
-                            .insert_cell(keyboard_inputs.clone_cell());
-                    });
-                });
-            },
-        );
+        <span class="comment">// Update the inputs.
+        </span>bones_world.resources.insert_cell(mouse_inputs.clone_cell());
+        bones_world
+            .resources
+            .insert_cell(keyboard_inputs.clone_cell());
     });
+
+    world.insert_resource(data);
+    world.insert_resource(bones_image_ids);
+    world.insert_resource(bevy_egui_textures);
+    world.insert_resource(bevy_images);
 }
 
 <span class="kw">fn </span>sync_clear_color(<span class="kw-2">mut </span>clear_color: ResMut&lt;ClearColor&gt;, <span class="kw-2">mut </span>data: ResMut&lt;BonesData&gt;) {
@@ -1148,7 +1234,10 @@
     bones_renderable_entity: Extract&lt;Res&lt;BonesGameEntity&gt;&gt;,
 ) {
     <span class="kw">let </span>game = <span class="kw-2">&amp;</span>data.game;
-    <span class="kw">let </span>bones_assets = data.asset_server.borrow();
+    <span class="kw">let </span><span class="prelude-val">Some</span>(bones_assets) = <span class="kw-2">&amp;</span>data.asset_server <span class="kw">else </span>{
+        <span class="kw">return</span>;
+    };
+    <span class="kw">let </span>bones_assets = bones_assets.borrow();
 
     <span class="kw">for </span>session_name <span class="kw">in </span><span class="kw-2">&amp;</span>game.sorted_session_keys {
         <span class="kw">let </span>session = game.sessions.get(<span class="kw-2">*</span>session_name).unwrap();
@@ -1244,7 +1333,10 @@
     bones_renderable_entity: Extract&lt;Res&lt;BonesGameEntity&gt;&gt;,
 ) {
     <span class="kw">let </span>game = <span class="kw-2">&amp;</span>data.game;
-    <span class="kw">let </span>bones_assets = data.asset_server.borrow();
+    <span class="kw">let </span><span class="prelude-val">Some</span>(bones_assets) = <span class="kw-2">&amp;</span>data.asset_server <span class="kw">else </span>{
+        <span class="kw">return</span>;
+    };
+    <span class="kw">let </span>bones_assets = bones_assets.borrow();
 
     <span class="kw">for </span>session_name <span class="kw">in </span><span class="kw-2">&amp;</span>game.sorted_session_keys {
         <span class="kw">let </span>session = game.sessions.get(<span class="kw-2">*</span>session_name).unwrap();

@@ -361,6 +361,27 @@
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
 <a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! World resource storage.
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
@@ -368,17 +389,6 @@
 <span class="kw">use </span>atomicell::borrow::{AtomicBorrow, AtomicBorrowMut};
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-
-<span class="doccomment">/// Storage for un-typed resources.
-///
-/// This is the backing data store used by [`Resources`].
-///
-/// Unless you are intending to do modding or otherwise need raw pointers to your resource data, you
-/// should use [`Resources`] instead.
-</span><span class="attr">#[derive(Clone, Default)]
-</span><span class="kw">pub struct </span>UntypedResources {
-    resources: HashMap&lt;SchemaId, UntypedAtomicResource&gt;,
-}
 
 <span class="doccomment">/// An untyped resource that may be inserted into [`UntypedResources`].
 </span><span class="kw">pub struct </span>UntypedAtomicResource {
@@ -448,6 +458,14 @@
     </span><span class="kw">pub unsafe fn </span>deref&lt;T&gt;(<span class="self">self</span>) -&gt; Ref&lt;<span class="lifetime">&#39;a</span>, T&gt; {
         Ref::with_borrow(<span class="self">self</span>.schema_ref.deref(), <span class="self">self</span>.borrow)
     }
+
+    <span class="doccomment">/// Convert into typed [`Ref`]. This panics if the schema doesn&#39;t match.
+    </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>typed&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; Ref&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+        <span class="macro">assert_eq!</span>(T::schema(), <span class="self">self</span>.schema(), <span class="string">&quot;Schema mismatch&quot;</span>);
+        <span class="comment">// SOUND: we&#39;ve checked for matching schema.
+        </span><span class="kw">unsafe </span>{ <span class="self">self</span>.deref() }
+    }
 }
 
 <span class="doccomment">/// An atomic borrow of a [`SchemaRefMut`].
@@ -464,6 +482,14 @@
     </span><span class="kw">pub unsafe fn </span>deref_mut&lt;T&gt;(<span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
         RefMut::with_borrow(<span class="self">self</span>.schema_ref.deref_mut(), <span class="self">self</span>.borrow)
     }
+
+    <span class="doccomment">/// Convert into typed [`RefMut`]. This panics if the schema doesn&#39;t match.
+    </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>typed&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+        <span class="macro">assert_eq!</span>(T::schema(), <span class="self">self</span>.schema(), <span class="string">&quot;Schema mismatch&quot;</span>);
+        <span class="comment">// SOUND: we&#39;ve checked for matching schema.
+        </span><span class="kw">unsafe </span>{ <span class="self">self</span>.deref_mut() }
+    }
 }
 
 <span class="kw">impl </span>Clone <span class="kw">for </span>UntypedAtomicResource {
@@ -473,6 +499,17 @@
             schema: <span class="self">self</span>.schema,
         }
     }
+}
+
+<span class="doccomment">/// Storage for un-typed resources.
+///
+/// This is the backing data store used by [`Resources`].
+///
+/// Unless you are intending to do modding or otherwise need raw pointers to your resource data, you
+/// should use [`Resources`] instead.
+</span><span class="attr">#[derive(Clone, Default)]
+</span><span class="kw">pub struct </span>UntypedResources {
+    resources: HashMap&lt;SchemaId, UntypedAtomicResource&gt;,
 }
 
 <span class="kw">impl </span>UntypedResources {
@@ -486,6 +523,11 @@
         <span class="kw">let </span>id = resource.schema().id();
         <span class="self">self</span>.resources
             .insert(id, UntypedAtomicResource::new(resource))
+    }
+
+    <span class="doccomment">/// Check whether or not the resoruce with the given ID is present.
+    </span><span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, id: SchemaId) -&gt; bool {
+        <span class="self">self</span>.resources.contains_key(<span class="kw-2">&amp;</span>id)
     }
 
     <span class="doccomment">/// Insert a resource.

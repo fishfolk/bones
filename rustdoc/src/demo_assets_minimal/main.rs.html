@@ -50,6 +50,9 @@
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
 <a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bones_bevy_renderer::BonesBevyRenderer;
 <span class="kw">use </span>bones_framework::prelude::<span class="kw-2">*</span>;
 
@@ -74,8 +77,11 @@
     <span class="comment">// First create bones game.
     </span><span class="kw">let </span><span class="kw-2">mut </span>game = Game::new();
 
-    <span class="comment">// We must register all of our asset types before they can be loaded.
-    </span>game.asset_server().register_asset::&lt;GameMeta&gt;();
+    game
+        <span class="comment">// We initialize the asset server.
+        </span>.init_shared_resource::&lt;AssetServer&gt;()
+        <span class="comment">// We must register all of our asset types before they can be loaded.
+        </span>.register_asset::&lt;GameMeta&gt;();
 
     <span class="comment">// Create a new session for the game menu. Each session is it&#39;s own bones world with it&#39;s own
     // plugins, systems, and entities.

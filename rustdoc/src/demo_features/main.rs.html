@@ -353,6 +353,17 @@
 <a href="#353" id="353">353</a>
 <a href="#354" id="354">354</a>
 <a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::too_many_arguments)]
 
 </span><span class="kw">use </span>bones_bevy_renderer::{
@@ -369,6 +380,8 @@
 </span><span class="comment">// Allow asset to be loaded from &quot;game.yaml&quot; assets.
 </span><span class="attr">#[type_data(metadata_asset(<span class="string">&quot;game&quot;</span>))]
 </span><span class="kw">struct </span>GameMeta {
+    <span class="doccomment">/// The image displayed on the menu.
+    </span>menu_image: Handle&lt;Image&gt;,
     <span class="doccomment">/// The image for the sprite demo
     </span>sprite_demo: Handle&lt;Image&gt;,
     <span class="doccomment">/// Character information that will be loaded from a separate asset file.
@@ -435,7 +448,7 @@
     </span><span class="kw">let </span><span class="kw-2">mut </span>game = Game::new();
 
     <span class="comment">// Configure the asset server
-    </span>game.asset_server()
+    </span>game.init_shared_resource::&lt;AssetServer&gt;()
         <span class="comment">// Register the default asset types
         </span>.register_default_assets()
         <span class="comment">// Register our custom asset types
@@ -473,9 +486,11 @@
 
 <span class="doccomment">/// Our main menu system.
 </span><span class="kw">fn </span>menu_system(
+    meta: Root&lt;GameMeta&gt;,
     egui_ctx: ResMut&lt;EguiCtx&gt;,
     <span class="kw-2">mut </span>sessions: ResMut&lt;Sessions&gt;,
     <span class="kw-2">mut </span>session_options: ResMut&lt;SessionOptions&gt;,
+    egui_textures: Res&lt;EguiTextures&gt;,
     <span class="comment">// Get the localization field from our `GameMeta`
     </span>localization: Localization&lt;GameMeta&gt;,
 ) {
@@ -527,6 +542,13 @@
                         .create(<span class="string">&quot;path2d_demo&quot;</span>)
                         .install_plugin(path2d_demo_plugin);
                 }
+
+                ui.add_space(<span class="number">40.0</span>);
+
+                <span class="comment">// When using a bones image in egui, we have to get it&#39;s corresponding egui texture
+                // from the egui textures resource.
+                </span>ui.label(<span class="string">&quot;Bones Image Rendered in Egui&quot;</span>);
+                ui.image(egui_textures.get(meta.menu_image), [<span class="number">100.</span>, <span class="number">100.</span>]);
             });
         });
 }

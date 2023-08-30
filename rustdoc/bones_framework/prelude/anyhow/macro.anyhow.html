@@ -4,7 +4,7 @@
     (<span class="macro-nonterminal">$fmt</span>:expr, $(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; { ... };
 }</pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Construct an ad-hoc error from a string or existing non-<code>anyhow</code> error
 value.</p>
-<p>This evaluates to an <a href="../../lib/prelude/anyhow/struct.Error.html" title="struct bones_framework::lib::prelude::anyhow::Error"><code>Error</code></a>. It can take either just a
+<p>This evaluates to an <a href="../../asset/prelude/anyhow/struct.Error.html" title="struct bones_framework::asset::prelude::anyhow::Error"><code>Error</code></a>. It can take either just a
 string, or a format string with arguments. It also can take any custom type
 which implements <code>Debug</code> and <code>Display</code>.</p>
 <p>If called with a single argument whose type implements <code>std::error::Error</code>
