@@ -8,7 +8,7 @@ use crate::prelude::*;
 
 /// Color type.
 #[derive(Clone, Copy, Debug, HasSchema)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive_type_data(SchemaDeserialize)]
 pub enum Color {
     /// sRGBA color
     Rgba {
@@ -21,6 +21,36 @@ pub enum Color {
         /// Alpha channel. [0.0, 1.0]
         alpha: f32,
     },
+}
+
+impl<'de> serde::Deserialize<'de> for Color {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(ColorVisitor)
+    }
+}
+
+struct ColorVisitor;
+impl<'de> serde::de::Visitor<'de> for ColorVisitor {
+    type Value = Color;
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "A color in any valid CSS color format")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        let color = csscolorparser::parse(v).map_err(|e| E::custom(e.to_string()))?;
+        Ok(Color::Rgba {
+            red: color.r as f32,
+            green: color.g as f32,
+            blue: color.b as f32,
+            alpha: color.a as f32,
+        })
+    }
 }
 
 impl Color {

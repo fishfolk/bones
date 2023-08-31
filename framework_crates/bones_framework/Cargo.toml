@@ -56,6 +56,9 @@ instant   = "0.1"
 hex       = "0.4"
 tracing   = "0.1"
 
+# Render
+csscolorparser = "0.6"
+
 # Input
 gilrs = "0.10"
 

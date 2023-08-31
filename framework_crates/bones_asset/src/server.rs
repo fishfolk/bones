@@ -629,12 +629,6 @@ mod metadata {
         where
             D: serde::Deserializer<'de>,
         {
-            if self.schema.has_opaque() {
-                return Err(D::Error::custom(
-                    "Cannot deserialize schemas containing opaque types.",
-                ));
-            }
-
             // Allocate the object.
             let mut ptr = SchemaBox::default(self.schema);
 
@@ -685,6 +679,11 @@ mod metadata {
                 return Ok(());
             }
 
+            // Use custom deserialize implementation if present.
+            if let Some(schema_deserialize) = self.ptr.schema().type_data.get::<SchemaDeserialize>() {
+                return schema_deserialize.deserialize(self.ptr, deserializer);
+            }
+
             match &self.ptr.schema().kind {
                 SchemaKind::Struct(_) => deserializer.deserialize_any(StructVisitor {
                     ptr: self.ptr,
@@ -725,10 +724,12 @@ mod metadata {
                         Primitive::String => {
                             *self.ptr.cast_mut() = String::deserialize(deserializer)?
                         }
-                        Primitive::Opaque { .. } => panic!(
-                            "Cannot deserialize opaque types from metadata files.\
-                            This error should have been handled above"
-                        ),
+                        Primitive::Opaque { .. } => {
+                            return Err(D::Error::custom(
+                                "Opaque types must have `SchemaDeserialize` type data in order \
+                                to be loaded in a metadata asset.",
+                            ));
+                        }
                     };
                 }
             };

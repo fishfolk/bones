@@ -22,6 +22,8 @@ struct GameMeta {
     atlas_demo: Handle<AtlasDemoMeta>,
     /// The tilemap demo metadata.
     tilemap_demo: Handle<TilemapDemoMeta>,
+    /// The color the debug lines in the debug line demo.
+    path2d_color: Color,
     /// Localization asset
     localization: Handle<LocalizationAsset>,
 }
@@ -66,6 +68,8 @@ struct TileMeta {
 }
 
 fn main() {
+    assert!(Color::schema().type_data.get::<SchemaDeserialize>().is_some());
+
     // Create a bones bevy renderer from our bones game
     BonesBevyRenderer::new(create_game())
         // Get a bevy app for running our game
@@ -318,6 +322,7 @@ fn path2d_demo_plugin(session: &mut Session) {
 }
 
 fn path2d_demo_startup(
+    meta: Root<GameMeta>,
     mut entities: ResMut<Entities>,
     mut transforms: CompMut<Transform>,
     mut cameras: CompMut<Camera>,
@@ -331,7 +336,7 @@ fn path2d_demo_startup(
     path2ds.insert(
         ent,
         Path2d {
-            color: Color::RED,
+            color: meta.path2d_color,
             points: vec![
                 vec2(-SIZE, 0.),
                 vec2(0., SIZE),

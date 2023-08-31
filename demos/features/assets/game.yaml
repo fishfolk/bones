@@ -3,3 +3,4 @@ sprite_demo: ./sprite/fractal.png
 atlas_demo: ./atlas/atlas-demo.yaml
 tilemap_demo: ./tilemap/tilemap.yaml
 localization: ./localization.yaml
+path2d_color: red
