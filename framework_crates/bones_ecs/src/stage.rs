@@ -11,7 +11,7 @@ pub struct SystemStages {
     /// Whether or not the startup systems have been run yet.
     pub has_started: bool,
     /// The systems that should run at startup.
-    pub startup_systems: Vec<System>,
+    pub startup_systems: Vec<StaticSystem<(), ()>>,
 }
 impl std::fmt::Debug for SystemStages {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -43,20 +43,18 @@ impl SystemStages {
     ///
     /// > **Note:** You must call [`initialize_systems()`][Self::initialize_systems] once before
     /// > calling `run()` one or more times.
-    pub fn run(&mut self, world: &mut World) -> SystemResult {
+    pub fn run(&mut self, world: &mut World) {
         if !self.has_started {
             for system in &mut self.startup_systems {
                 system.initialize(world);
-                system.run(world).unwrap();
+                system.run(world, ());
             }
             self.has_started = true;
         }
 
         for stage in &mut self.stages {
-            stage.run(world)?;
+            stage.run(world);
         }
-
-        Ok(())
     }
 
     /// Create a [`SystemStages`] collection, initialized with a stage for each [`CoreStage`].
@@ -75,17 +73,19 @@ impl SystemStages {
     }
 
     /// Add a system that will run only once, before all of the other non-startup systems.
-    pub fn add_startup_system<Args, S: IntoSystem<Args, ()>>(&mut self, system: S) -> &mut Self {
+    pub fn add_startup_system<Args, S>(&mut self, system: S) -> &mut Self
+    where
+        S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
+    {
         self.startup_systems.push(system.system());
         self
     }
 
     /// Add a [`System`] to the stage with the given label.
-    pub fn add_system_to_stage<Args, S: IntoSystem<Args, ()>, L: StageLabel>(
-        &mut self,
-        label: L,
-        system: S,
-    ) -> &mut Self {
+    pub fn add_system_to_stage<Args, S>(&mut self, label: impl StageLabel, system: S) -> &mut Self
+    where
+        S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
+    {
         let name = label.name();
         let id = label.id();
         let mut stage = None;
@@ -150,14 +150,14 @@ pub trait SystemStage: Sync + Send {
     ///
     /// > **Note:** You must call [`initialize()`][Self::initialize] once before calling `run()` one
     /// > or more times.
-    fn run(&mut self, world: &mut World) -> SystemResult;
+    fn run(&mut self, world: &mut World);
     /// Initialize the contained systems for the given `world`.
     ///
     /// Must be called once before calling [`run()`][Self::run].
     fn initialize(&mut self, world: &mut World);
 
     /// Add a system to this stage.
-    fn add_system(&mut self, system: System<()>);
+    fn add_system(&mut self, system: StaticSystem<(), ()>);
 }
 
 /// A collection of systems that will be run in order.
@@ -169,7 +169,7 @@ pub struct SimpleSystemStage {
     /// The list of systems in the stage.
     ///
     /// Each system will be run in the order that they are in in this list.
-    pub systems: Vec<System<()>>,
+    pub systems: Vec<StaticSystem<(), ()>>,
 }
 
 impl SimpleSystemStage {
@@ -192,10 +192,10 @@ impl SystemStage for SimpleSystemStage {
         self.name.clone()
     }
 
-    fn run(&mut self, world: &mut World) -> SystemResult {
+    fn run(&mut self, world: &mut World) {
         // Run the systems
         for system in &mut self.systems {
-            system.run(world)?;
+            system.run(world, ());
         }
 
         // Drain the command queue
@@ -205,12 +205,10 @@ impl SystemStage for SimpleSystemStage {
 
                 for mut system in command_queue.queue.drain(..) {
                     system.initialize(world);
-                    system.run(world).unwrap();
+                    system.run(world, ());
                 }
             }
         }
-
-        Ok(())
     }
 
     fn initialize(&mut self, world: &mut World) {
@@ -220,7 +218,7 @@ impl SystemStage for SimpleSystemStage {
         }
     }
 
-    fn add_system(&mut self, system: System<()>) {
+    fn add_system(&mut self, system: StaticSystem<(), ()>) {
         self.systems.push(system);
     }
 }
@@ -267,10 +265,10 @@ impl StageLabel for CoreStage {
 /// A resource containing the [`Commands`] command queue.
 ///
 /// You can use [`Commands`] as a [`SystemParam`] as a shortcut to [`ResMut<CommandQueue>`].
-#[derive(Debug, HasSchema, Default)]
+#[derive(HasSchema, Default)]
 pub struct CommandQueue {
     /// The system queue that will be run at the end of the stage
-    pub queue: VecDeque<System>,
+    pub queue: VecDeque<StaticSystem<(), ()>>,
 }
 
 impl Clone for CommandQueue {
@@ -290,7 +288,10 @@ impl Clone for CommandQueue {
 
 impl CommandQueue {
     /// Add a system to be run at the end of the stage.
-    pub fn add<Args, S: IntoSystem<Args, ()>>(&mut self, system: S) {
+    pub fn add<Args, S>(&mut self, system: S)
+    where
+        S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
+    {
         self.queue.push_back(system.system());
     }
 }
@@ -312,7 +313,7 @@ impl<'a> SystemParam for Commands<'a> {
         world.resources.get_cell::<CommandQueue>().unwrap()
     }
 
-    fn borrow(state: &mut Self::State) -> Self::Param<'_> {
+    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
         Commands(state.borrow_mut())
     }
 }

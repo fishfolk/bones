@@ -22,14 +22,12 @@ fn main() {
     // Initialize an empty world
     let mut world = World::new();
 
-    // Run our setup system once to spawn our entities
-    world.run_system(setup_system).ok();
-
     // Create a SystemStages to store the systems that we will run more than once.
     let mut stages = SystemStages::with_core_stages();
 
-    // Add our systems to the dispatcher
+    // Add our systems to the system stages
     stages
+        .add_startup_system(startup_system)
         .add_system_to_stage(CoreStage::Update, pos_vel_system)
         .add_system_to_stage(CoreStage::PostUpdate, print_system);
 
@@ -38,12 +36,12 @@ fn main() {
 
     // Run our game loop for 10 frames
     for _ in 0..10 {
-        stages.run(&mut world).unwrap();
+        stages.run(&mut world);
     }
 }
 
 /// Setup system that spawns two entities with a Pos and a Vel component.
-fn setup_system(
+fn startup_system(
     mut entities: ResMut<Entities>,
     mut positions: CompMut<Pos>,
     mut velocities: CompMut<Vel>,

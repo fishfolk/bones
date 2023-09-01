@@ -42,7 +42,7 @@ fn main() {
 
 /// System to render the home menu.
 fn menu_system(
-    egui_ctx: Res<EguiCtx>,
+    egui_ctx: Egui,
     // We can access our root asset by using the Root parameter.
     meta: Root<GameMeta>,
 ) {

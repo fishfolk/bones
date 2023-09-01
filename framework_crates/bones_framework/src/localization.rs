@@ -118,7 +118,10 @@ impl<T: HasSchema> SystemParam for Localization<'_, T> {
                 .unwrap(),
         )
     }
-    fn borrow((asset_server, field_idx): &mut Self::State) -> Self::Param<'_> {
+    fn borrow<'s>(
+        _world: &'s World,
+        (asset_server, field_idx): &'s mut Self::State,
+    ) -> Self::Param<'s> {
         const ERR: &str = "Could not find a `Handle<LocalizationAsset>` field on root asset, \
                            needed for `Localization` parameter to work";
         let asset_server = asset_server.borrow();

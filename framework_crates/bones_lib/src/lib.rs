@@ -107,7 +107,7 @@ impl<F: FnOnce(&mut Session)> Plugin for F {
 /// A session runner is in charge of advancing a [`Session`] simulation.
 pub trait SessionRunner: Sync + Send + 'static {
     /// Step the simulation once.
-    fn step(&mut self, world: &mut World, stages: &mut SystemStages) -> SystemResult;
+    fn step(&mut self, world: &mut World, stages: &mut SystemStages);
 }
 
 /// The default [`SessionRunner`], which just runs the systems once every time it is run.
@@ -117,7 +117,7 @@ pub struct DefaultSessionRunner {
     pub has_init: bool,
 }
 impl SessionRunner for DefaultSessionRunner {
-    fn step(&mut self, world: &mut World, stages: &mut SystemStages) -> SystemResult {
+    fn step(&mut self, world: &mut World, stages: &mut SystemStages) {
         // Initialize systems if they have not been initialized yet.
         if unlikely(!self.has_init) {
             self.has_init = true;
@@ -258,8 +258,7 @@ impl Game {
                 // Step the current session's simulation using it's session runner
                 current_session
                     .runner
-                    .step(&mut current_session.world, &mut current_session.stages)
-                    .unwrap_or_else(|_| panic!("Error running session: {session_name}"));
+                    .step(&mut current_session.world, &mut current_session.stages);
 
                 // Pull the sessions back out of the world
                 {

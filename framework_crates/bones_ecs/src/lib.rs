@@ -21,9 +21,6 @@ pub mod system;
 pub use bones_schema as schema;
 pub use bones_utils as utils;
 
-mod error;
-pub use error::EcsError;
-
 mod world;
 pub use world::{FromWorld, World};
 
@@ -37,7 +34,6 @@ pub mod prelude {
         bitset::*,
         components::*,
         entities::*,
-        error::*,
         resources::*,
         stage::{CoreStage::*, *},
         system::*,
@@ -96,7 +92,7 @@ mod test {
                 let e = entities.create();
                 comps.insert(e, default());
             },
+            (),
         )
-        .unwrap();
     }
 }

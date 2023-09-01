@@ -9,47 +9,39 @@ struct Test {
     s: String,
 }
 
-/// Struct used to run a system function using the world.
-pub struct System<Out = ()> {
+/// Trait implemented by systems.
+pub trait System<In, Out> {
+    /// Initialize the system, creating any component or resource storages necessary for the system
+    /// to run in the world.
+    fn initialize(&self, world: &mut World);
+    /// Run the system.
+    fn run(&mut self, world: &World, input: In) -> Out;
+    /// Get a best-effort name for the system, used in diagnostics.
+    fn name(&self) -> &str;
+}
+
+/// Struct containing a static system.
+pub struct StaticSystem<In, Out> {
     /// This should be called once to initialize the system, allowing it to intialize any resources
     /// or components in the world.
     ///
     /// Usually only called once, but this is not guaranteed so the implementation should be
     /// idempotent.
-    pub initialize: Box<dyn Send + Sync + Fn(&mut World)>,
+    pub initialize: fn(&mut World),
     /// This is run every time the system is executed
-    pub run: Box<dyn Send + Sync + FnMut(&World) -> SystemResult<Out>>,
+    pub run: Box<dyn FnMut(&World, In) -> Out + Send + Sync>,
     /// A best-effort name for the system, for diagnostic purposes.
     pub name: &'static str,
 }
 
-impl<Out> std::fmt::Debug for System<Out> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("System")
-            .field("name", &self.name)
-            .finish_non_exhaustive()
-    }
-}
-
-impl<Out> System<Out> {
-    /// Initializes the resources required to run this system inside of the provided [`World`], if
-    /// those resources don't already exist.
-    ///
-    /// This is usually only called once, but this is not guaranteed so the implementation should be
-    /// idempotent.
-    pub fn initialize(&self, world: &mut World) {
+impl<In, Out> System<In, Out> for StaticSystem<In, Out> {
+    fn initialize(&self, world: &mut World) {
         (self.initialize)(world)
     }
-
-    /// Runs the system's function using the provided [`World`]
-    pub fn run(&mut self, world: &World) -> SystemResult<Out> {
-        (self.run)(world)
+    fn run(&mut self, world: &World, input: In) -> Out {
+        (self.run)(world, input)
     }
-
-    /// Returns the underlying type name of the system.
-    ///
-    /// This is not guranteed to be stable or human-readable, but can be used for diagnostics.
-    pub fn name(&self) -> &'static str {
+    fn name(&self) -> &str {
         self.name
     }
 }
@@ -60,47 +52,27 @@ impl<Out> System<Out> {
 ///
 /// - Have 26 or less arguments,
 /// - Where every argument implments [`SystemParam`], and
-/// - That returns either `()` or [`SystemResult`]
-///
-/// [`IntoSystem`] is also implemented for functions that take [`&World`][World] as an argument, and
-/// return either `()` or [`SystemResult`].
 ///
 /// The most common [`SystemParam`] types that you will use as arguments to a system will be:
-///  - [`Res`] and [`ResMut`] parameters to access resources
+/// - [`Res`] and [`ResMut`] parameters to access resources
 /// - [`Comp`] and [`CompMut`] parameters to access components
-pub trait IntoSystem<Args, Out> {
+/// - [`&World`][World] to access the world directly
+/// - [`In`] for systems which have an input value. This must be the first argument of the function.
+pub trait IntoSystem<Args, In, Out> {
+    /// The type of the system that is output
+    type Sys: System<In, Out>;
+
     /// Convert into a [`System`].
-    fn system(self) -> System<Out>;
+    fn system(self) -> Self::Sys;
 }
 
-impl<Out> IntoSystem<System<Out>, Out> for System<Out> {
-    fn system(self) -> System<Out> {
+impl<T, In, Out> IntoSystem<T, In, Out> for T
+where
+    T: System<In, Out>,
+{
+    type Sys = T;
+    fn system(self) -> Self::Sys {
         self
-    }
-}
-
-impl<F, Out> IntoSystem<(World, F), Out> for F
-where
-    F: FnMut(&World) -> Out + Send + Sync + 'static,
-{
-    fn system(mut self) -> System<Out> {
-        System {
-            initialize: Box::new(|_| ()),
-            run: Box::new(move |world| Ok(self(world))),
-            name: std::any::type_name::<F>(),
-        }
-    }
-}
-impl<F, Out> IntoSystem<(World, F, SystemResult<Out>), Out> for F
-where
-    F: FnMut(&World) -> SystemResult<Out> + Send + Sync + 'static,
-{
-    fn system(self) -> System<Out> {
-        System {
-            initialize: Box::new(|_| ()),
-            run: Box::new(self),
-            name: std::any::type_name::<F>(),
-        }
     }
 }
 
@@ -135,8 +107,22 @@ pub trait SystemParam: Sized {
     /// This is used create an instance of the system parame, possibly borrowed from the
     /// intermediate parameter state.
     #[allow(clippy::needless_lifetimes)] // Explicit lifetimes help clarity in this case
-    fn borrow<'s>(state: &'s mut Self::State) -> Self::Param<'s>;
+    fn borrow<'s>(world: &'s World, state: &'s mut Self::State) -> Self::Param<'s>;
 }
+
+impl SystemParam for &'_ World {
+    type State = ();
+    type Param<'s> = &'s World;
+    fn initialize(_world: &mut World) {}
+    fn get_state(_world: &World) -> Self::State {}
+    fn borrow<'s>(world: &'s World, _state: &'s mut Self::State) -> Self::Param<'s> {
+        world
+    }
+}
+
+/// The system input parameter.
+#[derive(Deref, DerefMut)]
+pub struct In<T>(pub T);
 
 /// [`SystemParam`] for getting read access to a resource.
 ///
@@ -212,7 +198,7 @@ impl<'a, T: HasSchema> SystemParam for Res<'a, T> {
         })
     }
 
-    fn borrow(state: &mut Self::State) -> Self::Param<'_> {
+    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
         Res(state.borrow())
     }
 }
@@ -231,7 +217,7 @@ impl<'a, T: HasSchema + FromWorld> SystemParam for ResInit<'a, T> {
         world.resources.get_cell::<T>().unwrap()
     }
 
-    fn borrow(state: &mut Self::State) -> Self::Param<'_> {
+    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
         ResInit(state.borrow())
     }
 }
@@ -254,7 +240,7 @@ impl<'a, T: HasSchema> SystemParam for ResMut<'a, T> {
         })
     }
 
-    fn borrow(state: &mut Self::State) -> Self::Param<'_> {
+    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
         ResMut(state.borrow_mut())
     }
 }
@@ -273,7 +259,7 @@ impl<'a, T: HasSchema + FromWorld> SystemParam for ResMutInit<'a, T> {
         world.resources.get_cell::<T>().unwrap()
     }
 
-    fn borrow(state: &mut Self::State) -> Self::Param<'_> {
+    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
         ResMutInit(state.borrow_mut())
     }
 }
@@ -295,7 +281,7 @@ impl<'a, T: HasSchema> SystemParam for Comp<'a, T> {
         world.components.get_cell::<T>().unwrap()
     }
 
-    fn borrow(state: &mut Self::State) -> Self::Param<'_> {
+    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
         state.borrow()
     }
 }
@@ -312,7 +298,7 @@ impl<'a, T: HasSchema> SystemParam for CompMut<'a, T> {
         world.components.get_cell::<T>().unwrap()
     }
 
-    fn borrow(state: &mut Self::State) -> Self::Param<'_> {
+    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
         state.borrow_mut()
     }
 }
@@ -326,28 +312,29 @@ macro_rules! impl_system {
             $(
                 $args: SystemParam,
             )*
-        > IntoSystem<(F, $($args,)*), Out> for F
+        > IntoSystem<(F, $($args,)*), (), Out> for F
         where for<'a> F: 'static + Send + Sync +
             FnMut(
                 $(
                     <$args as SystemParam>::Param<'a>,
                 )*
-            ) -> SystemResult<Out> +
+            ) -> Out +
             FnMut(
                 $(
                     $args,
                 )*
-            ) -> SystemResult<Out>
+            ) -> Out
         {
-            fn system(mut self) -> System<Out> {
-                System {
+            type Sys = StaticSystem<(), Out>;
+            fn system(mut self) -> Self::Sys {
+                StaticSystem {
                     name: std::any::type_name::<F>(),
-                    initialize: Box::new(|_world| {
+                    initialize: |_world| {
                         $(
                             $args::initialize(_world);
                         )*
-                    }),
-                    run: Box::new(move |_world| {
+                    },
+                    run: Box::new(move |_world, _input| {
                         $(
                             #[allow(non_snake_case)]
                             let mut $args = $args::get_state(_world);
@@ -355,7 +342,7 @@ macro_rules! impl_system {
 
                         self(
                             $(
-                                $args::borrow(&mut $args),
+                                $args::borrow(_world, &mut $args),
                             )*
                         )
                     })
@@ -365,48 +352,53 @@ macro_rules! impl_system {
     };
 }
 
-macro_rules! impl_system_with_empty_return {
+macro_rules! impl_system_with_input {
     ($($args:ident,)*) => {
         #[allow(unused_parens)]
         impl<
+            'input,
             F,
+            InT: 'input,
+            Out,
             $(
                 $args: SystemParam,
             )*
-        > IntoSystem<(F, $($args,)* ()), ()> for F
+        > IntoSystem<(F, InT, $($args,)*), InT, Out> for F
         where for<'a> F: 'static + Send + Sync +
             FnMut(
+                In<InT>,
                 $(
                     <$args as SystemParam>::Param<'a>,
                 )*
-            ) +
+            ) -> Out +
             FnMut(
+                In<InT>,
                 $(
                     $args,
                 )*
-            )
+            ) -> Out
         {
-            fn system(mut self) -> System<()> {
-                System {
+            type Sys = StaticSystem<InT, Out>;
+            fn system(mut self) -> Self::Sys {
+                StaticSystem {
                     name: std::any::type_name::<F>(),
-                    initialize: Box::new(|_world| {
+                    initialize: |_world| {
                         $(
                             $args::initialize(_world);
                         )*
-                    }),
-                    run: Box::new(move |_world| {
+                    },
+                    run: Box::new(move |_world, input| {
                         $(
                             #[allow(non_snake_case)]
                             let mut $args = $args::get_state(_world);
                         )*
 
                         self(
+                            In(input),
                             $(
-                                $args::borrow(&mut $args),
+                                $args::borrow(_world, &mut $args),
                             )*
-                        );
-
-                        Ok(())
+                        )
                     })
                 }
             }
@@ -416,17 +408,18 @@ macro_rules! impl_system_with_empty_return {
 
 macro_rules! impl_systems {
     // base case
-    () => {};
+    () => {
+        impl_system!();
+        impl_system_with_input!();
+    };
+    // recursive call
     ($head:ident, $($idents:ident,)*) => {
-        // recursive call
         impl_system!($head, $($idents,)*);
-        impl_system_with_empty_return!($head, $($idents,)*);
+        impl_system_with_input!($head, $($idents,)*);
         impl_systems!($($idents,)*);
     }
 }
 
-impl_system!();
-impl_system_with_empty_return!();
 impl_systems!(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,);
 
 #[cfg(test)]
@@ -440,8 +433,8 @@ mod tests {
             _var2: Ref<ComponentStore<u64>>,
             _var3: Res<i32>,
             _var4: ResMut<i64>,
-        ) -> SystemResult {
-            Ok(())
+        ) -> u32 {
+            0
         }
         // Technically reusing the same type is incorrect and causes a runtime panic.
         // However, there doesn't seem to be a clean way to handle type inequality in generics.
@@ -459,11 +452,12 @@ mod tests {
             _var10: CompMut<i64>,
             _var11: Comp<i64>,
             _var12: CompMut<u64>,
-        ) -> SystemResult {
-            Ok(())
+        ) {
         }
+        fn tmp3(_in: In<usize>, _comp1: Comp<i64>) {}
         let _ = tmp.system();
         let _ = tmp2.system();
+        let _ = tmp3.system();
     }
 
     #[test]
@@ -472,23 +466,34 @@ mod tests {
         send(
             (move |_var1: Res<u32>| {
                 let _y = x;
-                Ok(())
             })
             .system(),
         );
-        send((|| Ok(())).system());
+        send((|| ()).system());
         send(sys.system());
     }
 
-    fn sys(_var1: Res<u32>) -> SystemResult {
-        Ok(())
-    }
+    fn sys(_var1: Res<u32>) {}
     fn send<T: Send>(_t: T) {}
 
     #[test]
-    fn manual_system_run() {
-        let mut world = World::default();
-        world.init_resource::<u32>();
+    fn in_and_out() {
+        fn mul_by_res(n: In<usize>, r: Res<usize>) -> usize {
+            *n * *r
+        }
+
+        fn sys_with_ref_in(mut n: In<&mut usize>) {
+            **n *= 3;
+        }
+
+        let mut world = World::new();
+        world.insert_resource(2usize);
+
+        let result = world.run_initialized_system(mul_by_res, 3);
+        assert_eq!(result, 6);
+
+        let mut n = 3;
+        world.run_initialized_system(sys_with_ref_in, &mut n)
     }
 
     #[test]
@@ -503,7 +508,6 @@ mod tests {
         let mut my_system = (|_a: ResInit<A>, mut b: ResMutInit<B>| {
             let b2 = B { x: 45 };
             *b = b2;
-            Ok(())
         })
         .system();
 
@@ -515,7 +519,7 @@ mod tests {
             assert_eq!(res.x, 0);
         }
 
-        my_system.run(&world).unwrap();
+        my_system.run(&world, ());
 
         let res = world.resource::<B>();
         assert_eq!(res.x, 45);
