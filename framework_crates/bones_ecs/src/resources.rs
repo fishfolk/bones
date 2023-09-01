@@ -7,6 +7,7 @@ use atomicell::borrow::{AtomicBorrow, AtomicBorrowMut};
 use crate::prelude::*;
 
 /// An untyped resource that may be inserted into [`UntypedResources`].
+#[derive(Clone)]
 pub struct UntypedAtomicResource {
     cell: Arc<AtomicCell<SchemaBox>>,
     schema: &'static Schema,
@@ -30,10 +31,11 @@ impl UntypedAtomicResource {
         }
     }
 
-    /// Get another [`UntypedAtomicResource`] that points to the same data.
-    pub fn clone_cell(&self) -> UntypedAtomicResource {
+    /// Clone the inner data, creating a new copy instead of returning another handle the the same
+    /// data, as the normal `clone()` implementation does.
+    pub fn clone_data(&self) -> Self {
         Self {
-            cell: self.cell.clone(),
+            cell: Arc::new(AtomicCell::new((*self.cell.borrow()).clone())),
             schema: self.schema,
         }
     }
@@ -108,24 +110,26 @@ impl<'a> AtomicSchemaRefMut<'a> {
     }
 }
 
-impl Clone for UntypedAtomicResource {
-    fn clone(&self) -> Self {
-        Self {
-            cell: Arc::new(AtomicCell::new((*self.cell.borrow()).clone())),
-            schema: self.schema,
-        }
-    }
-}
-
 /// Storage for un-typed resources.
 ///
 /// This is the backing data store used by [`Resources`].
 ///
 /// Unless you are intending to do modding or otherwise need raw pointers to your resource data, you
 /// should use [`Resources`] instead.
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct UntypedResources {
     resources: HashMap<SchemaId, UntypedAtomicResource>,
+}
+
+impl Clone for UntypedResources {
+    fn clone(&self) -> Self {
+        let resources = self
+            .resources
+            .iter()
+            .map(|(k, v)| (*k, v.clone_data()))
+            .collect();
+        Self { resources }
+    }
 }
 
 impl UntypedResources {
@@ -157,7 +161,7 @@ impl UntypedResources {
 
     /// Get a cell containing the resource data pointer for the given ID.
     pub fn get_cell(&self, schema_id: SchemaId) -> Option<UntypedAtomicResource> {
-        self.resources.get(&schema_id).map(|x| x.clone_cell())
+        self.resources.get(&schema_id).cloned()
     }
 
     /// Get a reference to an untyped resource.
@@ -255,6 +259,7 @@ impl Resources {
 ///
 /// To access the resource you must borrow it with either [`borrow()`][Self::borrow] or
 /// [`borrow_mut()`][Self::borrow_mut].
+#[derive(Clone)]
 pub struct AtomicResource<T: HasSchema> {
     untyped: UntypedAtomicResource,
     _phantom: PhantomData<T>,
@@ -284,14 +289,6 @@ impl<T: HasSchema> AtomicResource<T> {
     pub fn new(data: T) -> Self {
         AtomicResource {
             untyped: UntypedAtomicResource::new(SchemaBox::new(data)),
-            _phantom: PhantomData,
-        }
-    }
-
-    /// Clone this atomic resource, returning a handle to the same resource data.
-    pub fn clone_cell(&self) -> Self {
-        Self {
-            untyped: self.untyped.clone_cell(),
             _phantom: PhantomData,
         }
     }

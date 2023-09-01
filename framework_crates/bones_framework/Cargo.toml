@@ -15,7 +15,7 @@ default = ["image_png", "ui", "localization"]
 #! Cargo feature supported in `bones_framework`.
 
 ## Enable the `ui` module, powered by [`egui`].
-ui = ["dep:egui"]
+ui = ["dep:egui", "dep:ttf-parser"]
 ## Enable the localization module, powered by [`fluent`](https://github.com/projectfluent/fluent-rs).
 localization = ["dep:fluent-bundle", "dep:fluent-langneg", "dep:intl-memoizer", "dep:unic-langid", "dep:sys-locale"]
 
@@ -46,7 +46,7 @@ document-features = ["dep:document-features"]
 
 [dependencies]
 # Bones
-bones_lib = { version = "0.3", path = "../bones_lib", features = ["glam"] }
+bones_lib   = { version = "0.3", path = "../bones_lib", features = ["glam"] }
 bones_asset = { version = "0.3", path = "../bones_asset" }
 
 # Other
@@ -55,6 +55,9 @@ thiserror = "1.0"
 instant   = "0.1"
 hex       = "0.4"
 tracing   = "0.1"
+
+# Render
+csscolorparser = "0.6"
 
 # Input
 gilrs = "0.10"
@@ -68,6 +71,7 @@ image = { version = "0.24", default-features = false }
 
 # Gui
 egui = { version = "0.22", optional = true }
+ttf-parser        = { version = "0.19.1", default-features = false, optional = true }
 
 # Localization
 fluent-bundle  = { version = "0.15", optional = true }

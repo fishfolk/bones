@@ -44,7 +44,9 @@ pub mod localization;
 pub struct DefaultPlugin;
 impl lib::Plugin for DefaultPlugin {
     fn install(self, session: &mut lib::Session) {
-        session.install_plugin(animation::plugin);
+        session
+            .install_plugin(animation::animation_plugin)
+            .install_plugin(render::render_plugin);
     }
 }
 
@@ -65,6 +67,9 @@ impl AssetServerExt for &mut bones_asset::AssetServer {
                 .register_asset::<FluentBundleAsset>()
                 .register_asset::<FluentResourceAsset>();
         }
+
+        #[cfg(feature = "ui")]
+        self.register_asset::<Font>();
 
         self
     }

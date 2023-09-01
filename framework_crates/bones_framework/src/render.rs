@@ -10,7 +10,7 @@ pub mod prelude {
     };
 
     #[cfg(feature = "ui")]
-    pub use super::ui::*;
+    pub use super::ui::{widgets::*, *};
 }
 
 pub mod audio;
@@ -23,6 +23,11 @@ pub mod transform;
 
 #[cfg(feature = "ui")]
 pub mod ui;
+
+/// Bones framework rendering plugin.
+pub fn render_plugin(session: &mut Session) {
+    session.install_plugin(ui::ui_plugin);
+}
 
 /// Trait for the interface exposed by external bones renderers.
 ///

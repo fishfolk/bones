@@ -88,6 +88,16 @@ impl Schema {
     pub fn field_offsets(&self) -> &'static [(Option<String>, usize)] {
         self.field_offsets
     }
+
+    /// Helper function to make sure that this schema matches another or return a
+    /// [`SchemaMismatchError`].
+    pub fn ensure_match(&self, other: &Self) -> Result<(), SchemaMismatchError> {
+        if self == other {
+            Ok(())
+        } else {
+            Err(SchemaMismatchError)
+        }
+    }
 }
 
 /// A schema registry that alloates [`SchemaId`]s for [`SchemaData`]s and returns a registered
