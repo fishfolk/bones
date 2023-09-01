@@ -136,17 +136,16 @@ fn menu_startup(
 /// Our main menu system.
 fn menu_system(
     meta: Root<GameMeta>,
-    egui_ctx: ResMut<EguiCtx>,
+    ctx: Egui,
     mut sessions: ResMut<Sessions>,
     mut session_options: ResMut<SessionOptions>,
-    egui_textures: Res<EguiTextures>,
     // Get the localization field from our `GameMeta`
     localization: Localization<GameMeta>,
 ) {
     // Render the menu.
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
-        .show(&egui_ctx, |ui| {
+        .show(&ctx, |ui| {
             BorderedFrame::new(&meta.menu_border).show(ui, |ui| {
                 ui.vertical_centered(|ui| {
                     ui.add_space(20.0);
@@ -207,9 +206,11 @@ fn menu_system(
 
                     ui.add_space(30.0);
 
-                    // When using a bones image in egui, we have to get it's corresponding egui texture
-                    // from the egui textures resource.
-                    ui.image(egui_textures.get(meta.menu_image), [100., 100.]);
+                    // We can use the `widget()` method on the `Egui` to conveniently run bones
+                    // systems that can modify the `egui::Ui` and return an `egui::Response`.
+                    //
+                    // This makes it easier to compose widgets that have differing access to the bones world.
+                    ctx.widget(demo_widget, ui);
 
                     ui.add_space(30.0);
                 });
@@ -378,14 +379,14 @@ fn path2d_demo_startup(
 /// Simple UI system that shows a button at the bottom of the screen to delete the current session
 /// and  go back to the main menu.
 fn back_to_menu_ui(
-    egui_ctx: ResMut<EguiCtx>,
+    ctx: Egui,
     mut sessions: ResMut<Sessions>,
     mut session_options: ResMut<SessionOptions>,
     localization: Localization<GameMeta>,
 ) {
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
-        .show(&egui_ctx, |ui| {
+        .show(&ctx, |ui| {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
                 ui.add_space(20.0);
                 if ui.button(localization.get("back-to-menu")).clicked() {
@@ -394,4 +395,19 @@ fn back_to_menu_ui(
                 }
             });
         });
+}
+
+/// This is an example widget system.
+fn demo_widget(
+    // Widget systems must have an `In<&mut egui::Ui>` parameter as their first argument.
+    mut ui: In<&mut egui::Ui>,
+    // They can have any normal bones system parameters
+    meta: Root<GameMeta>,
+    egui_textures: Res<EguiTextures>,
+    // And they may return an `egui::Response` or any other value.
+) -> egui::Response {
+    ui.label("Demo Widget");
+    // When using a bones image in egui, we have to get it's corresponding egui texture
+    // from the egui textures resource.
+    ui.image(egui_textures.get(meta.menu_image), [100., 100.])
 }

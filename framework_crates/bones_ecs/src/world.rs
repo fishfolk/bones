@@ -68,11 +68,17 @@ impl World {
     /// Run a system once.
     ///
     /// This is good for initializing the world with setup systems.
-    pub fn run_system<R, Out, S: IntoSystem<R, Out>>(&mut self, system: S) -> SystemResult<Out> {
+    pub fn run_system<'system, R, In, Out, S>(&mut self, system: S, input: In) -> Out
+    where
+        In: 'system,
+        Out: 'system,
+        S: IntoSystem<R, In, Out>,
+        S::Sys: 'system,
+    {
         let mut s = system.system();
 
         s.initialize(self);
-        s.run(self)
+        s.run(self, input)
     }
 
     /// Run a system once, assuming any necessary initialization has already been performed for that
@@ -88,12 +94,15 @@ impl World {
     ///
     /// If all the system parameters have already been initialized, by calling
     /// [`initialize()`][System::initialize] on the system, then this will work fine.
-    pub fn run_initialized_system<R, Out, S: IntoSystem<R, Out>>(
-        &self,
-        system: S,
-    ) -> SystemResult<Out> {
+    pub fn run_initialized_system<'system, Args, In, Out, S>(&self, system: S, input: In) -> Out
+    where
+        In: 'system,
+        Out: 'system,
+        S: IntoSystem<Args, In, Out>,
+        S::Sys: 'system,
+    {
         let mut s = system.system();
-        s.run(self)
+        s.run(self, input)
     }
 
     /// Initialize a resource of type `T` by inserting it's default value.
@@ -251,44 +260,44 @@ mod tests {
     fn sanity_check() {
         let mut world = World::new();
 
-        world.run_system(setup_world).unwrap();
+        world.run_system(setup_world, ());
 
         // Make sure our entities exist visit properly during iteration
         let test = || {};
-        world.run_system(test).unwrap();
+        world.run_system(test, ());
 
         // Mutate and read some components
-        world.run_system(pos_vel_system).unwrap();
+        world.run_system(pos_vel_system, ());
 
         // Make sure the mutations were applied
-        world.run_system(test_pos_vel_1_run).unwrap();
+        world.run_system(test_pos_vel_1_run, ());
     }
 
     #[test]
     fn snapshot() {
         let mut world1 = World::new();
-        world1.run_system(setup_world).unwrap();
+        world1.run_system(setup_world, ());
 
         // Snapshot world1
         let mut snap = world1.clone();
 
         // Make sure the snapshot represents world1's state
-        snap.run_system(test_after_setup_state).unwrap();
+        snap.run_system(test_after_setup_state, ());
 
         // Run the pos_vel system on world1
-        world1.run_system(pos_vel_system).unwrap();
+        world1.run_system(pos_vel_system, ());
 
         // Make sure world1 has properly update
-        world1.run_system(test_pos_vel_1_run).unwrap();
+        world1.run_system(test_pos_vel_1_run, ());
 
         // Make sure the snapshot hasn't changed
-        snap.run_system(test_after_setup_state).unwrap();
+        snap.run_system(test_after_setup_state, ());
 
         // Run the pos vel system once on the snapshot
-        snap.run_system(pos_vel_system).unwrap();
+        snap.run_system(pos_vel_system, ());
 
         // Make sure the snapshot has updated
-        world1.run_system(test_pos_vel_1_run).unwrap();
+        world1.run_system(test_pos_vel_1_run, ());
     }
 
     #[test]

@@ -18,7 +18,7 @@ impl<'a, T: HasSchema> SystemParam for Root<'a, T> {
     fn get_state(world: &World) -> Self::State {
         world.resources.get_cell::<AssetServer>().unwrap()
     }
-    fn borrow(state: &mut Self::State) -> Self::Param<'_> {
+    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
         Root(Ref::map(state.borrow(), |asset_server| asset_server.root()))
     }
 }

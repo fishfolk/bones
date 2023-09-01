@@ -23,6 +23,17 @@ pub struct ComponentStores {
     pub(crate) components: HashMap<SchemaId, Arc<AtomicCell<UntypedComponentStore>>>,
 }
 
+/// An error returned when trying to access an uninitialized component.
+#[derive(Debug)]
+pub struct NotInitialized;
+
+impl std::fmt::Display for NotInitialized {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Component not initialized")
+    }
+}
+impl std::error::Error for NotInitialized {}
+
 // SOUND: all of the functions for ComponentStores requires that the types stored implement Sync +
 // Send.
 unsafe impl Sync for ComponentStores {}
@@ -52,7 +63,7 @@ impl ComponentStores {
     }
 
     /// Get the components of a certain type
-    pub fn get_cell<T: HasSchema>(&self) -> Result<AtomicComponentStore<T>, EcsError> {
+    pub fn get_cell<T: HasSchema>(&self) -> Result<AtomicComponentStore<T>, NotInitialized> {
         let untyped = self.get_cell_by_schema_id(T::schema().id())?;
 
         // Safe: We know the schema matches, and `ComponentStore<T>` is repr(transparent) over
@@ -68,13 +79,9 @@ impl ComponentStores {
     /// Borrow a component store.
     /// # Errors
     /// Errors if the component store has not been initialized yet.
-    pub fn get<T: HasSchema>(&self) -> Result<Ref<ComponentStore<T>>, EcsError> {
+    pub fn get<T: HasSchema>(&self) -> Result<Ref<ComponentStore<T>>, NotInitialized> {
         let id = T::schema().id();
-        let atomicref = self
-            .components
-            .get(&id)
-            .ok_or(EcsError::NotInitialized)?
-            .borrow();
+        let atomicref = self.components.get(&id).ok_or(NotInitialized)?.borrow();
 
         // SOUND: ComponentStore<T> is repr(transparent) over UntypedComponent store.
         let atomicref = Ref::map(atomicref, |x| unsafe {
@@ -87,13 +94,9 @@ impl ComponentStores {
     /// Borrow a component store.
     /// # Errors
     /// Errors if the component store has not been initialized yet.
-    pub fn get_mut<T: HasSchema>(&self) -> Result<RefMut<ComponentStore<T>>, EcsError> {
+    pub fn get_mut<T: HasSchema>(&self) -> Result<RefMut<ComponentStore<T>>, NotInitialized> {
         let id = T::schema().id();
-        let atomicref = self
-            .components
-            .get(&id)
-            .ok_or(EcsError::NotInitialized)?
-            .borrow_mut();
+        let atomicref = self.components.get(&id).ok_or(NotInitialized)?.borrow_mut();
 
         // SOUND: ComponentStore<T> is repr(transparent) over UntypedComponent store.
         let atomicref = RefMut::map(atomicref, |x| unsafe {
@@ -107,11 +110,8 @@ impl ComponentStores {
     pub fn get_cell_by_schema_id(
         &self,
         id: SchemaId,
-    ) -> Result<Arc<AtomicCell<UntypedComponentStore>>, EcsError> {
-        self.components
-            .get(&id)
-            .cloned()
-            .ok_or(EcsError::NotInitialized)
+    ) -> Result<Arc<AtomicCell<UntypedComponentStore>>, NotInitialized> {
+        self.components.get(&id).cloned().ok_or(NotInitialized)
     }
 }
 
@@ -125,44 +125,42 @@ mod test {
 
     #[test]
     fn borrow_many_mut() {
-        World::new()
-            .run_system(
-                |mut entities: ResMut<Entities>, mut my_datas: CompMut<MyData>| {
-                    let ent1 = entities.create();
-                    let ent2 = entities.create();
+        World::new().run_system(
+            |mut entities: ResMut<Entities>, mut my_datas: CompMut<MyData>| {
+                let ent1 = entities.create();
+                let ent2 = entities.create();
 
-                    my_datas.insert(ent1, MyData(7));
-                    my_datas.insert(ent2, MyData(8));
+                my_datas.insert(ent1, MyData(7));
+                my_datas.insert(ent2, MyData(8));
 
-                    {
-                        let [data2, data1] = my_datas.get_many_mut([ent2, ent1]).unwrap_many();
+                {
+                    let [data2, data1] = my_datas.get_many_mut([ent2, ent1]).unwrap_many();
 
-                        data1.0 = 0;
-                        data2.0 = 1;
-                    }
+                    data1.0 = 0;
+                    data2.0 = 1;
+                }
 
-                    assert_eq!(my_datas.get(ent1).unwrap().0, 0);
-                    assert_eq!(my_datas.get(ent2).unwrap().0, 1);
-                },
-            )
-            .unwrap();
+                assert_eq!(my_datas.get(ent1).unwrap().0, 0);
+                assert_eq!(my_datas.get(ent2).unwrap().0, 1);
+            },
+            (),
+        );
     }
 
     #[test]
     #[should_panic = "must be unique"]
     fn borrow_many_overlapping_mut() {
-        World::new()
-            .run_system(
-                |mut entities: ResMut<Entities>, mut my_datas: CompMut<MyData>| {
-                    let ent1 = entities.create();
-                    let ent2 = entities.create();
+        World::new().run_system(
+            |mut entities: ResMut<Entities>, mut my_datas: CompMut<MyData>| {
+                let ent1 = entities.create();
+                let ent2 = entities.create();
 
-                    my_datas.insert(ent1, MyData(1));
-                    my_datas.insert(ent2, MyData(2));
+                my_datas.insert(ent1, MyData(1));
+                my_datas.insert(ent2, MyData(2));
 
-                    my_datas.get_many_mut([ent1, ent2, ent1]).unwrap_many();
-                },
-            )
-            .unwrap();
+                my_datas.get_many_mut([ent1, ent2, ent1]).unwrap_many();
+            },
+            (),
+        )
     }
 }
