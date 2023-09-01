@@ -1,8 +1,8 @@
 var sourcesIndex = JSON.parse('{\
-"bones_asset":["",[],["asset.rs","cid.rs","handle.rs","io.rs","lib.rs","parse.rs","path.rs","server.rs"]],\
+"bones_asset":["",[],["asset.rs","cid.rs","handle.rs","io.rs","lib.rs","parse.rs","path.rs","serde.rs","server.rs"]],\
 "bones_bevy_renderer":["",[],["convert.rs","lib.rs"]],\
 "bones_ecs":["",[["components",[],["iterator.rs","typed.rs","untyped.rs"]]],["bitset.rs","components.rs","entities.rs","error.rs","lib.rs","resources.rs","stage.rs","system.rs","world.rs"]],\
-"bones_framework":["",[["input",[["time",[],["stopwatch.rs","timer.rs"]]],["gamepad.rs","keyboard.rs","mouse.rs","time.rs","window.rs"]],["render",[],["audio.rs","camera.rs","color.rs","line.rs","sprite.rs","tilemap.rs","transform.rs","ui.rs"]]],["animation.rs","input.rs","lib.rs","localization.rs","params.rs","render.rs"]],\
+"bones_framework":["",[["input",[["time",[],["stopwatch.rs","timer.rs"]]],["gamepad.rs","keyboard.rs","mouse.rs","time.rs","window.rs"]],["render",[["ui",[["widgets",[],["bordered_button.rs","bordered_frame.rs"]]],["widgets.rs"]]],["audio.rs","camera.rs","color.rs","line.rs","sprite.rs","tilemap.rs","transform.rs","ui.rs"]]],["animation.rs","input.rs","lib.rs","localization.rs","params.rs","render.rs"]],\
 "bones_lib":["",[],["lib.rs"]],\
 "bones_matchmaker":["",[],["certs.rs","cli.rs","lib.rs","matchmaker.rs","proxy.rs"]],\
 "bones_matchmaker_proto":["",[],["lib.rs"]],\

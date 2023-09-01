@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["audio","camera","color","line","prelude","sprite","tilemap","transform","ui"],"struct":["Renderer"],"trait":["RendererApi"]};
+window.SIDEBAR_ITEMS = {"fn":["render_plugin"],"mod":["audio","camera","color","line","prelude","sprite","tilemap","transform","ui"],"struct":["Renderer"],"trait":["RendererApi"]};

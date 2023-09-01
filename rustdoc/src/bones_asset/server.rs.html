@@ -903,6 +903,8 @@
 <a href="#903" id="903">903</a>
 <a href="#904" id="904">904</a>
 <a href="#905" id="905">905</a>
+<a href="#906" id="906">906</a>
+<a href="#907" id="907">907</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::path::{Path, PathBuf};
 
 <span class="kw">use </span>anyhow::Context;
@@ -1534,12 +1536,6 @@
         <span class="kw">where
             </span>D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
         {
-            <span class="kw">if </span><span class="self">self</span>.schema.has_opaque() {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(D::Error::custom(
-                    <span class="string">&quot;Cannot deserialize schemas containing opaque types.&quot;</span>,
-                ));
-            }
-
             <span class="comment">// Allocate the object.
             </span><span class="kw">let </span><span class="kw-2">mut </span>ptr = SchemaBox::default(<span class="self">self</span>.schema);
 
@@ -1590,6 +1586,12 @@
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(());
             }
 
+            <span class="comment">// Use custom deserialize implementation if present.
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(schema_deserialize) = <span class="self">self</span>.ptr.schema().type_data.get::&lt;SchemaDeserialize&gt;()
+            {
+                <span class="kw">return </span>schema_deserialize.deserialize(<span class="self">self</span>.ptr, deserializer);
+            }
+
             <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.ptr.schema().kind {
                 SchemaKind::Struct(<span class="kw">_</span>) =&gt; deserializer.deserialize_any(StructVisitor {
                     ptr: <span class="self">self</span>.ptr,
@@ -1630,10 +1632,12 @@
                         Primitive::String =&gt; {
                             <span class="kw-2">*</span><span class="self">self</span>.ptr.cast_mut() = String::deserialize(deserializer)<span class="question-mark">?
                         </span>}
-                        Primitive::Opaque { .. } =&gt; <span class="macro">panic!</span>(
-                            <span class="string">&quot;Cannot deserialize opaque types from metadata files.\
-                            This error should have been handled above&quot;
-                        </span>),
+                        Primitive::Opaque { .. } =&gt; {
+                            <span class="kw">return </span><span class="prelude-val">Err</span>(D::Error::custom(
+                                <span class="string">&quot;Opaque types must have `SchemaDeserialize` type data in order \
+                                to be loaded in a metadata asset.&quot;</span>,
+                            ));
+                        }
                     };
                 }
             };

@@ -389,9 +389,6 @@
 <a href="#389" id="389">389</a>
 <a href="#390" id="390">390</a>
 <a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -560,7 +557,7 @@
         <span class="self">self</span>.shared_resources
             .iter()
             .find(|x| x.schema() == T::schema())
-            .map(|x| AtomicResource::from_untyped(x.clone_cell()))
+            .map(|x| AtomicResource::from_untyped(x.clone()))
     }
 
     <span class="doccomment">/// Initialize a resource that will be shared across game sessions using it&#39;s [`Default`] value
@@ -629,7 +626,7 @@
                             .world
                             .resources
                             .untyped_mut()
-                            .insert_cell(r.clone_cell());
+                            .insert_cell(r.clone());
                     }
                 }
 
@@ -725,10 +722,7 @@
         </span><span class="kw">let </span><span class="kw-2">mut </span>session = Session::new();
 
         <span class="comment">// Make sure the new session has the same entities as the other sessions.
-        </span>session
-            .world
-            .resources
-            .insert_cell(<span class="self">self</span>.entities.clone_cell());
+        </span>session.world.resources.insert_cell(<span class="self">self</span>.entities.clone());
 
         <span class="comment">// Initialize the sessions resource in the session so it will be available in [`Game::step()`].
         </span>session.world.init_resource::&lt;Sessions&gt;();

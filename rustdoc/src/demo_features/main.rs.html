@@ -364,6 +364,37 @@
 <a href="#364" id="364">364</a>
 <a href="#365" id="365">365</a>
 <a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::too_many_arguments)]
 
 </span><span class="kw">use </span>bones_bevy_renderer::{
@@ -388,8 +419,18 @@
     </span>atlas_demo: Handle&lt;AtlasDemoMeta&gt;,
     <span class="doccomment">/// The tilemap demo metadata.
     </span>tilemap_demo: Handle&lt;TilemapDemoMeta&gt;,
+    <span class="doccomment">/// The color the debug lines in the debug line demo.
+    </span>path2d_color: Color,
     <span class="doccomment">/// Localization asset
     </span>localization: Handle&lt;LocalizationAsset&gt;,
+    <span class="doccomment">/// The font to use for the demo title.
+    </span>title_font: FontMeta,
+    <span class="doccomment">/// The list of font files to load for the UI.
+    </span>fonts: SVec&lt;Handle&lt;Font&gt;&gt;,
+    <span class="doccomment">/// The border to use the for main menu.
+    </span>menu_border: BorderImageMeta,
+    <span class="doccomment">/// The style to use for buttons.
+    </span>button_style: ButtonThemeMeta,
 }
 
 <span class="doccomment">/// Atlas information.
@@ -432,6 +473,11 @@
 }
 
 <span class="kw">fn </span>main() {
+    <span class="macro">assert!</span>(Color::schema()
+        .type_data
+        .get::&lt;SchemaDeserialize&gt;()
+        .is_some());
+
     <span class="comment">// Create a bones bevy renderer from our bones game
     </span>BonesBevyRenderer::new(create_game())
         <span class="comment">// Get a bevy app for running our game
@@ -498,58 +544,73 @@
     </span>egui::CentralPanel::default()
         .frame(egui::Frame::none())
         .show(<span class="kw-2">&amp;</span>egui_ctx, |ui| {
-            ui.vertical_centered(|ui| {
-                ui.add_space(<span class="number">20.0</span>);
-                ui.heading(localization.get(<span class="string">&quot;title&quot;</span>));
-                ui.add_space(<span class="number">20.0</span>);
+            BorderedFrame::new(<span class="kw-2">&amp;</span>meta.menu_border).show(ui, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.add_space(<span class="number">20.0</span>);
+                    ui.label(meta.title_font.rich(localization.get(<span class="string">&quot;title&quot;</span>)));
+                    ui.add_space(<span class="number">20.0</span>);
 
-                <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;sprite-demo&quot;</span>)).clicked() {
-                    <span class="comment">// Delete the menu world
-                    </span>session_options.delete = <span class="bool-val">true</span>;
+                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;sprite-demo&quot;</span>))
+                        .show(ui)
+                        .clicked()
+                    {
+                        <span class="comment">// Delete the menu world
+                        </span>session_options.delete = <span class="bool-val">true</span>;
 
-                    <span class="comment">// Create a session for the match
-                    </span>sessions
-                        .create(<span class="string">&quot;sprite_demo&quot;</span>)
-                        .install_plugin(sprite_demo_plugin);
-                }
+                        <span class="comment">// Create a session for the match
+                        </span>sessions
+                            .create(<span class="string">&quot;sprite_demo&quot;</span>)
+                            .install_plugin(sprite_demo_plugin);
+                    }
 
-                <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;atlas-demo&quot;</span>)).clicked() {
-                    <span class="comment">// Delete the menu world
-                    </span>session_options.delete = <span class="bool-val">true</span>;
+                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;atlas-demo&quot;</span>))
+                        .show(ui)
+                        .clicked()
+                    {
+                        <span class="comment">// Delete the menu world
+                        </span>session_options.delete = <span class="bool-val">true</span>;
 
-                    <span class="comment">// Create a session for the match
-                    </span>sessions
-                        .create(<span class="string">&quot;atlas_demo&quot;</span>)
-                        .install_plugin(atlas_demo_plugin);
-                }
+                        <span class="comment">// Create a session for the match
+                        </span>sessions
+                            .create(<span class="string">&quot;atlas_demo&quot;</span>)
+                            .install_plugin(atlas_demo_plugin);
+                    }
 
-                <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;tilemap-demo&quot;</span>)).clicked() {
-                    <span class="comment">// Delete the menu world
-                    </span>session_options.delete = <span class="bool-val">true</span>;
+                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;tilemap-demo&quot;</span>))
+                        .show(ui)
+                        .clicked()
+                    {
+                        <span class="comment">// Delete the menu world
+                        </span>session_options.delete = <span class="bool-val">true</span>;
 
-                    <span class="comment">// Create a session for the match
-                    </span>sessions
-                        .create(<span class="string">&quot;tilemap_demo&quot;</span>)
-                        .install_plugin(tilemap_demo_plugin);
-                }
+                        <span class="comment">// Create a session for the match
+                        </span>sessions
+                            .create(<span class="string">&quot;tilemap_demo&quot;</span>)
+                            .install_plugin(tilemap_demo_plugin);
+                    }
 
-                <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;path2d-demo&quot;</span>)).clicked() {
-                    <span class="comment">// Delete the menu world
-                    </span>session_options.delete = <span class="bool-val">true</span>;
+                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;path2d-demo&quot;</span>))
+                        .show(ui)
+                        .clicked()
+                    {
+                        <span class="comment">// Delete the menu world
+                        </span>session_options.delete = <span class="bool-val">true</span>;
 
-                    <span class="comment">// Create a session for the match
-                    </span>sessions
-                        .create(<span class="string">&quot;path2d_demo&quot;</span>)
-                        .install_plugin(path2d_demo_plugin);
-                }
+                        <span class="comment">// Create a session for the match
+                        </span>sessions
+                            .create(<span class="string">&quot;path2d_demo&quot;</span>)
+                            .install_plugin(path2d_demo_plugin);
+                    }
 
-                ui.add_space(<span class="number">40.0</span>);
+                    ui.add_space(<span class="number">30.0</span>);
 
-                <span class="comment">// When using a bones image in egui, we have to get it&#39;s corresponding egui texture
-                // from the egui textures resource.
-                </span>ui.label(<span class="string">&quot;Bones Image Rendered in Egui&quot;</span>);
-                ui.image(egui_textures.get(meta.menu_image), [<span class="number">100.</span>, <span class="number">100.</span>]);
-            });
+                    <span class="comment">// When using a bones image in egui, we have to get it&#39;s corresponding egui texture
+                    // from the egui textures resource.
+                    </span>ui.image(egui_textures.get(meta.menu_image), [<span class="number">100.</span>, <span class="number">100.</span>]);
+
+                    ui.add_space(<span class="number">30.0</span>);
+                });
+            })
         });
 }
 
@@ -684,6 +745,7 @@
 }
 
 <span class="kw">fn </span>path2d_demo_startup(
+    meta: Root&lt;GameMeta&gt;,
     <span class="kw-2">mut </span>entities: ResMut&lt;Entities&gt;,
     <span class="kw-2">mut </span>transforms: CompMut&lt;Transform&gt;,
     <span class="kw-2">mut </span>cameras: CompMut&lt;Camera&gt;,
@@ -697,7 +759,7 @@
     path2ds.insert(
         ent,
         Path2d {
-            color: Color::RED,
+            color: meta.path2d_color,
             points: <span class="macro">vec!</span>[
                 vec2(-SIZE, <span class="number">0.</span>),
                 vec2(<span class="number">0.</span>, SIZE),

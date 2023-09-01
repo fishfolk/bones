@@ -134,7 +134,7 @@
 }
 
 <span class="doccomment">/// Install animation utilities into the given [`SystemStages`].
-</span><span class="kw">pub fn </span>plugin(core: <span class="kw-2">&amp;mut </span>Session) {
+</span><span class="kw">pub fn </span>animation_plugin(core: <span class="kw-2">&amp;mut </span>Session) {
     core.stages
         .add_system_to_stage(CoreStage::Last, update_animation_banks)
         .add_system_to_stage(CoreStage::Last, animate_sprites);

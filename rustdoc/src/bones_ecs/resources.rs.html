@@ -379,9 +379,6 @@
 <a href="#379" id="379">379</a>
 <a href="#380" id="380">380</a>
 <a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! World resource storage.
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
@@ -391,6 +388,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// An untyped resource that may be inserted into [`UntypedResources`].
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>UntypedAtomicResource {
     cell: Arc&lt;AtomicCell&lt;SchemaBox&gt;&gt;,
     schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
@@ -414,10 +412,11 @@
         }
     }
 
-    <span class="doccomment">/// Get another [`UntypedAtomicResource`] that points to the same data.
-    </span><span class="kw">pub fn </span>clone_cell(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; UntypedAtomicResource {
+    <span class="doccomment">/// Clone the inner data, creating a new copy instead of returning another handle the the same
+    /// data, as the normal `clone()` implementation does.
+    </span><span class="kw">pub fn </span>clone_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            cell: <span class="self">self</span>.cell.clone(),
+            cell: Arc::new(AtomicCell::new((<span class="kw-2">*</span><span class="self">self</span>.cell.borrow()).clone())),
             schema: <span class="self">self</span>.schema,
         }
     }
@@ -492,24 +491,26 @@
     }
 }
 
-<span class="kw">impl </span>Clone <span class="kw">for </span>UntypedAtomicResource {
-    <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            cell: Arc::new(AtomicCell::new((<span class="kw-2">*</span><span class="self">self</span>.cell.borrow()).clone())),
-            schema: <span class="self">self</span>.schema,
-        }
-    }
-}
-
 <span class="doccomment">/// Storage for un-typed resources.
 ///
 /// This is the backing data store used by [`Resources`].
 ///
 /// Unless you are intending to do modding or otherwise need raw pointers to your resource data, you
 /// should use [`Resources`] instead.
-</span><span class="attr">#[derive(Clone, Default)]
+</span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>UntypedResources {
     resources: HashMap&lt;SchemaId, UntypedAtomicResource&gt;,
+}
+
+<span class="kw">impl </span>Clone <span class="kw">for </span>UntypedResources {
+    <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>resources = <span class="self">self
+            </span>.resources
+            .iter()
+            .map(|(k, v)| (<span class="kw-2">*</span>k, v.clone_data()))
+            .collect();
+        <span class="self">Self </span>{ resources }
+    }
 }
 
 <span class="kw">impl </span>UntypedResources {
@@ -541,7 +542,7 @@
 
     <span class="doccomment">/// Get a cell containing the resource data pointer for the given ID.
     </span><span class="kw">pub fn </span>get_cell(<span class="kw-2">&amp;</span><span class="self">self</span>, schema_id: SchemaId) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedAtomicResource&gt; {
-        <span class="self">self</span>.resources.get(<span class="kw-2">&amp;</span>schema_id).map(|x| x.clone_cell())
+        <span class="self">self</span>.resources.get(<span class="kw-2">&amp;</span>schema_id).cloned()
     }
 
     <span class="doccomment">/// Get a reference to an untyped resource.
@@ -639,6 +640,7 @@
 ///
 /// To access the resource you must borrow it with either [`borrow()`][Self::borrow] or
 /// [`borrow_mut()`][Self::borrow_mut].
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>AtomicResource&lt;T: HasSchema&gt; {
     untyped: UntypedAtomicResource,
     _phantom: PhantomData&lt;T&gt;,
@@ -668,14 +670,6 @@
     </span><span class="kw">pub fn </span>new(data: T) -&gt; <span class="self">Self </span>{
         AtomicResource {
             untyped: UntypedAtomicResource::new(SchemaBox::new(data)),
-            _phantom: PhantomData,
-        }
-    }
-
-    <span class="doccomment">/// Clone this atomic resource, returning a handle to the same resource data.
-    </span><span class="kw">pub fn </span>clone_cell(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            untyped: <span class="self">self</span>.untyped.clone_cell(),
             _phantom: PhantomData,
         }
     }
