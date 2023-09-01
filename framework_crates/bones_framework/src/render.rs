@@ -24,6 +24,11 @@ pub mod transform;
 #[cfg(feature = "ui")]
 pub mod ui;
 
+/// Bones framework rendering plugin.
+pub fn render_plugin(session: &mut Session) {
+    session.install_plugin(ui::ui_plugin);
+}
+
 /// Trait for the interface exposed by external bones renderers.
 ///
 /// These methods allow the game to notify the renderer when certain things happen, and to allow the

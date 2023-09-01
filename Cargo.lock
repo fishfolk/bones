@@ -1112,6 +1112,7 @@ dependencies = [
  "sys-locale",
  "thiserror",
  "tracing",
+ "ttf-parser",
  "unic-langid",
 ]
 

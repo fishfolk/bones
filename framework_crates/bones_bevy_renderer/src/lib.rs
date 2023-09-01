@@ -115,6 +115,36 @@ impl BonesImageIds {
     }
 }
 
+fn update_egui_fonts(ctx: &bevy_egui::egui::Context, bones_assets: &bones::AssetServer) {
+    use bevy_egui::egui;
+    let mut fonts = egui::FontDefinitions::default();
+
+    for asset in bones_assets.store.assets.values() {
+        if let Ok(font) = asset.try_cast_ref::<bones::Font>() {
+            let previous = fonts
+                .font_data
+                .insert(font.family_name.to_string(), font.data.clone());
+            if previous.is_some() {
+                warn!(
+                    name=%font.family_name,
+                    "Found two fonts with the same family name, using \
+                    only the latest one"
+                );
+            }
+            fonts
+                .families
+                .entry(egui::FontFamily::Name(font.family_name.clone()))
+                .or_default()
+                .push(font.family_name.to_string());
+        }
+    }
+
+    ctx.set_fonts(fonts);
+    // Render a frame so the font is available immediately
+    ctx.begin_frame(egui::RawInput::default());
+    let _ = ctx.end_frame();
+}
+
 /// Bevy resource that contains the info for the bones game that is being rendered.
 #[derive(Resource)]
 pub struct BonesData {
@@ -122,6 +152,8 @@ pub struct BonesData {
     pub game: bones::Game,
     /// The bones asset server cell.
     pub asset_server: Option<bones::AtomicResource<bones::AssetServer>>,
+    /// Whether or not the egui fonts have been loaded.
+    pub has_loaded_fonts: bool,
 }
 
 impl BonesBevyRenderer {
@@ -176,31 +208,26 @@ impl BonesBevyRenderer {
                     // Configure the AssetIO
                     let io = bones::FileAssetIo::new(&self.asset_dir, &self.packs_dir, true);
                     asset_server.set_io(io);
-
-                    // Load the game assets
-                    asset_server
-                        .load_assets()
-                        .expect("Could not load game assets");
-
-                    // Take all loaded image assets and conver them to external images that reference bevy handles
-                    bones_image_ids.load_bones_images(
-                        &mut asset_server,
-                        &mut bones_egui_textures,
-                        &mut bevy_images,
-                        &mut bevy_egui_textures,
-                    );
                 }
+
                 #[cfg(target_arch = "wasm32")]
                 {
-                    bones_image_ids.load_bones_images(
-                        &mut asset_server,
-                        &mut bones_egui_textures,
-                        &mut bevy_images,
-                        &mut bevy_egui_textures,
-                    );
                     // TODO: Implement WASM asset loader.
                     unimplemented!("WASM asset loading is not implemented yet.");
                 }
+
+                // Load the game assets
+                asset_server
+                    .load_assets()
+                    .expect("Could not load game assets");
+
+                // Take all loaded image assets and conver them to external images that reference bevy handles
+                bones_image_ids.load_bones_images(
+                    &mut asset_server,
+                    &mut bones_egui_textures,
+                    &mut bevy_images,
+                    &mut bevy_egui_textures,
+                );
             }
         }
 
@@ -211,6 +238,7 @@ impl BonesBevyRenderer {
         app.insert_resource(BonesData {
             asset_server: self.game.shared_resource_cell::<bones::AssetServer>(),
             game: self.game,
+            has_loaded_fonts: false,
         })
         .init_resource::<BonesGameEntity>();
 
@@ -303,7 +331,11 @@ fn step_bones_game(
         let mut egui_ctx = egui_query.get_single_mut(world).unwrap();
         egui_ctx.get_mut().clone()
     };
-    let BonesData { game, .. } = &mut data;
+    let BonesData {
+        game,
+        has_loaded_fonts,
+        ..
+    } = &mut data;
     let bevy_time = world.resource::<Time>();
 
     let mouse_inputs = bones::AtomicResource::new(mouse_inputs);
@@ -311,9 +343,16 @@ fn step_bones_game(
 
     // Reload assets if necessary
     if let Some(mut asset_server) = game.shared_resource::<bones::AssetServer>() {
+        if !*has_loaded_fonts {
+            update_egui_fonts(&egui_ctx, &asset_server);
+            *has_loaded_fonts = true;
+        }
+
         asset_server.handle_asset_changes(|asset_server, handle| {
             let mut bones_egui_textures = game.shared_resource::<bones::EguiTextures>().unwrap();
             let asset = asset_server.get_untyped_mut(handle).unwrap();
+
+            // TODO: hot reload changed fonts.
 
             if let Ok(image) = asset.data.try_cast_mut::<bones::Image>() {
                 bones_image_ids.load_bones_image(

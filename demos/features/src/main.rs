@@ -26,6 +26,10 @@ struct GameMeta {
     path2d_color: Color,
     /// Localization asset
     localization: Handle<LocalizationAsset>,
+    /// The font to use for the demo title.
+    title_font: FontMeta,
+    /// The list of font files to load for the UI.
+    fonts: SVec<Handle<Font>>,
 }
 
 /// Atlas information.
@@ -68,7 +72,10 @@ struct TileMeta {
 }
 
 fn main() {
-    assert!(Color::schema().type_data.get::<SchemaDeserialize>().is_some());
+    assert!(Color::schema()
+        .type_data
+        .get::<SchemaDeserialize>()
+        .is_some());
 
     // Create a bones bevy renderer from our bones game
     BonesBevyRenderer::new(create_game())
@@ -138,7 +145,7 @@ fn menu_system(
         .show(&egui_ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(20.0);
-                ui.heading(localization.get("title"));
+                ui.label(meta.title_font.rich(localization.get("title")));
                 ui.add_space(20.0);
 
                 if ui.button(localization.get("sprite-demo")).clicked() {
@@ -185,7 +192,6 @@ fn menu_system(
 
                 // When using a bones image in egui, we have to get it's corresponding egui texture
                 // from the egui textures resource.
-                ui.label("Bones Image Rendered in Egui");
                 ui.image(egui_textures.get(meta.menu_image), [100., 100.]);
             });
         });
