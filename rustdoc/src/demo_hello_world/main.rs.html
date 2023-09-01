@@ -43,8 +43,8 @@
 }
 
 <span class="doccomment">/// System to render the home menu.
-</span><span class="kw">fn </span>menu_system(egui_ctx: Res&lt;EguiCtx&gt;) {
-    egui::CentralPanel::default().show(<span class="kw-2">&amp;</span>egui_ctx, |ui| {
+</span><span class="kw">fn </span>menu_system(ctx: Egui) {
+    egui::CentralPanel::default().show(<span class="kw-2">&amp;</span>ctx, |ui| {
         ui.label(<span class="string">&quot;Hello World&quot;</span>);
     });
 }

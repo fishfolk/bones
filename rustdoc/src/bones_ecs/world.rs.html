@@ -326,6 +326,15 @@
 <a href="#326" id="326">326</a>
 <a href="#327" id="327">327</a>
 <a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Contains the ECS [`World`].
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -396,11 +405,17 @@
     <span class="doccomment">/// Run a system once.
     ///
     /// This is good for initializing the world with setup systems.
-    </span><span class="kw">pub fn </span>run_system&lt;R, Out, S: IntoSystem&lt;R, Out&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: S) -&gt; SystemResult&lt;Out&gt; {
+    </span><span class="kw">pub fn </span>run_system&lt;<span class="lifetime">&#39;system</span>, R, In, Out, S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: S, input: In) -&gt; Out
+    <span class="kw">where
+        </span>In: <span class="lifetime">&#39;system</span>,
+        Out: <span class="lifetime">&#39;system</span>,
+        S: IntoSystem&lt;R, In, Out&gt;,
+        S::Sys: <span class="lifetime">&#39;system</span>,
+    {
         <span class="kw">let </span><span class="kw-2">mut </span>s = system.system();
 
         s.initialize(<span class="self">self</span>);
-        s.run(<span class="self">self</span>)
+        s.run(<span class="self">self</span>, input)
     }
 
     <span class="doccomment">/// Run a system once, assuming any necessary initialization has already been performed for that
@@ -416,12 +431,15 @@
     ///
     /// If all the system parameters have already been initialized, by calling
     /// [`initialize()`][System::initialize] on the system, then this will work fine.
-    </span><span class="kw">pub fn </span>run_initialized_system&lt;R, Out, S: IntoSystem&lt;R, Out&gt;&gt;(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        system: S,
-    ) -&gt; SystemResult&lt;Out&gt; {
+    </span><span class="kw">pub fn </span>run_initialized_system&lt;<span class="lifetime">&#39;system</span>, Args, In, Out, S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, system: S, input: In) -&gt; Out
+    <span class="kw">where
+        </span>In: <span class="lifetime">&#39;system</span>,
+        Out: <span class="lifetime">&#39;system</span>,
+        S: IntoSystem&lt;Args, In, Out&gt;,
+        S::Sys: <span class="lifetime">&#39;system</span>,
+    {
         <span class="kw">let </span><span class="kw-2">mut </span>s = system.system();
-        s.run(<span class="self">self</span>)
+        s.run(<span class="self">self</span>, input)
     }
 
     <span class="doccomment">/// Initialize a resource of type `T` by inserting it&#39;s default value.
@@ -579,44 +597,44 @@
     </span><span class="kw">fn </span>sanity_check() {
         <span class="kw">let </span><span class="kw-2">mut </span>world = World::new();
 
-        world.run_system(setup_world).unwrap();
+        world.run_system(setup_world, ());
 
         <span class="comment">// Make sure our entities exist visit properly during iteration
         </span><span class="kw">let </span>test = || {};
-        world.run_system(test).unwrap();
+        world.run_system(test, ());
 
         <span class="comment">// Mutate and read some components
-        </span>world.run_system(pos_vel_system).unwrap();
+        </span>world.run_system(pos_vel_system, ());
 
         <span class="comment">// Make sure the mutations were applied
-        </span>world.run_system(test_pos_vel_1_run).unwrap();
+        </span>world.run_system(test_pos_vel_1_run, ());
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>snapshot() {
         <span class="kw">let </span><span class="kw-2">mut </span>world1 = World::new();
-        world1.run_system(setup_world).unwrap();
+        world1.run_system(setup_world, ());
 
         <span class="comment">// Snapshot world1
         </span><span class="kw">let </span><span class="kw-2">mut </span>snap = world1.clone();
 
         <span class="comment">// Make sure the snapshot represents world1&#39;s state
-        </span>snap.run_system(test_after_setup_state).unwrap();
+        </span>snap.run_system(test_after_setup_state, ());
 
         <span class="comment">// Run the pos_vel system on world1
-        </span>world1.run_system(pos_vel_system).unwrap();
+        </span>world1.run_system(pos_vel_system, ());
 
         <span class="comment">// Make sure world1 has properly update
-        </span>world1.run_system(test_pos_vel_1_run).unwrap();
+        </span>world1.run_system(test_pos_vel_1_run, ());
 
         <span class="comment">// Make sure the snapshot hasn&#39;t changed
-        </span>snap.run_system(test_after_setup_state).unwrap();
+        </span>snap.run_system(test_after_setup_state, ());
 
         <span class="comment">// Run the pos vel system once on the snapshot
-        </span>snap.run_system(pos_vel_system).unwrap();
+        </span>snap.run_system(pos_vel_system, ());
 
         <span class="comment">// Make sure the snapshot has updated
-        </span>world1.run_system(test_pos_vel_1_run).unwrap();
+        </span>world1.run_system(test_pos_vel_1_run, ());
     }
 
     <span class="attr">#[test]

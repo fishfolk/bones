@@ -524,6 +524,10 @@
 <a href="#524" id="524">524</a>
 <a href="#525" id="525">525</a>
 <a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Implements the system API for the ECS.
 
 </span><span class="kw">use </span>std::sync::Arc;
@@ -535,47 +539,39 @@
     s: String,
 }
 
-<span class="doccomment">/// Struct used to run a system function using the world.
-</span><span class="kw">pub struct </span>System&lt;Out = ()&gt; {
+<span class="doccomment">/// Trait implemented by systems.
+</span><span class="kw">pub trait </span>System&lt;In, Out&gt; {
+    <span class="doccomment">/// Initialize the system, creating any component or resource storages necessary for the system
+    /// to run in the world.
+    </span><span class="kw">fn </span>initialize(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World);
+    <span class="doccomment">/// Run the system.
+    </span><span class="kw">fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World, input: In) -&gt; Out;
+    <span class="doccomment">/// Get a best-effort name for the system, used in diagnostics.
+    </span><span class="kw">fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str;
+}
+
+<span class="doccomment">/// Struct containing a static system.
+</span><span class="kw">pub struct </span>StaticSystem&lt;In, Out&gt; {
     <span class="doccomment">/// This should be called once to initialize the system, allowing it to intialize any resources
     /// or components in the world.
     ///
     /// Usually only called once, but this is not guaranteed so the implementation should be
     /// idempotent.
-    </span><span class="kw">pub </span>initialize: Box&lt;<span class="kw">dyn </span>Send + Sync + Fn(<span class="kw-2">&amp;mut </span>World)&gt;,
+    </span><span class="kw">pub </span>initialize: <span class="kw">fn</span>(<span class="kw-2">&amp;mut </span>World),
     <span class="doccomment">/// This is run every time the system is executed
-    </span><span class="kw">pub </span>run: Box&lt;<span class="kw">dyn </span>Send + Sync + FnMut(<span class="kw-2">&amp;</span>World) -&gt; SystemResult&lt;Out&gt;&gt;,
+    </span><span class="kw">pub </span>run: Box&lt;<span class="kw">dyn </span>FnMut(<span class="kw-2">&amp;</span>World, In) -&gt; Out + Send + Sync&gt;,
     <span class="doccomment">/// A best-effort name for the system, for diagnostic purposes.
     </span><span class="kw">pub </span>name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
 }
 
-<span class="kw">impl</span>&lt;Out&gt; std::fmt::Debug <span class="kw">for </span>System&lt;Out&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        f.debug_struct(<span class="string">&quot;System&quot;</span>)
-            .field(<span class="string">&quot;name&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name)
-            .finish_non_exhaustive()
-    }
-}
-
-<span class="kw">impl</span>&lt;Out&gt; System&lt;Out&gt; {
-    <span class="doccomment">/// Initializes the resources required to run this system inside of the provided [`World`], if
-    /// those resources don&#39;t already exist.
-    ///
-    /// This is usually only called once, but this is not guaranteed so the implementation should be
-    /// idempotent.
-    </span><span class="kw">pub fn </span>initialize(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
+<span class="kw">impl</span>&lt;In, Out&gt; System&lt;In, Out&gt; <span class="kw">for </span>StaticSystem&lt;In, Out&gt; {
+    <span class="kw">fn </span>initialize(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
         (<span class="self">self</span>.initialize)(world)
     }
-
-    <span class="doccomment">/// Runs the system&#39;s function using the provided [`World`]
-    </span><span class="kw">pub fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World) -&gt; SystemResult&lt;Out&gt; {
-        (<span class="self">self</span>.run)(world)
+    <span class="kw">fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World, input: In) -&gt; Out {
+        (<span class="self">self</span>.run)(world, input)
     }
-
-    <span class="doccomment">/// Returns the underlying type name of the system.
-    ///
-    /// This is not guranteed to be stable or human-readable, but can be used for diagnostics.
-    </span><span class="kw">pub fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+    <span class="kw">fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
         <span class="self">self</span>.name
     }
 }
@@ -586,48 +582,28 @@
 ///
 /// - Have 26 or less arguments,
 /// - Where every argument implments [`SystemParam`], and
-/// - That returns either `()` or [`SystemResult`]
-///
-/// [`IntoSystem`] is also implemented for functions that take [`&amp;World`][World] as an argument, and
-/// return either `()` or [`SystemResult`].
 ///
 /// The most common [`SystemParam`] types that you will use as arguments to a system will be:
-///  - [`Res`] and [`ResMut`] parameters to access resources
+/// - [`Res`] and [`ResMut`] parameters to access resources
 /// - [`Comp`] and [`CompMut`] parameters to access components
-</span><span class="kw">pub trait </span>IntoSystem&lt;Args, Out&gt; {
+/// - [`&amp;World`][World] to access the world directly
+/// - [`In`] for systems which have an input value. This must be the first argument of the function.
+</span><span class="kw">pub trait </span>IntoSystem&lt;Args, In, Out&gt; {
+    <span class="doccomment">/// The type of the system that is output
+    </span><span class="kw">type </span>Sys: System&lt;In, Out&gt;;
+
     <span class="doccomment">/// Convert into a [`System`].
-    </span><span class="kw">fn </span>system(<span class="self">self</span>) -&gt; System&lt;Out&gt;;
+    </span><span class="kw">fn </span>system(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Sys;
 }
 
-<span class="kw">impl</span>&lt;Out&gt; IntoSystem&lt;System&lt;Out&gt;, Out&gt; <span class="kw">for </span>System&lt;Out&gt; {
-    <span class="kw">fn </span>system(<span class="self">self</span>) -&gt; System&lt;Out&gt; {
+<span class="kw">impl</span>&lt;T, In, Out&gt; IntoSystem&lt;T, In, Out&gt; <span class="kw">for </span>T
+<span class="kw">where
+    </span>T: System&lt;In, Out&gt;,
+{
+    <span class="kw">type </span>Sys = T;
+    <span class="kw">fn </span>system(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Sys {
         <span class="self">self
     </span>}
-}
-
-<span class="kw">impl</span>&lt;F, Out&gt; IntoSystem&lt;(World, F), Out&gt; <span class="kw">for </span>F
-<span class="kw">where
-    </span>F: FnMut(<span class="kw-2">&amp;</span>World) -&gt; Out + Send + Sync + <span class="lifetime">&#39;static</span>,
-{
-    <span class="kw">fn </span>system(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; System&lt;Out&gt; {
-        System {
-            initialize: Box::new(|<span class="kw">_</span>| ()),
-            run: Box::new(<span class="kw">move </span>|world| <span class="prelude-val">Ok</span>(<span class="self">self</span>(world))),
-            name: std::any::type_name::&lt;F&gt;(),
-        }
-    }
-}
-<span class="kw">impl</span>&lt;F, Out&gt; IntoSystem&lt;(World, F, SystemResult&lt;Out&gt;), Out&gt; <span class="kw">for </span>F
-<span class="kw">where
-    </span>F: FnMut(<span class="kw-2">&amp;</span>World) -&gt; SystemResult&lt;Out&gt; + Send + Sync + <span class="lifetime">&#39;static</span>,
-{
-    <span class="kw">fn </span>system(<span class="self">self</span>) -&gt; System&lt;Out&gt; {
-        System {
-            initialize: Box::new(|<span class="kw">_</span>| ()),
-            run: Box::new(<span class="self">self</span>),
-            name: std::any::type_name::&lt;F&gt;(),
-        }
-    }
 }
 
 <span class="doccomment">/// Trait used to implement parameters for [`System`] functions.
@@ -661,8 +637,22 @@
     <span class="doccomment">/// This is used create an instance of the system parame, possibly borrowed from the
     /// intermediate parameter state.
     </span><span class="attr">#[allow(clippy::needless_lifetimes)] </span><span class="comment">// Explicit lifetimes help clarity in this case
-    </span><span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt;;
+    </span><span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt;;
 }
+
+<span class="kw">impl </span>SystemParam <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>World {
+    <span class="kw">type </span>State = ();
+    <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;s</span>&gt; = <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World;
+    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
+    <span class="kw">fn </span>get_state(_world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {}
+    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, _state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
+        world
+    }
+}
+
+<span class="doccomment">/// The system input parameter.
+</span><span class="attr">#[derive(Deref, DerefMut)]
+</span><span class="kw">pub struct </span>In&lt;T&gt;(<span class="kw">pub </span>T);
 
 <span class="doccomment">/// [`SystemParam`] for getting read access to a resource.
 ///
@@ -738,7 +728,7 @@
         })
     }
 
-    <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
         Res(state.borrow())
     }
 }
@@ -757,7 +747,7 @@
         world.resources.get_cell::&lt;T&gt;().unwrap()
     }
 
-    <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
         ResInit(state.borrow())
     }
 }
@@ -780,7 +770,7 @@
         })
     }
 
-    <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
         ResMut(state.borrow_mut())
     }
 }
@@ -799,7 +789,7 @@
         world.resources.get_cell::&lt;T&gt;().unwrap()
     }
 
-    <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
         ResMutInit(state.borrow_mut())
     }
 }
@@ -821,7 +811,7 @@
         world.components.get_cell::&lt;T&gt;().unwrap()
     }
 
-    <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
         state.borrow()
     }
 }
@@ -838,7 +828,7 @@
         world.components.get_cell::&lt;T&gt;().unwrap()
     }
 
-    <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
         state.borrow_mut()
     }
 }
@@ -852,28 +842,29 @@
             $(
                 <span class="macro-nonterminal">$args</span>: SystemParam,
             )*
-        &gt; IntoSystem&lt;(F, $(<span class="macro-nonterminal">$args</span>,)<span class="kw-2">*</span>), Out&gt; <span class="kw">for </span>F
+        &gt; IntoSystem&lt;(F, $(<span class="macro-nonterminal">$args</span>,)<span class="kw-2">*</span>), (), Out&gt; <span class="kw">for </span>F
         <span class="kw">where for</span>&lt;<span class="lifetime">&#39;a</span>&gt; F: <span class="lifetime">&#39;static </span>+ Send + Sync +
             FnMut(
                 $(
                     &lt;<span class="macro-nonterminal">$args </span><span class="kw">as </span>SystemParam&gt;::Param&lt;<span class="lifetime">&#39;a</span>&gt;,
                 )*
-            ) -&gt; SystemResult&lt;Out&gt; +
+            ) -&gt; Out +
             FnMut(
                 $(
                     <span class="macro-nonterminal">$args</span>,
                 )*
-            ) -&gt; SystemResult&lt;Out&gt;
+            ) -&gt; Out
         {
-            <span class="kw">fn </span>system(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; System&lt;Out&gt; {
-                System {
+            <span class="kw">type </span>Sys = StaticSystem&lt;(), Out&gt;;
+            <span class="kw">fn </span>system(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Sys {
+                StaticSystem {
                     name: std::any::type_name::&lt;F&gt;(),
-                    initialize: Box::new(|_world| {
+                    initialize: |_world| {
                         $(
                             <span class="macro-nonterminal">$args::initialize</span>(_world);
                         )*
-                    }),
-                    run: Box::new(<span class="kw">move </span>|_world| {
+                    },
+                    run: Box::new(<span class="kw">move </span>|_world, _input| {
                         $(
                             <span class="attr">#[allow(non_snake_case)]
                             </span><span class="kw">let </span><span class="kw-2">mut </span><span class="macro-nonterminal">$args </span>= <span class="macro-nonterminal">$args::get_state</span>(_world);
@@ -881,7 +872,7 @@
 
                         <span class="self">self</span>(
                             $(
-                                <span class="macro-nonterminal">$args::borrow</span>(<span class="kw-2">&amp;mut </span><span class="macro-nonterminal">$args</span>),
+                                <span class="macro-nonterminal">$args::borrow</span>(_world, <span class="kw-2">&amp;mut </span><span class="macro-nonterminal">$args</span>),
                             )*
                         )
                     })
@@ -891,48 +882,53 @@
     };
 }
 
-<span class="macro">macro_rules! </span>impl_system_with_empty_return {
+<span class="macro">macro_rules! </span>impl_system_with_input {
     ($(<span class="macro-nonterminal">$args</span>:ident,)<span class="kw-2">*</span>) =&gt; {
         <span class="attr">#[allow(unused_parens)]
         </span><span class="kw">impl</span>&lt;
+            <span class="lifetime">&#39;input</span>,
             F,
+            InT: <span class="lifetime">&#39;input</span>,
+            Out,
             $(
                 <span class="macro-nonterminal">$args</span>: SystemParam,
             )*
-        &gt; IntoSystem&lt;(F, $(<span class="macro-nonterminal">$args</span>,)* ()), ()&gt; <span class="kw">for </span>F
+        &gt; IntoSystem&lt;(F, InT, $(<span class="macro-nonterminal">$args</span>,)<span class="kw-2">*</span>), InT, Out&gt; <span class="kw">for </span>F
         <span class="kw">where for</span>&lt;<span class="lifetime">&#39;a</span>&gt; F: <span class="lifetime">&#39;static </span>+ Send + Sync +
             FnMut(
+                In&lt;InT&gt;,
                 $(
                     &lt;<span class="macro-nonterminal">$args </span><span class="kw">as </span>SystemParam&gt;::Param&lt;<span class="lifetime">&#39;a</span>&gt;,
                 )*
-            ) +
+            ) -&gt; Out +
             FnMut(
+                In&lt;InT&gt;,
                 $(
                     <span class="macro-nonterminal">$args</span>,
                 )*
-            )
+            ) -&gt; Out
         {
-            <span class="kw">fn </span>system(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; System&lt;()&gt; {
-                System {
+            <span class="kw">type </span>Sys = StaticSystem&lt;InT, Out&gt;;
+            <span class="kw">fn </span>system(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Sys {
+                StaticSystem {
                     name: std::any::type_name::&lt;F&gt;(),
-                    initialize: Box::new(|_world| {
+                    initialize: |_world| {
                         $(
                             <span class="macro-nonterminal">$args::initialize</span>(_world);
                         )*
-                    }),
-                    run: Box::new(<span class="kw">move </span>|_world| {
+                    },
+                    run: Box::new(<span class="kw">move </span>|_world, input| {
                         $(
                             <span class="attr">#[allow(non_snake_case)]
                             </span><span class="kw">let </span><span class="kw-2">mut </span><span class="macro-nonterminal">$args </span>= <span class="macro-nonterminal">$args::get_state</span>(_world);
                         )*
 
                         <span class="self">self</span>(
+                            In(input),
                             $(
-                                <span class="macro-nonterminal">$args::borrow</span>(<span class="kw-2">&amp;mut </span><span class="macro-nonterminal">$args</span>),
+                                <span class="macro-nonterminal">$args::borrow</span>(_world, <span class="kw-2">&amp;mut </span><span class="macro-nonterminal">$args</span>),
                             )*
-                        );
-
-                        <span class="prelude-val">Ok</span>(())
+                        )
                     })
                 }
             }
@@ -942,17 +938,18 @@
 
 <span class="macro">macro_rules! </span>impl_systems {
     <span class="comment">// base case
-    </span>() =&gt; {};
-    (<span class="macro-nonterminal">$head</span>:ident, $(<span class="macro-nonterminal">$idents</span>:ident,)<span class="kw-2">*</span>) =&gt; {
-        <span class="comment">// recursive call
-        </span><span class="macro">impl_system!</span>(<span class="macro-nonterminal">$head</span>, $(<span class="macro-nonterminal">$idents</span>,)<span class="kw-2">*</span>);
-        <span class="macro">impl_system_with_empty_return!</span>(<span class="macro-nonterminal">$head</span>, $(<span class="macro-nonterminal">$idents</span>,)<span class="kw-2">*</span>);
+    </span>() =&gt; {
+        <span class="macro">impl_system!</span>();
+        <span class="macro">impl_system_with_input!</span>();
+    };
+    <span class="comment">// recursive call
+    </span>(<span class="macro-nonterminal">$head</span>:ident, $(<span class="macro-nonterminal">$idents</span>:ident,)<span class="kw-2">*</span>) =&gt; {
+        <span class="macro">impl_system!</span>(<span class="macro-nonterminal">$head</span>, $(<span class="macro-nonterminal">$idents</span>,)<span class="kw-2">*</span>);
+        <span class="macro">impl_system_with_input!</span>(<span class="macro-nonterminal">$head</span>, $(<span class="macro-nonterminal">$idents</span>,)<span class="kw-2">*</span>);
         <span class="macro">impl_systems!</span>($(<span class="macro-nonterminal">$idents</span>,)<span class="kw-2">*</span>);
     }
 }
 
-<span class="macro">impl_system!</span>();
-<span class="macro">impl_system_with_empty_return!</span>();
 <span class="macro">impl_systems!</span>(A, B, C, D, E, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,);
 
 <span class="attr">#[cfg(test)]
@@ -966,9 +963,9 @@
             _var2: Ref&lt;ComponentStore&lt;u64&gt;&gt;,
             _var3: Res&lt;i32&gt;,
             _var4: ResMut&lt;i64&gt;,
-        ) -&gt; SystemResult {
-            <span class="prelude-val">Ok</span>(())
-        }
+        ) -&gt; u32 {
+            <span class="number">0
+        </span>}
         <span class="comment">// Technically reusing the same type is incorrect and causes a runtime panic.
         // However, there doesn&#39;t seem to be a clean way to handle type inequality in generics.
         </span><span class="attr">#[allow(clippy::too_many_arguments)]
@@ -985,11 +982,12 @@
             _var10: CompMut&lt;i64&gt;,
             _var11: Comp&lt;i64&gt;,
             _var12: CompMut&lt;u64&gt;,
-        ) -&gt; SystemResult {
-            <span class="prelude-val">Ok</span>(())
+        ) {
         }
+        <span class="kw">fn </span>tmp3(_in: In&lt;usize&gt;, _comp1: Comp&lt;i64&gt;) {}
         <span class="kw">let _ </span>= tmp.system();
         <span class="kw">let _ </span>= tmp2.system();
+        <span class="kw">let _ </span>= tmp3.system();
     }
 
     <span class="attr">#[test]
@@ -998,23 +996,34 @@
         send(
             (<span class="kw">move </span>|_var1: Res&lt;u32&gt;| {
                 <span class="kw">let </span>_y = x;
-                <span class="prelude-val">Ok</span>(())
             })
             .system(),
         );
-        send((|| <span class="prelude-val">Ok</span>(())).system());
+        send((|| ()).system());
         send(sys.system());
     }
 
-    <span class="kw">fn </span>sys(_var1: Res&lt;u32&gt;) -&gt; SystemResult {
-        <span class="prelude-val">Ok</span>(())
-    }
+    <span class="kw">fn </span>sys(_var1: Res&lt;u32&gt;) {}
     <span class="kw">fn </span>send&lt;T: Send&gt;(_t: T) {}
 
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>manual_system_run() {
-        <span class="kw">let </span><span class="kw-2">mut </span>world = World::default();
-        world.init_resource::&lt;u32&gt;();
+    </span><span class="kw">fn </span>in_and_out() {
+        <span class="kw">fn </span>mul_by_res(n: In&lt;usize&gt;, r: Res&lt;usize&gt;) -&gt; usize {
+            <span class="kw-2">*</span>n * <span class="kw-2">*</span>r
+        }
+
+        <span class="kw">fn </span>sys_with_ref_in(<span class="kw-2">mut </span>n: In&lt;<span class="kw-2">&amp;mut </span>usize&gt;) {
+            <span class="kw-2">**</span>n <span class="kw-2">*</span>= <span class="number">3</span>;
+        }
+
+        <span class="kw">let </span><span class="kw-2">mut </span>world = World::new();
+        world.insert_resource(<span class="number">2usize</span>);
+
+        <span class="kw">let </span>result = world.run_initialized_system(mul_by_res, <span class="number">3</span>);
+        <span class="macro">assert_eq!</span>(result, <span class="number">6</span>);
+
+        <span class="kw">let </span><span class="kw-2">mut </span>n = <span class="number">3</span>;
+        world.run_initialized_system(sys_with_ref_in, <span class="kw-2">&amp;mut </span>n)
     }
 
     <span class="attr">#[test]
@@ -1029,7 +1038,6 @@
         <span class="kw">let </span><span class="kw-2">mut </span>my_system = (|_a: ResInit&lt;A&gt;, <span class="kw-2">mut </span>b: ResMutInit&lt;B&gt;| {
             <span class="kw">let </span>b2 = B { x: <span class="number">45 </span>};
             <span class="kw-2">*</span>b = b2;
-            <span class="prelude-val">Ok</span>(())
         })
         .system();
 
@@ -1041,7 +1049,7 @@
             <span class="macro">assert_eq!</span>(res.x, <span class="number">0</span>);
         }
 
-        my_system.run(<span class="kw-2">&amp;</span>world).unwrap();
+        my_system.run(<span class="kw-2">&amp;</span>world, ());
 
         <span class="kw">let </span>res = world.resource::&lt;B&gt;();
         <span class="macro">assert_eq!</span>(res.x, <span class="number">45</span>);

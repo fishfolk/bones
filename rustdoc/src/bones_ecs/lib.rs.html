@@ -96,10 +96,6 @@
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
@@ -123,9 +119,6 @@
 <span class="kw">pub use </span>bones_schema <span class="kw">as </span>schema;
 <span class="kw">pub use </span>bones_utils <span class="kw">as </span>utils;
 
-<span class="kw">mod </span>error;
-<span class="kw">pub use </span>error::EcsError;
-
 <span class="kw">mod </span>world;
 <span class="kw">pub use </span>world::{FromWorld, World};
 
@@ -139,7 +132,6 @@
         bitset::<span class="kw-2">*</span>,
         components::<span class="kw-2">*</span>,
         entities::<span class="kw-2">*</span>,
-        error::<span class="kw-2">*</span>,
         resources::<span class="kw-2">*</span>,
         stage::{CoreStage::<span class="kw-2">*</span>, <span class="kw-2">*</span>},
         system::<span class="kw-2">*</span>,
@@ -198,8 +190,8 @@
                 <span class="kw">let </span>e = entities.create();
                 comps.insert(e, default());
             },
+            (),
         )
-        .unwrap();
     }
 }
 </code></pre></div></section></main></body></html>

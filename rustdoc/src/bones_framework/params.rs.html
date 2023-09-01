@@ -42,7 +42,7 @@
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
         world.resources.get_cell::&lt;AssetServer&gt;().unwrap()
     }
-    <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
         Root(Ref::map(state.borrow(), |asset_server| asset_server.root()))
     }
 }

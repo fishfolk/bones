@@ -171,6 +171,46 @@
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
 <a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! UI resources &amp; components.
 
 </span><span class="kw">use </span>std::sync::Arc;
@@ -190,6 +230,46 @@
 <span class="doccomment">/// Resource containing the [`egui::Context`] that can be used to render UI.
 </span><span class="attr">#[derive(HasSchema, Clone, Debug, Default, Deref, DerefMut)]
 </span><span class="kw">pub struct </span>EguiCtx(<span class="kw">pub </span>egui::Context);
+
+<span class="doccomment">/// System parameter for rendering to egui.
+</span><span class="attr">#[derive(Deref)]
+</span><span class="kw">pub struct </span>Egui&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="doccomment">/// The bones world reference, needed so that the `widget` method can work.
+    </span><span class="kw">pub </span>world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>World,
+    <span class="doccomment">/// The egui context.
+    </span><span class="attr">#[deref]
+    </span><span class="kw">pub </span>context: Ref&lt;<span class="lifetime">&#39;a</span>, egui::Context&gt;,
+}
+
+<span class="kw">impl </span>Egui&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="doccomment">/// Run a widget sub-system.
+    </span><span class="kw">pub fn </span>widget&lt;<span class="lifetime">&#39;a</span>, Args, S, Out&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, system: S, ui: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>egui::Ui) -&gt; Out
+    <span class="kw">where
+        </span>S: IntoSystem&lt;Args, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>egui::Ui, Out&gt;,
+        S::Sys: <span class="lifetime">&#39;a</span>,
+    {
+        <span class="self">self</span>.world.run_initialized_system(system, ui)
+    }
+}
+
+<span class="kw">impl </span>SystemParam <span class="kw">for </span>Egui&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">type </span>State = AtomicResource&lt;EguiCtx&gt;;
+    <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;s</span>&gt; = Egui&lt;<span class="lifetime">&#39;s</span>&gt;;
+
+    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
+
+    <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
+        world
+            .resources
+            .get_cell::&lt;EguiCtx&gt;()
+            .expect(<span class="string">&quot;`EguiCtx` resource doesn&#39;t exist&quot;</span>)
+    }
+
+    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
+        <span class="kw">let </span>context = Ref::map(state.borrow(), |x| <span class="kw-2">&amp;</span>x.<span class="number">0</span>);
+        Egui { world, context }
+    }
+}
 
 <span class="doccomment">/// Resource that maps image handles to their associated egui textures.
 </span><span class="attr">#[derive(HasSchema, Clone, Debug, Default, Deref, DerefMut)]

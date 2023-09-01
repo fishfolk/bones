@@ -164,8 +164,6 @@
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
 <a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! ECS component storage.
 
 </span><span class="kw">use </span>std::sync::Arc;
@@ -190,6 +188,17 @@
 </span><span class="kw">pub struct </span>ComponentStores {
     <span class="kw">pub</span>(<span class="kw">crate</span>) components: HashMap&lt;SchemaId, Arc&lt;AtomicCell&lt;UntypedComponentStore&gt;&gt;&gt;,
 }
+
+<span class="doccomment">/// An error returned when trying to access an uninitialized component.
+</span><span class="attr">#[derive(Debug)]
+</span><span class="kw">pub struct </span>NotInitialized;
+
+<span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>NotInitialized {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">&quot;Component not initialized&quot;</span>)
+    }
+}
+<span class="kw">impl </span>std::error::Error <span class="kw">for </span>NotInitialized {}
 
 <span class="comment">// SOUND: all of the functions for ComponentStores requires that the types stored implement Sync +
 // Send.
@@ -220,7 +229,7 @@
     }
 
     <span class="doccomment">/// Get the components of a certain type
-    </span><span class="kw">pub fn </span>get_cell&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;AtomicComponentStore&lt;T&gt;, EcsError&gt; {
+    </span><span class="kw">pub fn </span>get_cell&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;AtomicComponentStore&lt;T&gt;, NotInitialized&gt; {
         <span class="kw">let </span>untyped = <span class="self">self</span>.get_cell_by_schema_id(T::schema().id())<span class="question-mark">?</span>;
 
         <span class="comment">// Safe: We know the schema matches, and `ComponentStore&lt;T&gt;` is repr(transparent) over
@@ -236,13 +245,9 @@
     <span class="doccomment">/// Borrow a component store.
     /// # Errors
     /// Errors if the component store has not been initialized yet.
-    </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Ref&lt;ComponentStore&lt;T&gt;&gt;, EcsError&gt; {
+    </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Ref&lt;ComponentStore&lt;T&gt;&gt;, NotInitialized&gt; {
         <span class="kw">let </span>id = T::schema().id();
-        <span class="kw">let </span>atomicref = <span class="self">self
-            </span>.components
-            .get(<span class="kw-2">&amp;</span>id)
-            .ok_or(EcsError::NotInitialized)<span class="question-mark">?
-            </span>.borrow();
+        <span class="kw">let </span>atomicref = <span class="self">self</span>.components.get(<span class="kw-2">&amp;</span>id).ok_or(NotInitialized)<span class="question-mark">?</span>.borrow();
 
         <span class="comment">// SOUND: ComponentStore&lt;T&gt; is repr(transparent) over UntypedComponent store.
         </span><span class="kw">let </span>atomicref = Ref::map(atomicref, |x| <span class="kw">unsafe </span>{
@@ -255,13 +260,9 @@
     <span class="doccomment">/// Borrow a component store.
     /// # Errors
     /// Errors if the component store has not been initialized yet.
-    </span><span class="kw">pub fn </span>get_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;RefMut&lt;ComponentStore&lt;T&gt;&gt;, EcsError&gt; {
+    </span><span class="kw">pub fn </span>get_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;RefMut&lt;ComponentStore&lt;T&gt;&gt;, NotInitialized&gt; {
         <span class="kw">let </span>id = T::schema().id();
-        <span class="kw">let </span>atomicref = <span class="self">self
-            </span>.components
-            .get(<span class="kw-2">&amp;</span>id)
-            .ok_or(EcsError::NotInitialized)<span class="question-mark">?
-            </span>.borrow_mut();
+        <span class="kw">let </span>atomicref = <span class="self">self</span>.components.get(<span class="kw-2">&amp;</span>id).ok_or(NotInitialized)<span class="question-mark">?</span>.borrow_mut();
 
         <span class="comment">// SOUND: ComponentStore&lt;T&gt; is repr(transparent) over UntypedComponent store.
         </span><span class="kw">let </span>atomicref = RefMut::map(atomicref, |x| <span class="kw">unsafe </span>{
@@ -275,11 +276,8 @@
     </span><span class="kw">pub fn </span>get_cell_by_schema_id(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         id: SchemaId,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;AtomicCell&lt;UntypedComponentStore&gt;&gt;, EcsError&gt; {
-        <span class="self">self</span>.components
-            .get(<span class="kw-2">&amp;</span>id)
-            .cloned()
-            .ok_or(EcsError::NotInitialized)
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;AtomicCell&lt;UntypedComponentStore&gt;&gt;, NotInitialized&gt; {
+        <span class="self">self</span>.components.get(<span class="kw-2">&amp;</span>id).cloned().ok_or(NotInitialized)
     }
 }
 
@@ -293,45 +291,43 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>borrow_many_mut() {
-        World::new()
-            .run_system(
-                |<span class="kw-2">mut </span>entities: ResMut&lt;Entities&gt;, <span class="kw-2">mut </span>my_datas: CompMut&lt;MyData&gt;| {
-                    <span class="kw">let </span>ent1 = entities.create();
-                    <span class="kw">let </span>ent2 = entities.create();
+        World::new().run_system(
+            |<span class="kw-2">mut </span>entities: ResMut&lt;Entities&gt;, <span class="kw-2">mut </span>my_datas: CompMut&lt;MyData&gt;| {
+                <span class="kw">let </span>ent1 = entities.create();
+                <span class="kw">let </span>ent2 = entities.create();
 
-                    my_datas.insert(ent1, MyData(<span class="number">7</span>));
-                    my_datas.insert(ent2, MyData(<span class="number">8</span>));
+                my_datas.insert(ent1, MyData(<span class="number">7</span>));
+                my_datas.insert(ent2, MyData(<span class="number">8</span>));
 
-                    {
-                        <span class="kw">let </span>[data2, data1] = my_datas.get_many_mut([ent2, ent1]).unwrap_many();
+                {
+                    <span class="kw">let </span>[data2, data1] = my_datas.get_many_mut([ent2, ent1]).unwrap_many();
 
-                        data1.<span class="number">0 </span>= <span class="number">0</span>;
-                        data2.<span class="number">0 </span>= <span class="number">1</span>;
-                    }
+                    data1.<span class="number">0 </span>= <span class="number">0</span>;
+                    data2.<span class="number">0 </span>= <span class="number">1</span>;
+                }
 
-                    <span class="macro">assert_eq!</span>(my_datas.get(ent1).unwrap().<span class="number">0</span>, <span class="number">0</span>);
-                    <span class="macro">assert_eq!</span>(my_datas.get(ent2).unwrap().<span class="number">0</span>, <span class="number">1</span>);
-                },
-            )
-            .unwrap();
+                <span class="macro">assert_eq!</span>(my_datas.get(ent1).unwrap().<span class="number">0</span>, <span class="number">0</span>);
+                <span class="macro">assert_eq!</span>(my_datas.get(ent2).unwrap().<span class="number">0</span>, <span class="number">1</span>);
+            },
+            (),
+        );
     }
 
     <span class="attr">#[test]
     #[should_panic = <span class="string">&quot;must be unique&quot;</span>]
     </span><span class="kw">fn </span>borrow_many_overlapping_mut() {
-        World::new()
-            .run_system(
-                |<span class="kw-2">mut </span>entities: ResMut&lt;Entities&gt;, <span class="kw-2">mut </span>my_datas: CompMut&lt;MyData&gt;| {
-                    <span class="kw">let </span>ent1 = entities.create();
-                    <span class="kw">let </span>ent2 = entities.create();
+        World::new().run_system(
+            |<span class="kw-2">mut </span>entities: ResMut&lt;Entities&gt;, <span class="kw-2">mut </span>my_datas: CompMut&lt;MyData&gt;| {
+                <span class="kw">let </span>ent1 = entities.create();
+                <span class="kw">let </span>ent2 = entities.create();
 
-                    my_datas.insert(ent1, MyData(<span class="number">1</span>));
-                    my_datas.insert(ent2, MyData(<span class="number">2</span>));
+                my_datas.insert(ent1, MyData(<span class="number">1</span>));
+                my_datas.insert(ent2, MyData(<span class="number">2</span>));
 
-                    my_datas.get_many_mut([ent1, ent2, ent1]).unwrap_many();
-                },
-            )
-            .unwrap();
+                my_datas.get_many_mut([ent1, ent2, ent1]).unwrap_many();
+            },
+            (),
+        )
     }
 }
 </code></pre></div></section></main></body></html>

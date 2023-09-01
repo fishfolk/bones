@@ -316,6 +316,7 @@
 <a href="#316" id="316">316</a>
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Implementation of stage abstraction for running collections of systems over a [`World`].
 
 </span><span class="kw">use </span>std::collections::VecDeque;
@@ -329,7 +330,7 @@
     <span class="doccomment">/// Whether or not the startup systems have been run yet.
     </span><span class="kw">pub </span>has_started: bool,
     <span class="doccomment">/// The systems that should run at startup.
-    </span><span class="kw">pub </span>startup_systems: Vec&lt;System&gt;,
+    </span><span class="kw">pub </span>startup_systems: Vec&lt;StaticSystem&lt;(), ()&gt;&gt;,
 }
 <span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>SystemStages {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
@@ -361,20 +362,18 @@
     ///
     /// &gt; **Note:** You must call [`initialize_systems()`][Self::initialize_systems] once before
     /// &gt; calling `run()` one or more times.
-    </span><span class="kw">pub fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) -&gt; SystemResult {
+    </span><span class="kw">pub fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
         <span class="kw">if </span>!<span class="self">self</span>.has_started {
             <span class="kw">for </span>system <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.startup_systems {
                 system.initialize(world);
-                system.run(world).unwrap();
+                system.run(world, ());
             }
             <span class="self">self</span>.has_started = <span class="bool-val">true</span>;
         }
 
         <span class="kw">for </span>stage <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.stages {
-            stage.run(world)<span class="question-mark">?</span>;
+            stage.run(world);
         }
-
-        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Create a [`SystemStages`] collection, initialized with a stage for each [`CoreStage`].
@@ -393,17 +392,19 @@
     }
 
     <span class="doccomment">/// Add a system that will run only once, before all of the other non-startup systems.
-    </span><span class="kw">pub fn </span>add_startup_system&lt;Args, S: IntoSystem&lt;Args, ()&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: S) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>add_startup_system&lt;Args, S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: S) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self
+    </span><span class="kw">where
+        </span>S: IntoSystem&lt;Args, (), (), Sys = StaticSystem&lt;(), ()&gt;&gt;,
+    {
         <span class="self">self</span>.startup_systems.push(system.system());
         <span class="self">self
     </span>}
 
     <span class="doccomment">/// Add a [`System`] to the stage with the given label.
-    </span><span class="kw">pub fn </span>add_system_to_stage&lt;Args, S: IntoSystem&lt;Args, ()&gt;, L: StageLabel&gt;(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        label: L,
-        system: S,
-    ) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>add_system_to_stage&lt;Args, S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, label: <span class="kw">impl </span>StageLabel, system: S) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self
+    </span><span class="kw">where
+        </span>S: IntoSystem&lt;Args, (), (), Sys = StaticSystem&lt;(), ()&gt;&gt;,
+    {
         <span class="kw">let </span>name = label.name();
         <span class="kw">let </span>id = label.id();
         <span class="kw">let </span><span class="kw-2">mut </span>stage = <span class="prelude-val">None</span>;
@@ -468,14 +469,14 @@
     ///
     /// &gt; **Note:** You must call [`initialize()`][Self::initialize] once before calling `run()` one
     /// &gt; or more times.
-    </span><span class="kw">fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) -&gt; SystemResult;
+    </span><span class="kw">fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World);
     <span class="doccomment">/// Initialize the contained systems for the given `world`.
     ///
     /// Must be called once before calling [`run()`][Self::run].
     </span><span class="kw">fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World);
 
     <span class="doccomment">/// Add a system to this stage.
-    </span><span class="kw">fn </span>add_system(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: System&lt;()&gt;);
+    </span><span class="kw">fn </span>add_system(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: StaticSystem&lt;(), ()&gt;);
 }
 
 <span class="doccomment">/// A collection of systems that will be run in order.
@@ -487,7 +488,7 @@
     <span class="doccomment">/// The list of systems in the stage.
     ///
     /// Each system will be run in the order that they are in in this list.
-    </span><span class="kw">pub </span>systems: Vec&lt;System&lt;()&gt;&gt;,
+    </span><span class="kw">pub </span>systems: Vec&lt;StaticSystem&lt;(), ()&gt;&gt;,
 }
 
 <span class="kw">impl </span>SimpleSystemStage {
@@ -510,10 +511,10 @@
         <span class="self">self</span>.name.clone()
     }
 
-    <span class="kw">fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) -&gt; SystemResult {
+    <span class="kw">fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
         <span class="comment">// Run the systems
         </span><span class="kw">for </span>system <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.systems {
-            system.run(world)<span class="question-mark">?</span>;
+            system.run(world, ());
         }
 
         <span class="comment">// Drain the command queue
@@ -523,12 +524,10 @@
 
                 <span class="kw">for </span><span class="kw-2">mut </span>system <span class="kw">in </span>command_queue.queue.drain(..) {
                     system.initialize(world);
-                    system.run(world).unwrap();
+                    system.run(world, ());
                 }
             }
         }
-
-        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
@@ -538,7 +537,7 @@
         }
     }
 
-    <span class="kw">fn </span>add_system(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: System&lt;()&gt;) {
+    <span class="kw">fn </span>add_system(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: StaticSystem&lt;(), ()&gt;) {
         <span class="self">self</span>.systems.push(system);
     }
 }
@@ -585,10 +584,10 @@
 <span class="doccomment">/// A resource containing the [`Commands`] command queue.
 ///
 /// You can use [`Commands`] as a [`SystemParam`] as a shortcut to [`ResMut&lt;CommandQueue&gt;`].
-</span><span class="attr">#[derive(Debug, HasSchema, Default)]
+</span><span class="attr">#[derive(HasSchema, Default)]
 </span><span class="kw">pub struct </span>CommandQueue {
     <span class="doccomment">/// The system queue that will be run at the end of the stage
-    </span><span class="kw">pub </span>queue: VecDeque&lt;System&gt;,
+    </span><span class="kw">pub </span>queue: VecDeque&lt;StaticSystem&lt;(), ()&gt;&gt;,
 }
 
 <span class="kw">impl </span>Clone <span class="kw">for </span>CommandQueue {
@@ -608,7 +607,10 @@
 
 <span class="kw">impl </span>CommandQueue {
     <span class="doccomment">/// Add a system to be run at the end of the stage.
-    </span><span class="kw">pub fn </span>add&lt;Args, S: IntoSystem&lt;Args, ()&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: S) {
+    </span><span class="kw">pub fn </span>add&lt;Args, S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: S)
+    <span class="kw">where
+        </span>S: IntoSystem&lt;Args, (), (), Sys = StaticSystem&lt;(), ()&gt;&gt;,
+    {
         <span class="self">self</span>.queue.push_back(system.system());
     }
 }
@@ -630,7 +632,7 @@
         world.resources.get_cell::&lt;CommandQueue&gt;().unwrap()
     }
 
-    <span class="kw">fn </span>borrow(state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
         Commands(state.borrow_mut())
     }
 }
