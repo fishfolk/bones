@@ -7,6 +7,8 @@ use crate::prelude::*;
 pub use ::egui;
 use serde::Deserialize;
 
+pub mod widgets;
+
 /// The Bones Framework UI plugin.
 pub fn ui_plugin(_session: &mut Session) {
     // TODO: remove this plugin if it remains unused.

@@ -166,7 +166,7 @@ impl Game {
         self.shared_resources
             .iter()
             .find(|x| x.schema() == T::schema())
-            .map(|x| AtomicResource::from_untyped(x.clone_cell()))
+            .map(|x| AtomicResource::from_untyped(x.clone()))
     }
 
     /// Initialize a resource that will be shared across game sessions using it's [`Default`] value
@@ -235,7 +235,7 @@ impl Game {
                             .world
                             .resources
                             .untyped_mut()
-                            .insert_cell(r.clone_cell());
+                            .insert_cell(r.clone());
                     }
                 }
 
@@ -331,10 +331,7 @@ impl Sessions {
         let mut session = Session::new();
 
         // Make sure the new session has the same entities as the other sessions.
-        session
-            .world
-            .resources
-            .insert_cell(self.entities.clone_cell());
+        session.world.resources.insert_cell(self.entities.clone());
 
         // Initialize the sessions resource in the session so it will be available in [`Game::step()`].
         session.world.init_resource::<Sessions>();

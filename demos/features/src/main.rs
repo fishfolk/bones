@@ -30,6 +30,10 @@ struct GameMeta {
     title_font: FontMeta,
     /// The list of font files to load for the UI.
     fonts: SVec<Handle<Font>>,
+    /// The border to use the for main menu.
+    menu_border: BorderImageMeta,
+    /// The style to use for buttons.
+    button_style: ButtonThemeMeta,
 }
 
 /// Atlas information.
@@ -143,57 +147,73 @@ fn menu_system(
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
         .show(&egui_ctx, |ui| {
-            ui.vertical_centered(|ui| {
-                ui.add_space(20.0);
-                ui.label(meta.title_font.rich(localization.get("title")));
-                ui.add_space(20.0);
+            BorderedFrame::new(&meta.menu_border).show(ui, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.add_space(20.0);
+                    ui.label(meta.title_font.rich(localization.get("title")));
+                    ui.add_space(20.0);
 
-                if ui.button(localization.get("sprite-demo")).clicked() {
-                    // Delete the menu world
-                    session_options.delete = true;
+                    if BorderedButton::themed(&meta.button_style, localization.get("sprite-demo"))
+                        .show(ui)
+                        .clicked()
+                    {
+                        // Delete the menu world
+                        session_options.delete = true;
 
-                    // Create a session for the match
-                    sessions
-                        .create("sprite_demo")
-                        .install_plugin(sprite_demo_plugin);
-                }
+                        // Create a session for the match
+                        sessions
+                            .create("sprite_demo")
+                            .install_plugin(sprite_demo_plugin);
+                    }
 
-                if ui.button(localization.get("atlas-demo")).clicked() {
-                    // Delete the menu world
-                    session_options.delete = true;
+                    if BorderedButton::themed(&meta.button_style, localization.get("atlas-demo"))
+                        .show(ui)
+                        .clicked()
+                    {
+                        // Delete the menu world
+                        session_options.delete = true;
 
-                    // Create a session for the match
-                    sessions
-                        .create("atlas_demo")
-                        .install_plugin(atlas_demo_plugin);
-                }
+                        // Create a session for the match
+                        sessions
+                            .create("atlas_demo")
+                            .install_plugin(atlas_demo_plugin);
+                    }
 
-                if ui.button(localization.get("tilemap-demo")).clicked() {
-                    // Delete the menu world
-                    session_options.delete = true;
+                    if BorderedButton::themed(&meta.button_style, localization.get("tilemap-demo"))
+                        .show(ui)
+                        .clicked()
+                    {
+                        // Delete the menu world
+                        session_options.delete = true;
 
-                    // Create a session for the match
-                    sessions
-                        .create("tilemap_demo")
-                        .install_plugin(tilemap_demo_plugin);
-                }
+                        // Create a session for the match
+                        sessions
+                            .create("tilemap_demo")
+                            .install_plugin(tilemap_demo_plugin);
+                    }
 
-                if ui.button(localization.get("path2d-demo")).clicked() {
-                    // Delete the menu world
-                    session_options.delete = true;
+                    if BorderedButton::themed(&meta.button_style, localization.get("path2d-demo"))
+                        .show(ui)
+                        .clicked()
+                    {
+                        // Delete the menu world
+                        session_options.delete = true;
 
-                    // Create a session for the match
-                    sessions
-                        .create("path2d_demo")
-                        .install_plugin(path2d_demo_plugin);
-                }
+                        // Create a session for the match
+                        sessions
+                            .create("path2d_demo")
+                            .install_plugin(path2d_demo_plugin);
+                    }
 
-                ui.add_space(40.0);
+                    ui.add_space(30.0);
 
-                // When using a bones image in egui, we have to get it's corresponding egui texture
-                // from the egui textures resource.
-                ui.image(egui_textures.get(meta.menu_image), [100., 100.]);
-            });
+                    // When using a bones image in egui, we have to get it's corresponding egui texture
+                    // from the egui textures resource.
+                    ui.image(egui_textures.get(meta.menu_image), [100., 100.]);
+
+                    ui.add_space(30.0);
+                });
+            })
         });
 }
 

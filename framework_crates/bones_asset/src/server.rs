@@ -680,7 +680,8 @@ mod metadata {
             }
 
             // Use custom deserialize implementation if present.
-            if let Some(schema_deserialize) = self.ptr.schema().type_data.get::<SchemaDeserialize>() {
+            if let Some(schema_deserialize) = self.ptr.schema().type_data.get::<SchemaDeserialize>()
+            {
                 return schema_deserialize.deserialize(self.ptr, deserializer);
             }
 

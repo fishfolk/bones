@@ -3,7 +3,7 @@ use serde::{de::Error, Deserialize};
 
 use crate::prelude::*;
 
-/// Derivable schema [`type_data`][Schema::type_data] for types that implement
+/// Derivable schema [`type_data`][SchemaData::type_data] for types that implement
 /// [`Deserialize`][serde::Deserialize].
 ///
 /// This allows you use serde to implement custom deserialization logic instead of the default one

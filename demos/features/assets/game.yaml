@@ -8,5 +8,52 @@ title_font:
   font: Orbitron
   size: 20
   color: purple
+menu_border:
+  image: ./ui/panel.png
+  image_size: [44, 44]
+  border_size:
+    left: 16
+    right: 16
+    top: 16
+    bottom: 16
+  scale: 4
+button_style:
+  font:
+    font: Orbitron
+    color: white
+    size: 10
+  padding:
+    top: 6
+    left: 6
+    right: 6
+    bottom: 9
+  borders:
+    default:
+      image: ui/button.png
+      image_size: [14, 14]
+      border_size:
+        top: 5
+        bottom: 5
+        right: 5
+        left: 5
+      scale: 2
+    focused:
+      image: ui/button-focused.png
+      image_size: [14, 14]
+      border_size:
+        top: 5
+        bottom: 5
+        right: 5
+        left: 5
+      scale: 2
+    clicked:
+      image: ui/button-down.png
+      image_size: [14, 14]
+      border_size:
+        top: 5
+        bottom: 5
+        right: 5
+        left: 5
+      scale: 2
 fonts:
-  - ./fonts/Orbitron-Regular.ttf
+  - ./fonts/Orbitron.ttf

@@ -10,7 +10,7 @@ pub mod prelude {
     };
 
     #[cfg(feature = "ui")]
-    pub use super::ui::*;
+    pub use super::ui::{widgets::*, *};
 }
 
 pub mod audio;

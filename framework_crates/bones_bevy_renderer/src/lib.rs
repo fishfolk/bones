@@ -153,7 +153,9 @@ pub struct BonesData {
     /// The bones asset server cell.
     pub asset_server: Option<bones::AtomicResource<bones::AssetServer>>,
     /// Whether or not the egui fonts have been loaded.
-    pub has_loaded_fonts: bool,
+    pub has_initialized_egui: bool,
+    /// The bones egui texture resource.
+    pub bones_egui_textures: bones::AtomicResource<bones::EguiTextures>,
 }
 
 impl BonesBevyRenderer {
@@ -210,12 +212,6 @@ impl BonesBevyRenderer {
                     asset_server.set_io(io);
                 }
 
-                #[cfg(target_arch = "wasm32")]
-                {
-                    // TODO: Implement WASM asset loader.
-                    unimplemented!("WASM asset loading is not implemented yet.");
-                }
-
                 // Load the game assets
                 asset_server
                     .load_assets()
@@ -237,8 +233,12 @@ impl BonesBevyRenderer {
         // Insert the bones data
         app.insert_resource(BonesData {
             asset_server: self.game.shared_resource_cell::<bones::AssetServer>(),
+            has_initialized_egui: false,
+            bones_egui_textures: self
+                .game
+                .shared_resource_cell::<bones::EguiTextures>()
+                .unwrap(),
             game: self.game,
-            has_loaded_fonts: false,
         })
         .init_resource::<BonesGameEntity>();
 
@@ -333,7 +333,8 @@ fn step_bones_game(
     };
     let BonesData {
         game,
-        has_loaded_fonts,
+        has_initialized_egui: has_loaded_fonts,
+        bones_egui_textures,
         ..
     } = &mut data;
     let bevy_time = world.resource::<Time>();
@@ -346,6 +347,10 @@ fn step_bones_game(
         if !*has_loaded_fonts {
             update_egui_fonts(&egui_ctx, &asset_server);
             *has_loaded_fonts = true;
+
+            egui_ctx.data_mut(|map| {
+                map.insert_temp(bevy_egui::egui::Id::null(), bones_egui_textures.clone());
+            });
         }
 
         asset_server.handle_asset_changes(|asset_server, handle| {
@@ -396,10 +401,8 @@ fn step_bones_game(
         }
 
         // Update the inputs.
-        bones_world.resources.insert_cell(mouse_inputs.clone_cell());
-        bones_world
-            .resources
-            .insert_cell(keyboard_inputs.clone_cell());
+        bones_world.resources.insert_cell(mouse_inputs.clone());
+        bones_world.resources.insert_cell(keyboard_inputs.clone());
     });
 
     world.insert_resource(data);
