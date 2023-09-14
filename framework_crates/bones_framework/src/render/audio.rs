@@ -7,8 +7,17 @@ use crate::prelude::*;
 /// The audio source asset type, contains no data, but [`Handle<AudioSource>`] is still useful
 /// because it uniquely represents a sound/music that may be played outside of bones.
 #[derive(Copy, Clone, HasSchema, Debug, Default)]
-#[repr(C)]
+#[type_data(asset_loader("ogg", AudioLoader))]
 pub struct AudioSource;
+
+/// The audio file asset loader.
+pub struct AudioLoader;
+impl AssetLoader for AudioLoader {
+    // TODO: implement audio file loader.
+    fn load(&self, _ctx: AssetLoadCtx, _bytes: &[u8]) -> anyhow::Result<SchemaBox> {
+        Ok(SchemaBox::new(AudioSource))
+    }
+}
 
 /// Resource containing the audio event queue.
 #[derive(Default, HasSchema, Clone, Debug)]
