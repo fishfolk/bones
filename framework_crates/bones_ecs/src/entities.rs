@@ -15,6 +15,9 @@ use crate::prelude::*;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Entity(u32, u32);
 impl Entity {
+    /// An invalid entity, useful for placeholder entity values.
+    const INVALID: Entity = Entity(u32::MAX, u32::MAX);
+
     /// Creates a new `Entity` from the provided index and generation.
     ///
     /// > ⚠️ **Warning:** It is not generally recommended to manually create [`Entity`]s unless you
@@ -39,6 +42,11 @@ impl Entity {
     /// However, it can be useful to create caches to improve performances.
     pub fn generation(&self) -> u32 {
         self.1
+    }
+}
+impl Default for Entity {
+    fn default() -> Self {
+        Self::INVALID
     }
 }
 
@@ -330,7 +338,14 @@ impl Entities {
             if i >= BITSET_SIZE {
                 panic!("Exceeded maximum amount of concurrent entities.");
             }
-            Entity::new(i as u32, self.generation[i])
+            let entity = Entity::new(i as u32, self.generation[i]);
+
+            // Make sure we never return the invalid entity.
+            if unlikely(entity == Entity::INVALID) {
+                panic!("Ran out of entity IDs");
+            }
+
+            entity
         }
     }
 

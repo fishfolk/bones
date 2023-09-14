@@ -204,7 +204,7 @@ pub enum SchemaKind {
         /// The schema of the value type.
         value: &'static Schema,
     },
-    /// The represents a [`SchemaBox`].
+    /// The represents a [`SchemaBox`] with given type inside.
     Box(&'static Schema),
     /// The type represents a primitive value.
     Primitive(Primitive),

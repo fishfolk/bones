@@ -18,6 +18,7 @@ allow = [
   "CC0-1.0",
   "ISC",
   "BSD-2-Clause",
+  "BSD-2-Clause-Patent",
   "OpenSSL",
 ]
 default = "deny"

@@ -336,6 +336,16 @@ impl SchemaVec {
     }
 }
 
+impl<T: HasSchema> FromIterator<T> for SVec<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let mut this = Self::default();
+        for item in iter {
+            this.push(item);
+        }
+        this
+    }
+}
+
 impl<'a> IntoIterator for &'a SchemaVec {
     type Item = SchemaRef<'a>;
     type IntoIter = SchemaVecIter<'a>;
@@ -515,12 +525,20 @@ impl<T: HasSchema> SVec<T> {
 
     /// Iterate over references to the items in the vec.
     pub fn iter(&self) -> SVecIter<T> {
-        SVecIter { vec: self, idx: 0 }
+        SVecIter {
+            vec: self,
+            idx: 0,
+            end: self.len() - 1,
+        }
     }
 
     /// Iterate over mutable references to the items in the vec.
     pub fn iter_mut(&mut self) -> SVecIterMut<T> {
-        SVecIterMut { vec: self, idx: 0 }
+        SVecIterMut {
+            idx: 0,
+            end: self.len() - 1,
+            vec: self,
+        }
     }
 
     /// Get the length of the vector.
@@ -643,14 +661,24 @@ impl<'a, T: HasSchema> IntoIterator for &'a mut SVec<T> {
 pub struct SVecIter<'a, T: HasSchema> {
     vec: &'a SVec<T>,
     idx: usize,
+    end: usize,
 }
 impl<'a, T: HasSchema> Iterator for SVecIter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = self.vec.get(self.idx);
+        let item = (self.idx <= self.end).then(|| self.vec.get(self.idx).unwrap());
         if item.is_some() {
             self.idx += 1;
+        }
+        item
+    }
+}
+impl<'a, T: HasSchema> DoubleEndedIterator for SVecIter<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let item = (self.end >= self.idx).then(|| self.vec.get(self.end).unwrap());
+        if item.is_some() {
+            self.end -= 1;
         }
         item
     }
@@ -660,14 +688,26 @@ impl<'a, T: HasSchema> Iterator for SVecIter<'a, T> {
 pub struct SVecIterMut<'a, T: HasSchema> {
     vec: &'a mut SVec<T>,
     idx: usize,
+    end: usize,
 }
 impl<'a, T: HasSchema> Iterator for SVecIterMut<'a, T> {
     type Item = &'a mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = self.vec.get_mut(self.idx);
+        let item = (self.idx <= self.end).then(|| self.vec.get_mut(self.idx).unwrap());
         if item.is_some() {
             self.idx += 1;
+        }
+        // SOUND: we are returning data with the lifetime of the vec which is valid and sound,
+        // assuming we don't return two mutable references to the same item.
+        item.map(|x| unsafe { transmute_lifetime(x) })
+    }
+}
+impl<'a, T: HasSchema> DoubleEndedIterator for SVecIterMut<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let item = (self.end >= self.idx).then(|| self.vec.get_mut(self.end).unwrap());
+        if item.is_some() {
+            self.end -= 1;
         }
         // SOUND: we are returning data with the lifetime of the vec which is valid and sound,
         // assuming we don't return two mutable references to the same item.
@@ -681,4 +721,34 @@ impl<'a, T: HasSchema> Iterator for SVecIterMut<'a, T> {
 /// the lifetime, not the type of the reference.
 unsafe fn transmute_lifetime<'b, T>(v: &mut T) -> &'b mut T {
     std::mem::transmute(v)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn double_ended() {
+        let mut v = [1, 2, 3, 4, 5, 6].into_iter().collect::<SVec<_>>();
+
+        let mut iter = v.iter();
+        assert_eq!(iter.next_back(), Some(&6));
+        assert_eq!(iter.next_back(), Some(&5));
+        assert_eq!(iter.next(), Some(&1));
+        assert_eq!(iter.next(), Some(&2));
+        assert_eq!(iter.next_back(), Some(&4));
+        assert_eq!(iter.next(), Some(&3));
+        assert_eq!(iter.next_back(), None);
+        assert_eq!(iter.next(), None);
+
+        let mut iter = v.iter_mut();
+        assert_eq!(iter.next_back(), Some(&mut 6));
+        assert_eq!(iter.next_back(), Some(&mut 5));
+        assert_eq!(iter.next(), Some(&mut 1));
+        assert_eq!(iter.next(), Some(&mut 2));
+        assert_eq!(iter.next_back(), Some(&mut 4));
+        assert_eq!(iter.next(), Some(&mut 3));
+        assert_eq!(iter.next_back(), None);
+        assert_eq!(iter.next(), None);
+    }
 }

@@ -142,7 +142,13 @@ impl AssetIo for FileAssetIo {
             Some(folder) => self.packs_dir.join(folder),
             None => self.core_dir.clone(),
         };
-        let path = base_dir.join(loc.path);
+        // Make sure absolute paths are relative to pack.
+        let path = if loc.path.is_absolute() {
+            loc.path.strip_prefix("/").unwrap()
+        } else {
+            loc.path
+        };
+        let path = base_dir.join(path);
         Ok(std::fs::read(path)?)
     }
 
