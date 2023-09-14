@@ -189,11 +189,7 @@ fn apply_trauma(
     }
     trauma_events.queue.clear();
 }
-fn decay_trauma(
-    entities: Res<Entities>,
-    mut camera_shakes: CompMut<CameraShake>,
-    time: Res<Time>,
-) {
+fn decay_trauma(entities: Res<Entities>, mut camera_shakes: CompMut<CameraShake>, time: Res<Time>) {
     for (_ent, shake) in entities.iter_with(&mut camera_shakes) {
         shake.trauma = 0.0f32.max(shake.trauma - shake.decay_rate * time.delta_seconds())
     }

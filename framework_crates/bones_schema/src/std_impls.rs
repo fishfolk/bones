@@ -1,8 +1,8 @@
+#[cfg(feature = "serde")]
+use crate::ser_de::SchemaDeserialize;
 use bones_utils::{fxhash::FxHasher, ustr, Ustr};
 #[cfg(feature = "serde")]
 use serde::{de::Error, Deserialize};
-#[cfg(feature = "serde")]
-use crate::ser_de::SchemaDeserialize;
 
 use crate::{alloc::SchemaTypeMap, prelude::*, raw_fns::*};
 
