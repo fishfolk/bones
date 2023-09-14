@@ -670,6 +670,28 @@
 <a href="#670" id="670">670</a>
 <a href="#671" id="671">671</a>
 <a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     any::TypeId,
     fmt::Debug,
@@ -1057,6 +1079,28 @@
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         }
+    }
+}
+
+<span class="kw">impl</span>&lt;K: HasSchema, V: HasSchema&gt; FromIterator&lt;(K, V)&gt; <span class="kw">for </span>SMap&lt;K, V&gt; {
+    <span class="kw">fn </span>from_iter&lt;T: IntoIterator&lt;Item = (K, V)&gt;&gt;(iter: T) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>this = <span class="self">Self</span>::default();
+        <span class="kw">for </span>(k, v) <span class="kw">in </span>iter {
+            this.insert(k, v);
+        }
+        this
+    }
+}
+
+<span class="kw">impl</span>&lt;K: HasSchema, V: HasSchema&gt; std::ops::Index&lt;<span class="kw-2">&amp;</span>K&gt; <span class="kw">for </span>SMap&lt;K, V&gt; {
+    <span class="kw">type </span>Output = V;
+    <span class="kw">fn </span>index(<span class="kw-2">&amp;</span><span class="self">self</span>, index: <span class="kw-2">&amp;</span>K) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Output {
+        <span class="self">self</span>.get(index).unwrap()
+    }
+}
+<span class="kw">impl</span>&lt;K: HasSchema, V: HasSchema&gt; std::ops::IndexMut&lt;<span class="kw-2">&amp;</span>K&gt; <span class="kw">for </span>SMap&lt;K, V&gt; {
+    <span class="kw">fn </span>index_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: <span class="kw-2">&amp;</span>K) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Output {
+        <span class="self">self</span>.get_mut(index).unwrap()
     }
 }
 

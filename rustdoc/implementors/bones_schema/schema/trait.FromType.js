@@ -1,4 +1,7 @@
 (function() {var implementors = {
-"bones_asset":[["impl&lt;T: <a class=\"trait\" href=\"bones_asset/trait.HasSchema.html\" title=\"trait bones_asset::HasSchema\">HasSchema</a> + for&lt;'de&gt; <a class=\"trait\" href=\"https://docs.rs/serde/1.0.171/serde/de/trait.Deserialize.html\" title=\"trait serde::de::Deserialize\">Deserialize</a>&lt;'de&gt;&gt; <a class=\"trait\" href=\"bones_asset/trait.FromType.html\" title=\"trait bones_asset::FromType\">FromType</a>&lt;T&gt; for <a class=\"struct\" href=\"bones_asset/prelude/struct.SchemaDeserialize.html\" title=\"struct bones_asset::prelude::SchemaDeserialize\">SchemaDeserialize</a>"]],
-"bones_framework":[]
+"bones_asset":[],
+"bones_ecs":[],
+"bones_framework":[],
+"bones_lib":[],
+"bones_schema":[]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

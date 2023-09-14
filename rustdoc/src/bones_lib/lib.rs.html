@@ -531,7 +531,7 @@
     ///
     /// These are only guaranteed to be sorted and up-to-date immediately after calling
     /// [`Game::step()`].
-    </span><span class="kw">pub </span>sorted_session_keys: Vec&lt;Key&gt;,
+    </span><span class="kw">pub </span>sorted_session_keys: Vec&lt;Ustr&gt;,
     <span class="doccomment">/// Collection of resources that will have a shared instance of each be inserted into each
     /// session automatically.
     </span><span class="kw">pub </span>shared_resources: Vec&lt;UntypedAtomicResource&gt;,
@@ -693,7 +693,7 @@
 </span><span class="attr">#[derive(HasSchema, Default, Debug)]
 </span><span class="kw">pub struct </span>Sessions {
     entities: AtomicResource&lt;Entities&gt;,
-    map: HashMap&lt;Key, Session&gt;,
+    map: UstrMap&lt;Session&gt;,
 }
 
 <span class="doccomment">/// Resource that allows you to configure the current session.
@@ -711,9 +711,9 @@
 <span class="kw">impl </span>Sessions {
     <span class="doccomment">/// Create a new session, and borrow it mutably so it can be modified.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>create&lt;K: TryInto&lt;Key&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: K) -&gt; <span class="kw-2">&amp;mut </span>Session
+    </span><span class="kw">pub fn </span>create&lt;K: TryInto&lt;Ustr&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: K) -&gt; <span class="kw-2">&amp;mut </span>Session
     <span class="kw">where
-        </span>&lt;K <span class="kw">as </span>TryInto&lt;Key&gt;&gt;::Error: Debug,
+        </span>&lt;K <span class="kw">as </span>TryInto&lt;Ustr&gt;&gt;::Error: Debug,
     {
         <span class="kw">let </span>name = name.try_into().unwrap();
         <span class="comment">// Create a blank session
@@ -734,38 +734,38 @@
 
     <span class="doccomment">/// Delete a session.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>delete&lt;K: TryInto&lt;Key&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: K)
+    </span><span class="kw">pub fn </span>delete&lt;K: TryInto&lt;Ustr&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: K)
     <span class="kw">where
-        </span>&lt;K <span class="kw">as </span>TryInto&lt;Key&gt;&gt;::Error: Debug,
+        </span>&lt;K <span class="kw">as </span>TryInto&lt;Ustr&gt;&gt;::Error: Debug,
     {
         <span class="self">self</span>.map.remove(<span class="kw-2">&amp;</span>name.try_into().unwrap());
     }
 
     <span class="doccomment">/// Borrow a session from the sessions list.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>get&lt;K: TryInto&lt;Key&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, name: K) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Session&gt;
+    </span><span class="kw">pub fn </span>get&lt;K: TryInto&lt;Ustr&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, name: K) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Session&gt;
     <span class="kw">where
-        </span>&lt;K <span class="kw">as </span>TryInto&lt;Key&gt;&gt;::Error: Debug,
+        </span>&lt;K <span class="kw">as </span>TryInto&lt;Ustr&gt;&gt;::Error: Debug,
     {
         <span class="self">self</span>.map.get(<span class="kw-2">&amp;</span>name.try_into().unwrap())
     }
 
     <span class="doccomment">/// Borrow a session from the sessions list.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>get_mut&lt;K: TryInto&lt;Key&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: K) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Session&gt;
+    </span><span class="kw">pub fn </span>get_mut&lt;K: TryInto&lt;Ustr&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: K) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Session&gt;
     <span class="kw">where
-        </span>&lt;K <span class="kw">as </span>TryInto&lt;Key&gt;&gt;::Error: Debug,
+        </span>&lt;K <span class="kw">as </span>TryInto&lt;Ustr&gt;&gt;::Error: Debug,
     {
         <span class="self">self</span>.map.get_mut(<span class="kw-2">&amp;</span>name.try_into().unwrap())
     }
 
     <span class="doccomment">/// Mutably iterate over sessions.
-    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; hashbrown::hash_map::IterMut&lt;Key, Session&gt; {
+    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; std::collections::hash_map::IterMut&lt;Ustr, Session&gt; {
         <span class="self">self</span>.map.iter_mut()
     }
 
     <span class="doccomment">/// Iterate over sessions.
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; hashbrown::hash_map::Iter&lt;Key, Session&gt; {
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::collections::hash_map::Iter&lt;Ustr, Session&gt; {
         <span class="self">self</span>.map.iter()
     }
 }

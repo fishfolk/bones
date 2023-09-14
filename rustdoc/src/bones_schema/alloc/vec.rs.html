@@ -682,6 +682,76 @@
 <a href="#682" id="682">682</a>
 <a href="#683" id="683">683</a>
 <a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     any::TypeId, fmt::Debug, iter::Iterator, marker::PhantomData, mem::MaybeUninit, sync::OnceLock,
 };
@@ -1020,6 +1090,16 @@
     }
 }
 
+<span class="kw">impl</span>&lt;T: HasSchema&gt; FromIterator&lt;T&gt; <span class="kw">for </span>SVec&lt;T&gt; {
+    <span class="kw">fn </span>from_iter&lt;I: IntoIterator&lt;Item = T&gt;&gt;(iter: I) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>this = <span class="self">Self</span>::default();
+        <span class="kw">for </span>item <span class="kw">in </span>iter {
+            this.push(item);
+        }
+        this
+    }
+}
+
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaVec {
     <span class="kw">type </span>Item = SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;;
     <span class="kw">type </span>IntoIter = SchemaVecIter&lt;<span class="lifetime">&#39;a</span>&gt;;
@@ -1199,12 +1279,20 @@
 
     <span class="doccomment">/// Iterate over references to the items in the vec.
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SVecIter&lt;T&gt; {
-        SVecIter { vec: <span class="self">self</span>, idx: <span class="number">0 </span>}
+        SVecIter {
+            vec: <span class="self">self</span>,
+            idx: <span class="number">0</span>,
+            end: <span class="self">self</span>.len() - <span class="number">1</span>,
+        }
     }
 
     <span class="doccomment">/// Iterate over mutable references to the items in the vec.
     </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SVecIterMut&lt;T&gt; {
-        SVecIterMut { vec: <span class="self">self</span>, idx: <span class="number">0 </span>}
+        SVecIterMut {
+            idx: <span class="number">0</span>,
+            end: <span class="self">self</span>.len() - <span class="number">1</span>,
+            vec: <span class="self">self</span>,
+        }
     }
 
     <span class="doccomment">/// Get the length of the vector.
@@ -1327,14 +1415,24 @@
 </span><span class="kw">pub struct </span>SVecIter&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; {
     vec: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SVec&lt;T&gt;,
     idx: usize,
+    end: usize,
 }
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; Iterator <span class="kw">for </span>SVecIter&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
-        <span class="kw">let </span>item = <span class="self">self</span>.vec.get(<span class="self">self</span>.idx);
+        <span class="kw">let </span>item = (<span class="self">self</span>.idx &lt;= <span class="self">self</span>.end).then(|| <span class="self">self</span>.vec.get(<span class="self">self</span>.idx).unwrap());
         <span class="kw">if </span>item.is_some() {
             <span class="self">self</span>.idx += <span class="number">1</span>;
+        }
+        item
+    }
+}
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; DoubleEndedIterator <span class="kw">for </span>SVecIter&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    <span class="kw">fn </span>next_back(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
+        <span class="kw">let </span>item = (<span class="self">self</span>.end &gt;= <span class="self">self</span>.idx).then(|| <span class="self">self</span>.vec.get(<span class="self">self</span>.end).unwrap());
+        <span class="kw">if </span>item.is_some() {
+            <span class="self">self</span>.end -= <span class="number">1</span>;
         }
         item
     }
@@ -1344,14 +1442,26 @@
 </span><span class="kw">pub struct </span>SVecIterMut&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; {
     vec: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SVec&lt;T&gt;,
     idx: usize,
+    end: usize,
 }
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; Iterator <span class="kw">for </span>SVecIterMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>T;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
-        <span class="kw">let </span>item = <span class="self">self</span>.vec.get_mut(<span class="self">self</span>.idx);
+        <span class="kw">let </span>item = (<span class="self">self</span>.idx &lt;= <span class="self">self</span>.end).then(|| <span class="self">self</span>.vec.get_mut(<span class="self">self</span>.idx).unwrap());
         <span class="kw">if </span>item.is_some() {
             <span class="self">self</span>.idx += <span class="number">1</span>;
+        }
+        <span class="comment">// SOUND: we are returning data with the lifetime of the vec which is valid and sound,
+        // assuming we don&#39;t return two mutable references to the same item.
+        </span>item.map(|x| <span class="kw">unsafe </span>{ transmute_lifetime(x) })
+    }
+}
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; DoubleEndedIterator <span class="kw">for </span>SVecIterMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    <span class="kw">fn </span>next_back(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
+        <span class="kw">let </span>item = (<span class="self">self</span>.end &gt;= <span class="self">self</span>.idx).then(|| <span class="self">self</span>.vec.get_mut(<span class="self">self</span>.end).unwrap());
+        <span class="kw">if </span>item.is_some() {
+            <span class="self">self</span>.end -= <span class="number">1</span>;
         }
         <span class="comment">// SOUND: we are returning data with the lifetime of the vec which is valid and sound,
         // assuming we don&#39;t return two mutable references to the same item.
@@ -1365,5 +1475,35 @@
 /// the lifetime, not the type of the reference.
 </span><span class="kw">unsafe fn </span>transmute_lifetime&lt;<span class="lifetime">&#39;b</span>, T&gt;(v: <span class="kw-2">&amp;mut </span>T) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span>T {
     std::mem::transmute(v)
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>test {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>double_ended() {
+        <span class="kw">let </span><span class="kw-2">mut </span>v = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>].into_iter().collect::&lt;SVec&lt;<span class="kw">_</span>&gt;&gt;();
+
+        <span class="kw">let </span><span class="kw-2">mut </span>iter = v.iter();
+        <span class="macro">assert_eq!</span>(iter.next_back(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">6</span>));
+        <span class="macro">assert_eq!</span>(iter.next_back(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">5</span>));
+        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">1</span>));
+        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">2</span>));
+        <span class="macro">assert_eq!</span>(iter.next_back(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">4</span>));
+        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">3</span>));
+        <span class="macro">assert_eq!</span>(iter.next_back(), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">None</span>);
+
+        <span class="kw">let </span><span class="kw-2">mut </span>iter = v.iter_mut();
+        <span class="macro">assert_eq!</span>(iter.next_back(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span><span class="number">6</span>));
+        <span class="macro">assert_eq!</span>(iter.next_back(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span><span class="number">5</span>));
+        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span><span class="number">1</span>));
+        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span><span class="number">2</span>));
+        <span class="macro">assert_eq!</span>(iter.next_back(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span><span class="number">4</span>));
+        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span><span class="number">3</span>));
+        <span class="macro">assert_eq!</span>(iter.next_back(), <span class="prelude-val">None</span>);
+        <span class="macro">assert_eq!</span>(iter.next(), <span class="prelude-val">None</span>);
+    }
 }
 </code></pre></div></section></main></body></html>

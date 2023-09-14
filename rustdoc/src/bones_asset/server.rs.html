@@ -905,6 +905,11 @@
 <a href="#905" id="905">905</a>
 <a href="#906" id="906">906</a>
 <a href="#907" id="907">907</a>
+<a href="#908" id="908">908</a>
+<a href="#909" id="909">909</a>
+<a href="#910" id="910">910</a>
+<a href="#911" id="911">911</a>
+<a href="#912" id="912">912</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::path::{Path, PathBuf};
 
 <span class="kw">use </span>anyhow::Context;
@@ -1208,7 +1213,7 @@
 
     <span class="kw">fn </span>impl_load_asset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, loc: AssetLocRef, force: bool) -&gt; anyhow::Result&lt;UntypedHandle&gt; {
         <span class="kw">let </span>contents = <span class="self">self</span>.io.load_file(loc).context(<span class="macro">format!</span>(
-            <span class="string">&quot;Could not load asset file: {:?} from path {:?}&quot;</span>,
+            <span class="string">&quot;Could not load asset file: {:?} from pack {:?}&quot;</span>,
             loc.path,
             loc.pack.unwrap_or(<span class="string">&quot;[core]&quot;</span>)
         ))<span class="question-mark">?</span>;
@@ -1793,13 +1798,18 @@
         {
             <span class="comment">// SOUND: schema asserts this is a SchemaMap.
             </span><span class="kw">let </span>v = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>SchemaMap) };
-            <span class="kw">if </span>v.key_schema() != String::schema() {
+            <span class="kw">let </span>is_ustr = v.key_schema() == Ustr::schema();
+            <span class="kw">if </span>v.key_schema() != String::schema() &amp;&amp; !is_ustr {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(A::Error::custom(
-                    <span class="string">&quot;Can only deserialize maps with string keys.&quot;</span>,
+                    <span class="string">&quot;Can only deserialize maps with `String` or `Ustr` keys.&quot;</span>,
                 ));
             }
             <span class="kw">while let </span><span class="prelude-val">Some</span>(key) = map.next_key::&lt;String&gt;()<span class="question-mark">? </span>{
-                <span class="kw">let </span>key = SchemaBox::new(key);
+                <span class="kw">let </span>key = <span class="kw">if </span>is_ustr {
+                    SchemaBox::new(ustr(<span class="kw-2">&amp;</span>key))
+                } <span class="kw">else </span>{
+                    SchemaBox::new(key)
+                };
                 <span class="kw">let </span><span class="kw-2">mut </span>value = SchemaBox::default(v.value_schema());
                 map.next_value_seed(SchemaPtrLoadCtx {
                     ctx: <span class="self">self</span>.ctx,

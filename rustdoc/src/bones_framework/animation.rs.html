@@ -123,11 +123,13 @@
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Animation utilities and systems.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-
-<span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>prelude {
     <span class="kw">pub use super</span>::{AnimatedSprite, AnimationBankSprite};
@@ -142,13 +144,15 @@
 
 <span class="doccomment">/// Component that may be added to entities with an [`AtlasSprite`] to animate them.
 </span><span class="attr">#[derive(Clone, HasSchema, Debug)]
+#[repr(C)]
 </span><span class="kw">pub struct </span>AnimatedSprite {
     <span class="doccomment">/// The current frame in the animation.
-    </span><span class="kw">pub </span>index: usize,
+    </span><span class="kw">pub </span>index: u32,
     <span class="doccomment">/// The frames in the animation.
     ///
     /// These are the indexes into the atlas, specified in the order they will be played.
-    </span><span class="kw">pub </span>frames: Arc&lt;[u32]&gt;,
+    </span><span class="comment">// TODO: Put Animation Frames in an `Arc` to Avoid Snapshot Clone Cost.
+    </span><span class="kw">pub </span>frames: SVec&lt;u32&gt;,
     <span class="doccomment">/// The frames per second to play the animation at.
     </span><span class="kw">pub </span>fps: f32,
     <span class="doccomment">/// The amount of time the current frame has been playing
@@ -170,19 +174,21 @@
 </span><span class="attr">#[derive(Clone, HasSchema, Debug, Default)]
 </span><span class="kw">pub struct </span>AnimationBankSprite {
     <span class="doccomment">/// The current animation.
-    </span><span class="kw">pub </span>current: Key,
+    </span><span class="kw">pub </span>current: Ustr,
     <span class="doccomment">/// The collection of animations in this animation bank.
-    </span><span class="kw">pub </span>animations: Arc&lt;HashMap&lt;Key, AnimatedSprite&gt;&gt;,
+    </span><span class="comment">// TODO: Put Animation Frames in an `Arc` to Avoid Snapshot Clone Cost.
+    // TODO: Use more economic key type such as `ustr`
+    </span><span class="kw">pub </span>animations: SMap&lt;Ustr, AnimatedSprite&gt;,
     <span class="attr">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(default))]
     </span><span class="doccomment">/// The last animation that was playing.
-    </span><span class="kw">pub </span>last_animation: Key,
+    </span><span class="kw">pub </span>last_animation: Ustr,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>AnimatedSprite {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             index: <span class="number">0</span>,
-            frames: Arc::from([]),
+            frames: default(),
             fps: <span class="number">0.0</span>,
             timer: <span class="number">0.0</span>,
             repeat: <span class="bool-val">true</span>,
@@ -207,18 +213,20 @@
         animated_sprite.timer += time.delta_seconds();
 
         <span class="comment">// If we are ready to go to the next frame
-        </span><span class="kw">if </span>(animated_sprite.index != animated_sprite.frames.len() - <span class="number">1 </span>|| animated_sprite.repeat)
+        </span><span class="kw">if </span>(animated_sprite.index != animated_sprite.frames.len() <span class="kw">as </span>u32 - <span class="number">1
+            </span>|| animated_sprite.repeat)
             &amp;&amp; animated_sprite.timer &gt; <span class="number">1.0 </span>/ animated_sprite.fps.max(f32::MIN_POSITIVE)
         {
             <span class="comment">// Restart the timer
             </span>animated_sprite.timer = <span class="number">0.0</span>;
 
             <span class="comment">// Increment and loop around the current index
-            </span>animated_sprite.index = (animated_sprite.index + <span class="number">1</span>) % animated_sprite.frames.len();
+            </span>animated_sprite.index =
+                (animated_sprite.index + <span class="number">1</span>) % animated_sprite.frames.len() <span class="kw">as </span>u32;
         }
 
         <span class="comment">// Set the atlas sprite to match the current frame of the animated sprite
-        </span>atlas_sprite.index = animated_sprite.frames[animated_sprite.index];
+        </span>atlas_sprite.index = animated_sprite.frames[animated_sprite.index <span class="kw">as </span>usize];
     }
 }
 

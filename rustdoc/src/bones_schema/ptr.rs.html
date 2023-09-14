@@ -923,6 +923,30 @@
 <a href="#923" id="923">923</a>
 <a href="#924" id="924">924</a>
 <a href="#925" id="925">925</a>
+<a href="#926" id="926">926</a>
+<a href="#927" id="927">927</a>
+<a href="#928" id="928">928</a>
+<a href="#929" id="929">929</a>
+<a href="#930" id="930">930</a>
+<a href="#931" id="931">931</a>
+<a href="#932" id="932">932</a>
+<a href="#933" id="933">933</a>
+<a href="#934" id="934">934</a>
+<a href="#935" id="935">935</a>
+<a href="#936" id="936">936</a>
+<a href="#937" id="937">937</a>
+<a href="#938" id="938">938</a>
+<a href="#939" id="939">939</a>
+<a href="#940" id="940">940</a>
+<a href="#941" id="941">941</a>
+<a href="#942" id="942">942</a>
+<a href="#943" id="943">943</a>
+<a href="#944" id="944">944</a>
+<a href="#945" id="945">945</a>
+<a href="#946" id="946">946</a>
+<a href="#947" id="947">947</a>
+<a href="#948" id="948">948</a>
+<a href="#949" id="949">949</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Schema-aware smart pointers.
 
 </span><span class="kw">use </span>std::{
@@ -1674,6 +1698,30 @@
             <span class="comment">// Drop the type
             </span>(drop_fn)(<span class="self">self</span>.ptr.as_mut().as_ptr());
         }
+    }
+}
+
+<span class="kw">unsafe impl </span>HasSchema <span class="kw">for </span>SchemaBox {
+    <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+        <span class="kw">use </span><span class="kw">crate</span>::raw_fns::<span class="kw-2">*</span>;
+        <span class="kw">use </span>std::alloc::Layout;
+        <span class="kw">static </span>S: OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt; = OnceLock::new();
+        <span class="kw">let </span>layout = Layout::new::&lt;<span class="self">Self</span>&gt;();
+        S.get_or_init(|| {
+            SCHEMA_REGISTRY.register(SchemaData {
+                kind: SchemaKind::Primitive(Primitive::Opaque {
+                    size: layout.size(),
+                    align: layout.align(),
+                }),
+                type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="self">Self</span>&gt;()),
+                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone),
+                drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop),
+                default_fn: <span class="prelude-val">None</span>,
+                hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash),
+                eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq),
+                type_data: default(),
+            })
+        })
     }
 }
 

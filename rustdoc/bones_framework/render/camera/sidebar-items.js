@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["spawn_default_camera"],"struct":["Camera","ClearColor","Viewport"]};
+window.SIDEBAR_ITEMS = {"fn":["plugin","spawn_default_camera"],"struct":["Camera","CameraShake","CameraTraumaEvents","ClearColor","ShakeNoise","Viewport"]};

@@ -2,15 +2,15 @@
 </div></details><h2 id="implementations" class="small-section-header">Implementations<a href="#implementations" class="anchor">§</a></h2><div id="implementations-list"><details class="toggle implementors-toggle" open><summary><section id="impl-BonesImageIds" class="impl"><a class="srclink rightside" href="../src/bones_bevy_renderer/lib.rs.html#72-116">source</a><a href="#impl-BonesImageIds" class="anchor">§</a><h3 class="code-header">impl <a class="struct" href="struct.BonesImageIds.html" title="struct bones_bevy_renderer::BonesImageIds">BonesImageIds</a></h3></section></summary><div class="impl-items"><details class="toggle method-toggle" open><summary><section id="method.load_bones_images" class="method"><a class="srclink rightside" href="../src/bones_bevy_renderer/lib.rs.html#74-93">source</a><h4 class="code-header">pub fn <a href="#method.load_bones_images" class="fn">load_bones_images</a>(
     &amp;mut self,
     bones_assets: &amp;mut AssetServer,
-    bones_egui_textures: &amp;mut <a class="struct" href="../bones_framework/render/ui/struct.EguiTextures.html" title="struct bones_framework::render::ui::EguiTextures">EguiTextures</a>,
+    bones_egui_textures: &amp;mut EguiTextures,
     bevy_images: &amp;mut Assets&lt;Image&gt;,
     bevy_egui_textures: &amp;mut EguiUserTextures
 )</h4></section></summary><div class="docblock"><p>Load all bones images into bevy.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.load_bones_image" class="method"><a class="srclink rightside" href="../src/bones_bevy_renderer/lib.rs.html#96-115">source</a><h4 class="code-header">pub fn <a href="#method.load_bones_image" class="fn">load_bones_image</a>(
     &amp;mut self,
-    bones_handle: Handle&lt;<a class="enum" href="../bones_framework/render/sprite/enum.Image.html" title="enum bones_framework::render::sprite::Image">Image</a>&gt;,
-    image: &amp;mut <a class="enum" href="../bones_framework/render/sprite/enum.Image.html" title="enum bones_framework::render::sprite::Image">Image</a>,
-    bones_egui_textures: &amp;mut <a class="struct" href="../bones_framework/render/ui/struct.EguiTextures.html" title="struct bones_framework::render::ui::EguiTextures">EguiTextures</a>,
+    bones_handle: Handle&lt;Image&gt;,
+    image: &amp;mut Image,
+    bones_egui_textures: &amp;mut EguiTextures,
     bevy_images: &amp;mut Assets&lt;Image&gt;,
     bevy_egui_textures: &amp;mut EguiUserTextures
 )</h4></section></summary><div class="docblock"><p>Load a bones image into bevy.</p>

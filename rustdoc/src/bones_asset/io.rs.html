@@ -199,6 +199,12 @@
 <a href="#199" id="199">199</a>
 <a href="#200" id="200">200</a>
 <a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::path::PathBuf;
 
 <span class="kw">use </span>bones_utils::HashMap;
@@ -343,7 +349,13 @@
             <span class="prelude-val">Some</span>(folder) =&gt; <span class="self">self</span>.packs_dir.join(folder),
             <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.core_dir.clone(),
         };
-        <span class="kw">let </span>path = base_dir.join(loc.path);
+        <span class="comment">// Make sure absolute paths are relative to pack.
+        </span><span class="kw">let </span>path = <span class="kw">if </span>loc.path.is_absolute() {
+            loc.path.strip_prefix(<span class="string">&quot;/&quot;</span>).unwrap()
+        } <span class="kw">else </span>{
+            loc.path
+        };
+        <span class="kw">let </span>path = base_dir.join(path);
         <span class="prelude-val">Ok</span>(std::fs::read(path)<span class="question-mark">?</span>)
     }
 

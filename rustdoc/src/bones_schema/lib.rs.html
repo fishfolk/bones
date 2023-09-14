@@ -41,6 +41,8 @@
 <a href="#41" id="41">41</a>
 <a href="#42" id="42">42</a>
 <a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Simple reflection system based on the `#[repr(C)]` memory layout.
 //!
 //! You can derive [`HasSchema`] for your Rust types to unlock integration with the `bones_schema`
@@ -59,6 +61,8 @@
 
 <span class="doccomment">/// The prelude.
 </span><span class="kw">pub mod </span>prelude {
+    <span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
+    </span><span class="kw">pub use </span><span class="kw">crate</span>::ser_de::SchemaDeserialize;
     <span class="kw">pub use crate</span>::{
         alloc::{SMap, SVec, SchemaMap, SchemaVec},
         ptr::<span class="kw-2">*</span>,
