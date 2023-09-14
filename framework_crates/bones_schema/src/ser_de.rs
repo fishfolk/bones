@@ -1,3 +1,4 @@
+use bones_utils::ustr;
 use erased_serde::Deserializer;
 use serde::{de::Error, Deserialize};
 
@@ -82,6 +83,8 @@ unsafe impl HasSchema for SchemaDeserialize {
         let layout = Layout::new::<Self>();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: ustr("SchemaDeserialize"),
+                full_name: ustr(concat!(module_path!(), "::SchemaDeserialize")),
                 kind: SchemaKind::Primitive(Primitive::Opaque {
                     size: layout.size(),
                     align: layout.align(),

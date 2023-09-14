@@ -760,6 +760,8 @@ unsafe impl HasSchema for SchemaBox {
         let layout = Layout::new::<Self>();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: ustr("SchemaBox"),
+                full_name: ustr("bones_schema::ptr::SchemaBox"),
                 kind: SchemaKind::Primitive(Primitive::Opaque {
                     size: layout.size(),
                     align: layout.align(),
@@ -834,7 +836,10 @@ unsafe impl<T: HasSchema> HasSchema for SBox<T> {
     fn schema() -> &'static Schema {
         static S: OnceLock<&'static Schema> = OnceLock::new();
         S.get_or_init(|| {
+            let short_name = format!("SBox<{}>", std::any::type_name::<T>());
             SCHEMA_REGISTRY.register(SchemaData {
+                name: ustr(&short_name),
+                full_name: ustr(&format!("bones_schema::ptr::{short_name}")),
                 kind: SchemaKind::Box(T::schema()),
                 type_id: Some(TypeId::of::<Self>()),
                 clone_fn: Some(<Self as RawClone>::raw_clone),

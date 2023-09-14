@@ -2,6 +2,8 @@
 
 use std::{alloc::Layout, any::TypeId, borrow::Cow};
 
+use bones_utils::Ustr;
+
 use crate::{alloc::SchemaTypeMap, prelude::*};
 
 /// Trait implemented for types that have a [`Schema`].
@@ -121,11 +123,21 @@ impl Schema {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
-// TODO: Add name fields to `SchemaData`.
-// We may want to to have both "full" names and "short" names. We have to think about whether or not
-// we want to have some sort of a module path type or just make the full name include the module
-// path in whatever way it wants to.
 pub struct SchemaData {
+    /// The short name of the type.
+    ///
+    /// **Note:** Currently bones isn't very standardized as far as name generation for Rust or
+    /// other language type names, and this is mostly for diagnostics. This may change in the future
+    /// but for now there are no guarantees.
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_ustr"))]
+    pub name: Ustr,
+    /// The full name of the type, including any module specifiers.
+    ///
+    /// **Note:** Currently bones isn't very standardized as far as name generation for Rust or
+    /// other language type names, and this is mostly for diagnostics. This may change in the future
+    /// but for now there are no guarantees.
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_ustr"))]
+    pub full_name: Ustr,
     /// The kind of schema.
     pub kind: SchemaKind,
     #[cfg_attr(feature = "serde", serde(skip))]
@@ -182,6 +194,12 @@ pub struct SchemaData {
     /// total equality, not partial equality.
     #[cfg_attr(feature = "serde", serde(skip))]
     pub eq_fn: Option<unsafe extern "C-unwind" fn(a: *const u8, b: *const u8) -> bool>,
+}
+
+#[cfg(feature = "serde")]
+fn deserialize_ustr<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Ustr, D::Error> {
+    use serde::Deserialize;
+    Ok(Ustr::from(&String::deserialize(d)?))
 }
 
 /// A schema describes the data layout of a type, to enable dynamic access to the type's data

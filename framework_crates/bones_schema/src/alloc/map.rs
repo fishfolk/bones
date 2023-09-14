@@ -6,7 +6,7 @@ use std::{
     sync::OnceLock,
 };
 
-use bones_utils::{hashbrown::hash_map, HashMap};
+use bones_utils::{hashbrown::hash_map, ustr, HashMap};
 
 use crate::{
     prelude::*,
@@ -537,7 +537,14 @@ unsafe impl<K: HasSchema, V: HasSchema> HasSchema for SMap<K, V> {
     fn schema() -> &'static Schema {
         static S: OnceLock<&'static Schema> = OnceLock::new();
         S.get_or_init(|| {
+            let short_name = format!(
+                "SMap<{}, {}>",
+                std::any::type_name::<K>(),
+                std::any::type_name::<V>()
+            );
             SCHEMA_REGISTRY.register(SchemaData {
+                name: ustr(&short_name),
+                full_name: ustr(&format!("bones_schema::ptr::{short_name}")),
                 kind: SchemaKind::Map {
                     key: K::schema(),
                     value: V::schema(),

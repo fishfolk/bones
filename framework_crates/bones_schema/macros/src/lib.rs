@@ -169,6 +169,8 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                     S.get_or_init(|| {
                         let layout = std::alloc::Layout::new::<Self>();
                         #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
+                            name: bones_utils::ustr(stringify!(#name)),
+                            full_name: bones_utils::ustr(concat!(module_path!(), stringify!(#name))),
                             type_id: Some(std::any::TypeId::of::<Self>()),
                             clone_fn: #clone_fn,
                             default_fn: #default_fn,
@@ -237,6 +239,8 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                     schema: {
                                         let layout = ::std::alloc::Layout::new::<#ty>();
                                         #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
+                                            name: bones_utils::ustr(stringify!(#ty)),
+                                            full_name: bones_utils::ustr(concat!(module_path!(), stringify!(#ty))),
                                             kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
                                                 size: layout.size(),
                                                 align: layout.align(),
@@ -294,6 +298,8 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                 static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();
                 S.get_or_init(|| {
                     #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
+                        name: bones_utils::ustr(stringify!(#name)),
+                        full_name: bones_utils::ustr(concat!(module_path!(), stringify!(#name))),
                         type_id: Some(std::any::TypeId::of::<Self>()),
                         kind: #schema_kind,
                         type_data: #type_datas,

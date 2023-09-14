@@ -26,6 +26,7 @@ pub mod prelude {
     };
     #[cfg(feature = "derive")]
     pub use bones_schema_macros::*;
+    pub use bones_utils;
     pub use ulid::Ulid;
 }
 
@@ -42,4 +43,4 @@ mod std_impls;
 
 /// Serde implementations for [`Schema`].
 #[cfg(feature = "serde")]
-mod ser_de;
+pub mod ser_de;

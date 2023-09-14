@@ -11,7 +11,7 @@ categories.workspace    = true
 keywords.workspace      = true
 
 [features]
-default   = ["derive"]
+default   = ["derive", "serde"]
 serde     = ["dep:serde", "dep:erased-serde", "ulid/serde", "bones_utils/serde"]
 derive    = ["bones_schema_macros"]
 glam      = ["dep:glam"]
