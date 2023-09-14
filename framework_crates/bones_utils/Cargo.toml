@@ -11,7 +11,7 @@ categories.workspace    = true
 keywords.workspace      = true
 
 [features]
-serde = ["dep:serde", "hashbrown/serde"]
+serde = ["dep:serde", "hashbrown/serde", "ustr/serde"]
 
 [dependencies]
 bones_utils_macros = { version = "0.3", path = "./macros" }
@@ -24,3 +24,4 @@ parking_lot        = "0.12"
 serde              = { version = "1.0", optional = true }
 maybe-owned        = "0.3"
 branches           = "0.1"
+ustr               = "0.10.0"

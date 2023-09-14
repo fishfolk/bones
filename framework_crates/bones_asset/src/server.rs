@@ -301,7 +301,7 @@ impl AssetServer {
 
     fn impl_load_asset(&mut self, loc: AssetLocRef, force: bool) -> anyhow::Result<UntypedHandle> {
         let contents = self.io.load_file(loc).context(format!(
-            "Could not load asset file: {:?} from path {:?}",
+            "Could not load asset file: {:?} from pack {:?}",
             loc.path,
             loc.pack.unwrap_or("[core]")
         ))?;
@@ -886,13 +886,18 @@ mod metadata {
         {
             // SOUND: schema asserts this is a SchemaMap.
             let v = unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaMap) };
-            if v.key_schema() != String::schema() {
+            let is_ustr = v.key_schema() == Ustr::schema();
+            if v.key_schema() != String::schema() && !is_ustr {
                 return Err(A::Error::custom(
-                    "Can only deserialize maps with string keys.",
+                    "Can only deserialize maps with `String` or `Ustr` keys.",
                 ));
             }
             while let Some(key) = map.next_key::<String>()? {
-                let key = SchemaBox::new(key);
+                let key = if is_ustr {
+                    SchemaBox::new(ustr(&key))
+                } else {
+                    SchemaBox::new(key)
+                };
                 let mut value = SchemaBox::default(v.value_schema());
                 map.next_value_seed(SchemaPtrLoadCtx {
                     ctx: self.ctx,

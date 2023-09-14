@@ -141,7 +141,7 @@ pub struct Game {
     ///
     /// These are only guaranteed to be sorted and up-to-date immediately after calling
     /// [`Game::step()`].
-    pub sorted_session_keys: Vec<Key>,
+    pub sorted_session_keys: Vec<Ustr>,
     /// Collection of resources that will have a shared instance of each be inserted into each
     /// session automatically.
     pub shared_resources: Vec<UntypedAtomicResource>,
@@ -303,7 +303,7 @@ impl Game {
 #[derive(HasSchema, Default, Debug)]
 pub struct Sessions {
     entities: AtomicResource<Entities>,
-    map: HashMap<Key, Session>,
+    map: UstrMap<Session>,
 }
 
 /// Resource that allows you to configure the current session.
@@ -321,9 +321,9 @@ pub struct SessionOptions {
 impl Sessions {
     /// Create a new session, and borrow it mutably so it can be modified.
     #[track_caller]
-    pub fn create<K: TryInto<Key>>(&mut self, name: K) -> &mut Session
+    pub fn create<K: TryInto<Ustr>>(&mut self, name: K) -> &mut Session
     where
-        <K as TryInto<Key>>::Error: Debug,
+        <K as TryInto<Ustr>>::Error: Debug,
     {
         let name = name.try_into().unwrap();
         // Create a blank session
@@ -344,38 +344,38 @@ impl Sessions {
 
     /// Delete a session.
     #[track_caller]
-    pub fn delete<K: TryInto<Key>>(&mut self, name: K)
+    pub fn delete<K: TryInto<Ustr>>(&mut self, name: K)
     where
-        <K as TryInto<Key>>::Error: Debug,
+        <K as TryInto<Ustr>>::Error: Debug,
     {
         self.map.remove(&name.try_into().unwrap());
     }
 
     /// Borrow a session from the sessions list.
     #[track_caller]
-    pub fn get<K: TryInto<Key>>(&self, name: K) -> Option<&Session>
+    pub fn get<K: TryInto<Ustr>>(&self, name: K) -> Option<&Session>
     where
-        <K as TryInto<Key>>::Error: Debug,
+        <K as TryInto<Ustr>>::Error: Debug,
     {
         self.map.get(&name.try_into().unwrap())
     }
 
     /// Borrow a session from the sessions list.
     #[track_caller]
-    pub fn get_mut<K: TryInto<Key>>(&mut self, name: K) -> Option<&mut Session>
+    pub fn get_mut<K: TryInto<Ustr>>(&mut self, name: K) -> Option<&mut Session>
     where
-        <K as TryInto<Key>>::Error: Debug,
+        <K as TryInto<Ustr>>::Error: Debug,
     {
         self.map.get_mut(&name.try_into().unwrap())
     }
 
     /// Mutably iterate over sessions.
-    pub fn iter_mut(&mut self) -> hashbrown::hash_map::IterMut<Key, Session> {
+    pub fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<Ustr, Session> {
         self.map.iter_mut()
     }
 
     /// Iterate over sessions.
-    pub fn iter(&self) -> hashbrown::hash_map::Iter<Key, Session> {
+    pub fn iter(&self) -> std::collections::hash_map::Iter<Ustr, Session> {
         self.map.iter()
     }
 }

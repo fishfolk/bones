@@ -1,8 +1,12 @@
-use bones_utils::fxhash::FxHasher;
+use bones_utils::{fxhash::FxHasher, ustr, Ustr};
+#[cfg(feature = "serde")]
+use serde::{de::Error, Deserialize};
+#[cfg(feature = "serde")]
+use crate::ser_de::SchemaDeserialize;
 
-use crate::{prelude::*, raw_fns::*};
+use crate::{alloc::SchemaTypeMap, prelude::*, raw_fns::*};
 
-use std::{any::TypeId, hash::Hasher, sync::OnceLock};
+use std::{alloc::Layout, any::TypeId, hash::Hasher, sync::OnceLock, time::Duration};
 
 macro_rules! impl_primitive {
     ($t:ty, $prim:ident) => {
@@ -106,6 +110,96 @@ unsafe impl HasSchema for isize {
                 hash_fn: Some(<Self as RawHash>::raw_hash),
                 eq_fn: Some(<Self as RawEq>::raw_eq),
                 type_data: Default::default(),
+            })
+        })
+    }
+}
+
+unsafe impl HasSchema for Ustr {
+    fn schema() -> &'static Schema {
+        static S: OnceLock<&'static Schema> = OnceLock::new();
+        let layout = Layout::new::<Self>();
+        S.get_or_init(|| {
+            SCHEMA_REGISTRY.register(SchemaData {
+                kind: SchemaKind::Primitive(Primitive::Opaque {
+                    size: layout.size(),
+                    align: layout.align(),
+                }),
+                type_id: Some(TypeId::of::<Self>()),
+                clone_fn: Some(<Self as RawClone>::raw_clone),
+                drop_fn: Some(<Self as RawDrop>::raw_drop),
+                default_fn: Some(<Self as RawDefault>::raw_default),
+                hash_fn: Some(<Self as RawHash>::raw_hash),
+                eq_fn: Some(<Self as RawEq>::raw_eq),
+                type_data: {
+                    let mut td = SchemaTypeMap::default();
+                    #[cfg(feature = "serde")]
+                    td.insert(SchemaDeserialize {
+                        deserialize_fn: |reference, deserializer| {
+                            Self::schema()
+                                .ensure_match(reference.schema())
+                                .map_err(|e| erased_serde::Error::custom(e.to_string()))?;
+
+                            let s = String::deserialize(deserializer)?;
+                            let us = ustr(&s);
+                            *reference.cast_into_mut() = us;
+
+                            Ok(())
+                        },
+                    });
+                    td
+                },
+            })
+        })
+    }
+}
+
+unsafe impl HasSchema for Duration {
+    fn schema() -> &'static Schema {
+        static S: OnceLock<&'static Schema> = OnceLock::new();
+        let layout = Layout::new::<Self>();
+        S.get_or_init(|| {
+            SCHEMA_REGISTRY.register(SchemaData {
+                kind: SchemaKind::Primitive(Primitive::Opaque {
+                    size: layout.size(),
+                    align: layout.align(),
+                }),
+                type_id: Some(TypeId::of::<Self>()),
+                clone_fn: Some(<Self as RawClone>::raw_clone),
+                drop_fn: Some(<Self as RawDrop>::raw_drop),
+                default_fn: Some(<Self as RawDefault>::raw_default),
+                hash_fn: Some(<Self as RawHash>::raw_hash),
+                eq_fn: Some(<Self as RawEq>::raw_eq),
+                type_data: {
+                    let mut td = SchemaTypeMap::default();
+                    #[cfg(feature = "serde")]
+                    td.insert(SchemaDeserialize {
+                        deserialize_fn: |reference, deserializer| {
+                            Self::schema()
+                                .ensure_match(reference.schema())
+                                .map_err(|e| erased_serde::Error::custom(e.to_string()))?;
+
+                            #[cfg(feature = "humantime")]
+                            {
+                                let s = String::deserialize(deserializer)?;
+                                let d: Duration = s
+                                    .parse::<humantime::Duration>()
+                                    .map_err(|e| erased_serde::Error::custom(e.to_string()))?
+                                    .into();
+                                *reference.cast_into_mut() = d;
+                            }
+
+                            #[cfg(not(feature = "humantime"))]
+                            {
+                                let d = Duration::deserialize(deserializer)?;
+                                *reference.cast_into_mut() = d;
+                            }
+
+                            Ok(())
+                        },
+                    });
+                    td
+                },
             })
         })
     }

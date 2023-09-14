@@ -11,21 +11,24 @@ categories.workspace    = true
 keywords.workspace      = true
 
 [features]
-default = ["derive"]
-serde   = ["dep:serde", "ulid/serde", "bones_utils/serde"]
-derive  = ["bones_schema_macros"]
-glam    = ["dep:glam"]
+default   = ["derive"]
+serde     = ["dep:serde", "dep:erased-serde", "ulid/serde", "bones_utils/serde"]
+derive    = ["bones_schema_macros"]
+glam      = ["dep:glam"]
+humantime = ["dep:humantime", "serde"]
 
 [dependencies]
 bones_utils = { version = "0.3", path = "../bones_utils" }
 ulid        = { version = "1.0" }
 paste       = "1.0"
+sptr        = "0.3"
 
 # Optional deps
 bones_schema_macros = { version = "0.3", path = "./macros", optional = true }
 glam                = { version = "0.24", optional = true }
 serde               = { version = "1.0", features = ["derive"], optional = true }
-sptr                = "0.3"
+erased-serde        = { version = "0.3.31", optional = true }
+humantime           = { version = "2.1", optional = true }
 
 [[test]]
 name              = "tests"

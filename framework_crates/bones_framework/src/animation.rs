@@ -2,8 +2,6 @@
 
 use crate::prelude::*;
 
-use std::sync::Arc;
-
 pub(crate) mod prelude {
     pub use super::{AnimatedSprite, AnimationBankSprite};
 }
@@ -17,13 +15,15 @@ pub fn animation_plugin(core: &mut Session) {
 
 /// Component that may be added to entities with an [`AtlasSprite`] to animate them.
 #[derive(Clone, HasSchema, Debug)]
+#[repr(C)]
 pub struct AnimatedSprite {
     /// The current frame in the animation.
-    pub index: usize,
+    pub index: u32,
     /// The frames in the animation.
     ///
     /// These are the indexes into the atlas, specified in the order they will be played.
-    pub frames: Arc<[u32]>,
+    // TODO: Put Animation Frames in an `Arc` to Avoid Snapshot Clone Cost.
+    pub frames: SVec<u32>,
     /// The frames per second to play the animation at.
     pub fps: f32,
     /// The amount of time the current frame has been playing
@@ -45,19 +45,21 @@ fn default_true() -> bool {
 #[derive(Clone, HasSchema, Debug, Default)]
 pub struct AnimationBankSprite {
     /// The current animation.
-    pub current: Key,
+    pub current: Ustr,
     /// The collection of animations in this animation bank.
-    pub animations: Arc<HashMap<Key, AnimatedSprite>>,
+    // TODO: Put Animation Frames in an `Arc` to Avoid Snapshot Clone Cost.
+    // TODO: Use more economic key type such as `ustr`
+    pub animations: SMap<Ustr, AnimatedSprite>,
     #[cfg_attr(feature = "serde", serde(default))]
     /// The last animation that was playing.
-    pub last_animation: Key,
+    pub last_animation: Ustr,
 }
 
 impl Default for AnimatedSprite {
     fn default() -> Self {
         Self {
             index: 0,
-            frames: Arc::from([]),
+            frames: default(),
             fps: 0.0,
             timer: 0.0,
             repeat: true,
@@ -82,18 +84,20 @@ pub fn animate_sprites(
         animated_sprite.timer += time.delta_seconds();
 
         // If we are ready to go to the next frame
-        if (animated_sprite.index != animated_sprite.frames.len() - 1 || animated_sprite.repeat)
+        if (animated_sprite.index != animated_sprite.frames.len() as u32 - 1
+            || animated_sprite.repeat)
             && animated_sprite.timer > 1.0 / animated_sprite.fps.max(f32::MIN_POSITIVE)
         {
             // Restart the timer
             animated_sprite.timer = 0.0;
 
             // Increment and loop around the current index
-            animated_sprite.index = (animated_sprite.index + 1) % animated_sprite.frames.len();
+            animated_sprite.index =
+                (animated_sprite.index + 1) % animated_sprite.frames.len() as u32;
         }
 
         // Set the atlas sprite to match the current frame of the animated sprite
-        atlas_sprite.index = animated_sprite.frames[animated_sprite.index];
+        atlas_sprite.index = animated_sprite.frames[animated_sprite.index as usize];
     }
 }
 
