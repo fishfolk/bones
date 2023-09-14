@@ -752,6 +752,30 @@ impl SchemaBox {
     }
 }
 
+unsafe impl HasSchema for SchemaBox {
+    fn schema() -> &'static Schema {
+        use crate::raw_fns::*;
+        use std::alloc::Layout;
+        static S: OnceLock<&'static Schema> = OnceLock::new();
+        let layout = Layout::new::<Self>();
+        S.get_or_init(|| {
+            SCHEMA_REGISTRY.register(SchemaData {
+                kind: SchemaKind::Primitive(Primitive::Opaque {
+                    size: layout.size(),
+                    align: layout.align(),
+                }),
+                type_id: Some(TypeId::of::<Self>()),
+                clone_fn: Some(<Self as RawClone>::raw_clone),
+                drop_fn: Some(<Self as RawDrop>::raw_drop),
+                default_fn: None,
+                hash_fn: Some(<Self as RawHash>::raw_hash),
+                eq_fn: Some(<Self as RawEq>::raw_eq),
+                type_data: default(),
+            })
+        })
+    }
+}
+
 impl Drop for SchemaBox {
     fn drop(&mut self) {
         unsafe {
