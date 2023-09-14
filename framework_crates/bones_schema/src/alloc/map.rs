@@ -388,6 +388,28 @@ impl SchemaMap {
     }
 }
 
+impl<K: HasSchema, V: HasSchema> FromIterator<(K, V)> for SMap<K, V> {
+    fn from_iter<T: IntoIterator<Item = (K, V)>>(iter: T) -> Self {
+        let mut this = Self::default();
+        for (k, v) in iter {
+            this.insert(k, v);
+        }
+        this
+    }
+}
+
+impl<K: HasSchema, V: HasSchema> std::ops::Index<&K> for SMap<K, V> {
+    type Output = V;
+    fn index(&self, index: &K) -> &Self::Output {
+        self.get(index).unwrap()
+    }
+}
+impl<K: HasSchema, V: HasSchema> std::ops::IndexMut<&K> for SMap<K, V> {
+    fn index_mut(&mut self, index: &K) -> &mut Self::Output {
+        self.get_mut(index).unwrap()
+    }
+}
+
 type SchemaMapIter<'iter> = std::iter::Map<
     hash_map::Iter<'iter, SchemaBox, SchemaBox>,
     for<'a> fn((&'a SchemaBox, &'a SchemaBox)) -> (SchemaRef<'a>, SchemaRef<'a>),
