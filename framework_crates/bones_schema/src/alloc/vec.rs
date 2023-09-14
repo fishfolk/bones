@@ -1,8 +1,13 @@
 use std::{
-    any::TypeId, fmt::Debug, iter::Iterator, marker::PhantomData, mem::MaybeUninit, sync::OnceLock,
+    any::{type_name, TypeId},
+    fmt::Debug,
+    iter::Iterator,
+    marker::PhantomData,
+    mem::MaybeUninit,
+    sync::OnceLock,
 };
 
-use bones_utils::{fxhash::FxHasher, ustr};
+use bones_utils::fxhash::FxHasher;
 
 use crate::{prelude::*, raw_fns::*};
 
@@ -611,10 +616,9 @@ unsafe impl<T: HasSchema> HasSchema for SVec<T> {
     fn schema() -> &'static Schema {
         static S: OnceLock<&'static Schema> = OnceLock::new();
         S.get_or_init(|| {
-            let short_name = format!("SVec<{}>", std::any::type_name::<T>());
             SCHEMA_REGISTRY.register(SchemaData {
-                name: ustr(&short_name),
-                full_name: ustr(&format!("bones_schema::ptr::{short_name}")),
+                name: type_name::<Self>().into(),
+                full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
                 kind: SchemaKind::Vec(T::schema()),
                 type_id: Some(TypeId::of::<Self>()),
                 clone_fn: Some(<Self as RawClone>::raw_clone),

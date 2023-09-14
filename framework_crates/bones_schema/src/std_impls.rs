@@ -1,5 +1,3 @@
-use bones_utils::ustr;
-
 #[cfg(feature = "serde")]
 use crate::ser_de::SchemaDeserialize;
 use bones_utils::{fxhash::FxHasher, Ustr};
@@ -17,8 +15,8 @@ macro_rules! impl_primitive {
                 static S: OnceLock<&'static Schema> = OnceLock::new();
                 S.get_or_init(|| {
                     SCHEMA_REGISTRY.register(SchemaData {
-                        name: ustr(stringify!($t)),
-                        full_name: ustr(concat!("std::", stringify!($t))),
+                        name: stringify!($t).into(),
+                        full_name: concat!("std::", stringify!($t)).into(),
                         kind: SchemaKind::Primitive(Primitive::$prim),
                         type_id: Some(TypeId::of::<$t>()),
                         clone_fn: Some(<$t as RawClone>::raw_clone),
@@ -54,8 +52,8 @@ macro_rules! schema_impl_float {
                 static S: OnceLock<&'static Schema> = OnceLock::new();
                 S.get_or_init(|| {
                     SCHEMA_REGISTRY.register(SchemaData {
-                        name: ustr(stringify!($t)),
-                        full_name: ustr(concat!("std::", stringify!($t))),
+                        name: stringify!($t).into(),
+                        full_name: concat!("std::", stringify!($t)).into(),
                         kind: SchemaKind::Primitive(Primitive::$prim),
                         type_id: Some(TypeId::of::<$t>()),
                         clone_fn: Some(<$t as RawClone>::raw_clone),
@@ -79,8 +77,8 @@ unsafe impl HasSchema for usize {
         static S: OnceLock<&'static Schema> = OnceLock::new();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
-                name: ustr("usize"),
-                full_name: ustr("std::usize"),
+                name: "usize".into(),
+                full_name: "std::usize".into(),
                 kind: SchemaKind::Primitive({
                     #[cfg(target_pointer_width = "32")]
                     let p = Primitive::U32;
@@ -104,8 +102,8 @@ unsafe impl HasSchema for isize {
         static S: OnceLock<&'static Schema> = OnceLock::new();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
-                name: ustr("isize"),
-                full_name: ustr("std::isize"),
+                name: "isize".into(),
+                full_name: "std::isize".into(),
                 kind: SchemaKind::Primitive({
                     #[cfg(target_pointer_width = "32")]
                     let p = Primitive::I32;
@@ -131,8 +129,8 @@ unsafe impl HasSchema for Ustr {
         let layout = Layout::new::<Self>();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
-                name: ustr("Ustr"),
-                full_name: ustr("ustr::Ustr"),
+                name: "Ustr".into(),
+                full_name: "ustr::Ustr".into(),
                 kind: SchemaKind::Primitive(Primitive::Opaque {
                     size: layout.size(),
                     align: layout.align(),
@@ -172,8 +170,8 @@ unsafe impl HasSchema for Duration {
         let layout = Layout::new::<Self>();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
-                name: ustr("Duration"),
-                full_name: ustr("std::Duration"),
+                name: "Duration".into(),
+                full_name: "std::Duration".into(),
                 kind: SchemaKind::Primitive(Primitive::Opaque {
                     size: layout.size(),
                     align: layout.align(),
@@ -230,8 +228,8 @@ mod impl_glam {
             let layout = std::alloc::Layout::new::<Quat>();
             S.get_or_init(|| {
                 SCHEMA_REGISTRY.register(SchemaData {
-                    name: ustr("Quat"),
-                    full_name: ustr("glam::Quat"),
+                    name: "Quat".into(),
+                    full_name: "glam::Quat".into(),
                     kind: SchemaKind::Primitive(Primitive::Opaque {
                         size: layout.size(),
                         align: layout.align(),
@@ -272,8 +270,8 @@ mod impl_glam {
                             ],
                         });
                         SCHEMA_REGISTRY.register(SchemaData {
-                            name: ustr(stringify!($t)),
-                            full_name: ustr(concat!("glam::", stringify!($t))),
+                            name: stringify!($t).into(),
+                            full_name: concat!("glam::", stringify!($t)).into(),
                             type_id,
                             kind,
                             type_data: Default::default(),

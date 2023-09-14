@@ -1,8 +1,13 @@
 //! Schema-aware smart pointers.
 
 use std::{
-    alloc::handle_alloc_error, any::TypeId, hash::Hash, marker::PhantomData, mem::MaybeUninit,
-    ptr::NonNull, sync::OnceLock,
+    alloc::handle_alloc_error,
+    any::{type_name, TypeId},
+    hash::Hash,
+    marker::PhantomData,
+    mem::MaybeUninit,
+    ptr::NonNull,
+    sync::OnceLock,
 };
 
 use crate::{
@@ -125,6 +130,7 @@ impl<'pointer> SchemaRef<'pointer> {
                     schema: field.schema,
                 })
             }
+            SchemaKind::Enum(_) => todo!(),
             SchemaKind::Box(_) => {
                 // SOUND: schema asserts that type is box
                 let the_box = unsafe { self.ptr.deref::<SchemaBox>() };
@@ -353,6 +359,7 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
                     parent_lifetime: PhantomData,
                 })
             }
+            SchemaKind::Enum(_) => todo!(),
             SchemaKind::Box(_) => {
                 // SOUND: schema asserts that type is box
                 let the_box = unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaBox) };
@@ -760,8 +767,8 @@ unsafe impl HasSchema for SchemaBox {
         let layout = Layout::new::<Self>();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
-                name: ustr("SchemaBox"),
-                full_name: ustr("bones_schema::ptr::SchemaBox"),
+                name: type_name::<Self>().into(),
+                full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
                 kind: SchemaKind::Primitive(Primitive::Opaque {
                     size: layout.size(),
                     align: layout.align(),
@@ -836,10 +843,9 @@ unsafe impl<T: HasSchema> HasSchema for SBox<T> {
     fn schema() -> &'static Schema {
         static S: OnceLock<&'static Schema> = OnceLock::new();
         S.get_or_init(|| {
-            let short_name = format!("SBox<{}>", std::any::type_name::<T>());
             SCHEMA_REGISTRY.register(SchemaData {
-                name: ustr(&short_name),
-                full_name: ustr(&format!("bones_schema::ptr::{short_name}")),
+                name: type_name::<Self>().into(),
+                full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
                 kind: SchemaKind::Box(T::schema()),
                 type_id: Some(TypeId::of::<Self>()),
                 clone_fn: Some(<Self as RawClone>::raw_clone),
