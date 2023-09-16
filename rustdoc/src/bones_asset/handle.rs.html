@@ -176,7 +176,21 @@
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::{alloc::Layout, any::TypeId, marker::PhantomData, sync::OnceLock};
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::{
+    alloc::Layout,
+    any::{type_name, TypeId},
+    marker::PhantomData,
+    sync::OnceLock,
+};
 
 <span class="kw">use </span>bones_schema::{prelude::<span class="kw-2">*</span>, raw_fns::<span class="kw-2">*</span>};
 <span class="kw">use </span>bones_utils::{parking_lot::RwLock, HashMap};
@@ -287,6 +301,8 @@
             existing_schema
         } <span class="kw">else </span>{
             <span class="kw">let </span>schema = SCHEMA_REGISTRY.register(SchemaData {
+                name: type_name::&lt;<span class="self">Self</span>&gt;().into(),
+                full_name: <span class="macro">format!</span>(<span class="string">&quot;{}{}&quot;</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
                 type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="self">Self</span>&gt;()),
                 kind: SchemaKind::Struct(StructSchemaInfo {
                     fields: <span class="macro">vec!</span>[StructFieldInfo {
@@ -333,6 +349,8 @@
         </span>);
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: type_name::&lt;<span class="self">Self</span>&gt;().into(),
+                full_name: <span class="macro">format!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
                 type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="self">Self</span>&gt;()),
                 kind: SchemaKind::Struct(StructSchemaInfo {
                     fields: <span class="macro">vec!</span>[StructFieldInfo {

@@ -2,11 +2,11 @@
     (@one <span class="macro-nonterminal">$x</span>:expr) =&gt; { ... };
     (<span class="macro-nonterminal">$elem</span>:expr; <span class="macro-nonterminal">$n</span>:expr) =&gt; { ... };
     ($(<span class="macro-nonterminal">$x</span>:expr),<span class="kw-2">*</span>$(,)<span class="kw-2">*</span>) =&gt; { ... };
-}</pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Creates a <a href="../utils/struct.SmallVec.html" title="struct bones_framework::lib::ecs::utils::SmallVec"><code>SmallVec</code></a> containing the arguments.</p>
+}</pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Creates a <a href="../../../asset/prelude/bones_utils/struct.SmallVec.html" title="struct bones_framework::asset::prelude::bones_utils::SmallVec"><code>SmallVec</code></a> containing the arguments.</p>
 <p><code>smallvec!</code> allows <code>SmallVec</code>s to be defined with the same syntax as array expressions.
 There are two forms of this macro:</p>
 <ul>
-<li>Create a <a href="../utils/struct.SmallVec.html" title="struct bones_framework::lib::ecs::utils::SmallVec"><code>SmallVec</code></a> containing a given list of elements:</li>
+<li>Create a <a href="../../../asset/prelude/bones_utils/struct.SmallVec.html" title="struct bones_framework::asset::prelude::bones_utils::SmallVec"><code>SmallVec</code></a> containing a given list of elements:</li>
 </ul>
 
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>v: SmallVec&lt;[<span class="kw">_</span>; <span class="number">128</span>]&gt; = <span class="macro">smallvec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
@@ -14,7 +14,7 @@ There are two forms of this macro:</p>
 <span class="macro">assert_eq!</span>(v[<span class="number">1</span>], <span class="number">2</span>);
 <span class="macro">assert_eq!</span>(v[<span class="number">2</span>], <span class="number">3</span>);</code></pre></div>
 <ul>
-<li>Create a <a href="../utils/struct.SmallVec.html" title="struct bones_framework::lib::ecs::utils::SmallVec"><code>SmallVec</code></a> from a given element and size:</li>
+<li>Create a <a href="../../../asset/prelude/bones_utils/struct.SmallVec.html" title="struct bones_framework::asset::prelude::bones_utils::SmallVec"><code>SmallVec</code></a> from a given element and size:</li>
 </ul>
 
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>v: SmallVec&lt;[<span class="kw">_</span>; <span class="number">0x8000</span>]&gt; = <span class="macro">smallvec!</span>[<span class="number">1</span>; <span class="number">3</span>];

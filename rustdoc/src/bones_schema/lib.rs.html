@@ -43,6 +43,7 @@
 <a href="#43" id="43">43</a>
 <a href="#44" id="44">44</a>
 <a href="#45" id="45">45</a>
+<a href="#46" id="46">46</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Simple reflection system based on the `#[repr(C)]` memory layout.
 //!
 //! You can derive [`HasSchema`] for your Rust types to unlock integration with the `bones_schema`
@@ -71,6 +72,7 @@
     };
     <span class="attr">#[cfg(feature = <span class="string">&quot;derive&quot;</span>)]
     </span><span class="kw">pub use </span>bones_schema_macros::<span class="kw-2">*</span>;
+    <span class="kw">pub use </span>bones_utils;
     <span class="kw">pub use </span>ulid::Ulid;
 }
 
@@ -87,5 +89,5 @@
 
 <span class="doccomment">/// Serde implementations for [`Schema`].
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
-</span><span class="kw">mod </span>ser_de;
+</span><span class="kw">pub mod </span>ser_de;
 </code></pre></div></section></main></body></html>

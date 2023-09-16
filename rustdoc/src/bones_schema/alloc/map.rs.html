@@ -692,8 +692,10 @@
 <a href="#692" id="692">692</a>
 <a href="#693" id="693">693</a>
 <a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
-    any::TypeId,
+    any::{type_name, TypeId},
     fmt::Debug,
     hash::{BuildHasher, Hasher},
     marker::PhantomData,
@@ -1232,6 +1234,8 @@
         <span class="kw">static </span>S: OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt; = OnceLock::new();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: type_name::&lt;<span class="self">Self</span>&gt;().into(),
+                full_name: <span class="macro">format!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
                 kind: SchemaKind::Map {
                     key: K::schema(),
                     value: V::schema(),

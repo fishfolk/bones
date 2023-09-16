@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"derive":["HasSchema"],"enum":["Primitive","SchemaKind"],"mod":["alloc","prelude","ptr","raw_fns","registry"],"struct":["SchemaData","SchemaLayoutInfo","StructFieldInfo","StructSchemaInfo"],"trait":["FromType","HasSchema"]};
+window.SIDEBAR_ITEMS = {"derive":["HasSchema"],"enum":["EnumTagType","Primitive","SchemaKind"],"mod":["alloc","prelude","ptr","raw_fns","registry","ser_de"],"struct":["EnumSchemaInfo","SchemaData","SchemaLayoutInfo","StructFieldInfo","StructSchemaInfo","VariantInfo"],"trait":["FromType","HasSchema"]};

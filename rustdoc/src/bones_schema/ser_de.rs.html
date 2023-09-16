@@ -134,7 +134,13 @@
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>erased_serde::Deserializer;
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::any::type_name;
+
+<span class="kw">use </span>erased_serde::Deserializer;
 <span class="kw">use </span>serde::{de::Error, Deserialize};
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -218,6 +224,8 @@
         <span class="kw">let </span>layout = Layout::new::&lt;<span class="self">Self</span>&gt;();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: type_name::&lt;<span class="self">Self</span>&gt;().into(),
+                full_name: <span class="macro">format!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
                 kind: SchemaKind::Primitive(Primitive::Opaque {
                     size: layout.size(),
                     align: layout.align(),

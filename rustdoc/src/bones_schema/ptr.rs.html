@@ -947,11 +947,31 @@
 <a href="#947" id="947">947</a>
 <a href="#948" id="948">948</a>
 <a href="#949" id="949">949</a>
+<a href="#950" id="950">950</a>
+<a href="#951" id="951">951</a>
+<a href="#952" id="952">952</a>
+<a href="#953" id="953">953</a>
+<a href="#954" id="954">954</a>
+<a href="#955" id="955">955</a>
+<a href="#956" id="956">956</a>
+<a href="#957" id="957">957</a>
+<a href="#958" id="958">958</a>
+<a href="#959" id="959">959</a>
+<a href="#960" id="960">960</a>
+<a href="#961" id="961">961</a>
+<a href="#962" id="962">962</a>
+<a href="#963" id="963">963</a>
+<a href="#964" id="964">964</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Schema-aware smart pointers.
 
 </span><span class="kw">use </span>std::{
-    alloc::handle_alloc_error, any::TypeId, hash::Hash, marker::PhantomData, mem::MaybeUninit,
-    ptr::NonNull, sync::OnceLock,
+    alloc::handle_alloc_error,
+    any::{type_name, TypeId},
+    hash::Hash,
+    marker::PhantomData,
+    mem::MaybeUninit,
+    ptr::NonNull,
+    sync::OnceLock,
 };
 
 <span class="kw">use crate</span>::{
@@ -1079,7 +1099,10 @@
                 </span><span class="kw">let </span>the_box = <span class="kw">unsafe </span>{ <span class="self">self</span>.ptr.deref::&lt;SchemaBox&gt;() };
                 the_box.get_field(idx)
             }
-            SchemaKind::Vec(<span class="kw">_</span>) | SchemaKind::Primitive(<span class="kw">_</span>) | SchemaKind::Map { .. } =&gt; not_found,
+            SchemaKind::Vec(<span class="kw">_</span>)
+            | SchemaKind::Primitive(<span class="kw">_</span>)
+            | SchemaKind::Map { .. }
+            | SchemaKind::Enum(<span class="kw">_</span>) =&gt; not_found,
         }
     }
 
@@ -1307,7 +1330,10 @@
                 </span><span class="kw">let </span>the_box = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>SchemaBox) };
                 the_box.get_field_mut(idx)
             }
-            SchemaKind::Map { .. } | SchemaKind::Vec(<span class="kw">_</span>) | SchemaKind::Primitive(<span class="kw">_</span>) =&gt; not_found,
+            SchemaKind::Map { .. }
+            | SchemaKind::Vec(<span class="kw">_</span>)
+            | SchemaKind::Primitive(<span class="kw">_</span>)
+            | SchemaKind::Enum(<span class="kw">_</span>) =&gt; not_found,
         }
     }
 
@@ -1709,6 +1735,8 @@
         <span class="kw">let </span>layout = Layout::new::&lt;<span class="self">Self</span>&gt;();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: type_name::&lt;<span class="self">Self</span>&gt;().into(),
+                full_name: <span class="macro">format!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
                 kind: SchemaKind::Primitive(Primitive::Opaque {
                     size: layout.size(),
                     align: layout.align(),
@@ -1784,6 +1812,8 @@
         <span class="kw">static </span>S: OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt; = OnceLock::new();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: type_name::&lt;<span class="self">Self</span>&gt;().into(),
+                full_name: <span class="macro">format!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
                 kind: SchemaKind::Box(T::schema()),
                 type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="self">Self</span>&gt;()),
                 clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone),

@@ -387,9 +387,25 @@
 <a href="#387" id="387">387</a>
 <a href="#388" id="388">388</a>
 <a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span><span class="kw">crate</span>::ser_de::SchemaDeserialize;
-<span class="kw">use </span>bones_utils::{fxhash::FxHasher, ustr, Ustr};
+<span class="kw">use </span>bones_utils::{fxhash::FxHasher, Ustr};
 <span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span>serde::{de::Error, Deserialize};
 
@@ -404,6 +420,8 @@
                 <span class="kw">static </span>S: OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt; = OnceLock::new();
                 S.get_or_init(|| {
                     SCHEMA_REGISTRY.register(SchemaData {
+                        name: <span class="macro">stringify!</span>(<span class="macro-nonterminal">$t</span>).into(),
+                        full_name: <span class="macro">concat!</span>(<span class="string">&quot;std::&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$t</span>)).into(),
                         kind: SchemaKind::Primitive(Primitive::<span class="macro-nonterminal">$prim</span>),
                         type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="macro-nonterminal">$t</span>&gt;()),
                         clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawClone&gt;::raw_clone),
@@ -439,6 +457,8 @@
                 <span class="kw">static </span>S: OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt; = OnceLock::new();
                 S.get_or_init(|| {
                     SCHEMA_REGISTRY.register(SchemaData {
+                        name: <span class="macro">stringify!</span>(<span class="macro-nonterminal">$t</span>).into(),
+                        full_name: <span class="macro">concat!</span>(<span class="string">&quot;std::&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$t</span>)).into(),
                         kind: SchemaKind::Primitive(Primitive::<span class="macro-nonterminal">$prim</span>),
                         type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="macro-nonterminal">$t</span>&gt;()),
                         clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawClone&gt;::raw_clone),
@@ -462,6 +482,8 @@
         <span class="kw">static </span>S: OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt; = OnceLock::new();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: <span class="string">&quot;usize&quot;</span>.into(),
+                full_name: <span class="string">&quot;std::usize&quot;</span>.into(),
                 kind: SchemaKind::Primitive({
                     <span class="attr">#[cfg(target_pointer_width = <span class="string">&quot;32&quot;</span>)]
                     </span><span class="kw">let </span>p = Primitive::U32;
@@ -485,6 +507,8 @@
         <span class="kw">static </span>S: OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt; = OnceLock::new();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: <span class="string">&quot;isize&quot;</span>.into(),
+                full_name: <span class="string">&quot;std::isize&quot;</span>.into(),
                 kind: SchemaKind::Primitive({
                     <span class="attr">#[cfg(target_pointer_width = <span class="string">&quot;32&quot;</span>)]
                     </span><span class="kw">let </span>p = Primitive::I32;
@@ -510,6 +534,8 @@
         <span class="kw">let </span>layout = Layout::new::&lt;<span class="self">Self</span>&gt;();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: <span class="string">&quot;Ustr&quot;</span>.into(),
+                full_name: <span class="string">&quot;ustr::Ustr&quot;</span>.into(),
                 kind: SchemaKind::Primitive(Primitive::Opaque {
                     size: layout.size(),
                     align: layout.align(),
@@ -530,7 +556,7 @@
                                 .map_err(|e| erased_serde::Error::custom(e.to_string()))<span class="question-mark">?</span>;
 
                             <span class="kw">let </span>s = String::deserialize(deserializer)<span class="question-mark">?</span>;
-                            <span class="kw">let </span>us = ustr(<span class="kw-2">&amp;</span>s);
+                            <span class="kw">let </span>us = Ustr::from(<span class="kw-2">&amp;</span>s);
                             <span class="kw-2">*</span>reference.cast_into_mut() = us;
 
                             <span class="prelude-val">Ok</span>(())
@@ -549,6 +575,8 @@
         <span class="kw">let </span>layout = Layout::new::&lt;<span class="self">Self</span>&gt;();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: <span class="string">&quot;Duration&quot;</span>.into(),
+                full_name: <span class="string">&quot;std::Duration&quot;</span>.into(),
                 kind: SchemaKind::Primitive(Primitive::Opaque {
                     size: layout.size(),
                     align: layout.align(),
@@ -605,6 +633,8 @@
             <span class="kw">let </span>layout = std::alloc::Layout::new::&lt;Quat&gt;();
             S.get_or_init(|| {
                 SCHEMA_REGISTRY.register(SchemaData {
+                    name: <span class="string">&quot;Quat&quot;</span>.into(),
+                    full_name: <span class="string">&quot;glam::Quat&quot;</span>.into(),
                     kind: SchemaKind::Primitive(Primitive::Opaque {
                         size: layout.size(),
                         align: layout.align(),
@@ -645,6 +675,8 @@
                             ],
                         });
                         SCHEMA_REGISTRY.register(SchemaData {
+                            name: <span class="macro">stringify!</span>(<span class="macro-nonterminal">$t</span>).into(),
+                            full_name: <span class="macro">concat!</span>(<span class="string">&quot;glam::&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$t</span>)).into(),
                             type_id,
                             kind,
                             type_data: Default::default(),

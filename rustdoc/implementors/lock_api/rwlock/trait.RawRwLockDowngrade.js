@@ -1,4 +1,5 @@
 (function() {var implementors = {
+"bones_asset":[],
 "bones_ecs":[],
 "bones_framework":[],
 "bones_lib":[]
