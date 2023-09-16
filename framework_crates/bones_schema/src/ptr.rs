@@ -130,13 +130,15 @@ impl<'pointer> SchemaRef<'pointer> {
                     schema: field.schema,
                 })
             }
-            SchemaKind::Enum(_) => todo!(),
             SchemaKind::Box(_) => {
                 // SOUND: schema asserts that type is box
                 let the_box = unsafe { self.ptr.deref::<SchemaBox>() };
                 the_box.get_field(idx)
             }
-            SchemaKind::Vec(_) | SchemaKind::Primitive(_) | SchemaKind::Map { .. } => not_found,
+            SchemaKind::Vec(_)
+            | SchemaKind::Primitive(_)
+            | SchemaKind::Map { .. }
+            | SchemaKind::Enum(_) => not_found,
         }
     }
 
@@ -359,13 +361,15 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
                     parent_lifetime: PhantomData,
                 })
             }
-            SchemaKind::Enum(_) => todo!(),
             SchemaKind::Box(_) => {
                 // SOUND: schema asserts that type is box
                 let the_box = unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaBox) };
                 the_box.get_field_mut(idx)
             }
-            SchemaKind::Map { .. } | SchemaKind::Vec(_) | SchemaKind::Primitive(_) => not_found,
+            SchemaKind::Map { .. }
+            | SchemaKind::Vec(_)
+            | SchemaKind::Primitive(_)
+            | SchemaKind::Enum(_) => not_found,
         }
     }
 
