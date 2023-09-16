@@ -611,7 +611,7 @@ fn path_is_metadata(path: &Path) -> bool {
 
 use metadata::*;
 mod metadata {
-    use serde::de::{DeserializeSeed, Error, Visitor};
+    use serde::de::{DeserializeSeed, Error, VariantAccess, Visitor};
 
     use super::*;
 
@@ -698,6 +698,14 @@ mod metadata {
                     ptr: self.ptr,
                     ctx: self.ctx,
                 })?,
+                SchemaKind::Enum(_) => deserializer.deserialize_enum(
+                    &self.ptr.schema().name,
+                    &[], // We don't have a static list of variant names
+                    EnumVisitor {
+                        ptr: self.ptr,
+                        ctx: self.ctx,
+                    },
+                )?,
                 SchemaKind::Box(_) => {
                     // SOUND: schema asserts pointer is a SchemaBox.
                     let b = unsafe { self.ptr.deref_mut::<SchemaBox>() };
@@ -907,6 +915,112 @@ mod metadata {
                 v.insert_box(key, value);
             }
             Ok(())
+        }
+    }
+
+    struct EnumVisitor<'a, 'srv, 'ptr, 'prnt> {
+        ctx: &'a mut MetaAssetLoadCtx<'srv>,
+        ptr: SchemaRefMut<'ptr, 'prnt>,
+    }
+
+    impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for EnumVisitor<'a, 'srv, 'ptr, 'prnt> {
+        type Value = ();
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            // TODO: Write very verbose error messages for metadata asset deserializers.
+            write!(
+                formatter,
+                "asset metadata matching the schema: {:#?}",
+                self.ptr.schema()
+            )
+        }
+
+        fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::EnumAccess<'de>,
+        {
+            let (value_ptr, var_access) = data.variant_seed(EnumPtrLoadCtx { ptr: self.ptr })?;
+
+            let variant_info = value_ptr.schema().kind.as_struct().unwrap();
+            if variant_info.fields.is_empty() {
+                var_access.unit_variant()?;
+            } else if variant_info.fields[0].name.is_none() {
+                var_access.tuple_variant(
+                    variant_info.fields.len(),
+                    StructVisitor {
+                        ctx: self.ctx,
+                        ptr: value_ptr,
+                    },
+                )?;
+            } else {
+                var_access.struct_variant(
+                    &[], // We don't have static fields list
+                    StructVisitor {
+                        ctx: self.ctx,
+                        ptr: value_ptr,
+                    },
+                )?;
+            }
+
+            Ok(())
+        }
+    }
+
+    struct EnumPtrLoadCtx<'ptr, 'prnt> {
+        ptr: SchemaRefMut<'ptr, 'prnt>,
+    }
+
+    impl<'ptr, 'prnt, 'de> DeserializeSeed<'de> for EnumPtrLoadCtx<'ptr, 'prnt> {
+        type Value = SchemaRefMut<'ptr, 'prnt>;
+
+        fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            let var_name = String::deserialize(deserializer)?;
+            let enum_info = self.ptr.schema().kind.as_enum().unwrap();
+            let value_offset = self.ptr.schema().field_offsets()[0].1;
+            let (var_idx, var_schema) = enum_info
+                .variants
+                .iter()
+                .enumerate()
+                .find_map(|(idx, info)| (info.name == var_name).then_some((idx, info.schema)))
+                .ok_or_else(|| {
+                    D::Error::custom(format!(
+                        "Unknown enum variant `{var_name}`, expected one of: {}",
+                        enum_info
+                            .variants
+                            .iter()
+                            .map(|x| format!("`{}`", x.name))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ))
+                })?;
+
+            // Write the enum variant
+            // SOUND: the schema asserts that the write to the enum discriminant is valid
+            match enum_info.tag_type {
+                EnumTagType::U8 => unsafe { self.ptr.as_ptr().write(var_idx as u8) },
+                EnumTagType::U16 => unsafe {
+                    self.ptr.as_ptr().cast::<u16>().write(var_idx as u16)
+                },
+                EnumTagType::U32 => unsafe {
+                    self.ptr.as_ptr().cast::<u32>().write(var_idx as u32)
+                },
+            }
+
+            if var_schema.kind.as_struct().is_none() {
+                return Err(D::Error::custom(
+                    "All enum variant types must have a struct Schema",
+                ));
+            }
+
+            unsafe {
+                Ok(SchemaRefMut::from_ptr_schema(
+                    self.ptr.as_ptr().add(value_offset),
+                    var_schema,
+                ))
+            }
         }
     }
 }

@@ -1,5 +1,5 @@
 use std::{
-    any::TypeId,
+    any::{type_name, TypeId},
     fmt::Debug,
     hash::{BuildHasher, Hasher},
     marker::PhantomData,
@@ -538,6 +538,8 @@ unsafe impl<K: HasSchema, V: HasSchema> HasSchema for SMap<K, V> {
         static S: OnceLock<&'static Schema> = OnceLock::new();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: type_name::<Self>().into(),
+                full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
                 kind: SchemaKind::Map {
                     key: K::schema(),
                     value: V::schema(),

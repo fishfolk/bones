@@ -1,6 +1,6 @@
 #[cfg(feature = "serde")]
 use crate::ser_de::SchemaDeserialize;
-use bones_utils::{fxhash::FxHasher, ustr, Ustr};
+use bones_utils::{fxhash::FxHasher, Ustr};
 #[cfg(feature = "serde")]
 use serde::{de::Error, Deserialize};
 
@@ -15,6 +15,8 @@ macro_rules! impl_primitive {
                 static S: OnceLock<&'static Schema> = OnceLock::new();
                 S.get_or_init(|| {
                     SCHEMA_REGISTRY.register(SchemaData {
+                        name: stringify!($t).into(),
+                        full_name: concat!("std::", stringify!($t)).into(),
                         kind: SchemaKind::Primitive(Primitive::$prim),
                         type_id: Some(TypeId::of::<$t>()),
                         clone_fn: Some(<$t as RawClone>::raw_clone),
@@ -50,6 +52,8 @@ macro_rules! schema_impl_float {
                 static S: OnceLock<&'static Schema> = OnceLock::new();
                 S.get_or_init(|| {
                     SCHEMA_REGISTRY.register(SchemaData {
+                        name: stringify!($t).into(),
+                        full_name: concat!("std::", stringify!($t)).into(),
                         kind: SchemaKind::Primitive(Primitive::$prim),
                         type_id: Some(TypeId::of::<$t>()),
                         clone_fn: Some(<$t as RawClone>::raw_clone),
@@ -73,6 +77,8 @@ unsafe impl HasSchema for usize {
         static S: OnceLock<&'static Schema> = OnceLock::new();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: "usize".into(),
+                full_name: "std::usize".into(),
                 kind: SchemaKind::Primitive({
                     #[cfg(target_pointer_width = "32")]
                     let p = Primitive::U32;
@@ -96,6 +102,8 @@ unsafe impl HasSchema for isize {
         static S: OnceLock<&'static Schema> = OnceLock::new();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: "isize".into(),
+                full_name: "std::isize".into(),
                 kind: SchemaKind::Primitive({
                     #[cfg(target_pointer_width = "32")]
                     let p = Primitive::I32;
@@ -121,6 +129,8 @@ unsafe impl HasSchema for Ustr {
         let layout = Layout::new::<Self>();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: "Ustr".into(),
+                full_name: "ustr::Ustr".into(),
                 kind: SchemaKind::Primitive(Primitive::Opaque {
                     size: layout.size(),
                     align: layout.align(),
@@ -141,7 +151,7 @@ unsafe impl HasSchema for Ustr {
                                 .map_err(|e| erased_serde::Error::custom(e.to_string()))?;
 
                             let s = String::deserialize(deserializer)?;
-                            let us = ustr(&s);
+                            let us = Ustr::from(&s);
                             *reference.cast_into_mut() = us;
 
                             Ok(())
@@ -160,6 +170,8 @@ unsafe impl HasSchema for Duration {
         let layout = Layout::new::<Self>();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: "Duration".into(),
+                full_name: "std::Duration".into(),
                 kind: SchemaKind::Primitive(Primitive::Opaque {
                     size: layout.size(),
                     align: layout.align(),
@@ -216,6 +228,8 @@ mod impl_glam {
             let layout = std::alloc::Layout::new::<Quat>();
             S.get_or_init(|| {
                 SCHEMA_REGISTRY.register(SchemaData {
+                    name: "Quat".into(),
+                    full_name: "glam::Quat".into(),
                     kind: SchemaKind::Primitive(Primitive::Opaque {
                         size: layout.size(),
                         align: layout.align(),
@@ -256,6 +270,8 @@ mod impl_glam {
                             ],
                         });
                         SCHEMA_REGISTRY.register(SchemaData {
+                            name: stringify!($t).into(),
+                            full_name: concat!("glam::", stringify!($t)).into(),
                             type_id,
                             kind,
                             type_data: Default::default(),

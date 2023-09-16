@@ -121,11 +121,19 @@ impl Schema {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
-// TODO: Add name fields to `SchemaData`.
-// We may want to to have both "full" names and "short" names. We have to think about whether or not
-// we want to have some sort of a module path type or just make the full name include the module
-// path in whatever way it wants to.
 pub struct SchemaData {
+    /// The short name of the type.
+    ///
+    /// **Note:** Currently bones isn't very standardized as far as name generation for Rust or
+    /// other language type names, and this is mostly for diagnostics. This may change in the future
+    /// but for now there are no guarantees.
+    pub name: Cow<'static, str>,
+    /// The full name of the type, including any module specifiers.
+    ///
+    /// **Note:** Currently bones isn't very standardized as far as name generation for Rust or
+    /// other language type names, and this is mostly for diagnostics. This may change in the future
+    /// but for now there are no guarantees.
+    pub full_name: Cow<'static, str>,
     /// The kind of schema.
     pub kind: SchemaKind,
     #[cfg_attr(feature = "serde", serde(skip))]
@@ -197,6 +205,8 @@ pub enum SchemaKind {
     /// The scripting solution must facilitate a way for scripts to access data in the [`Vec`] if it
     /// is to be readable/modifyable from scripts.
     Vec(&'static Schema),
+    /// Type represents an enum, which in the C layout is called a tagged union.
+    Enum(EnumSchemaInfo),
     /// Type represents a [`SchemaMap`].
     Map {
         /// The schema of the key type.
@@ -227,6 +237,14 @@ impl SchemaKind {
             None
         }
     }
+    /// Get the enum, if this is a enum.
+    pub fn as_enum(&self) -> Option<&EnumSchemaInfo> {
+        if let Self::Enum(e) = self {
+            Some(e)
+        } else {
+            None
+        }
+    }
     /// Get the schema of the items in the vector, if this is a vector.
     pub fn as_vec(&self) -> Option<&'static Schema> {
         if let Self::Vec(v) = self {
@@ -242,7 +260,11 @@ impl SchemaKind {
 pub struct SchemaLayoutInfo<'a> {
     /// The layout of the type.
     pub layout: Layout,
-    /// The field offsets if this is a struct schema.
+    /// If this is a struct, then the field offsets will contain the byte offset from the front of
+    /// the struct to each field in the order the fields are declared.
+    ///
+    /// If this is an enum, there will be exactly one entry specifying the offset from the beginning
+    /// of the struct to the enum value.
     pub field_offsets: Vec<(Option<&'a str>, usize)>,
 }
 
@@ -251,6 +273,51 @@ pub struct SchemaLayoutInfo<'a> {
 pub struct StructSchemaInfo {
     /// The fields in the struct, in the order they are defined.
     pub fields: Vec<StructFieldInfo>,
+}
+
+/// Schema data for an enum.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+pub struct EnumSchemaInfo {
+    /// The layout of the enum tag.
+    pub tag_type: EnumTagType,
+    /// Info for the enum variants.
+    pub variants: Vec<VariantInfo>,
+}
+
+/// A type for an enum tag for [`EnumSchemaInfo`].
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+pub enum EnumTagType {
+    /// A [`u8`].
+    U8,
+    /// A [`u16`].
+    U16,
+    /// A [`u32`].
+    U32,
+}
+
+impl EnumTagType {
+    /// Get the memory layout of the enum tag.
+    pub fn layout(&self) -> Layout {
+        match self {
+            EnumTagType::U8 => Layout::new::<u8>(),
+            EnumTagType::U16 => Layout::new::<u16>(),
+            EnumTagType::U32 => Layout::new::<u32>(),
+        }
+    }
+}
+
+/// Information about an enum variant for [`EnumSchemaInfo`].
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+pub struct VariantInfo {
+    /// The name of the enum variant.
+    pub name: Cow<'static, str>,
+    /// The schema of this variant.
+    pub schema: &'static Schema,
 }
 
 /// A field in a [`StructSchemaInfo`].
@@ -356,6 +423,28 @@ impl SchemaData {
             SchemaKind::Map { .. } => {
                 extend_layout(&mut layout, Layout::new::<SchemaMap>());
             }
+            SchemaKind::Enum(e) => {
+                let enum_tag_layout = e.tag_type.layout();
+                extend_layout(&mut layout, enum_tag_layout);
+
+                let mut enum_value_layout = Layout::from_size_align(0, 1).unwrap();
+                // The enum layout is the greatest of it's variants sizes and aligments
+                for var in &e.variants {
+                    let var_layout = var.schema.layout();
+                    if var_layout.size() > enum_value_layout.size() {
+                        enum_value_layout =
+                            Layout::from_size_align(var_layout.size(), enum_value_layout.align())
+                                .unwrap();
+                    }
+                    if var_layout.align() > enum_value_layout.align() {
+                        enum_value_layout =
+                            Layout::from_size_align(enum_value_layout.size(), var_layout.align())
+                                .unwrap();
+                    }
+                }
+                let offset = extend_layout(&mut layout, enum_value_layout);
+                field_offsets.push((None, offset));
+            }
             SchemaKind::Primitive(p) => {
                 extend_layout(
                     &mut layout,
@@ -397,6 +486,7 @@ impl SchemaData {
             SchemaKind::Struct(s) => s.fields.iter().any(|field| field.schema.has_opaque()),
             SchemaKind::Vec(v) => v.has_opaque(),
             SchemaKind::Box(b) => b.schema().has_opaque(),
+            SchemaKind::Enum(e) => e.variants.iter().any(|var| var.schema.has_opaque()),
             SchemaKind::Map { key, value } => {
                 key.schema().has_opaque() || value.schema().has_opaque()
             }

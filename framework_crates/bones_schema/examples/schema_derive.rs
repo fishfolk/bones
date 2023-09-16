@@ -30,6 +30,17 @@ struct Player {
     fancier: SVec<SVec<TupleExample>>,
 }
 
+#[derive(HasSchema, Clone, Default)]
+#[repr(C, u8)]
+enum EnumExample {
+    #[default]
+    Waiting,
+    Thinking {
+        progress: f32,
+    },
+    Ready(u32),
+}
+
 /// You can also make the entire type opaque, so that it contains no real description of it's type
 /// other than the size and alignment.
 #[derive(HasSchema)]
@@ -43,4 +54,5 @@ fn main() {
     dbg!(Player::schema());
     dbg!(Player::schema().layout());
     dbg!(OpaqueType::schema());
+    dbg!(EnumExample::schema());
 }

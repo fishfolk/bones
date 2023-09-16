@@ -1,4 +1,9 @@
-use std::{alloc::Layout, any::TypeId, marker::PhantomData, sync::OnceLock};
+use std::{
+    alloc::Layout,
+    any::{type_name, TypeId},
+    marker::PhantomData,
+    sync::OnceLock,
+};
 
 use bones_schema::{prelude::*, raw_fns::*};
 use bones_utils::{parking_lot::RwLock, HashMap};
@@ -109,6 +114,8 @@ unsafe impl<T: HasSchema> HasSchema for Handle<T> {
             existing_schema
         } else {
             let schema = SCHEMA_REGISTRY.register(SchemaData {
+                name: type_name::<Self>().into(),
+                full_name: format!("{}{}", module_path!(), type_name::<Self>()).into(),
                 type_id: Some(TypeId::of::<Self>()),
                 kind: SchemaKind::Struct(StructSchemaInfo {
                     fields: vec![StructFieldInfo {
@@ -155,6 +162,8 @@ unsafe impl HasSchema for UntypedHandle {
         );
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: type_name::<Self>().into(),
+                full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
                 type_id: Some(TypeId::of::<Self>()),
                 kind: SchemaKind::Struct(StructSchemaInfo {
                     fields: vec![StructFieldInfo {

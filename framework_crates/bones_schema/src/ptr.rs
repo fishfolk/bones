@@ -1,8 +1,13 @@
 //! Schema-aware smart pointers.
 
 use std::{
-    alloc::handle_alloc_error, any::TypeId, hash::Hash, marker::PhantomData, mem::MaybeUninit,
-    ptr::NonNull, sync::OnceLock,
+    alloc::handle_alloc_error,
+    any::{type_name, TypeId},
+    hash::Hash,
+    marker::PhantomData,
+    mem::MaybeUninit,
+    ptr::NonNull,
+    sync::OnceLock,
 };
 
 use crate::{
@@ -130,7 +135,10 @@ impl<'pointer> SchemaRef<'pointer> {
                 let the_box = unsafe { self.ptr.deref::<SchemaBox>() };
                 the_box.get_field(idx)
             }
-            SchemaKind::Vec(_) | SchemaKind::Primitive(_) | SchemaKind::Map { .. } => not_found,
+            SchemaKind::Vec(_)
+            | SchemaKind::Primitive(_)
+            | SchemaKind::Map { .. }
+            | SchemaKind::Enum(_) => not_found,
         }
     }
 
@@ -358,7 +366,10 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
                 let the_box = unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaBox) };
                 the_box.get_field_mut(idx)
             }
-            SchemaKind::Map { .. } | SchemaKind::Vec(_) | SchemaKind::Primitive(_) => not_found,
+            SchemaKind::Map { .. }
+            | SchemaKind::Vec(_)
+            | SchemaKind::Primitive(_)
+            | SchemaKind::Enum(_) => not_found,
         }
     }
 
@@ -760,6 +771,8 @@ unsafe impl HasSchema for SchemaBox {
         let layout = Layout::new::<Self>();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: type_name::<Self>().into(),
+                full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
                 kind: SchemaKind::Primitive(Primitive::Opaque {
                     size: layout.size(),
                     align: layout.align(),
@@ -835,6 +848,8 @@ unsafe impl<T: HasSchema> HasSchema for SBox<T> {
         static S: OnceLock<&'static Schema> = OnceLock::new();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
+                name: type_name::<Self>().into(),
+                full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
                 kind: SchemaKind::Box(T::schema()),
                 type_id: Some(TypeId::of::<Self>()),
                 clone_fn: Some(<Self as RawClone>::raw_clone),

@@ -1,6 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::{TokenStream as TokenStream2, TokenTree as TokenTree2};
 use quote::{format_ident, quote, quote_spanned, spanned::Spanned};
+use venial::StructFields;
 
 /// Helper macro to bail out of the macro with a compile error.
 macro_rules! throw {
@@ -138,16 +139,34 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 
     let no_clone = schema_flags.iter().any(|x| x.as_str() == "no_clone");
     let no_default = schema_flags.iter().any(|x| x.as_str() == "no_default");
-    let repr_c = input.attributes().iter().any(|attr| {
-        attr.get_single_path_segment() == Some(&format_ident!("repr")) && {
+
+    let mut repr_c = false;
+    let mut repr_c_enum_tag = None;
+    input.attributes().iter().for_each(|attr| {
+        if attr.get_single_path_segment() == Some(&format_ident!("repr")) {
             let value = attr.get_value_tokens();
-            value.len() == 1
-                && match &value[0] {
-                    TokenTree2::Ident(i) => i == &format_ident!("C"),
-                    _ => false,
+            let is_c = matches!(&value[0], TokenTree2::Ident(i) if i == &format_ident!("C"));
+
+            if is_c {
+                repr_c = true;
+                let valid_enum_tag_types = [
+                    format_ident!("u8"),
+                    format_ident!("u16"),
+                    format_ident!("u32"),
+                ];
+
+                match (&value.get(1), &value.get(2)) {
+                    (Some(TokenTree2::Punct(p)), Some(TokenTree2::Ident(i)))
+                        if valid_enum_tag_types.contains(i) && p.as_char() == ',' =>
+                    {
+                        repr_c_enum_tag = Some(format_ident!("{}", i.to_string().to_uppercase()));
+                    }
+                    _ => (),
                 }
+            }
         }
     });
+
     let is_opaque = schema_flags.iter().any(|x| x.as_str() == "opaque") || !repr_c;
 
     let clone_fn = if no_clone {
@@ -169,6 +188,8 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                     S.get_or_init(|| {
                         let layout = std::alloc::Layout::new::<Self>();
                         #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
+                            name: stringify!(#name).into(),
+                            full_name: concat!(module_path!(), stringify!(#name)).into(),
                             type_id: Some(std::any::TypeId::of::<Self>()),
                             clone_fn: #clone_fn,
                             default_fn: #default_fn,
@@ -203,69 +224,75 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         .into();
     }
 
+    let parse_struct_fields = |fields: &StructFields| {
+        match fields {
+        venial::StructFields::Tuple(tuple) => tuple
+            .fields
+            .iter()
+            .map(|(field, _)| {
+                let ty = &field.ty;
+                quote_spanned! {field.ty.__span() =>
+                    #schema_mod::StructFieldInfo {
+                        name: None,
+                        schema: <#ty as #schema_mod::HasSchema>::schema(),
+                    }
+                }
+            })
+            .collect::<Vec<_>>(),
+        venial::StructFields::Named(named) => named
+            .fields
+            .iter()
+            .map(|(field, _)| {
+                let name = &field.name;
+                let ty = &field.ty;
+                let opaque = field.attributes.iter().any(|attr| {
+                    &attr.path[0].to_string() == "schema"
+                        && &attr.value.get_value_tokens()[0].to_string() == "opaque"
+                });
+
+                if opaque {
+                    quote_spanned! {field.ty.__span() =>
+                        #schema_mod::StructFieldInfo {
+                            name: Some(stringify!(#name).into()),
+                            schema: {
+                                let layout = ::std::alloc::Layout::new::<#ty>();
+                                #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
+                                    name: stringify!(#ty).into(),
+                                    full_name: concat!(module_path!(), stringify!(#ty)).into(),
+                                    kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
+                                        size: layout.size(),
+                                        align: layout.align(),
+                                    }),
+                                    type_id: Some(std::any::TypeId::of::<#ty>()),
+                                    type_data: #type_datas,
+                                    clone_fn: #clone_fn,
+                                    default_fn: #default_fn,
+                                    eq_fn: None,
+                                    hash_fn: None,
+                                    drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
+                                })
+                            },
+                        }
+                    }
+                } else {
+                    quote_spanned! {field.ty.__span() =>
+                        #schema_mod::StructFieldInfo {
+                            name: Some(stringify!(#name).into()),
+                            schema: <#ty as #schema_mod::HasSchema>::schema(),
+                        }
+                    }
+                }
+            })
+            .collect::<Vec<_>>(),
+        venial::StructFields::Unit => {
+            Vec::new()
+        }
+    }
+    };
+
     let schema_kind = match input {
         venial::Declaration::Struct(s) => {
-            let fields = match s.fields {
-                venial::StructFields::Tuple(tuple) => tuple
-                    .fields
-                    .iter()
-                    .map(|(field, _)| {
-                        let ty = &field.ty;
-                        quote_spanned! {field.ty.__span() =>
-                            #schema_mod::StructFieldInfo {
-                                name: None,
-                                schema: <#ty as #schema_mod::HasSchema>::schema(),
-                            }
-                        }
-                    })
-                    .collect::<Vec<_>>(),
-                venial::StructFields::Named(named) => named
-                    .fields
-                    .iter()
-                    .map(|(field, _)| {
-                        let name = &field.name;
-                        let ty = &field.ty;
-                        let opaque = field.attributes.iter().any(|attr| {
-                            &attr.path[0].to_string() == "schema"
-                                && &attr.value.get_value_tokens()[0].to_string() == "opaque"
-                        });
-
-                        if opaque {
-                            quote_spanned! {field.ty.__span() =>
-                                #schema_mod::StructFieldInfo {
-                                    name: Some(stringify!(#name).into()),
-                                    schema: {
-                                        let layout = ::std::alloc::Layout::new::<#ty>();
-                                        #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
-                                            kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
-                                                size: layout.size(),
-                                                align: layout.align(),
-                                            }),
-                                            type_id: Some(std::any::TypeId::of::<#ty>()),
-                                            type_data: #type_datas,
-                                            clone_fn: #clone_fn,
-                                            default_fn: #default_fn,
-                                            eq_fn: None,
-                                            hash_fn: None,
-                                            drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
-                                        })
-                                    },
-                                }
-                            }
-                        } else {
-                            quote_spanned! {field.ty.__span() =>
-                                #schema_mod::StructFieldInfo {
-                                    name: Some(stringify!(#name).into()),
-                                    schema: <#ty as #schema_mod::HasSchema>::schema(),
-                                }
-                            }
-                        }
-                    })
-                    .collect::<Vec<_>>(),
-                venial::StructFields::Unit => {
-                    Vec::new()
-                }
-            };
+            let fields = parse_struct_fields(&s.fields);
 
             quote! {
                 #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
@@ -275,11 +302,57 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                 })
             }
         }
-        venial::Declaration::Enum(_) => todo!(
-            "
-            TODO: implement HasSchema for enum types.
-        "
-        ),
+        venial::Declaration::Enum(e) => {
+            let Some(tag_type) = repr_c_enum_tag else {
+                throw!(
+                    e,
+                    "Enums deriving HasSchema with a `#[repr(C)]` annotation \
+                    must also specify an enum tag type like `#[repr(C, u8)]` where \
+                    `u8` could be either `u16` or `u32` if you need more than 256 enum \
+                    variants."
+                );
+            };
+            let mut variants = Vec::new();
+
+            for v in e.variants.items() {
+                let name = v.name.to_string();
+                let variant_schema_name = format!("{}::{}::EnumVariantSchemaData", e.name, name);
+                let fields = parse_struct_fields(&v.contents);
+                variants.push(quote! {
+                    VariantInfo {
+                        name: #name.into(),
+                        schema: {
+                            static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();
+                            S.get_or_init(|| {
+                                #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
+                                    name: #variant_schema_name.into(),
+                                    full_name: concat!(module_path!(), #variant_schema_name).into(),
+                                    type_id: None,
+                                    kind: #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
+                                        fields: vec![
+                                            #(#fields),*
+                                        ]
+                                    }),
+                                    type_data: Default::default(),
+                                    default_fn: None,
+                                    clone_fn: None,
+                                    eq_fn: None,
+                                    hash_fn: None,
+                                    drop_fn: None,
+                                })
+                            })
+                        }
+                    }
+                })
+            }
+
+            quote! {
+                #schema_mod::SchemaKind::Enum(#schema_mod::EnumSchemaInfo {
+                    tag_type: #schema_mod::EnumTagType::#tag_type,
+                    variants: vec![#(#variants),*],
+                })
+            }
+        }
         _ => {
             throw!(
                 input,
@@ -294,6 +367,8 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                 static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();
                 S.get_or_init(|| {
                     #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
+                        name: stringify!(#name).into(),
+                        full_name: concat!(module_path!(), stringify!(#name)).into(),
                         type_id: Some(std::any::TypeId::of::<Self>()),
                         kind: #schema_kind,
                         type_data: #type_datas,
