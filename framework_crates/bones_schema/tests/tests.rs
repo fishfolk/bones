@@ -313,3 +313,15 @@ fn schema_layout_matches_rust_layout() {
     }
     layout_eq!(A, B);
 }
+
+#[derive(HasSchema, Clone)]
+#[schema(no_default)]
+struct HasGeneric<A>(A);
+
+#[test]
+fn generic_has_schema_impls_dont_match() {
+    assert_ne!(SMap::<u32, u32>::schema(), SMap::<u32, u8>::schema());
+    assert_ne!(SVec::<u32>::schema(), SVec::<u8>::schema());
+    assert_ne!(SBox::<u32>::schema(), SBox::<u8>::schema());
+    assert_ne!(HasGeneric::<u32>::schema(), HasGeneric::<u64>::schema());
+}

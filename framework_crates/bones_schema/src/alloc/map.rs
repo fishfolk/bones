@@ -6,7 +6,7 @@ use std::{
     sync::OnceLock,
 };
 
-use bones_utils::{hashbrown::hash_map, HashMap};
+use bones_utils::{default, hashbrown::hash_map, parking_lot::RwLock, HashMap};
 
 use crate::{
     prelude::*,
@@ -535,9 +535,15 @@ impl<K: HasSchema, V: HasSchema> Default for SMap<K, V> {
 }
 unsafe impl<K: HasSchema, V: HasSchema> HasSchema for SMap<K, V> {
     fn schema() -> &'static Schema {
-        static S: OnceLock<&'static Schema> = OnceLock::new();
-        S.get_or_init(|| {
-            SCHEMA_REGISTRY.register(SchemaData {
+        static S: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
+        let schema = {
+            S.get_or_init(default)
+                .read()
+                .get(&TypeId::of::<Self>())
+                .copied()
+        };
+        schema.unwrap_or_else(|| {
+            let schema = SCHEMA_REGISTRY.register(SchemaData {
                 name: type_name::<Self>().into(),
                 full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
                 kind: SchemaKind::Map {
@@ -551,7 +557,13 @@ unsafe impl<K: HasSchema, V: HasSchema> HasSchema for SMap<K, V> {
                 hash_fn: Some(SchemaVec::raw_hash),
                 eq_fn: Some(SchemaVec::raw_eq),
                 type_data: Default::default(),
-            })
+            });
+
+            S.get_or_init(default)
+                .write()
+                .insert(TypeId::of::<Self>(), schema);
+
+            schema
         })
     }
 }

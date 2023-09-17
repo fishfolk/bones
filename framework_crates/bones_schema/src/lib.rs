@@ -23,6 +23,8 @@ pub mod prelude {
         ptr::*,
         registry::*,
         schema::*,
+        Maybe,
+        Maybe::*,
     };
     #[cfg(feature = "derive")]
     pub use bones_schema_macros::*;
@@ -44,3 +46,40 @@ mod std_impls;
 /// Serde implementations for [`Schema`].
 #[cfg(feature = "serde")]
 pub mod ser_de;
+
+/// An equivalent to [`Option<T>`] that has a stable memory layout and implements [`HasSchema`].
+#[derive(HasSchema, Clone, Default)]
+#[schema_module(crate)]
+#[repr(C, u8)]
+pub enum Maybe<T> {
+    /// The value is set.
+    Set(T),
+    /// The value is not set.
+    #[default]
+    Unset,
+}
+
+impl<T> Maybe<T> {
+    /// Convert this [`Maybe`] into an [`Option`].
+    pub fn option(self) -> Option<T> {
+        self.into()
+    }
+}
+
+impl<T> From<Maybe<T>> for Option<T> {
+    fn from(value: Maybe<T>) -> Self {
+        match value {
+            Maybe::Set(s) => Some(s),
+            Maybe::Unset => None,
+        }
+    }
+}
+
+impl<T> From<Option<T>> for Maybe<T> {
+    fn from(value: Option<T>) -> Self {
+        match value {
+            Some(s) => Maybe::Set(s),
+            None => Maybe::Unset,
+        }
+    }
+}

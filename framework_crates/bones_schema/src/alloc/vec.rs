@@ -7,7 +7,7 @@ use std::{
     sync::OnceLock,
 };
 
-use bones_utils::fxhash::FxHasher;
+use bones_utils::{default, fxhash::FxHasher, parking_lot::RwLock, HashMap};
 
 use crate::{prelude::*, raw_fns::*};
 
@@ -614,9 +614,15 @@ impl<T: HasSchema> std::ops::DerefMut for SVec<T> {
 
 unsafe impl<T: HasSchema> HasSchema for SVec<T> {
     fn schema() -> &'static Schema {
-        static S: OnceLock<&'static Schema> = OnceLock::new();
-        S.get_or_init(|| {
-            SCHEMA_REGISTRY.register(SchemaData {
+        static S: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
+        let schema = {
+            S.get_or_init(default)
+                .read()
+                .get(&TypeId::of::<Self>())
+                .copied()
+        };
+        schema.unwrap_or_else(|| {
+            let schema = SCHEMA_REGISTRY.register(SchemaData {
                 name: type_name::<Self>().into(),
                 full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
                 kind: SchemaKind::Vec(T::schema()),
@@ -627,7 +633,13 @@ unsafe impl<T: HasSchema> HasSchema for SVec<T> {
                 hash_fn: Some(SchemaVec::raw_hash),
                 eq_fn: Some(SchemaVec::raw_eq),
                 type_data: Default::default(),
-            })
+            });
+
+            S.get_or_init(default)
+                .write()
+                .insert(TypeId::of::<Self>(), schema);
+
+            schema
         })
     }
 }

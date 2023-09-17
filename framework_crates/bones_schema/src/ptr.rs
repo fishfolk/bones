@@ -14,7 +14,7 @@ use crate::{
     prelude::*,
     raw_fns::{RawClone, RawDefault, RawDrop},
 };
-use bones_utils::prelude::*;
+use bones_utils::{parking_lot::RwLock, prelude::*};
 
 /// An untyped reference that knows the [`Schema`] of the pointee and that can be cast to a matching
 /// type.
@@ -845,9 +845,15 @@ impl<T: HasSchema + std::fmt::Debug> std::fmt::Debug for SBox<T> {
 }
 unsafe impl<T: HasSchema> HasSchema for SBox<T> {
     fn schema() -> &'static Schema {
-        static S: OnceLock<&'static Schema> = OnceLock::new();
-        S.get_or_init(|| {
-            SCHEMA_REGISTRY.register(SchemaData {
+        static S: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
+        let schema = {
+            S.get_or_init(default)
+                .read()
+                .get(&TypeId::of::<Self>())
+                .copied()
+        };
+        schema.unwrap_or_else(|| {
+            let schema = SCHEMA_REGISTRY.register(SchemaData {
                 name: type_name::<Self>().into(),
                 full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
                 kind: SchemaKind::Box(T::schema()),
@@ -858,7 +864,13 @@ unsafe impl<T: HasSchema> HasSchema for SBox<T> {
                 hash_fn: Some(SchemaVec::raw_hash),
                 eq_fn: Some(SchemaVec::raw_eq),
                 type_data: Default::default(),
-            })
+            });
+
+            S.get_or_init(default)
+                .write()
+                .insert(TypeId::of::<Self>(), schema);
+
+            schema
         })
     }
 }
