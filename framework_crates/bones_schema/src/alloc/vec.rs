@@ -533,7 +533,7 @@ impl<T: HasSchema> SVec<T> {
         SVecIter {
             vec: self,
             idx: 0,
-            end: self.len() - 1,
+            end: self.len() as isize - 1,
         }
     }
 
@@ -541,7 +541,7 @@ impl<T: HasSchema> SVec<T> {
     pub fn iter_mut(&mut self) -> SVecIterMut<T> {
         SVecIterMut {
             idx: 0,
-            end: self.len() - 1,
+            end: self.len() as isize - 1,
             vec: self,
         }
     }
@@ -680,13 +680,16 @@ impl<'a, T: HasSchema> IntoIterator for &'a mut SVec<T> {
 pub struct SVecIter<'a, T: HasSchema> {
     vec: &'a SVec<T>,
     idx: usize,
-    end: usize,
+    end: isize,
 }
 impl<'a, T: HasSchema> Iterator for SVecIter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = (self.idx <= self.end).then(|| self.vec.get(self.idx).unwrap());
+        if self.end < 0 {
+            return None;
+        }
+        let item = (self.idx <= self.end as usize).then(|| self.vec.get(self.idx).unwrap());
         if item.is_some() {
             self.idx += 1;
         }
@@ -695,7 +698,11 @@ impl<'a, T: HasSchema> Iterator for SVecIter<'a, T> {
 }
 impl<'a, T: HasSchema> DoubleEndedIterator for SVecIter<'a, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        let item = (self.end >= self.idx).then(|| self.vec.get(self.end).unwrap());
+        if self.end < 0 {
+            return None;
+        }
+        let item =
+            (self.end as usize >= self.idx).then(|| self.vec.get(self.end as usize).unwrap());
         if item.is_some() {
             self.end -= 1;
         }
@@ -707,13 +714,16 @@ impl<'a, T: HasSchema> DoubleEndedIterator for SVecIter<'a, T> {
 pub struct SVecIterMut<'a, T: HasSchema> {
     vec: &'a mut SVec<T>,
     idx: usize,
-    end: usize,
+    end: isize,
 }
 impl<'a, T: HasSchema> Iterator for SVecIterMut<'a, T> {
     type Item = &'a mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = (self.idx <= self.end).then(|| self.vec.get_mut(self.idx).unwrap());
+        if self.end < 0 {
+            return None;
+        }
+        let item = (self.idx <= self.end as usize).then(|| self.vec.get_mut(self.idx).unwrap());
         if item.is_some() {
             self.idx += 1;
         }
@@ -724,7 +734,11 @@ impl<'a, T: HasSchema> Iterator for SVecIterMut<'a, T> {
 }
 impl<'a, T: HasSchema> DoubleEndedIterator for SVecIterMut<'a, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        let item = (self.end >= self.idx).then(|| self.vec.get_mut(self.end).unwrap());
+        if self.end < 0 {
+            return None;
+        }
+        let item =
+            (self.end as usize >= self.idx).then(|| self.vec.get_mut(self.end as usize).unwrap());
         if item.is_some() {
             self.end -= 1;
         }
@@ -767,6 +781,15 @@ mod test {
         assert_eq!(iter.next(), Some(&mut 2));
         assert_eq!(iter.next_back(), Some(&mut 4));
         assert_eq!(iter.next(), Some(&mut 3));
+        assert_eq!(iter.next_back(), None);
+        assert_eq!(iter.next(), None);
+
+        let v = [].into_iter().collect::<SVec<u8>>();
+        let mut iter = v.iter();
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next_back(), None);
+        let mut iter = v.iter();
         assert_eq!(iter.next_back(), None);
         assert_eq!(iter.next(), None);
     }
