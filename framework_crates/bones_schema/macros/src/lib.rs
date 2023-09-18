@@ -390,7 +390,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 ///
 /// For example, with the given struct:
 ///
-/// ```
+/// ```ignore
 /// #[example(test)]
 /// #[my_attr(hello, world)]
 /// struct Hello;
