@@ -341,12 +341,18 @@ fn step_bones_game(
         .unwrap();
     let mut bevy_images = world.remove_resource::<Assets<Image>>().unwrap();
 
-    let egui_ctx = {
-        let mut egui_query = world.query_filtered::<&mut EguiContext, With<Window>>();
-        let mut egui_ctx = egui_query.get_single_mut(world).unwrap();
-        egui_ctx.get_mut().clone()
+    let (egui_ctx, window) = {
+        let mut egui_query = world.query::<(&mut EguiContext, &Window)>();
+        let (mut egui_ctx, window) = egui_query.get_single_mut(world).unwrap();
+        (egui_ctx.get_mut().clone(), window)
     };
     let BonesData { game, .. } = &mut data;
+
+    // Insert window information
+    game.insert_shared_resource(bones::Window {
+        size: vec2(window.width(), window.height()),
+    });
+
     let bevy_time = world.resource::<Time>();
 
     let mouse_inputs = bones::AtomicResource::new(mouse_inputs);
