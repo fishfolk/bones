@@ -1024,6 +1024,21 @@
 <a href="#1024" id="1024">1024</a>
 <a href="#1025" id="1025">1025</a>
 <a href="#1026" id="1026">1026</a>
+<a href="#1027" id="1027">1027</a>
+<a href="#1028" id="1028">1028</a>
+<a href="#1029" id="1029">1029</a>
+<a href="#1030" id="1030">1030</a>
+<a href="#1031" id="1031">1031</a>
+<a href="#1032" id="1032">1032</a>
+<a href="#1033" id="1033">1033</a>
+<a href="#1034" id="1034">1034</a>
+<a href="#1035" id="1035">1035</a>
+<a href="#1036" id="1036">1036</a>
+<a href="#1037" id="1037">1037</a>
+<a href="#1038" id="1038">1038</a>
+<a href="#1039" id="1039">1039</a>
+<a href="#1040" id="1040">1040</a>
+<a href="#1041" id="1041">1041</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::path::{Path, PathBuf};
 
 <span class="kw">use </span>anyhow::Context;
@@ -1635,17 +1650,23 @@
     ext == <span class="string">&quot;yaml&quot; </span>|| ext == <span class="string">&quot;yml&quot; </span>|| ext == <span class="string">&quot;json&quot;
 </span>}
 
-<span class="kw">use </span>metadata::<span class="kw-2">*</span>;
+<span class="kw">pub use </span>metadata::<span class="kw-2">*</span>;
 <span class="kw">mod </span>metadata {
     <span class="kw">use </span>serde::de::{DeserializeSeed, Error, VariantAccess, Visitor};
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="kw">pub struct </span>MetaAssetLoadCtx&lt;<span class="lifetime">&#39;srv</span>&gt; {
-        <span class="kw">pub </span>server: <span class="kw-2">&amp;</span><span class="lifetime">&#39;srv </span><span class="kw-2">mut </span>AssetServer,
-        <span class="kw">pub </span>dependencies: <span class="kw-2">&amp;</span><span class="lifetime">&#39;srv </span><span class="kw-2">mut </span>Vec&lt;Cid&gt;,
-        <span class="kw">pub </span>loc: AssetLocRef&lt;<span class="lifetime">&#39;srv</span>&gt;,
-        <span class="kw">pub </span>schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
+    <span class="doccomment">/// Context provided while loading a metadata asset.
+    </span><span class="kw">pub struct </span>MetaAssetLoadCtx&lt;<span class="lifetime">&#39;srv</span>&gt; {
+        <span class="doccomment">/// The asset server.
+        </span><span class="kw">pub </span>server: <span class="kw-2">&amp;</span><span class="lifetime">&#39;srv </span><span class="kw-2">mut </span>AssetServer,
+        <span class="doccomment">/// The dependency list of this asset. This should be updated by asset loaders as
+        /// dependencies are added.
+        </span><span class="kw">pub </span>dependencies: <span class="kw-2">&amp;</span><span class="lifetime">&#39;srv </span><span class="kw-2">mut </span>Vec&lt;Cid&gt;,
+        <span class="doccomment">/// The location that the asset is being loaded from.
+        </span><span class="kw">pub </span>loc: AssetLocRef&lt;<span class="lifetime">&#39;srv</span>&gt;,
+        <span class="doccomment">/// The schema of the asset being loaded.
+        </span><span class="kw">pub </span>schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
     }
 
     <span class="kw">impl</span>&lt;<span class="lifetime">&#39;asset</span>, <span class="lifetime">&#39;de</span>&gt; DeserializeSeed&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>MetaAssetLoadCtx&lt;<span class="lifetime">&#39;asset</span>&gt; {
@@ -1668,9 +1689,12 @@
         }
     }
 
-    <span class="kw">struct </span>SchemaPtrLoadCtx&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
-        ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>MetaAssetLoadCtx&lt;<span class="lifetime">&#39;srv</span>&gt;,
-        ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt;,
+    <span class="doccomment">/// The load context for a [`SchemaRefMut`].
+    </span><span class="kw">pub struct </span>SchemaPtrLoadCtx&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
+        <span class="doccomment">/// The metadata asset load context.
+        </span><span class="kw">pub </span>ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>MetaAssetLoadCtx&lt;<span class="lifetime">&#39;srv</span>&gt;,
+        <span class="doccomment">/// The pointer to load.
+        </span><span class="kw">pub </span>ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt;,
     }
 
     <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>, <span class="lifetime">&#39;de</span>&gt; DeserializeSeed&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>SchemaPtrLoadCtx&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
@@ -1705,8 +1729,14 @@
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(());
             }
 
-            <span class="comment">// Use custom deserialize implementation if present.
-            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(schema_deserialize) = <span class="self">self</span>.ptr.schema().type_data.get::&lt;SchemaDeserialize&gt;()
+            <span class="comment">// Use custom asset load or deserialize implementation if present.
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(custom_loader) = <span class="self">self</span>.ptr.schema().type_data.get::&lt;SchemaMetaAssetLoader&gt;()
+            {
+                <span class="kw">return </span>custom_loader
+                    .load(<span class="self">self</span>.ctx, <span class="self">self</span>.ptr, deserializer)
+                    .map_err(|e| D::Error::custom(e.to_string()));
+            } <span class="kw">else if let </span><span class="prelude-val">Some</span>(schema_deserialize) =
+                <span class="self">self</span>.ptr.schema().type_data.get::&lt;SchemaDeserialize&gt;()
             {
                 <span class="kw">return </span>schema_deserialize.deserialize(<span class="self">self</span>.ptr, deserializer);
             }

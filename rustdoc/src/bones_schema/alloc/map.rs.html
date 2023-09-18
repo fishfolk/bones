@@ -694,6 +694,18 @@
 <a href="#694" id="694">694</a>
 <a href="#695" id="695">695</a>
 <a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     any::{type_name, TypeId},
     fmt::Debug,
@@ -702,7 +714,7 @@
     sync::OnceLock,
 };
 
-<span class="kw">use </span>bones_utils::{hashbrown::hash_map, HashMap};
+<span class="kw">use </span>bones_utils::{default, hashbrown::hash_map, parking_lot::RwLock, HashMap};
 
 <span class="kw">use crate</span>::{
     prelude::<span class="kw-2">*</span>,
@@ -1231,9 +1243,15 @@
 }
 <span class="kw">unsafe impl</span>&lt;K: HasSchema, V: HasSchema&gt; HasSchema <span class="kw">for </span>SMap&lt;K, V&gt; {
     <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
-        <span class="kw">static </span>S: OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt; = OnceLock::new();
-        S.get_or_init(|| {
-            SCHEMA_REGISTRY.register(SchemaData {
+        <span class="kw">static </span>S: OnceLock&lt;RwLock&lt;HashMap&lt;TypeId, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt;&gt;&gt; = OnceLock::new();
+        <span class="kw">let </span>schema = {
+            S.get_or_init(default)
+                .read()
+                .get(<span class="kw-2">&amp;</span>TypeId::of::&lt;<span class="self">Self</span>&gt;())
+                .copied()
+        };
+        schema.unwrap_or_else(|| {
+            <span class="kw">let </span>schema = SCHEMA_REGISTRY.register(SchemaData {
                 name: type_name::&lt;<span class="self">Self</span>&gt;().into(),
                 full_name: <span class="macro">format!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
                 kind: SchemaKind::Map {
@@ -1247,7 +1265,13 @@
                 hash_fn: <span class="prelude-val">Some</span>(SchemaVec::raw_hash),
                 eq_fn: <span class="prelude-val">Some</span>(SchemaVec::raw_eq),
                 type_data: Default::default(),
-            })
+            });
+
+            S.get_or_init(default)
+                .write()
+                .insert(TypeId::of::&lt;<span class="self">Self</span>&gt;(), schema);
+
+            schema
         })
     }
 }

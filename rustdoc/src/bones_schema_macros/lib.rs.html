@@ -384,10 +384,60 @@
 <a href="#384" id="384">384</a>
 <a href="#385" id="385">385</a>
 <a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>proc_macro::TokenStream;
-<span class="kw">use </span>proc_macro2::{TokenStream <span class="kw">as </span>TokenStream2, TokenTree <span class="kw">as </span>TokenTree2};
+<span class="kw">use </span>proc_macro2::{Punct, Spacing, TokenStream <span class="kw">as </span>TokenStream2, TokenTree <span class="kw">as </span>TokenTree2};
 <span class="kw">use </span>quote::{format_ident, quote, quote_spanned, spanned::Spanned};
-<span class="kw">use </span>venial::StructFields;
+<span class="kw">use </span>venial::{GenericBound, StructFields};
 
 <span class="doccomment">/// Helper macro to bail out of the macro with a compile error.
 </span><span class="macro">macro_rules! </span>throw {
@@ -450,51 +500,32 @@
 /// ```
 ///
 /// If this is a problem for your use-case, please open an issue.
-</span><span class="attr">#[proc_macro_derive(HasSchema, attributes(schema, derive_type_data, type_data))]
+</span><span class="attr">#[proc_macro_derive(
+    HasSchema,
+    attributes(schema, derive_type_data, type_data, schema_module)
+)]
 </span><span class="kw">pub fn </span>derive_has_schema(input: TokenStream) -&gt; TokenStream {
     <span class="kw">let </span>input = venial::parse_declaration(input.into()).unwrap();
     <span class="kw">let </span>name = input.name().expect(<span class="string">&quot;Type must have a name&quot;</span>);
-    <span class="kw">let </span>schema_mod = <span class="macro">quote!</span>(bones_schema);
 
-    <span class="kw">let </span>get_flags_for_attr = |attr_name: <span class="kw-2">&amp;</span>str| {
-        <span class="kw">let </span>attrs = input
-            .attributes()
-            .iter()
-            .filter(|attr| attr.path.len() == <span class="number">1 </span>&amp;&amp; attr.path[<span class="number">0</span>].to_string() == attr_name)
-            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-        attrs
-            .iter()
-            .map(|attr| <span class="kw">match </span><span class="kw-2">&amp;</span>attr.value {
-                venial::AttributeValue::Group(<span class="kw">_</span>, value) =&gt; {
-                    <span class="kw">let </span><span class="kw-2">mut </span>flags = Vec::new();
-
-                    <span class="kw">let </span><span class="kw-2">mut </span>current_flag = proc_macro2::TokenStream::new();
-                    <span class="kw">for </span>token <span class="kw">in </span>value {
-                        <span class="kw">match </span>token {
-                            TokenTree2::Punct(x) <span class="kw">if </span>x.as_char() == <span class="string">&#39;,&#39; </span>=&gt; {
-                                flags.push(current_flag.to_string());
-                                current_flag = Default::default();
-                            }
-                            x =&gt; current_flag.extend(std::iter::once(x.clone())),
-                        }
-                    }
-                    flags.push(current_flag.to_string());
-
-                    flags
-                }
-                venial::AttributeValue::Equals(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
-                    <span class="comment">// TODO: Improve macro error message span.
-                    </span><span class="macro">panic!</span>(<span class="string">&quot;Unsupported attribute format&quot;</span>);
-                }
-                venial::AttributeValue::Empty =&gt; Vec::new(),
+    <span class="comment">// Get the schema module, reading optionally from the `schema_module` attribute, so that we can
+    // set the module to `crate` when we want to use it within the `bones_schema` crate itself.
+    </span><span class="kw">let </span>schema_mod = input
+        .attributes()
+        .iter()
+        .find_map(|attr| {
+            (attr.path.len() == <span class="number">1 </span>&amp;&amp; attr.path[<span class="number">0</span>].to_string() == <span class="string">&quot;schema_module&quot;</span>).then(|| {
+                attr.value
+                    .get_value_tokens()
+                    .iter()
+                    .cloned()
+                    .collect::&lt;TokenStream2&gt;()
             })
-            .fold(Vec::new(), |<span class="kw-2">mut </span>acc, item| {
-                acc.extend(item);
-                acc
-            })
-    };
+        })
+        .unwrap_or_else(|| <span class="macro">quote!</span>(bones_schema));
 
-    <span class="kw">let </span>derive_type_data_flags = get_flags_for_attr(<span class="string">&quot;derive_type_data&quot;</span>);
+    <span class="comment">// Get the type datas that have been added and derived
+    </span><span class="kw">let </span>derive_type_data_flags = get_flags_for_attr(<span class="kw-2">&amp;</span>input, <span class="string">&quot;derive_type_data&quot;</span>);
     <span class="kw">let </span>type_datas = {
         <span class="kw">let </span>add_derive_type_datas = derive_type_data_flags.into_iter().map(|ty| {
             <span class="kw">let </span>ty = <span class="macro">format_ident!</span>(<span class="string">&quot;{ty}&quot;</span>);
@@ -521,12 +552,8 @@
         }
     };
 
-    <span class="kw">let </span>schema_flags = get_flags_for_attr(<span class="string">&quot;schema&quot;</span>);
-
-    <span class="kw">let </span>no_clone = schema_flags.iter().any(|x| x.as_str() == <span class="string">&quot;no_clone&quot;</span>);
-    <span class="kw">let </span>no_default = schema_flags.iter().any(|x| x.as_str() == <span class="string">&quot;no_default&quot;</span>);
-
-    <span class="kw">let </span><span class="kw-2">mut </span>repr_c = <span class="bool-val">false</span>;
+    <span class="comment">// Try to parse a `#[repr(C)]` or `#[repr(C, u8/u16/u32)]` attribute
+    </span><span class="kw">let </span><span class="kw-2">mut </span>repr_c = <span class="bool-val">false</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>repr_c_enum_tag = <span class="prelude-val">None</span>;
     input.attributes().iter().for_each(|attr| {
         <span class="kw">if </span>attr.get_single_path_segment() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">format_ident!</span>(<span class="string">&quot;repr&quot;</span>)) {
@@ -553,9 +580,14 @@
         }
     });
 
+    <span class="comment">// Collect schema flags
+    </span><span class="kw">let </span>schema_flags = get_flags_for_attr(<span class="kw-2">&amp;</span>input, <span class="string">&quot;schema&quot;</span>);
+    <span class="kw">let </span>no_clone = schema_flags.iter().any(|x| x.as_str() == <span class="string">&quot;no_clone&quot;</span>);
+    <span class="kw">let </span>no_default = schema_flags.iter().any(|x| x.as_str() == <span class="string">&quot;no_default&quot;</span>);
     <span class="kw">let </span>is_opaque = schema_flags.iter().any(|x| x.as_str() == <span class="string">&quot;opaque&quot;</span>) || !repr_c;
 
-    <span class="kw">let </span>clone_fn = <span class="kw">if </span>no_clone {
+    <span class="comment">// Get the clone and default functions based on the flags
+    </span><span class="kw">let </span>clone_fn = <span class="kw">if </span>no_clone {
         <span class="macro">quote!</span>(<span class="prelude-val">None</span>)
     } <span class="kw">else </span>{
         <span class="macro">quote!</span>(<span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawClone&gt;::raw_clone))
@@ -566,208 +598,276 @@
         <span class="macro">quote!</span>(<span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawDefault&gt;::raw_default))
     };
 
-    <span class="kw">if </span>is_opaque {
-        <span class="kw">return </span><span class="macro">quote! </span>{
+    <span class="comment">// Get the schema kind
+    </span><span class="kw">let </span>schema_kind = (|| {
+        <span class="kw">if </span>is_opaque {
+            <span class="kw">return </span><span class="macro">quote! </span>{
+                {
+                    <span class="kw">let </span>layout = ::std::alloc::Layout::new::&lt;<span class="self">Self</span>&gt;();
+                    #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
+                        size: layout.size(),
+                        align: layout.align(),
+                    })
+                }
+            };
+        }
+
+        <span class="comment">// Helper to parse struct fields from structs or enum variants
+        </span><span class="kw">let </span>parse_struct_fields = |fields: <span class="kw-2">&amp;</span>StructFields| {
+            <span class="kw">match </span>fields {
+                venial::StructFields::Tuple(tuple) =&gt; tuple
+                    .fields
+                    .iter()
+                    .map(|(field, <span class="kw">_</span>)| {
+                        <span class="kw">let </span>ty = <span class="kw-2">&amp;</span>field.ty;
+                        <span class="macro">quote_spanned! </span>{field.ty.__span() =&gt;
+                            #schema_mod::StructFieldInfo {
+                                name: <span class="prelude-val">None</span>,
+                                schema: &lt;#ty <span class="kw">as </span>#schema_mod::HasSchema&gt;::schema(),
+                            }
+                        }
+                    })
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
+                venial::StructFields::Named(named) =&gt; named
+                    .fields
+                    .iter()
+                    .map(|(field, <span class="kw">_</span>)| {
+                        <span class="kw">let </span>name = <span class="kw-2">&amp;</span>field.name;
+                        <span class="kw">let </span>ty = <span class="kw-2">&amp;</span>field.ty;
+                        <span class="kw">let </span>opaque = field.attributes.iter().any(|attr| {
+                            <span class="kw-2">&amp;</span>attr.path[<span class="number">0</span>].to_string() == <span class="string">&quot;schema&quot;
+                                </span>&amp;&amp; <span class="kw-2">&amp;</span>attr.value.get_value_tokens()[<span class="number">0</span>].to_string() == <span class="string">&quot;opaque&quot;
+                        </span>});
+
+                        <span class="kw">if </span>opaque {
+                            <span class="macro">quote_spanned! </span>{field.ty.__span() =&gt;
+                                #schema_mod::StructFieldInfo {
+                                    name: <span class="prelude-val">Some</span>(<span class="macro">stringify!</span>(#name).into()),
+                                    schema: {
+                                        <span class="kw">let </span>layout = ::std::alloc::Layout::new::&lt;#ty&gt;();
+                                        #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
+                                            name: <span class="macro">stringify!</span>(#ty).into(),
+                                            full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), <span class="macro">stringify!</span>(#ty)).into(),
+                                            kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
+                                                size: layout.size(),
+                                                align: layout.align(),
+                                            }),
+                                            type_id: <span class="prelude-val">Some</span>(std::any::TypeId::of::&lt;#ty&gt;()),
+                                            type_data: #type_datas,
+                                            clone_fn: #clone_fn,
+                                            default_fn: #default_fn,
+                                            eq_fn: <span class="prelude-val">None</span>,
+                                            hash_fn: <span class="prelude-val">None</span>,
+                                            drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawDrop&gt;::raw_drop),
+                                        })
+                                    },
+                                }
+                            }
+                        } <span class="kw">else </span>{
+                            <span class="macro">quote_spanned! </span>{field.ty.__span() =&gt;
+                                #schema_mod::StructFieldInfo {
+                                    name: <span class="prelude-val">Some</span>(<span class="macro">stringify!</span>(#name).into()),
+                                    schema: &lt;#ty <span class="kw">as </span>#schema_mod::HasSchema&gt;::schema(),
+                                }
+                            }
+                        }
+                    })
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
+                venial::StructFields::Unit =&gt; Vec::new(),
+            }
+        };
+
+        <span class="comment">// Match on the the type we are deriving on and return its SchemaData
+        </span><span class="kw">match </span><span class="kw-2">&amp;</span>input {
+            venial::Declaration::Struct(s) =&gt; {
+                <span class="kw">let </span>fields = parse_struct_fields(<span class="kw-2">&amp;</span>s.fields);
+
+                <span class="macro">quote! </span>{
+                    #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
+                        fields: <span class="macro">vec!</span>[
+                            #(#fields),*
+                        ]
+                    })
+                }
+            }
+            venial::Declaration::Enum(e) =&gt; {
+                <span class="kw">let </span><span class="prelude-val">Some</span>(tag_type) = repr_c_enum_tag <span class="kw">else </span>{
+                    <span class="macro">throw!</span>(
+                        e,
+                        <span class="string">&quot;Enums deriving HasSchema with a `#[repr(C)]` annotation \
+                        must also specify an enum tag type like `#[repr(C, u8)]` where \
+                        `u8` could be either `u16` or `u32` if you need more than 256 enum \
+                        variants.&quot;
+                    </span>);
+                };
+                <span class="kw">let </span><span class="kw-2">mut </span>variants = Vec::new();
+
+                <span class="kw">for </span>v <span class="kw">in </span>e.variants.items() {
+                    <span class="kw">let </span>name = v.name.to_string();
+                    <span class="kw">let </span>variant_schema_name =
+                        <span class="macro">format!</span>(<span class="string">&quot;{}::{}::EnumVariantSchemaData&quot;</span>, e.name, name);
+                    <span class="kw">let </span>fields = parse_struct_fields(<span class="kw-2">&amp;</span>v.contents);
+                    variants.push(<span class="macro">quote! </span>{
+                        VariantInfo {
+                            name: #name.into(),
+                            schema: {
+                                <span class="kw">static </span>S: ::std::sync::OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>#schema_mod::Schema&gt; = ::std::sync::OnceLock::new();
+                                S.get_or_init(|| {
+                                    #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
+                                        name: #variant_schema_name.into(),
+                                        full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), #variant_schema_name).into(),
+                                        type_id: <span class="prelude-val">None</span>,
+                                        kind: #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
+                                            fields: <span class="macro">vec!</span>[
+                                                #(#fields),*
+                                            ]
+                                        }),
+                                        type_data: Default::default(),
+                                        default_fn: <span class="prelude-val">None</span>,
+                                        clone_fn: <span class="prelude-val">None</span>,
+                                        eq_fn: <span class="prelude-val">None</span>,
+                                        hash_fn: <span class="prelude-val">None</span>,
+                                        drop_fn: <span class="prelude-val">None</span>,
+                                    })
+                                })
+                            }
+                        }
+                    })
+                }
+
+                <span class="macro">quote! </span>{
+                    #schema_mod::SchemaKind::Enum(#schema_mod::EnumSchemaInfo {
+                        tag_type: #schema_mod::EnumTagType::#tag_type,
+                        variants: <span class="macro">vec!</span>[#(#variants),<span class="kw-2">*</span>],
+                    })
+                }
+            }
+            <span class="kw">_ </span>=&gt; {
+                <span class="macro">throw!</span>(
+                    input,
+                    <span class="string">&quot;You may only derive HasSchema for structs and enums.&quot;
+                </span>);
+            }
+        }
+    })();
+
+    <span class="kw">let </span>schema_register = <span class="macro">quote! </span>{
+        #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
+            name: <span class="macro">stringify!</span>(#name).into(),
+            full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), <span class="macro">stringify!</span>(#name)).into(),
+            type_id: <span class="prelude-val">Some</span>(::std::any::TypeId::of::&lt;<span class="self">Self</span>&gt;()),
+            kind: #schema_kind,
+            type_data: #type_datas,
+            default_fn: #default_fn,
+            clone_fn: #clone_fn,
+            eq_fn: <span class="prelude-val">None</span>,
+            hash_fn: <span class="prelude-val">None</span>,
+            drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawDrop&gt;::raw_drop),
+        })
+    };
+
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(generic_params) = input.generic_params() {
+        <span class="kw">let </span><span class="kw-2">mut </span>sync_send_generic_params = generic_params.clone();
+        <span class="kw">for </span>(param, <span class="kw">_</span>) <span class="kw">in </span>sync_send_generic_params.params.iter_mut() {
+            <span class="kw">let </span>clone_bound = <span class="kw">if </span>!no_clone { <span class="macro">quote!</span>(+ Clone) } <span class="kw">else </span>{ <span class="macro">quote!</span>() };
+            param.bound = <span class="prelude-val">Some</span>(GenericBound {
+                tk_colon: Punct::new(<span class="string">&#39;:&#39;</span>, Spacing::Joint),
+                tokens: <span class="macro">quote!</span>(HasSchema #clone_bound ).into_iter().collect(),
+            });
+        }
+        <span class="macro">quote! </span>{
+            <span class="kw">unsafe impl </span>#sync_send_generic_params #schema_mod::HasSchema <span class="kw">for </span>#name #generic_params {
+                <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>#schema_mod::Schema {
+                    <span class="comment">// TODO: use faster hashmap and rwlocks from bones_utils.
+                    </span><span class="kw">use </span>::std::sync::{OnceLock};
+                    <span class="kw">use </span>::std::any::TypeId;
+                    <span class="kw">use </span>bones_utils::{HashMap, parking_lot::RwLock};
+                    <span class="kw">static </span>S: OnceLock&lt;RwLock&lt;HashMap&lt;TypeId, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt;&gt;&gt; = OnceLock::new();
+                    <span class="kw">let </span>schema = {
+                        S.get_or_init(Default::default)
+                            .read()
+                            .get(<span class="kw-2">&amp;</span>TypeId::of::&lt;<span class="self">Self</span>&gt;())
+                            .copied()
+                    };
+                    schema.unwrap_or_else(|| {
+                        <span class="kw">let </span>schema = #schema_register;
+
+                        S.get_or_init(Default::default)
+                            .write()
+                            .insert(TypeId::of::&lt;<span class="self">Self</span>&gt;(), schema);
+
+                        schema
+                    })
+
+                }
+            }
+        }
+    } <span class="kw">else </span>{
+        <span class="macro">quote! </span>{
             <span class="kw">unsafe impl </span>#schema_mod::HasSchema <span class="kw">for </span>#name {
                 <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>#schema_mod::Schema {
                     <span class="kw">static </span>S: ::std::sync::OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>#schema_mod::Schema&gt; = ::std::sync::OnceLock::new();
                     S.get_or_init(|| {
-                        <span class="kw">let </span>layout = std::alloc::Layout::new::&lt;<span class="self">Self</span>&gt;();
-                        #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
-                            name: <span class="macro">stringify!</span>(#name).into(),
-                            full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), <span class="macro">stringify!</span>(#name)).into(),
-                            type_id: <span class="prelude-val">Some</span>(std::any::TypeId::of::&lt;<span class="self">Self</span>&gt;()),
-                            clone_fn: #clone_fn,
-                            default_fn: #default_fn,
-                            drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawDrop&gt;::raw_drop),
-                            <span class="comment">// TODO: Allow deriving `hash_fn` and `eq_fn` for `HasSchema`.
-                            // We need to come up with a strategy for deriving the `Hash` and `Eq`
-                            // functions. There are a couple ways of thinking about this. If the
-                            // struct is #[repr(C)] and all of it&#39;s fields implement hash and eq,
-                            // then we can automatically implement hash and EQ using all of the
-                            // field&#39;s implementations, without having to have the rust struct
-                            // actually implement either. On the other hand, we could have the rust
-                            // struct be required to derive hash and/or eq, and then we just use the
-                            // `RawHash` and `RawEq` traits to get the functions. I think that&#39;s
-                            // probably the right direction, but we need to come up with an
-                            // attribute syntax to tell the derive macro to use the Hash and Eq
-                            // rust implmentations. Bevy used `#[reflect(Hash)]`, and we already
-                            // have `#[schema(no_default)]` so maybe we just add a couple flags like
-                            // `#[schema(hash, eq)]` if you want to use the Rust structs
-                            // `Hash` and `Eq` impls.
-                            </span>eq_fn: <span class="prelude-val">None</span>,
-                            hash_fn: <span class="prelude-val">None</span>,
-                            kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
-                                size: layout.size(),
-                                align: layout.align(),
-                            }),
-                            type_data: #type_datas,
-                        })
+                        #schema_register
                     })
                 }
-            }
-        }
-        .into();
-    }
-
-    <span class="kw">let </span>parse_struct_fields = |fields: <span class="kw-2">&amp;</span>StructFields| {
-        <span class="kw">match </span>fields {
-        venial::StructFields::Tuple(tuple) =&gt; tuple
-            .fields
-            .iter()
-            .map(|(field, <span class="kw">_</span>)| {
-                <span class="kw">let </span>ty = <span class="kw-2">&amp;</span>field.ty;
-                <span class="macro">quote_spanned! </span>{field.ty.__span() =&gt;
-                    #schema_mod::StructFieldInfo {
-                        name: <span class="prelude-val">None</span>,
-                        schema: &lt;#ty <span class="kw">as </span>#schema_mod::HasSchema&gt;::schema(),
-                    }
-                }
-            })
-            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
-        venial::StructFields::Named(named) =&gt; named
-            .fields
-            .iter()
-            .map(|(field, <span class="kw">_</span>)| {
-                <span class="kw">let </span>name = <span class="kw-2">&amp;</span>field.name;
-                <span class="kw">let </span>ty = <span class="kw-2">&amp;</span>field.ty;
-                <span class="kw">let </span>opaque = field.attributes.iter().any(|attr| {
-                    <span class="kw-2">&amp;</span>attr.path[<span class="number">0</span>].to_string() == <span class="string">&quot;schema&quot;
-                        </span>&amp;&amp; <span class="kw-2">&amp;</span>attr.value.get_value_tokens()[<span class="number">0</span>].to_string() == <span class="string">&quot;opaque&quot;
-                </span>});
-
-                <span class="kw">if </span>opaque {
-                    <span class="macro">quote_spanned! </span>{field.ty.__span() =&gt;
-                        #schema_mod::StructFieldInfo {
-                            name: <span class="prelude-val">Some</span>(<span class="macro">stringify!</span>(#name).into()),
-                            schema: {
-                                <span class="kw">let </span>layout = ::std::alloc::Layout::new::&lt;#ty&gt;();
-                                #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
-                                    name: <span class="macro">stringify!</span>(#ty).into(),
-                                    full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), <span class="macro">stringify!</span>(#ty)).into(),
-                                    kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
-                                        size: layout.size(),
-                                        align: layout.align(),
-                                    }),
-                                    type_id: <span class="prelude-val">Some</span>(std::any::TypeId::of::&lt;#ty&gt;()),
-                                    type_data: #type_datas,
-                                    clone_fn: #clone_fn,
-                                    default_fn: #default_fn,
-                                    eq_fn: <span class="prelude-val">None</span>,
-                                    hash_fn: <span class="prelude-val">None</span>,
-                                    drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawDrop&gt;::raw_drop),
-                                })
-                            },
-                        }
-                    }
-                } <span class="kw">else </span>{
-                    <span class="macro">quote_spanned! </span>{field.ty.__span() =&gt;
-                        #schema_mod::StructFieldInfo {
-                            name: <span class="prelude-val">Some</span>(<span class="macro">stringify!</span>(#name).into()),
-                            schema: &lt;#ty <span class="kw">as </span>#schema_mod::HasSchema&gt;::schema(),
-                        }
-                    }
-                }
-            })
-            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
-        venial::StructFields::Unit =&gt; {
-            Vec::new()
-        }
-    }
-    };
-
-    <span class="kw">let </span>schema_kind = <span class="kw">match </span>input {
-        venial::Declaration::Struct(s) =&gt; {
-            <span class="kw">let </span>fields = parse_struct_fields(<span class="kw-2">&amp;</span>s.fields);
-
-            <span class="macro">quote! </span>{
-                #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
-                    fields: <span class="macro">vec!</span>[
-                        #(#fields),*
-                    ]
-                })
-            }
-        }
-        venial::Declaration::Enum(e) =&gt; {
-            <span class="kw">let </span><span class="prelude-val">Some</span>(tag_type) = repr_c_enum_tag <span class="kw">else </span>{
-                <span class="macro">throw!</span>(
-                    e,
-                    <span class="string">&quot;Enums deriving HasSchema with a `#[repr(C)]` annotation \
-                    must also specify an enum tag type like `#[repr(C, u8)]` where \
-                    `u8` could be either `u16` or `u32` if you need more than 256 enum \
-                    variants.&quot;
-                </span>);
-            };
-            <span class="kw">let </span><span class="kw-2">mut </span>variants = Vec::new();
-
-            <span class="kw">for </span>v <span class="kw">in </span>e.variants.items() {
-                <span class="kw">let </span>name = v.name.to_string();
-                <span class="kw">let </span>variant_schema_name = <span class="macro">format!</span>(<span class="string">&quot;{}::{}::EnumVariantSchemaData&quot;</span>, e.name, name);
-                <span class="kw">let </span>fields = parse_struct_fields(<span class="kw-2">&amp;</span>v.contents);
-                variants.push(<span class="macro">quote! </span>{
-                    VariantInfo {
-                        name: #name.into(),
-                        schema: {
-                            <span class="kw">static </span>S: ::std::sync::OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>#schema_mod::Schema&gt; = ::std::sync::OnceLock::new();
-                            S.get_or_init(|| {
-                                #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
-                                    name: #variant_schema_name.into(),
-                                    full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), #variant_schema_name).into(),
-                                    type_id: <span class="prelude-val">None</span>,
-                                    kind: #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
-                                        fields: <span class="macro">vec!</span>[
-                                            #(#fields),*
-                                        ]
-                                    }),
-                                    type_data: Default::default(),
-                                    default_fn: <span class="prelude-val">None</span>,
-                                    clone_fn: <span class="prelude-val">None</span>,
-                                    eq_fn: <span class="prelude-val">None</span>,
-                                    hash_fn: <span class="prelude-val">None</span>,
-                                    drop_fn: <span class="prelude-val">None</span>,
-                                })
-                            })
-                        }
-                    }
-                })
-            }
-
-            <span class="macro">quote! </span>{
-                #schema_mod::SchemaKind::Enum(#schema_mod::EnumSchemaInfo {
-                    tag_type: #schema_mod::EnumTagType::#tag_type,
-                    variants: <span class="macro">vec!</span>[#(#variants),<span class="kw-2">*</span>],
-                })
-            }
-        }
-        <span class="kw">_ </span>=&gt; {
-            <span class="macro">throw!</span>(
-                input,
-                <span class="string">&quot;You may only derive HasSchema for structs and enums.&quot;
-            </span>);
-        }
-    };
-
-    <span class="macro">quote! </span>{
-        <span class="kw">unsafe impl </span>#schema_mod::HasSchema <span class="kw">for </span>#name {
-            <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>#schema_mod::Schema {
-                <span class="kw">static </span>S: ::std::sync::OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>#schema_mod::Schema&gt; = ::std::sync::OnceLock::new();
-                S.get_or_init(|| {
-                    #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
-                        name: <span class="macro">stringify!</span>(#name).into(),
-                        full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), <span class="macro">stringify!</span>(#name)).into(),
-                        type_id: <span class="prelude-val">Some</span>(std::any::TypeId::of::&lt;<span class="self">Self</span>&gt;()),
-                        kind: #schema_kind,
-                        type_data: #type_datas,
-                        default_fn: #default_fn,
-                        clone_fn: #clone_fn,
-                        eq_fn: <span class="prelude-val">None</span>,
-                        hash_fn: <span class="prelude-val">None</span>,
-                        drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawDrop&gt;::raw_drop),
-                    })
-                })
             }
         }
     }
     .into()
+}
+
+<span class="comment">//
+// Helpers
+//
+
+</span><span class="doccomment">/// Look for an attribute with the given name and get all of the comma-separated flags that are
+/// in that attribute.
+///
+/// For example, with the given struct:
+///
+/// ```ignore
+/// #[example(test)]
+/// #[my_attr(hello, world)]
+/// struct Hello;
+/// ```
+///
+/// Calling `get_flags_for_attr(&quot;my_attr&quot;)` would return `vec![&quot;hello&quot;, &quot;world&quot;]`.
+</span><span class="kw">fn </span>get_flags_for_attr(input: <span class="kw-2">&amp;</span>venial::Declaration, attr_name: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;String&gt; {
+    <span class="kw">let </span>attrs = input
+        .attributes()
+        .iter()
+        .filter(|attr| attr.path.len() == <span class="number">1 </span>&amp;&amp; attr.path[<span class="number">0</span>].to_string() == attr_name)
+        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+    attrs
+        .iter()
+        .map(|attr| <span class="kw">match </span><span class="kw-2">&amp;</span>attr.value {
+            venial::AttributeValue::Group(<span class="kw">_</span>, value) =&gt; {
+                <span class="kw">let </span><span class="kw-2">mut </span>flags = Vec::new();
+
+                <span class="kw">let </span><span class="kw-2">mut </span>current_flag = proc_macro2::TokenStream::new();
+                <span class="kw">for </span>token <span class="kw">in </span>value {
+                    <span class="kw">match </span>token {
+                        TokenTree2::Punct(x) <span class="kw">if </span>x.as_char() == <span class="string">&#39;,&#39; </span>=&gt; {
+                            flags.push(current_flag.to_string());
+                            current_flag = Default::default();
+                        }
+                        x =&gt; current_flag.extend(std::iter::once(x.clone())),
+                    }
+                }
+                flags.push(current_flag.to_string());
+
+                flags
+            }
+            venial::AttributeValue::Equals(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
+                <span class="comment">// TODO: Improve macro error message span.
+                </span><span class="macro">panic!</span>(<span class="string">&quot;Unsupported attribute format&quot;</span>);
+            }
+            venial::AttributeValue::Empty =&gt; Vec::new(),
+        })
+        .fold(Vec::new(), |<span class="kw-2">mut </span>acc, item| {
+            acc.extend(item);
+            acc
+        })
 }
 </code></pre></div></section></main></body></html>
