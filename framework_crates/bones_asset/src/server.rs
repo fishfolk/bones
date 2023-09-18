@@ -609,16 +609,22 @@ fn path_is_metadata(path: &Path) -> bool {
     ext == "yaml" || ext == "yml" || ext == "json"
 }
 
-use metadata::*;
+pub use metadata::*;
 mod metadata {
     use serde::de::{DeserializeSeed, Error, VariantAccess, Visitor};
 
     use super::*;
 
+    /// Context provided while loading a metadata asset.
     pub struct MetaAssetLoadCtx<'srv> {
+        /// The asset server.
         pub server: &'srv mut AssetServer,
+        /// The dependency list of this asset. This should be updated by asset loaders as
+        /// dependencies are added.
         pub dependencies: &'srv mut Vec<Cid>,
+        /// The location that the asset is being loaded from.
         pub loc: AssetLocRef<'srv>,
+        /// The schema of the asset being loaded.
         pub schema: &'static Schema,
     }
 
@@ -642,9 +648,12 @@ mod metadata {
         }
     }
 
-    struct SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'prnt> {
-        ctx: &'a mut MetaAssetLoadCtx<'srv>,
-        ptr: SchemaRefMut<'ptr, 'prnt>,
+    /// The load context for a [`SchemaRefMut`].
+    pub struct SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'prnt> {
+        /// The metadata asset load context.
+        pub ctx: &'a mut MetaAssetLoadCtx<'srv>,
+        /// The pointer to load.
+        pub ptr: SchemaRefMut<'ptr, 'prnt>,
     }
 
     impl<'a, 'srv, 'ptr, 'prnt, 'de> DeserializeSeed<'de> for SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'prnt> {
@@ -679,8 +688,14 @@ mod metadata {
                 return Ok(());
             }
 
-            // Use custom deserialize implementation if present.
-            if let Some(schema_deserialize) = self.ptr.schema().type_data.get::<SchemaDeserialize>()
+            // Use custom asset load or deserialize implementation if present.
+            if let Some(custom_loader) = self.ptr.schema().type_data.get::<SchemaMetaAssetLoader>()
+            {
+                return custom_loader
+                    .load(self.ctx, self.ptr, deserializer)
+                    .map_err(|e| D::Error::custom(e.to_string()));
+            } else if let Some(schema_deserialize) =
+                self.ptr.schema().type_data.get::<SchemaDeserialize>()
             {
                 return schema_deserialize.deserialize(self.ptr, deserializer);
             }

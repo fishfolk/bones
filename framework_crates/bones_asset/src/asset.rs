@@ -252,6 +252,38 @@ pub trait AssetLoader: Sync + Send + 'static {
     fn load(&self, ctx: AssetLoadCtx, bytes: &[u8]) -> anyhow::Result<SchemaBox>;
 }
 
+/// A custom asset loader implementation for a metadata asset.
+///
+/// This is similar in purpose to implementing [`AssetLoader`], but instead of loading from bytes,
+/// it loads from the deserialized [`SchemaRefMut`] of a metadata asset and must be added as a
+/// schema type data.
+#[derive(HasSchema)]
+#[schema(no_clone, no_default)]
+pub struct SchemaMetaAssetLoader(
+    pub  fn(
+        ctx: &mut MetaAssetLoadCtx,
+        ptr: SchemaRefMut<'_, '_>,
+        deserialzer: &mut dyn erased_serde::Deserializer,
+    ) -> anyhow::Result<()>,
+);
+
+impl SchemaMetaAssetLoader {
+    /// Load the asset
+    pub fn load<'a, 'de, D>(
+        &self,
+        ctx: &mut MetaAssetLoadCtx,
+        ptr: SchemaRefMut<'a, 'a>,
+        deserializer: D,
+    ) -> Result<(), erased_serde::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+        let mut de = <dyn erased_serde::Deserializer>::erase(deserializer);
+        (self.0)(ctx, ptr, &mut de).map_err(|e| erased_serde::Error::custom(e.to_string()))
+    }
+}
+
 /// The kind of asset a type represents.
 #[derive(HasSchema)]
 #[schema(opaque, no_default, no_clone)]

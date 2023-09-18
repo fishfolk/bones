@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
-use proc_macro2::{TokenStream as TokenStream2, TokenTree as TokenTree2};
+use proc_macro2::{Punct, Spacing, TokenStream as TokenStream2, TokenTree as TokenTree2};
 use quote::{format_ident, quote, quote_spanned, spanned::Spanned};
-use venial::StructFields;
+use venial::{GenericBound, StructFields};
 
 /// Helper macro to bail out of the macro with a compile error.
 macro_rules! throw {
@@ -64,51 +64,32 @@ macro_rules! throw {
 /// ```
 ///
 /// If this is a problem for your use-case, please open an issue.
-#[proc_macro_derive(HasSchema, attributes(schema, derive_type_data, type_data))]
+#[proc_macro_derive(
+    HasSchema,
+    attributes(schema, derive_type_data, type_data, schema_module)
+)]
 pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     let input = venial::parse_declaration(input.into()).unwrap();
     let name = input.name().expect("Type must have a name");
-    let schema_mod = quote!(bones_schema);
 
-    let get_flags_for_attr = |attr_name: &str| {
-        let attrs = input
-            .attributes()
-            .iter()
-            .filter(|attr| attr.path.len() == 1 && attr.path[0].to_string() == attr_name)
-            .collect::<Vec<_>>();
-        attrs
-            .iter()
-            .map(|attr| match &attr.value {
-                venial::AttributeValue::Group(_, value) => {
-                    let mut flags = Vec::new();
-
-                    let mut current_flag = proc_macro2::TokenStream::new();
-                    for token in value {
-                        match token {
-                            TokenTree2::Punct(x) if x.as_char() == ',' => {
-                                flags.push(current_flag.to_string());
-                                current_flag = Default::default();
-                            }
-                            x => current_flag.extend(std::iter::once(x.clone())),
-                        }
-                    }
-                    flags.push(current_flag.to_string());
-
-                    flags
-                }
-                venial::AttributeValue::Equals(_, _) => {
-                    // TODO: Improve macro error message span.
-                    panic!("Unsupported attribute format");
-                }
-                venial::AttributeValue::Empty => Vec::new(),
+    // Get the schema module, reading optionally from the `schema_module` attribute, so that we can
+    // set the module to `crate` when we want to use it within the `bones_schema` crate itself.
+    let schema_mod = input
+        .attributes()
+        .iter()
+        .find_map(|attr| {
+            (attr.path.len() == 1 && attr.path[0].to_string() == "schema_module").then(|| {
+                attr.value
+                    .get_value_tokens()
+                    .iter()
+                    .cloned()
+                    .collect::<TokenStream2>()
             })
-            .fold(Vec::new(), |mut acc, item| {
-                acc.extend(item);
-                acc
-            })
-    };
+        })
+        .unwrap_or_else(|| quote!(bones_schema));
 
-    let derive_type_data_flags = get_flags_for_attr("derive_type_data");
+    // Get the type datas that have been added and derived
+    let derive_type_data_flags = get_flags_for_attr(&input, "derive_type_data");
     let type_datas = {
         let add_derive_type_datas = derive_type_data_flags.into_iter().map(|ty| {
             let ty = format_ident!("{ty}");
@@ -135,11 +116,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         }
     };
 
-    let schema_flags = get_flags_for_attr("schema");
-
-    let no_clone = schema_flags.iter().any(|x| x.as_str() == "no_clone");
-    let no_default = schema_flags.iter().any(|x| x.as_str() == "no_default");
-
+    // Try to parse a `#[repr(C)]` or `#[repr(C, u8/u16/u32)]` attribute
     let mut repr_c = false;
     let mut repr_c_enum_tag = None;
     input.attributes().iter().for_each(|attr| {
@@ -167,8 +144,13 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         }
     });
 
+    // Collect schema flags
+    let schema_flags = get_flags_for_attr(&input, "schema");
+    let no_clone = schema_flags.iter().any(|x| x.as_str() == "no_clone");
+    let no_default = schema_flags.iter().any(|x| x.as_str() == "no_default");
     let is_opaque = schema_flags.iter().any(|x| x.as_str() == "opaque") || !repr_c;
 
+    // Get the clone and default functions based on the flags
     let clone_fn = if no_clone {
         quote!(None)
     } else {
@@ -180,207 +162,275 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         quote!(Some(<Self as #schema_mod::raw_fns::RawDefault>::raw_default))
     };
 
-    if is_opaque {
-        return quote! {
+    // Get the schema kind
+    let schema_kind = (|| {
+        if is_opaque {
+            return quote! {
+                {
+                    let layout = ::std::alloc::Layout::new::<Self>();
+                    #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
+                        size: layout.size(),
+                        align: layout.align(),
+                    })
+                }
+            };
+        }
+
+        // Helper to parse struct fields from structs or enum variants
+        let parse_struct_fields = |fields: &StructFields| {
+            match fields {
+                venial::StructFields::Tuple(tuple) => tuple
+                    .fields
+                    .iter()
+                    .map(|(field, _)| {
+                        let ty = &field.ty;
+                        quote_spanned! {field.ty.__span() =>
+                            #schema_mod::StructFieldInfo {
+                                name: None,
+                                schema: <#ty as #schema_mod::HasSchema>::schema(),
+                            }
+                        }
+                    })
+                    .collect::<Vec<_>>(),
+                venial::StructFields::Named(named) => named
+                    .fields
+                    .iter()
+                    .map(|(field, _)| {
+                        let name = &field.name;
+                        let ty = &field.ty;
+                        let opaque = field.attributes.iter().any(|attr| {
+                            &attr.path[0].to_string() == "schema"
+                                && &attr.value.get_value_tokens()[0].to_string() == "opaque"
+                        });
+
+                        if opaque {
+                            quote_spanned! {field.ty.__span() =>
+                                #schema_mod::StructFieldInfo {
+                                    name: Some(stringify!(#name).into()),
+                                    schema: {
+                                        let layout = ::std::alloc::Layout::new::<#ty>();
+                                        #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
+                                            name: stringify!(#ty).into(),
+                                            full_name: concat!(module_path!(), stringify!(#ty)).into(),
+                                            kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
+                                                size: layout.size(),
+                                                align: layout.align(),
+                                            }),
+                                            type_id: Some(std::any::TypeId::of::<#ty>()),
+                                            type_data: #type_datas,
+                                            clone_fn: #clone_fn,
+                                            default_fn: #default_fn,
+                                            eq_fn: None,
+                                            hash_fn: None,
+                                            drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
+                                        })
+                                    },
+                                }
+                            }
+                        } else {
+                            quote_spanned! {field.ty.__span() =>
+                                #schema_mod::StructFieldInfo {
+                                    name: Some(stringify!(#name).into()),
+                                    schema: <#ty as #schema_mod::HasSchema>::schema(),
+                                }
+                            }
+                        }
+                    })
+                    .collect::<Vec<_>>(),
+                venial::StructFields::Unit => Vec::new(),
+            }
+        };
+
+        // Match on the the type we are deriving on and return its SchemaData
+        match &input {
+            venial::Declaration::Struct(s) => {
+                let fields = parse_struct_fields(&s.fields);
+
+                quote! {
+                    #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
+                        fields: vec![
+                            #(#fields),*
+                        ]
+                    })
+                }
+            }
+            venial::Declaration::Enum(e) => {
+                let Some(tag_type) = repr_c_enum_tag else {
+                    throw!(
+                        e,
+                        "Enums deriving HasSchema with a `#[repr(C)]` annotation \
+                        must also specify an enum tag type like `#[repr(C, u8)]` where \
+                        `u8` could be either `u16` or `u32` if you need more than 256 enum \
+                        variants."
+                    );
+                };
+                let mut variants = Vec::new();
+
+                for v in e.variants.items() {
+                    let name = v.name.to_string();
+                    let variant_schema_name =
+                        format!("{}::{}::EnumVariantSchemaData", e.name, name);
+                    let fields = parse_struct_fields(&v.contents);
+                    variants.push(quote! {
+                        VariantInfo {
+                            name: #name.into(),
+                            schema: {
+                                static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();
+                                S.get_or_init(|| {
+                                    #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
+                                        name: #variant_schema_name.into(),
+                                        full_name: concat!(module_path!(), #variant_schema_name).into(),
+                                        type_id: None,
+                                        kind: #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
+                                            fields: vec![
+                                                #(#fields),*
+                                            ]
+                                        }),
+                                        type_data: Default::default(),
+                                        default_fn: None,
+                                        clone_fn: None,
+                                        eq_fn: None,
+                                        hash_fn: None,
+                                        drop_fn: None,
+                                    })
+                                })
+                            }
+                        }
+                    })
+                }
+
+                quote! {
+                    #schema_mod::SchemaKind::Enum(#schema_mod::EnumSchemaInfo {
+                        tag_type: #schema_mod::EnumTagType::#tag_type,
+                        variants: vec![#(#variants),*],
+                    })
+                }
+            }
+            _ => {
+                throw!(
+                    input,
+                    "You may only derive HasSchema for structs and enums."
+                );
+            }
+        }
+    })();
+
+    let schema_register = quote! {
+        #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
+            name: stringify!(#name).into(),
+            full_name: concat!(module_path!(), stringify!(#name)).into(),
+            type_id: Some(::std::any::TypeId::of::<Self>()),
+            kind: #schema_kind,
+            type_data: #type_datas,
+            default_fn: #default_fn,
+            clone_fn: #clone_fn,
+            eq_fn: None,
+            hash_fn: None,
+            drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
+        })
+    };
+
+    if let Some(generic_params) = input.generic_params() {
+        let mut sync_send_generic_params = generic_params.clone();
+        for (param, _) in sync_send_generic_params.params.iter_mut() {
+            let clone_bound = if !no_clone { quote!(+ Clone) } else { quote!() };
+            param.bound = Some(GenericBound {
+                tk_colon: Punct::new(':', Spacing::Joint),
+                tokens: quote!(HasSchema #clone_bound ).into_iter().collect(),
+            });
+        }
+        quote! {
+            unsafe impl #sync_send_generic_params #schema_mod::HasSchema for #name #generic_params {
+                fn schema() -> &'static #schema_mod::Schema {
+                    // TODO: use faster hashmap and rwlocks from bones_utils.
+                    use ::std::sync::{OnceLock};
+                    use ::std::any::TypeId;
+                    use bones_utils::{HashMap, parking_lot::RwLock};
+                    static S: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
+                    let schema = {
+                        S.get_or_init(Default::default)
+                            .read()
+                            .get(&TypeId::of::<Self>())
+                            .copied()
+                    };
+                    schema.unwrap_or_else(|| {
+                        let schema = #schema_register;
+
+                        S.get_or_init(Default::default)
+                            .write()
+                            .insert(TypeId::of::<Self>(), schema);
+
+                        schema
+                    })
+
+                }
+            }
+        }
+    } else {
+        quote! {
             unsafe impl #schema_mod::HasSchema for #name {
                 fn schema() -> &'static #schema_mod::Schema {
                     static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();
                     S.get_or_init(|| {
-                        let layout = std::alloc::Layout::new::<Self>();
-                        #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
-                            name: stringify!(#name).into(),
-                            full_name: concat!(module_path!(), stringify!(#name)).into(),
-                            type_id: Some(std::any::TypeId::of::<Self>()),
-                            clone_fn: #clone_fn,
-                            default_fn: #default_fn,
-                            drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
-                            // TODO: Allow deriving `hash_fn` and `eq_fn` for `HasSchema`.
-                            // We need to come up with a strategy for deriving the `Hash` and `Eq`
-                            // functions. There are a couple ways of thinking about this. If the
-                            // struct is #[repr(C)] and all of it's fields implement hash and eq,
-                            // then we can automatically implement hash and EQ using all of the
-                            // field's implementations, without having to have the rust struct
-                            // actually implement either. On the other hand, we could have the rust
-                            // struct be required to derive hash and/or eq, and then we just use the
-                            // `RawHash` and `RawEq` traits to get the functions. I think that's
-                            // probably the right direction, but we need to come up with an
-                            // attribute syntax to tell the derive macro to use the Hash and Eq
-                            // rust implmentations. Bevy used `#[reflect(Hash)]`, and we already
-                            // have `#[schema(no_default)]` so maybe we just add a couple flags like
-                            // `#[schema(hash, eq)]` if you want to use the Rust structs
-                            // `Hash` and `Eq` impls.
-                            eq_fn: None,
-                            hash_fn: None,
-                            kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
-                                size: layout.size(),
-                                align: layout.align(),
-                            }),
-                            type_data: #type_datas,
-                        })
+                        #schema_register
                     })
                 }
-            }
-        }
-        .into();
-    }
-
-    let parse_struct_fields = |fields: &StructFields| {
-        match fields {
-        venial::StructFields::Tuple(tuple) => tuple
-            .fields
-            .iter()
-            .map(|(field, _)| {
-                let ty = &field.ty;
-                quote_spanned! {field.ty.__span() =>
-                    #schema_mod::StructFieldInfo {
-                        name: None,
-                        schema: <#ty as #schema_mod::HasSchema>::schema(),
-                    }
-                }
-            })
-            .collect::<Vec<_>>(),
-        venial::StructFields::Named(named) => named
-            .fields
-            .iter()
-            .map(|(field, _)| {
-                let name = &field.name;
-                let ty = &field.ty;
-                let opaque = field.attributes.iter().any(|attr| {
-                    &attr.path[0].to_string() == "schema"
-                        && &attr.value.get_value_tokens()[0].to_string() == "opaque"
-                });
-
-                if opaque {
-                    quote_spanned! {field.ty.__span() =>
-                        #schema_mod::StructFieldInfo {
-                            name: Some(stringify!(#name).into()),
-                            schema: {
-                                let layout = ::std::alloc::Layout::new::<#ty>();
-                                #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
-                                    name: stringify!(#ty).into(),
-                                    full_name: concat!(module_path!(), stringify!(#ty)).into(),
-                                    kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
-                                        size: layout.size(),
-                                        align: layout.align(),
-                                    }),
-                                    type_id: Some(std::any::TypeId::of::<#ty>()),
-                                    type_data: #type_datas,
-                                    clone_fn: #clone_fn,
-                                    default_fn: #default_fn,
-                                    eq_fn: None,
-                                    hash_fn: None,
-                                    drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
-                                })
-                            },
-                        }
-                    }
-                } else {
-                    quote_spanned! {field.ty.__span() =>
-                        #schema_mod::StructFieldInfo {
-                            name: Some(stringify!(#name).into()),
-                            schema: <#ty as #schema_mod::HasSchema>::schema(),
-                        }
-                    }
-                }
-            })
-            .collect::<Vec<_>>(),
-        venial::StructFields::Unit => {
-            Vec::new()
-        }
-    }
-    };
-
-    let schema_kind = match input {
-        venial::Declaration::Struct(s) => {
-            let fields = parse_struct_fields(&s.fields);
-
-            quote! {
-                #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
-                    fields: vec![
-                        #(#fields),*
-                    ]
-                })
-            }
-        }
-        venial::Declaration::Enum(e) => {
-            let Some(tag_type) = repr_c_enum_tag else {
-                throw!(
-                    e,
-                    "Enums deriving HasSchema with a `#[repr(C)]` annotation \
-                    must also specify an enum tag type like `#[repr(C, u8)]` where \
-                    `u8` could be either `u16` or `u32` if you need more than 256 enum \
-                    variants."
-                );
-            };
-            let mut variants = Vec::new();
-
-            for v in e.variants.items() {
-                let name = v.name.to_string();
-                let variant_schema_name = format!("{}::{}::EnumVariantSchemaData", e.name, name);
-                let fields = parse_struct_fields(&v.contents);
-                variants.push(quote! {
-                    VariantInfo {
-                        name: #name.into(),
-                        schema: {
-                            static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();
-                            S.get_or_init(|| {
-                                #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
-                                    name: #variant_schema_name.into(),
-                                    full_name: concat!(module_path!(), #variant_schema_name).into(),
-                                    type_id: None,
-                                    kind: #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
-                                        fields: vec![
-                                            #(#fields),*
-                                        ]
-                                    }),
-                                    type_data: Default::default(),
-                                    default_fn: None,
-                                    clone_fn: None,
-                                    eq_fn: None,
-                                    hash_fn: None,
-                                    drop_fn: None,
-                                })
-                            })
-                        }
-                    }
-                })
-            }
-
-            quote! {
-                #schema_mod::SchemaKind::Enum(#schema_mod::EnumSchemaInfo {
-                    tag_type: #schema_mod::EnumTagType::#tag_type,
-                    variants: vec![#(#variants),*],
-                })
-            }
-        }
-        _ => {
-            throw!(
-                input,
-                "You may only derive HasSchema for structs and enums."
-            );
-        }
-    };
-
-    quote! {
-        unsafe impl #schema_mod::HasSchema for #name {
-            fn schema() -> &'static #schema_mod::Schema {
-                static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();
-                S.get_or_init(|| {
-                    #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
-                        name: stringify!(#name).into(),
-                        full_name: concat!(module_path!(), stringify!(#name)).into(),
-                        type_id: Some(std::any::TypeId::of::<Self>()),
-                        kind: #schema_kind,
-                        type_data: #type_datas,
-                        default_fn: #default_fn,
-                        clone_fn: #clone_fn,
-                        eq_fn: None,
-                        hash_fn: None,
-                        drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
-                    })
-                })
             }
         }
     }
     .into()
+}
+
+//
+// Helpers
+//
+
+/// Look for an attribute with the given name and get all of the comma-separated flags that are
+/// in that attribute.
+///
+/// For example, with the given struct:
+///
+/// ```ignore
+/// #[example(test)]
+/// #[my_attr(hello, world)]
+/// struct Hello;
+/// ```
+///
+/// Calling `get_flags_for_attr("my_attr")` would return `vec!["hello", "world"]`.
+fn get_flags_for_attr(input: &venial::Declaration, attr_name: &str) -> Vec<String> {
+    let attrs = input
+        .attributes()
+        .iter()
+        .filter(|attr| attr.path.len() == 1 && attr.path[0].to_string() == attr_name)
+        .collect::<Vec<_>>();
+    attrs
+        .iter()
+        .map(|attr| match &attr.value {
+            venial::AttributeValue::Group(_, value) => {
+                let mut flags = Vec::new();
+
+                let mut current_flag = proc_macro2::TokenStream::new();
+                for token in value {
+                    match token {
+                        TokenTree2::Punct(x) if x.as_char() == ',' => {
+                            flags.push(current_flag.to_string());
+                            current_flag = Default::default();
+                        }
+                        x => current_flag.extend(std::iter::once(x.clone())),
+                    }
+                }
+                flags.push(current_flag.to_string());
+
+                flags
+            }
+            venial::AttributeValue::Equals(_, _) => {
+                // TODO: Improve macro error message span.
+                panic!("Unsupported attribute format");
+            }
+            venial::AttributeValue::Empty => Vec::new(),
+        })
+        .fold(Vec::new(), |mut acc, item| {
+            acc.extend(item);
+            acc
+        })
 }
