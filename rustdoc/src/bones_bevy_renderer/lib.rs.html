@@ -796,6 +796,7 @@
 <a href="#796" id="796">796</a>
 <a href="#797" id="797">797</a>
 <a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -938,9 +939,6 @@
     }
 
     ctx.set_fonts(fonts);
-    <span class="comment">// Render a frame so the font is available immediately
-    </span>ctx.begin_frame(egui::RawInput::default());
-    <span class="kw">let _ </span>= ctx.end_frame();
 }
 
 <span class="doccomment">/// Bevy resource that contains the info for the bones game that is being rendered.
@@ -950,8 +948,6 @@
     </span><span class="kw">pub </span>game: bones::Game,
     <span class="doccomment">/// The bones asset server cell.
     </span><span class="kw">pub </span>asset_server: <span class="prelude-ty">Option</span>&lt;bones::AtomicResource&lt;bones::AssetServer&gt;&gt;,
-    <span class="doccomment">/// Whether or not the egui fonts have been loaded.
-    </span><span class="kw">pub </span>has_initialized_egui: bool,
     <span class="doccomment">/// The bones egui texture resource.
     </span><span class="kw">pub </span>bones_egui_textures: bones::AtomicResource&lt;bones::EguiTextures&gt;,
 }
@@ -998,31 +994,30 @@
             <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = <span class="self">self</span>.game.shared_resource::&lt;bones::AssetServer&gt;() <span class="kw">else </span>{
                 <span class="kw">break </span><span class="lifetime">&#39;asset_load</span>;
             };
+
             <span class="kw">let </span>world = app.world.cell();
             <span class="kw">let </span><span class="kw-2">mut </span>bevy_images = world.resource_mut::&lt;Assets&lt;Image&gt;&gt;();
             <span class="kw">let </span><span class="kw-2">mut </span>bevy_egui_textures = world.resource_mut::&lt;bevy_egui::EguiUserTextures&gt;();
 
-            <span class="kw">if </span>!asset_server.asset_types.is_empty() {
-                <span class="attr">#[cfg(not(target_arch = <span class="string">&quot;wasm32&quot;</span>))]
-                </span>{
-                    <span class="comment">// Configure the AssetIO
-                    </span><span class="kw">let </span>io = bones::FileAssetIo::new(<span class="kw-2">&amp;</span><span class="self">self</span>.asset_dir, <span class="kw-2">&amp;</span><span class="self">self</span>.packs_dir, <span class="bool-val">true</span>);
-                    asset_server.set_io(io);
-                }
-
-                <span class="comment">// Load the game assets
-                </span>asset_server
-                    .load_assets()
-                    .expect(<span class="string">&quot;Could not load game assets&quot;</span>);
-
-                <span class="comment">// Take all loaded image assets and conver them to external images that reference bevy handles
-                </span>bones_image_ids.load_bones_images(
-                    <span class="kw-2">&amp;mut </span>asset_server,
-                    <span class="kw-2">&amp;mut </span>bones_egui_textures,
-                    <span class="kw-2">&amp;mut </span>bevy_images,
-                    <span class="kw-2">&amp;mut </span>bevy_egui_textures,
-                );
+            <span class="attr">#[cfg(not(target_arch = <span class="string">&quot;wasm32&quot;</span>))]
+            </span>{
+                <span class="comment">// Configure the AssetIO
+                </span><span class="kw">let </span>io = bones::FileAssetIo::new(<span class="kw-2">&amp;</span><span class="self">self</span>.asset_dir, <span class="kw-2">&amp;</span><span class="self">self</span>.packs_dir, <span class="bool-val">true</span>);
+                asset_server.set_io(io);
             }
+
+            <span class="comment">// Load the game assets
+            </span>asset_server
+                .load_assets()
+                .expect(<span class="string">&quot;Could not load game assets&quot;</span>);
+
+            <span class="comment">// Take all loaded image assets and conver them to external images that reference bevy handles
+            </span>bones_image_ids.load_bones_images(
+                <span class="kw-2">&amp;mut </span>asset_server,
+                <span class="kw-2">&amp;mut </span>bones_egui_textures,
+                <span class="kw-2">&amp;mut </span>bevy_images,
+                <span class="kw-2">&amp;mut </span>bevy_egui_textures,
+            );
         }
 
         <span class="self">self</span>.game.insert_shared_resource(bones_egui_textures);
@@ -1031,7 +1026,6 @@
         <span class="comment">// Insert the bones data
         </span>app.insert_resource(BonesData {
             asset_server: <span class="self">self</span>.game.shared_resource_cell::&lt;bones::AssetServer&gt;(),
-            has_initialized_egui: <span class="bool-val">false</span>,
             bones_egui_textures: <span class="self">self
                 </span>.game
                 .shared_resource_cell::&lt;bones::EguiTextures&gt;()
@@ -1041,7 +1035,7 @@
         .init_resource::&lt;BonesGameEntity&gt;();
 
         <span class="comment">// Add the world sync systems
-        </span>app.add_systems(
+        </span>app.add_systems(Startup, setup_egui).add_systems(
             Update,
             (
                 <span class="comment">// Collect input and run world simulation
@@ -1068,6 +1062,28 @@
 
         app
     }
+}
+
+<span class="doccomment">/// Startup system to load egui fonts and textures.
+</span><span class="kw">fn </span>setup_egui(world: <span class="kw-2">&amp;mut </span>World) {
+    world.resource_scope(|world: <span class="kw-2">&amp;mut </span>World, bones_data: Mut&lt;BonesData&gt;| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(bones_assets) = <span class="kw-2">&amp;</span>bones_data.asset_server {
+            <span class="kw">let </span>ctx = {
+                <span class="kw">let </span><span class="kw-2">mut </span>egui_query = world.query_filtered::&lt;<span class="kw-2">&amp;mut </span>EguiContext, With&lt;Window&gt;&gt;();
+                <span class="kw">let </span><span class="kw-2">mut </span>egui_ctx = egui_query.get_single_mut(world).unwrap();
+                egui_ctx.get_mut().clone()
+            };
+            update_egui_fonts(<span class="kw-2">&amp;</span>ctx, <span class="kw-2">&amp;</span>bones_assets.borrow());
+
+            <span class="comment">// Insert the bones egui textures
+            </span>ctx.data_mut(|map| {
+                map.insert_temp(
+                    bevy_egui::egui::Id::null(),
+                    bones_data.bones_egui_textures.clone(),
+                );
+            });
+        }
+    });
 }
 
 <span class="kw">fn </span>get_bones_input(
@@ -1129,12 +1145,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>egui_ctx = egui_query.get_single_mut(world).unwrap();
         egui_ctx.get_mut().clone()
     };
-    <span class="kw">let </span>BonesData {
-        game,
-        has_initialized_egui: has_loaded_fonts,
-        bones_egui_textures,
-        ..
-    } = <span class="kw-2">&amp;mut </span>data;
+    <span class="kw">let </span>BonesData { game, .. } = <span class="kw-2">&amp;mut </span>data;
     <span class="kw">let </span>bevy_time = world.resource::&lt;Time&gt;();
 
     <span class="kw">let </span>mouse_inputs = bones::AtomicResource::new(mouse_inputs);
@@ -1142,15 +1153,6 @@
 
     <span class="comment">// Reload assets if necessary
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = game.shared_resource::&lt;bones::AssetServer&gt;() {
-        <span class="kw">if </span>!<span class="kw-2">*</span>has_loaded_fonts {
-            update_egui_fonts(<span class="kw-2">&amp;</span>egui_ctx, <span class="kw-2">&amp;</span>asset_server);
-            <span class="kw-2">*</span>has_loaded_fonts = <span class="bool-val">true</span>;
-
-            egui_ctx.data_mut(|map| {
-                map.insert_temp(bevy_egui::egui::Id::null(), bones_egui_textures.clone());
-            });
-        }
-
         asset_server.handle_asset_changes(|asset_server, handle| {
             <span class="kw">let </span><span class="kw-2">mut </span>bones_egui_textures = game.shared_resource::&lt;bones::EguiTextures&gt;().unwrap();
             <span class="kw">let </span>asset = asset_server.get_untyped_mut(handle).unwrap();
