@@ -570,7 +570,16 @@ impl AssetServer {
             .asset_ids
             .get(&handle.untyped())
             .expect(NO_ASSET_MSG);
-        self.store.assets.get(cid).expect(NO_ASSET_MSG).cast_ref()
+        let asset = &self.store.assets.get(cid).expect(NO_ASSET_MSG).data;
+
+        // If this is a handle to a schema box, then return the schema box directly without casting
+        if T::schema() == <SchemaBox as HasSchema>::schema() {
+            // SOUND: the above comparison verifies that T is concretely a SchemaBox so &Schemabox
+            // is the same as &T.
+            unsafe { std::mem::transmute(asset) }
+        } else {
+            asset.cast_ref()
+        }
     }
 
     /// Mutably borrow a loaded asset.
