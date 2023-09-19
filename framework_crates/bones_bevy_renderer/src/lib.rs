@@ -16,8 +16,8 @@ use bevy::{
     },
     prelude::*,
     render::{camera::ScalingMode, Extract, RenderApp},
-    sprite::{extract_sprites, ExtractedSprite, ExtractedSprites, SpriteSystem, Anchor},
-    utils::HashMap,
+    sprite::{extract_sprites, Anchor, ExtractedSprite, ExtractedSprites, SpriteSystem},
+    utils::{HashMap, Instant},
 };
 use bevy_egui::EguiContext;
 use glam::*;
@@ -267,13 +267,19 @@ impl BonesBevyRenderer {
 
 /// Startup system to load egui fonts and textures.
 fn setup_egui(world: &mut World) {
-    world.resource_scope(|world: &mut World, bones_data: Mut<BonesData>| {
+    world.resource_scope(|world: &mut World, mut bones_data: Mut<BonesData>| {
+        let ctx = {
+            let mut egui_query = world.query_filtered::<&mut EguiContext, With<Window>>();
+            let mut egui_ctx = egui_query.get_single_mut(world).unwrap();
+            egui_ctx.get_mut().clone()
+        };
+
+        // Insert the egui context as a shared resource
+        bones_data
+            .game
+            .insert_shared_resource(bones::EguiCtx(ctx.clone()));
+
         if let Some(bones_assets) = &bones_data.asset_server {
-            let ctx = {
-                let mut egui_query = world.query_filtered::<&mut EguiContext, With<Window>>();
-                let mut egui_ctx = egui_query.get_single_mut(world).unwrap();
-                egui_ctx.get_mut().clone()
-            };
             update_egui_fonts(&ctx, &bones_assets.borrow());
 
             // Insert the bones egui textures
@@ -341,11 +347,8 @@ fn step_bones_game(
         .unwrap();
     let mut bevy_images = world.remove_resource::<Assets<Image>>().unwrap();
 
-    let (egui_ctx, window) = {
-        let mut egui_query = world.query::<(&mut EguiContext, &Window)>();
-        let (mut egui_ctx, window) = egui_query.get_single_mut(world).unwrap();
-        (egui_ctx.get_mut().clone(), window)
-    };
+    let mut winow_query = world.query::<&Window>();
+    let window = winow_query.get_single_mut(world).unwrap();
     let BonesData { game, .. } = &mut data;
 
     // Insert window information
@@ -379,38 +382,14 @@ fn step_bones_game(
     }
 
     // Step the game simulation
-    game.step(|bones_world| {
-        // Insert egui context if not present
-        if !bones_world
-            .resources
-            .contains::<bones_framework::render::ui::EguiCtx>()
-        {
-            bones_world
-                .resources
-                .insert(bones_framework::render::ui::EguiCtx(egui_ctx.clone()));
-        }
-
-        // Update bones time
-        {
-            // Initialize the time resource if it doesn't exist.
-            if !bones_world.resources.contains::<bones::Time>() {
-                bones_world.init_resource::<bones::Time>();
-            }
-
-            let mut time = bones_world.resource_mut::<bones::Time>();
-
-            // Use the Bevy time if it's available, otherwise use the default time.
-            if let Some(instant) = bevy_time.last_update() {
-                time.update_with_instant(instant);
-            } else {
-                time.update();
-            }
-        }
-
-        // Update the inputs.
-        bones_world.resources.insert_cell(mouse_inputs.clone());
-        bones_world.resources.insert_cell(keyboard_inputs.clone());
-    });
+    game.step(
+        bevy_time.last_update().unwrap_or_else(Instant::now),
+        |bones_world| {
+            // Update the inputs.
+            bones_world.resources.insert_cell(mouse_inputs.clone());
+            bones_world.resources.insert_cell(keyboard_inputs.clone());
+        },
+    );
 
     world.insert_resource(data);
     world.insert_resource(bones_image_ids);

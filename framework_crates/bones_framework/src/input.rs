@@ -3,7 +3,6 @@
 pub mod gamepad;
 pub mod keyboard;
 pub mod mouse;
-pub mod time;
 pub mod window;
 
 /// The state of a button, ether pressed or released.
@@ -18,5 +17,5 @@ pub enum ButtonState {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{keyboard::*, mouse::*, time::*, window::*, ButtonState};
+    pub use super::{keyboard::*, mouse::*, window::*, ButtonState};
 }

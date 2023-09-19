@@ -11,9 +11,13 @@ pub use bones_ecs as ecs;
 /// Bones lib prelude
 pub mod prelude {
     pub use crate::{
-        ecs::prelude::*, Game, Plugin, Session, SessionOptions, SessionRunner, Sessions,
+        ecs::prelude::*, instant::Instant, time::*, Game, Plugin, Session, SessionOptions,
+        SessionRunner, Sessions,
     };
 }
+
+pub use instant;
+pub mod time;
 
 use std::fmt::Debug;
 
@@ -35,6 +39,8 @@ pub struct Session {
     pub priority: i32,
     /// The session runner to use for this session.
     pub runner: Box<dyn SessionRunner>,
+    /// Whether or not the session systems in it's `stages` have been initialized yet.
+    pub has_initialized: bool,
 }
 
 impl std::fmt::Debug for Session {
@@ -83,12 +89,17 @@ impl Session {
 impl Default for Session {
     fn default() -> Self {
         Self {
-            world: default(),
+            world: {
+                let mut w = World::default();
+                w.init_resource::<Time>();
+                w
+            },
             stages: default(),
             active: true,
             visible: true,
             priority: 0,
             runner: Box::<DefaultSessionRunner>::default(),
+            has_initialized: false,
         }
     }
 }
@@ -107,22 +118,28 @@ impl<F: FnOnce(&mut Session)> Plugin for F {
 /// A session runner is in charge of advancing a [`Session`] simulation.
 pub trait SessionRunner: Sync + Send + 'static {
     /// Step the simulation once.
-    fn step(&mut self, world: &mut World, stages: &mut SystemStages);
+    ///
+    /// It is the responsibility of the session runner to update the [`Time`] resource if necessary.
+    ///
+    /// If no special behavior is desired, the simplest session runner, and the one that is
+    /// implemented by [`DefaultSessionRunner`] is as follows:
+    ///
+    /// ```
+    /// # use bones_lib::prelude::*;
+    /// fn step(&mut self, now: Instant, world: &mut World, stages: &mut SystemStages) {
+    ///     world.resource_mut::<Time>().update_with_instant(now);
+    ///     stages.run(world);
+    /// }
+    /// ```
+    fn step(&mut self, now: Instant, world: &mut World, stages: &mut SystemStages);
 }
 
 /// The default [`SessionRunner`], which just runs the systems once every time it is run.
 #[derive(Default)]
-pub struct DefaultSessionRunner {
-    /// Whether or not the systems have been initialized yet.
-    pub has_init: bool,
-}
+pub struct DefaultSessionRunner;
 impl SessionRunner for DefaultSessionRunner {
-    fn step(&mut self, world: &mut World, stages: &mut SystemStages) {
-        // Initialize systems if they have not been initialized yet.
-        if unlikely(!self.has_init) {
-            self.has_init = true;
-            stages.initialize_systems(world);
-        }
+    fn step(&mut self, now: instant::Instant, world: &mut World, stages: &mut SystemStages) {
+        world.resource_mut::<Time>().update_with_instant(now);
         stages.run(world)
     }
 }
@@ -184,18 +201,17 @@ impl Game {
 
     /// Insert a resource that will be shared across all game sessions.
     pub fn insert_shared_resource<T: HasSchema + Default>(&mut self, resource: T) {
-        let resource = UntypedAtomicResource::new(SchemaBox::new(resource));
-
-        // Replace an existing resource of the same type.
+        // Update an existing resource of the same type.
         for r in &mut self.shared_resources {
             if r.schema() == T::schema() {
-                *r = resource;
+                *r.borrow_mut().cast_mut() = resource;
                 return;
             }
         }
 
         // Or insert a new resource if we couldn't find one
-        self.shared_resources.push(resource);
+        self.shared_resources
+            .push(UntypedAtomicResource::new(SchemaBox::new(resource)));
     }
 
     /// Step the game simulation.
@@ -209,7 +225,7 @@ impl Game {
     ///   size.
     /// - setup other important resources such as the UI context and the asset server, if
     ///   applicable.
-    pub fn step<F: FnMut(&mut World)>(&mut self, mut apply_input: F) {
+    pub fn step<F: FnMut(&mut World)>(&mut self, now: instant::Instant, mut apply_input: F) {
         // Sort session keys by priority
         self.sorted_session_keys.clear();
         self.sorted_session_keys.extend(self.sessions.map.keys());
@@ -255,10 +271,19 @@ impl Game {
                     std::mem::swap(&mut *sessions, &mut self.sessions);
                 }
 
+                // Initialize the session if necessary
+                if unlikely(!current_session.has_initialized) {
+                    current_session
+                        .stages
+                        .initialize_systems(&mut current_session.world);
+                }
+
                 // Step the current session's simulation using it's session runner
-                current_session
-                    .runner
-                    .step(&mut current_session.world, &mut current_session.stages);
+                current_session.runner.step(
+                    now,
+                    &mut current_session.world,
+                    &mut current_session.stages,
+                );
 
                 // Pull the sessions back out of the world
                 {

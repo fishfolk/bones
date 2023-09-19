@@ -1121,6 +1121,7 @@ name = "bones_lib"
 version = "0.3.0"
 dependencies = [
  "bones_ecs",
+ "instant",
 ]
 
 [[package]]

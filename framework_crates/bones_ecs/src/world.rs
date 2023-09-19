@@ -107,7 +107,7 @@ impl World {
 
     /// Initialize a resource of type `T` by inserting it's default value.
     pub fn init_resource<R: HasSchema + FromWorld>(&mut self) {
-        if !self.resources.contains::<R>() {
+        if unlikely(!self.resources.contains::<R>()) {
             let value = R::from_world(self);
             self.resources.insert(value);
         }
