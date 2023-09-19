@@ -16,7 +16,7 @@ use bevy::{
     },
     prelude::*,
     render::{camera::ScalingMode, Extract, RenderApp},
-    sprite::{extract_sprites, ExtractedSprite, ExtractedSprites, SpriteSystem},
+    sprite::{extract_sprites, ExtractedSprite, ExtractedSprites, SpriteSystem, Anchor},
     utils::HashMap,
 };
 use bevy_egui::EguiContext;
@@ -573,7 +573,7 @@ fn extract_bones_sprites(
                     image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
                     flip_x: sprite.flip_x,
                     flip_y: sprite.flip_y,
-                    anchor: Vec2::ZERO,
+                    anchor: Anchor::Center.as_vec(),
                 })
             }
         }
@@ -612,7 +612,7 @@ fn extract_bones_sprites(
                     image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
                     flip_x: atlas_sprite.flip_x,
                     flip_y: atlas_sprite.flip_y,
-                    anchor: Vec2::ZERO,
+                    anchor: Anchor::Center.as_vec(),
                 })
             }
         }
@@ -685,6 +685,13 @@ fn extract_bones_tilemaps(
                 };
                 let mut transform = transform.into_bevy();
                 transform.translation += tile_offset.extend(0.0);
+                // Scale up slightly to avoid bleeding between tiles.
+                // TODO: Improve tile rendering
+                // Currently we do a small hack here, scaling up the tiles a little bit, to prevent
+                // visible gaps between tiles. This solution isn't perfect and we probably need to
+                // create a proper tile renderer. That can render multiple tiles on one quad instead
+                // of using a separate quad for each tile.
+                transform.scale += Vec3::new(0.01, 0.01, 0.0);
                 extracted_sprites.sprites.push(ExtractedSprite {
                     entity: bones_renderable_entity.0,
                     transform: transform.into(),
@@ -694,7 +701,7 @@ fn extract_bones_tilemaps(
                     image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
                     flip_x: tile.flip_x,
                     flip_y: tile.flip_y,
-                    anchor: Vec2::ZERO,
+                    anchor: Anchor::BottomLeft.as_vec(),
                 })
             }
         }
