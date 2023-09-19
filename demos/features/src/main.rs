@@ -116,7 +116,7 @@ pub fn menu_plugin(session: &mut Session) {
     // Register our menu system
     session
         // Install the bones_framework default plugins for this session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         // And add our systems.
         .add_system_to_stage(Update, menu_system)
         .add_startup_system(menu_startup);
@@ -221,7 +221,7 @@ fn menu_system(
 /// Plugin for running the sprite demo.
 fn sprite_demo_plugin(session: &mut Session) {
     session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         .add_startup_system(sprite_demo_startup)
         .add_system_to_stage(Update, back_to_menu_ui)
         .add_system_to_stage(Update, move_sprite);
@@ -264,7 +264,7 @@ fn move_sprite(
     let mut left = false;
     let mut right = false;
 
-    for input in &input.keys {
+    for input in &input.key_events {
         match input.key_code {
             Some(KeyCode::Right) => right = true,
             Some(KeyCode::Left) => left = true,
@@ -285,7 +285,7 @@ fn move_sprite(
 /// Plugin for running the tilemap demo.
 fn tilemap_demo_plugin(session: &mut Session) {
     session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         .add_startup_system(tilemap_startup_system)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
@@ -331,7 +331,7 @@ fn tilemap_startup_system(
 /// Plugin for running the atlas demo.
 fn atlas_demo_plugin(session: &mut Session) {
     session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         .add_startup_system(atlas_demo_startup)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
@@ -378,7 +378,7 @@ fn atlas_demo_startup(
 
 fn path2d_demo_plugin(session: &mut Session) {
     session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         .add_startup_system(path2d_demo_startup)
         .add_system_to_stage(Update, back_to_menu_ui);
 }

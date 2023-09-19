@@ -11,7 +11,7 @@ pub use bones_ecs as ecs;
 /// Bones lib prelude
 pub mod prelude {
     pub use crate::{
-        ecs::prelude::*, instant::Instant, time::*, Game, Plugin, Session, SessionOptions,
+        ecs::prelude::*, instant::Instant, time::*, Game, Session, SessionOptions, SessionPlugin,
         SessionRunner, Sessions,
     };
 }
@@ -63,7 +63,7 @@ impl Session {
     }
 
     /// Install a plugin.
-    pub fn install_plugin(&mut self, plugin: impl Plugin) -> &mut Self {
+    pub fn install_plugin(&mut self, plugin: impl SessionPlugin) -> &mut Self {
         plugin.install(self);
         self
     }
@@ -105,13 +105,24 @@ impl Default for Session {
 }
 
 /// Trait for plugins that can be installed into a [`Session`].
-pub trait Plugin {
+pub trait SessionPlugin {
     /// Install the plugin into the [`Session`].
     fn install(self, session: &mut Session);
 }
-impl<F: FnOnce(&mut Session)> Plugin for F {
-    fn install(self, core: &mut Session) {
-        (self)(core)
+impl<F: FnOnce(&mut Session)> SessionPlugin for F {
+    fn install(self, session: &mut Session) {
+        (self)(session)
+    }
+}
+
+/// Trait for plugins that can be installed into a [`Game`].
+pub trait GamePlugin {
+    /// Install the plugin into the [`Game`].
+    fn install(self, game: &mut Game);
+}
+impl<F: FnOnce(&mut Game)> GamePlugin for F {
+    fn install(self, game: &mut Game) {
+        (self)(game)
     }
 }
 
@@ -168,6 +179,12 @@ impl Game {
     /// Create an empty game with an asset server.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Install a [`GamePlugin`].
+    pub fn install_plugin<P: GamePlugin>(&mut self, plugin: P) -> &mut Self {
+        plugin.install(self);
+        self
     }
 
     /// Get the shared resource of a given type out of this [`Game`]s shared resources.
