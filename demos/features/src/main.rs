@@ -204,7 +204,7 @@ fn menu_system(
                             .install_plugin(path2d_demo_plugin);
                     }
 
-                    ui.add_space(30.0);
+                    ui.add_space(20.0);
 
                     // We can use the `widget()` method on the `Egui` to conveniently run bones
                     // systems that can modify the `egui::Ui` and return an `egui::Response`.
@@ -223,7 +223,8 @@ fn sprite_demo_plugin(session: &mut Session) {
     session
         .install_plugin(DefaultPlugin)
         .add_startup_system(sprite_demo_startup)
-        .add_system_to_stage(Update, back_to_menu_ui);
+        .add_system_to_stage(Update, back_to_menu_ui)
+        .add_system_to_stage(Update, move_sprite);
 }
 
 /// System that spawns the sprite demo.
@@ -245,6 +246,40 @@ fn sprite_demo_startup(
             ..default()
         },
     );
+}
+
+fn move_sprite(
+    entities: Res<Entities>,
+    sprite: Comp<Sprite>,
+    mut transforms: CompMut<Transform>,
+    input: Res<KeyboardInputs>,
+    ctx: Egui,
+) {
+    egui::CentralPanel::default()
+        .frame(egui::Frame::none())
+        .show(&ctx, |ui| {
+            ui.label("Press left and right arrow keys to move sprite");
+        });
+
+    let mut left = false;
+    let mut right = false;
+
+    for input in &input.keys {
+        match input.key_code {
+            Some(KeyCode::Right) => right = true,
+            Some(KeyCode::Left) => left = true,
+            _ => (),
+        }
+    }
+
+    for (_ent, (_sprite, transform)) in entities.iter_with((&sprite, &mut transforms)) {
+        if left {
+            transform.translation.x -= 2.0;
+        }
+        if right {
+            transform.translation.x += 2.0;
+        }
+    }
 }
 
 /// Plugin for running the tilemap demo.
