@@ -75,8 +75,8 @@ pub fn spawn_default_camera(
 }
 
 /// Install the camera utilities on the given [`SystemStages`].
-pub fn plugin(core: &mut Session) {
-    core.stages
+pub fn plugin(session: &mut Session) {
+    session.stages
         .add_system_to_stage(CoreStage::Last, apply_shake)
         .add_system_to_stage(CoreStage::Last, apply_trauma)
         .add_system_to_stage(CoreStage::Last, decay_trauma);
@@ -177,7 +177,7 @@ impl CameraTraumaEvents {
 fn apply_trauma(
     entities: Res<Entities>,
     mut camera_shakes: CompMut<CameraShake>,
-    mut trauma_events: ResMut<CameraTraumaEvents>,
+    mut trauma_events: ResMutInit<CameraTraumaEvents>,
 ) {
     for (_ent, camera_shake) in entities.iter_with(&mut camera_shakes) {
         camera_shake.add_trauma(
@@ -199,7 +199,7 @@ fn apply_shake(
     mut transforms: CompMut<Transform>,
     camera_shakes: Comp<CameraShake>,
     time: Res<Time>,
-    noise: Res<ShakeNoise>,
+    noise: ResInit<ShakeNoise>,
 ) {
     macro_rules! offset_noise {
         ($offset:expr, $shake_speed:expr) => {
