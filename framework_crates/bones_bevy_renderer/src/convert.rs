@@ -241,3 +241,44 @@ impl IntoBones<bones::KeyCode> for KeyCode {
         }
     }
 }
+
+impl IntoBones<bones::GamepadButton> for bevy::input::gamepad::GamepadButtonType {
+    fn into_bones(self) -> bones::GamepadButton {
+        match self {
+            GamepadButtonType::South => bones::GamepadButton::South,
+            GamepadButtonType::East => bones::GamepadButton::East,
+            GamepadButtonType::North => bones::GamepadButton::North,
+            GamepadButtonType::West => bones::GamepadButton::West,
+            GamepadButtonType::C => bones::GamepadButton::C,
+            GamepadButtonType::Z => bones::GamepadButton::Z,
+            GamepadButtonType::LeftTrigger => bones::GamepadButton::LeftTrigger,
+            GamepadButtonType::LeftTrigger2 => bones::GamepadButton::LeftTrigger2,
+            GamepadButtonType::RightTrigger => bones::GamepadButton::RightTrigger,
+            GamepadButtonType::RightTrigger2 => bones::GamepadButton::RightTrigger2,
+            GamepadButtonType::Select => bones::GamepadButton::Select,
+            GamepadButtonType::Start => bones::GamepadButton::Start,
+            GamepadButtonType::Mode => bones::GamepadButton::Mode,
+            GamepadButtonType::LeftThumb => bones::GamepadButton::LeftThumb,
+            GamepadButtonType::RightThumb => bones::GamepadButton::RightThumb,
+            GamepadButtonType::DPadUp => bones::GamepadButton::DPadUp,
+            GamepadButtonType::DPadDown => bones::GamepadButton::DPadDown,
+            GamepadButtonType::DPadLeft => bones::GamepadButton::DPadLeft,
+            GamepadButtonType::DPadRight => bones::GamepadButton::DPadRight,
+            GamepadButtonType::Other(x) => bones::GamepadButton::Other(x),
+        }
+    }
+}
+
+impl IntoBones<bones::GamepadAxis> for bevy::input::gamepad::GamepadAxisType {
+    fn into_bones(self) -> bones::GamepadAxis {
+        match self {
+            GamepadAxisType::LeftStickX => bones::GamepadAxis::LeftStickX,
+            GamepadAxisType::LeftStickY => bones::GamepadAxis::LeftStickY,
+            GamepadAxisType::LeftZ => bones::GamepadAxis::LeftZ,
+            GamepadAxisType::RightStickX => bones::GamepadAxis::RightStickX,
+            GamepadAxisType::RightStickY => bones::GamepadAxis::RightStickY,
+            GamepadAxisType::RightZ => bones::GamepadAxis::RightZ,
+            GamepadAxisType::Other(x) => bones::GamepadAxis::Other(x),
+        }
+    }
+}

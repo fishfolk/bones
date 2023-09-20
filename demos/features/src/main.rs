@@ -266,8 +266,8 @@ fn move_sprite(
 
     for input in &input.key_events {
         match input.key_code {
-            Some(KeyCode::Right) => right = true,
-            Some(KeyCode::Left) => left = true,
+            Set(KeyCode::Right) => right = true,
+            Set(KeyCode::Left) => left = true,
             _ => (),
         }
     }

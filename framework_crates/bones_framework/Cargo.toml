@@ -61,9 +61,6 @@ noise     = "0.8"
 # Render
 csscolorparser = "0.6"
 
-# Input
-gilrs = "0.10"
-
 # Assets
 serde_yaml = "0.9"
 serde      = { version = "1.0", features = ["derive"] }

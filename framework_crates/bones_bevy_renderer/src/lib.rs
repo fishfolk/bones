@@ -11,6 +11,7 @@ pub use bevy;
 
 use bevy::{
     input::{
+        gamepad::GamepadEvent,
         keyboard::KeyboardInput,
         mouse::{MouseButtonInput, MouseMotion, MouseWheel},
     },
@@ -298,7 +299,12 @@ fn get_bones_input(
     mut mouse_motion_events: EventReader<MouseMotion>,
     mut mouse_wheel_events: EventReader<MouseWheel>,
     mut keyboard_events: EventReader<KeyboardInput>,
-) -> (bones::MouseInputs, bones::KeyboardInputs) {
+    mut gamepad_events: EventReader<GamepadEvent>,
+) -> (
+    bones::MouseInputs,
+    bones::KeyboardInputs,
+    bones::GamepadInputs,
+) {
     // TODO: investigate possible ways to avoid allocating vectors every frame for event lists.
     (
         bones::MouseInputs {
@@ -309,26 +315,55 @@ fn get_bones_input(
                 .unwrap_or_default(),
             wheel_events: mouse_wheel_events
                 .iter()
-                .map(|event| bones::MouseScrollInput {
+                .map(|event| bones::MouseScrollEvent {
                     unit: event.unit.into_bones(),
                     movement: Vec2::new(event.x, event.y),
                 })
                 .collect(),
             button_events: mouse_button_input_events
                 .iter()
-                .map(|event| bones::MouseButtonInput {
+                .map(|event| bones::MouseButtonEvent {
                     button: event.button.into_bones(),
                     state: event.state.into_bones(),
                 })
                 .collect(),
         },
         bones::KeyboardInputs {
-            keys: keyboard_events
+            key_events: keyboard_events
                 .iter()
-                .map(|event| bones::KeyboardInput {
+                .map(|event| bones::KeyboardEvent {
                     scan_code: event.scan_code,
-                    key_code: event.key_code.map(|x| x.into_bones()),
+                    key_code: event.key_code.map(|x| x.into_bones()).into(),
                     button_state: event.state.into_bones(),
+                })
+                .collect(),
+        },
+        bones::GamepadInputs {
+            gamepad_events: gamepad_events
+                .iter()
+                .map(|event| match event {
+                    GamepadEvent::Connection(c) => {
+                        bones::GamepadEvent::Connection(bones::GamepadConnectionEvent {
+                            gamepad: c.gamepad.id as u32,
+                            event: if c.connected() {
+                                bones::GamepadConnectionEventKind::Connected
+                            } else {
+                                bones::GamepadConnectionEventKind::Disconnected
+                            },
+                        })
+                    }
+                    GamepadEvent::Button(b) => {
+                        bones::GamepadEvent::Button(bones::GamepadButtonEvent {
+                            gamepad: b.gamepad.id as u32,
+                            button: b.button_type.into_bones(),
+                            value: b.value,
+                        })
+                    }
+                    GamepadEvent::Axis(a) => bones::GamepadEvent::Axis(bones::GamepadAxisEvent {
+                        gamepad: a.gamepad.id as u32,
+                        axis: a.axis_type.into_bones(),
+                        value: a.value,
+                    }),
                 })
                 .collect(),
         },
@@ -337,7 +372,11 @@ fn get_bones_input(
 
 /// System to step the bones simulation.
 fn step_bones_game(
-    In((mouse_inputs, keyboard_inputs)): In<(bones::MouseInputs, bones::KeyboardInputs)>,
+    In((mouse_inputs, keyboard_inputs, gamepad_inputs)): In<(
+        bones::MouseInputs,
+        bones::KeyboardInputs,
+        bones::GamepadInputs,
+    )>,
     world: &mut World,
 ) {
     let mut data = world.remove_resource::<BonesData>().unwrap();
@@ -360,6 +399,7 @@ fn step_bones_game(
 
     let mouse_inputs = bones::AtomicResource::new(mouse_inputs);
     let keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
+    let gamepad_inputs = bones::AtomicResource::new(gamepad_inputs);
 
     // Reload assets if necessary
     if let Some(mut asset_server) = game.shared_resource::<bones::AssetServer>() {
@@ -388,6 +428,7 @@ fn step_bones_game(
             // Update the inputs.
             bones_world.resources.insert_cell(mouse_inputs.clone());
             bones_world.resources.insert_cell(keyboard_inputs.clone());
+            bones_world.resources.insert_cell(gamepad_inputs.clone());
         },
     );
 
