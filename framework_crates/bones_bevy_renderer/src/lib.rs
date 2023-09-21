@@ -63,11 +63,19 @@ impl FromWorld for BonesGameEntity {
 }
 
 /// Resource mapping bones image IDs to their bevy handles.
-#[derive(Resource, Default, Debug, Deref, DerefMut)]
+#[derive(Resource, Debug, Deref, DerefMut)]
 pub struct BonesImageIds {
     #[deref]
     map: HashMap<u32, Handle<Image>>,
     next_id: u32,
+}
+impl Default for BonesImageIds {
+    fn default() -> Self {
+        Self {
+            map: Default::default(),
+            next_id: 1,
+        }
+    }
 }
 
 impl BonesImageIds {
@@ -112,6 +120,12 @@ impl BonesImageIds {
             map.insert(*next_id, handle);
             *image = bones::Image::External(*next_id);
             *next_id += 1;
+
+        // The image has already been loaded. This may happen if multiple asset handles use the same
+        // image data. We will end up visiting the same data twice.
+        } else {
+            // Swap the image back to it's previous value.
+            std::mem::swap(image, &mut taken_image);
         }
     }
 }
