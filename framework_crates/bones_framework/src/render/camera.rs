@@ -7,25 +7,42 @@ use crate::prelude::*;
 /// Makes an entity behave like a camera.
 ///
 /// The entity must also have a [`Transform`] component for the camera to render anything.
-#[derive(Clone, Copy, Debug, HasSchema)]
+#[derive(Clone, Debug, HasSchema)]
 // TODO: make repr(C) when `Option`s are supported.
 // We don't have `Option` support in `bones_schema` right now.
 // Once we do, we can make this type `#[repr(C)]` instead of `#[schema(opaque)]`.
+#[repr(C)]
 pub struct Camera {
     /// The height of the camera in in-game pixels.
     ///
     /// The width of the camera will be determined from the window aspect ratio.
     // TODO: implement different scaling modes for bones cameras.
-    pub height: f32,
+    pub size: CameraSize,
     /// Whether or not the camera is enabled and rendering.
     pub active: bool,
     /// An optional viewport override, allowing you to specify that the camera should render to only
     /// a portion of the window.
     ///
     /// This can be used, for example, for split screen functionality.
-    pub viewport: Option<Viewport>,
+    pub viewport: Maybe<Viewport>,
     /// Cameras with a higher priority will be rendered on top of cameras with a lower priority.
     pub priority: i32,
+}
+
+/// A size setting for a camera.
+#[derive(HasSchema, Debug, Clone)]
+#[repr(C, u8)]
+pub enum CameraSize {
+    /// The camera will be a fixed height with a width dependent on the aspect ratio.
+    FixedHeight(f32),
+    /// The camera will be a fixed width with a height dependent on the aspect ratio.
+    FixedWidth(f32),
+}
+
+impl Default for CameraSize {
+    fn default() -> Self {
+        Self::FixedHeight(400.)
+    }
 }
 
 /// A custom viewport specification for a [`Camera`].
@@ -47,10 +64,10 @@ pub struct Viewport {
 impl Default for Camera {
     fn default() -> Self {
         Self {
-            height: 400.0,
             active: true,
-            viewport: None,
+            viewport: Unset,
             priority: 0,
+            size: default(),
         }
     }
 }
@@ -76,7 +93,8 @@ pub fn spawn_default_camera(
 
 /// Install the camera utilities on the given [`SystemStages`].
 pub fn plugin(session: &mut Session) {
-    session.stages
+    session
+        .stages
         .add_system_to_stage(CoreStage::Last, apply_shake)
         .add_system_to_stage(CoreStage::Last, apply_trauma)
         .add_system_to_stage(CoreStage::Last, decay_trauma);

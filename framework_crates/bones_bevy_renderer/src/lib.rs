@@ -495,12 +495,15 @@ fn sync_cameras(
         camera_ent.insert((
             Camera {
                 is_active: bones_camera.active,
-                viewport: bones_camera.viewport.map(|x| x.into_bevy()),
+                viewport: bones_camera.viewport.option().map(|x| x.into_bevy()),
                 order: bones_camera.priority as isize,
                 ..default()
             },
             OrthographicProjection {
-                scaling_mode: ScalingMode::FixedVertical(bones_camera.height),
+                scaling_mode: match bones_camera.size {
+                    bones::CameraSize::FixedHeight(h) => ScalingMode::FixedVertical(h),
+                    bones::CameraSize::FixedWidth(w) => ScalingMode::FixedHorizontal(w),
+                },
                 ..default()
             },
             bones_transform.into_bevy(),
