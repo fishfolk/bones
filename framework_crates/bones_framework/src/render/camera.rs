@@ -30,7 +30,7 @@ pub struct Camera {
 }
 
 /// A size setting for a camera.
-#[derive(HasSchema, Debug, Clone)]
+#[derive(HasSchema, Debug, Clone, Copy)]
 #[repr(C, u8)]
 pub enum CameraSize {
     /// The camera will be a fixed height with a width dependent on the aspect ratio.
