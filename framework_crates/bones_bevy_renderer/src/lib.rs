@@ -591,6 +591,7 @@ fn extract_bones_sprites(
 
         // Extract normal sprites
         if let Ok(sprites) = world.components.get::<bones::Sprite>() {
+            let mut z_offset = 0.0;
             for (_, (sprite, transform)) in entities.iter_with((&sprites, &transforms)) {
                 let sprite_image = bones_assets.get(sprite.image);
                 let image_id = if let bones::Image::External(id) = sprite_image {
@@ -603,7 +604,13 @@ fn extract_bones_sprites(
                 };
                 extracted_sprites.sprites.push(ExtractedSprite {
                     entity: bones_renderable_entity.0,
-                    transform: transform.into_bevy().into(),
+                    transform: {
+                        let mut t: Transform = transform.into_bevy();
+                        // Add tiny z offset to enforce a consistent z-sort
+                        t.translation.z += z_offset;
+                        z_offset += 0.00001;
+                        t.into()
+                    },
                     color: sprite.color.into_bevy(),
                     rect: None,
                     custom_size: None,
