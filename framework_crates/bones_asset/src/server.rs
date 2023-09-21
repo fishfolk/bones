@@ -712,7 +712,7 @@ mod metadata {
             match &self.ptr.schema().kind {
                 SchemaKind::Struct(s) => {
                     // If this is a newtype struct
-                    if s.fields.len() == 1 {
+                    if s.fields.len() == 1 && s.fields[0].name.is_none() {
                         // Deserialize it as the inner type
                         // SOUND: it is safe to cast a struct with one field to it's field type
                         let ptr = unsafe {
@@ -784,36 +784,6 @@ mod metadata {
         ptr: SchemaRefMut<'ptr, 'prnt>,
     }
 
-    /// Helper to generate value visitors for unit structs
-    macro_rules! visit_value_for_unit_struct {
-        ($(($inner:ident, $ty:ty, $unexp:ident)),* $(,)?) => {
-            $(
-                fn $inner<E>(self, value: $ty) -> Result<Self::Value, E>
-                where E: Error
-                {
-                    if self.ptr.schema().kind.as_struct().unwrap().fields.len() == 1 {
-                        let mut ptr = unsafe {
-                            SchemaRefMut::from_ptr_schema(
-                                self.ptr.as_ptr(),
-                                self.ptr.schema().kind.as_struct().unwrap().fields[0].schema,
-                            )
-                        };
-                        let v = ptr.try_cast_mut::<$ty>()
-                            .map_err(|_| E::invalid_type(Unexpected::$unexp(value), &self))?;
-                        *v = value;
-
-                        Ok(())
-                    } else {
-                        Err(E::invalid_type(
-                            Unexpected::Other("value"),
-                            &"list or map of struct fields",
-                        ))
-                    }
-                }
-            )*
-        };
-    }
-
     impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for StructVisitor<'a, 'srv, 'ptr, 'prnt> {
         type Value = ();
 
@@ -829,18 +799,12 @@ mod metadata {
             )
         }
 
-        visit_value_for_unit_struct!(
-            (visit_i64, i64, Signed),
-            (visit_u64, u64, Unsigned),
-            (visit_bool, bool, Bool),
-            (visit_f64, f64, Float),
-        );
-
         fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
         where
             E: Error,
         {
-            if self.ptr.schema().kind.as_struct().unwrap().fields.len() == 1 {
+            let struct_info = self.ptr.schema().kind.as_struct().unwrap();
+            if struct_info.fields.len() == 1 && struct_info.fields[0].name.is_none() {
                 // SOUND: we've verified this is a struct with one field, so it is safe to cast the
                 // pointer to a pointer to the inner type.
                 let mut ptr = unsafe {

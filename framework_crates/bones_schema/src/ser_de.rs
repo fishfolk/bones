@@ -101,7 +101,7 @@ mod serializer_deserializer {
                             )
                         };
 
-                        if struct_info.fields.len() == 1 {
+                        if struct_info.fields.len() == 1 && struct_info.fields[0].name.is_none() {
                             serializer.serialize_newtype_variant(
                                 &self.0.schema().name,
                                 variant_idx,
@@ -203,7 +203,7 @@ mod serializer_deserializer {
             match &self.schema().kind {
                 SchemaKind::Struct(s) => {
                     // If this is a newtype struct
-                    if s.fields.len() == 1 {
+                    if s.fields.len() == 1 && s.fields[0].name.is_none() {
                         // Deserialize it as the inner type
                         // SOUND: it is safe to cast a struct with one field to it's field type
                         unsafe { SchemaRefMut::from_ptr_schema(self.as_ptr(), s.fields[0].schema) }
