@@ -1041,26 +1041,10 @@ mod metadata {
         {
             let (value_ptr, var_access) = data.variant_seed(EnumPtrLoadCtx { ptr: self.ptr })?;
 
-            let variant_info = value_ptr.schema().kind.as_struct().unwrap();
-            if variant_info.fields.is_empty() {
-                var_access.unit_variant()?;
-            } else if variant_info.fields[0].name.is_none() {
-                var_access.tuple_variant(
-                    variant_info.fields.len(),
-                    StructVisitor {
-                        ctx: self.ctx,
-                        ptr: value_ptr,
-                    },
-                )?;
-            } else {
-                var_access.struct_variant(
-                    &[], // We don't have static fields list
-                    StructVisitor {
-                        ctx: self.ctx,
-                        ptr: value_ptr,
-                    },
-                )?;
-            }
+            var_access.newtype_variant_seed(SchemaPtrLoadCtx {
+                ctx: self.ctx,
+                ptr: value_ptr,
+            })?;
 
             Ok(())
         }

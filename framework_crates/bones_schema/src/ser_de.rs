@@ -399,19 +399,7 @@ mod serializer_deserializer {
             A: serde::de::EnumAccess<'de>,
         {
             let (value_ptr, var_access) = data.variant_seed(EnumLoad(self.0))?;
-
-            let variant_info = value_ptr.schema().kind.as_struct().unwrap();
-            if variant_info.fields.is_empty() {
-                var_access.unit_variant()?;
-            } else if variant_info.fields[0].name.is_none() {
-                var_access.tuple_variant(variant_info.fields.len(), StructVisitor(value_ptr))?;
-            } else {
-                var_access.struct_variant(
-                    &[], // We don't have static fields list
-                    StructVisitor(value_ptr),
-                )?;
-            }
-
+            var_access.newtype_variant_seed(value_ptr)?;
             Ok(())
         }
     }

@@ -41,6 +41,8 @@ struct GameMeta {
 #[repr(C)]
 #[type_data(metadata_asset("atlas-demo"))]
 struct AtlasDemoMeta {
+    /// The size of the camera.
+    camera_size: CameraSize,
     /// The sprite atlas for the player.
     pub atlas: Handle<Atlas>,
     /// The frames-per-second of the animation.
@@ -350,11 +352,12 @@ fn atlas_demo_startup(
     // Set the clear color
     **clear_color = Color::GRAY;
 
-    // Spawn the camera
-    spawn_default_camera(&mut entities, &mut transforms, &mut cameras);
-
     // Get the atlas metadata
     let demo = assets.get(meta.atlas_demo);
+
+    // Spawn the camera
+    let camera_ent = spawn_default_camera(&mut entities, &mut transforms, &mut cameras);
+    cameras.get_mut(camera_ent).unwrap().size = demo.camera_size.clone();
 
     // Spawn the character sprite.
     let sprite_ent = entities.create();
