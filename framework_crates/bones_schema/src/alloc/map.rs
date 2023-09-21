@@ -35,6 +35,18 @@ impl SchemaMap {
         }
     }
 
+    /// Get the number of entries in the map.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
+    /// Returns `true` if the map is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+
     /// Get the schema for the map keys.
     pub fn key_schema(&self) -> &'static Schema {
         self.key_schema
