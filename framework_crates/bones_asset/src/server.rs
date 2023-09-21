@@ -734,14 +734,10 @@ mod metadata {
                     ptr: self.ptr,
                     ctx: self.ctx,
                 })?,
-                SchemaKind::Enum(_) => deserializer.deserialize_enum(
-                    &self.ptr.schema().name,
-                    &[], // We don't have a static list of variant names
-                    EnumVisitor {
-                        ptr: self.ptr,
-                        ctx: self.ctx,
-                    },
-                )?,
+                SchemaKind::Enum(_) => deserializer.deserialize_any(EnumVisitor {
+                    ptr: self.ptr,
+                    ctx: self.ctx,
+                })?,
                 SchemaKind::Box(_) => {
                     // SOUND: schema asserts pointer is a SchemaBox.
                     let b = unsafe { self.ptr.deref_mut::<SchemaBox>() };
@@ -771,7 +767,7 @@ mod metadata {
                         }
                         Primitive::Opaque { .. } => {
                             return Err(D::Error::custom(
-                                "Opaque types must have `SchemaDeserialize` type data in order \
+                                "Opaque types must be #[repr(C)] or have `SchemaDeserialize` type data in order \
                                 to be loaded in a metadata asset.",
                             ));
                         }
@@ -1033,6 +1029,42 @@ mod metadata {
                 "asset metadata matching the schema: {:#?}",
                 self.ptr.schema()
             )
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            let enum_info = self.ptr.schema().kind.as_enum().unwrap();
+            let var_idx = enum_info
+                .variants
+                .iter()
+                .position(|x| x.name == v)
+                .ok_or_else(|| E::invalid_value(Unexpected::Str(v), &self))?;
+
+            if !enum_info.variants[var_idx]
+                .schema
+                .kind
+                .as_struct()
+                .unwrap()
+                .fields
+                .is_empty()
+            {
+                return Err(E::custom(format!(
+                    "Cannot deserialize enum variant with fields from string: {v}"
+                )));
+            }
+
+            // SOUND: we match the cast with the enum tag type.
+            unsafe {
+                match enum_info.tag_type {
+                    EnumTagType::U8 => self.ptr.as_ptr().cast::<u8>().write(var_idx as u8),
+                    EnumTagType::U16 => self.ptr.as_ptr().cast::<u16>().write(var_idx as u16),
+                    EnumTagType::U32 => self.ptr.as_ptr().cast::<u32>().write(var_idx as u32),
+                }
+            }
+
+            Ok(())
         }
 
         fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>

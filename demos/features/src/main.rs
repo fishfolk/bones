@@ -357,7 +357,7 @@ fn atlas_demo_startup(
 
     // Spawn the camera
     let camera_ent = spawn_default_camera(&mut entities, &mut transforms, &mut cameras);
-    cameras.get_mut(camera_ent).unwrap().size = demo.camera_size.clone();
+    cameras.get_mut(camera_ent).unwrap().size = demo.camera_size;
 
     // Spawn the character sprite.
     let sprite_ent = entities.create();
