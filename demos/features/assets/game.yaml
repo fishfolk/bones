@@ -5,7 +5,7 @@ tilemap_demo: ./tilemap/tilemap.yaml
 localization: ./localization.yaml
 path2d_color: red
 title_font:
-  font: Orbitron
+  family: Orbitron
   size: 20
   color: purple
 menu_border:
@@ -19,7 +19,7 @@ menu_border:
   scale: 4
 button_style:
   font:
-    font: Orbitron
+    family: Orbitron
     color: white
     size: 10
   padding:

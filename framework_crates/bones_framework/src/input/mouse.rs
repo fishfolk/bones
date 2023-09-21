@@ -22,7 +22,7 @@ pub struct MouseScrollEvent {
     pub movement: Vec2,
 }
 
-/// The unit that a [`MouseScrollInput`] is in.
+/// The unit that a [`MouseScrollEvent`] is in.
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum MouseScrollUnit {

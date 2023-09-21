@@ -90,7 +90,7 @@ pub struct Font {
 pub struct FontMeta {
     /// The font-family to use.
     #[serde(deserialize_with = "deserialize_arc_str")]
-    pub font: Arc<str>,
+    pub family: Arc<str>,
     /// The font size.
     pub size: f32,
     /// The font color.
@@ -100,7 +100,7 @@ pub struct FontMeta {
 impl Default for FontMeta {
     fn default() -> Self {
         Self {
-            font: "".into(),
+            family: "".into(),
             size: Default::default(),
             color: Default::default(),
         }
@@ -110,7 +110,7 @@ impl Default for FontMeta {
 impl FontMeta {
     /// Get the Egui font ID.
     pub fn id(&self) -> egui::FontId {
-        egui::FontId::new(self.size, egui::FontFamily::Name(self.font.clone()))
+        egui::FontId::new(self.size, egui::FontFamily::Name(self.family.clone()))
     }
 
     /// Create an [`egui::RichText`] that can be passed to [`ui.label()`][egui::Ui::label].
@@ -133,9 +133,13 @@ impl AssetLoader for FontLoader {
             let face = ttf_parser::Face::parse(bytes, 0)?;
             (
                 face.names()
-                    .get(ttf_parser::name_id::FAMILY)
-                    .and_then(|x| x.to_string())
-                    .ok_or_else(|| anyhow::format_err!("Could not read font family"))?
+                    .into_iter()
+                    .filter(|x| x.name_id == ttf_parser::name_id::FAMILY)
+                    .filter_map(|x| x.to_string())
+                    .next()
+                    .ok_or_else(|| {
+                        anyhow::format_err!("Could not read font family from font file")
+                    })?
                     .into(),
                 face.is_monospaced(),
             )
