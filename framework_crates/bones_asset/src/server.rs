@@ -620,7 +620,7 @@ fn path_is_metadata(path: &Path) -> bool {
 
 pub use metadata::*;
 mod metadata {
-    use serde::de::{DeserializeSeed, Error, VariantAccess, Visitor};
+    use serde::de::{DeserializeSeed, Error, Unexpected, VariantAccess, Visitor};
 
     use super::*;
 
@@ -710,10 +710,22 @@ mod metadata {
             }
 
             match &self.ptr.schema().kind {
-                SchemaKind::Struct(_) => deserializer.deserialize_any(StructVisitor {
-                    ptr: self.ptr,
-                    ctx: self.ctx,
-                })?,
+                SchemaKind::Struct(s) => {
+                    // If this is a newtype struct
+                    if s.fields.len() == 1 {
+                        // Deserialize it as the inner type
+                        // SOUND: it is safe to cast a struct with one field to it's field type
+                        let ptr = unsafe {
+                            SchemaRefMut::from_ptr_schema(self.ptr.as_ptr(), s.fields[0].schema)
+                        };
+                        SchemaPtrLoadCtx { ptr, ctx: self.ctx }.deserialize(deserializer)?
+                    } else {
+                        deserializer.deserialize_any(StructVisitor {
+                            ptr: self.ptr,
+                            ctx: self.ctx,
+                        })?
+                    }
+                }
                 SchemaKind::Vec(_) => deserializer.deserialize_seq(VecVisitor {
                     ptr: self.ptr,
                     ctx: self.ctx,
@@ -776,6 +788,36 @@ mod metadata {
         ptr: SchemaRefMut<'ptr, 'prnt>,
     }
 
+    /// Helper to generate value visitors for unit structs
+    macro_rules! visit_value_for_unit_struct {
+        ($(($inner:ident, $ty:ty, $unexp:ident)),* $(,)?) => {
+            $(
+                fn $inner<E>(self, value: $ty) -> Result<Self::Value, E>
+                where E: Error
+                {
+                    if self.ptr.schema().kind.as_struct().unwrap().fields.len() == 1 {
+                        let mut ptr = unsafe {
+                            SchemaRefMut::from_ptr_schema(
+                                self.ptr.as_ptr(),
+                                self.ptr.schema().kind.as_struct().unwrap().fields[0].schema,
+                            )
+                        };
+                        let v = ptr.try_cast_mut::<$ty>()
+                            .map_err(|_| E::invalid_type(Unexpected::$unexp(value), &self))?;
+                        *v = value;
+
+                        Ok(())
+                    } else {
+                        Err(E::invalid_type(
+                            Unexpected::Other("value"),
+                            &"list or map of struct fields",
+                        ))
+                    }
+                }
+            )*
+        };
+    }
+
     impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for StructVisitor<'a, 'srv, 'ptr, 'prnt> {
         type Value = ();
 
@@ -789,6 +831,40 @@ mod metadata {
                 "asset metadata matching the schema: {:#?}",
                 self.ptr.schema()
             )
+        }
+
+        visit_value_for_unit_struct!(
+            (visit_i64, i64, Signed),
+            (visit_u64, u64, Unsigned),
+            (visit_bool, bool, Bool),
+            (visit_f64, f64, Float),
+        );
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            if self.ptr.schema().kind.as_struct().unwrap().fields.len() == 1 {
+                // SOUND: we've verified this is a struct with one field, so it is safe to cast the
+                // pointer to a pointer to the inner type.
+                let mut ptr = unsafe {
+                    SchemaRefMut::from_ptr_schema(
+                        self.ptr.as_ptr(),
+                        self.ptr.schema().kind.as_struct().unwrap().fields[0].schema,
+                    )
+                };
+                let v = ptr
+                    .try_cast_mut::<String>()
+                    .map_err(|_| E::invalid_type(Unexpected::Str(value), &self))?;
+                *v = value.into();
+
+                Ok(())
+            } else {
+                Err(E::invalid_type(
+                    Unexpected::Other("value"),
+                    &"list or map of struct fields",
+                ))
+            }
         }
 
         fn visit_seq<A>(mut self, mut seq: A) -> Result<Self::Value, A::Error>
