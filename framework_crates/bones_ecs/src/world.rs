@@ -94,6 +94,9 @@ impl World {
     ///
     /// If all the system parameters have already been initialized, by calling
     /// [`initialize()`][System::initialize] on the system, then this will work fine.
+    ///
+    /// You can also use [`world.init_param()`][Self::init_param] to manually initialize specific
+    /// parameters if you know which ones will need to be initialized.
     pub fn run_initialized_system<'system, Args, In, Out, S>(&self, system: S, input: In) -> Out
     where
         In: 'system,
@@ -112,6 +115,16 @@ impl World {
             self.resources.insert(value);
         }
         self.resource_mut()
+    }
+
+    /// Initialize a system parameter.
+    ///
+    /// It is not necessary to do this manually unless you are going to run a system using
+    /// [`world.run_initialized_system()`][Self::run_initialized_system()] and you need to make sure
+    /// one of it's parameters are pre-initialized.
+    pub fn init_param<P: SystemParam>(&mut self) -> &mut Self {
+        P::initialize(self);
+        self
     }
 
     /// Insert a resource.
