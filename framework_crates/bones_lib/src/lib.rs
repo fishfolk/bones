@@ -137,10 +137,13 @@ pub trait SessionRunner: Sync + Send + 'static {
     ///
     /// ```
     /// # use bones_lib::prelude::*;
+    /// # struct Example;
+    /// # impl SessionRunner for Example {
     /// fn step(&mut self, now: Instant, world: &mut World, stages: &mut SystemStages) {
     ///     world.resource_mut::<Time>().update_with_instant(now);
     ///     stages.run(world);
     /// }
+    /// # }
     /// ```
     fn step(&mut self, now: Instant, world: &mut World, stages: &mut SystemStages);
 }
