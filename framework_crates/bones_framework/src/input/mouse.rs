@@ -2,27 +2,27 @@
 
 use crate::prelude::*;
 
-/// The mouse inputs made this frame.
+/// Resource containing the mouse input events made this frame.
 #[derive(HasSchema, Clone, Debug, Default)]
 pub struct MouseInputs {
     /// The movement of the mouse this frame.
     pub movement: Vec2,
     /// The mouse wheel event sent this frame.
-    pub wheel_events: Vec<MouseScrollInput>,
+    pub wheel_events: Vec<MouseScrollEvent>,
     /// The mouse button events sent this frame.
-    pub button_events: Vec<MouseButtonInput>,
+    pub button_events: Vec<MouseButtonEvent>,
 }
 
 /// Mouse scroll-wheel input event.
 #[derive(Debug, Clone, Copy)]
-pub struct MouseScrollInput {
+pub struct MouseScrollEvent {
     /// The unit the mouse scroll is in.
     pub unit: MouseScrollUnit,
     /// the scroll movement.
     pub movement: Vec2,
 }
 
-/// The unit that a [`MouseScrollInput`] is in.
+/// The unit that a [`MouseScrollEvent`] is in.
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum MouseScrollUnit {
@@ -34,7 +34,7 @@ pub enum MouseScrollUnit {
 
 /// A mouse button input event.
 #[derive(Debug, Clone, Copy)]
-pub struct MouseButtonInput {
+pub struct MouseButtonEvent {
     /// The button that the event refers to.
     pub button: MouseButton,
     /// Whether the button was pressed or released.

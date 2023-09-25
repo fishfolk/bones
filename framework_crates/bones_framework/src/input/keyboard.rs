@@ -4,24 +4,26 @@ use crate::prelude::*;
 
 /// Resource containing the keyboard input events detected on the current frame.
 #[derive(HasSchema, Clone, Debug, Default)]
+#[repr(C)]
 pub struct KeyboardInputs {
     /// The key events that have been detected this frame.
-    pub keys: Vec<KeyboardInput>,
+    pub key_events: SVec<KeyboardEvent>,
 }
 
 /// A keyboard input event.
-#[derive(Clone, Debug, Copy)]
-pub struct KeyboardInput {
+#[derive(HasSchema, Clone, Debug, Copy, Default)]
+#[repr(C)]
+pub struct KeyboardEvent {
     /// The scan code of the pressed key.
     pub scan_code: u32,
     /// The key code of the pressed key, if applicable.
-    pub key_code: Option<KeyCode>,
+    pub key_code: Maybe<KeyCode>,
     /// The state of the keyboard button.
     pub button_state: ButtonState,
 }
 
 /// The key code of a keyboard key.
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Hash)]
+#[derive(HasSchema, Clone, Copy, Default, Debug, PartialEq, Eq, Hash)]
 #[repr(u32)]
 pub enum KeyCode {
     #[default]

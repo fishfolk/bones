@@ -570,7 +570,16 @@ impl AssetServer {
             .asset_ids
             .get(&handle.untyped())
             .expect(NO_ASSET_MSG);
-        self.store.assets.get(cid).expect(NO_ASSET_MSG).cast_ref()
+        let asset = &self.store.assets.get(cid).expect(NO_ASSET_MSG).data;
+
+        // If this is a handle to a schema box, then return the schema box directly without casting
+        if T::schema() == <SchemaBox as HasSchema>::schema() {
+            // SOUND: the above comparison verifies that T is concretely a SchemaBox so &Schemabox
+            // is the same as &T.
+            unsafe { std::mem::transmute(asset) }
+        } else {
+            asset.cast_ref()
+        }
     }
 
     /// Mutably borrow a loaded asset.
@@ -611,7 +620,7 @@ fn path_is_metadata(path: &Path) -> bool {
 
 pub use metadata::*;
 mod metadata {
-    use serde::de::{DeserializeSeed, Error, VariantAccess, Visitor};
+    use serde::de::{DeserializeSeed, Error, Unexpected, VariantAccess, Visitor};
 
     use super::*;
 
@@ -701,10 +710,22 @@ mod metadata {
             }
 
             match &self.ptr.schema().kind {
-                SchemaKind::Struct(_) => deserializer.deserialize_any(StructVisitor {
-                    ptr: self.ptr,
-                    ctx: self.ctx,
-                })?,
+                SchemaKind::Struct(s) => {
+                    // If this is a newtype struct
+                    if s.fields.len() == 1 && s.fields[0].name.is_none() {
+                        // Deserialize it as the inner type
+                        // SOUND: it is safe to cast a struct with one field to it's field type
+                        let ptr = unsafe {
+                            SchemaRefMut::from_ptr_schema(self.ptr.as_ptr(), s.fields[0].schema)
+                        };
+                        SchemaPtrLoadCtx { ptr, ctx: self.ctx }.deserialize(deserializer)?
+                    } else {
+                        deserializer.deserialize_any(StructVisitor {
+                            ptr: self.ptr,
+                            ctx: self.ctx,
+                        })?
+                    }
+                }
                 SchemaKind::Vec(_) => deserializer.deserialize_seq(VecVisitor {
                     ptr: self.ptr,
                     ctx: self.ctx,
@@ -713,14 +734,10 @@ mod metadata {
                     ptr: self.ptr,
                     ctx: self.ctx,
                 })?,
-                SchemaKind::Enum(_) => deserializer.deserialize_enum(
-                    &self.ptr.schema().name,
-                    &[], // We don't have a static list of variant names
-                    EnumVisitor {
-                        ptr: self.ptr,
-                        ctx: self.ctx,
-                    },
-                )?,
+                SchemaKind::Enum(_) => deserializer.deserialize_any(EnumVisitor {
+                    ptr: self.ptr,
+                    ctx: self.ctx,
+                })?,
                 SchemaKind::Box(_) => {
                     // SOUND: schema asserts pointer is a SchemaBox.
                     let b = unsafe { self.ptr.deref_mut::<SchemaBox>() };
@@ -750,7 +767,7 @@ mod metadata {
                         }
                         Primitive::Opaque { .. } => {
                             return Err(D::Error::custom(
-                                "Opaque types must have `SchemaDeserialize` type data in order \
+                                "Opaque types must be #[repr(C)] or have `SchemaDeserialize` type data in order \
                                 to be loaded in a metadata asset.",
                             ));
                         }
@@ -780,6 +797,34 @@ mod metadata {
                 "asset metadata matching the schema: {:#?}",
                 self.ptr.schema()
             )
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            let struct_info = self.ptr.schema().kind.as_struct().unwrap();
+            if struct_info.fields.len() == 1 && struct_info.fields[0].name.is_none() {
+                // SOUND: we've verified this is a struct with one field, so it is safe to cast the
+                // pointer to a pointer to the inner type.
+                let mut ptr = unsafe {
+                    SchemaRefMut::from_ptr_schema(
+                        self.ptr.as_ptr(),
+                        self.ptr.schema().kind.as_struct().unwrap().fields[0].schema,
+                    )
+                };
+                let v = ptr
+                    .try_cast_mut::<String>()
+                    .map_err(|_| E::invalid_type(Unexpected::Str(value), &self))?;
+                *v = value.into();
+
+                Ok(())
+            } else {
+                Err(E::invalid_type(
+                    Unexpected::Other("value"),
+                    &"list or map of struct fields",
+                ))
+            }
         }
 
         fn visit_seq<A>(mut self, mut seq: A) -> Result<Self::Value, A::Error>
@@ -950,32 +995,52 @@ mod metadata {
             )
         }
 
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            let enum_info = self.ptr.schema().kind.as_enum().unwrap();
+            let var_idx = enum_info
+                .variants
+                .iter()
+                .position(|x| x.name == v)
+                .ok_or_else(|| E::invalid_value(Unexpected::Str(v), &self))?;
+
+            if !enum_info.variants[var_idx]
+                .schema
+                .kind
+                .as_struct()
+                .unwrap()
+                .fields
+                .is_empty()
+            {
+                return Err(E::custom(format!(
+                    "Cannot deserialize enum variant with fields from string: {v}"
+                )));
+            }
+
+            // SOUND: we match the cast with the enum tag type.
+            unsafe {
+                match enum_info.tag_type {
+                    EnumTagType::U8 => self.ptr.as_ptr().cast::<u8>().write(var_idx as u8),
+                    EnumTagType::U16 => self.ptr.as_ptr().cast::<u16>().write(var_idx as u16),
+                    EnumTagType::U32 => self.ptr.as_ptr().cast::<u32>().write(var_idx as u32),
+                }
+            }
+
+            Ok(())
+        }
+
         fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
         where
             A: serde::de::EnumAccess<'de>,
         {
             let (value_ptr, var_access) = data.variant_seed(EnumPtrLoadCtx { ptr: self.ptr })?;
 
-            let variant_info = value_ptr.schema().kind.as_struct().unwrap();
-            if variant_info.fields.is_empty() {
-                var_access.unit_variant()?;
-            } else if variant_info.fields[0].name.is_none() {
-                var_access.tuple_variant(
-                    variant_info.fields.len(),
-                    StructVisitor {
-                        ctx: self.ctx,
-                        ptr: value_ptr,
-                    },
-                )?;
-            } else {
-                var_access.struct_variant(
-                    &[], // We don't have static fields list
-                    StructVisitor {
-                        ctx: self.ctx,
-                        ptr: value_ptr,
-                    },
-                )?;
-            }
+            var_access.newtype_variant_seed(SchemaPtrLoadCtx {
+                ctx: self.ctx,
+                ptr: value_ptr,
+            })?;
 
             Ok(())
         }

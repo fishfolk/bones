@@ -33,19 +33,19 @@ fn cast_glam() {
     // Create a glam vector
     let mut a = Vec2::new(1.2, 3.4);
     // Cast it to custom type with the same layout
-    let b: &DataA = a.cast();
+    let b: &DataA = HasSchema::cast(&a);
 
     // Make sure the values match after casting
     assert_eq!(a.x, b.x);
     assert_eq!(a.y, b.y);
 
     // Try it with tuple struct
-    let c: &DataB = a.cast();
+    let c: &DataB = HasSchema::cast(&a);
     assert_eq!(a.x, c.0);
     assert_eq!(a.y, c.1);
 
     // Do a mutable cast
-    let d: &mut DataA = a.cast_mut();
+    let d: &mut DataA = HasSchema::cast_mut(&mut a);
     // Modify the data through casted ref
     d.y = 5.0;
 
@@ -113,14 +113,14 @@ fn sbox() {
 #[should_panic = "Invalid cast: the schemas of the casted types are not compatible."]
 fn cast_not_matching_fails_ref() {
     let a = Vec3::ONE;
-    a.cast::<DataA>();
+    HasSchema::cast::<DataA>(&a);
 }
 
 #[test]
 #[should_panic = "Invalid cast: the schemas of the casted types are not compatible."]
 fn cast_not_matching_fails_mut() {
     let mut a = Vec3::ONE;
-    a.cast_mut::<DataA>();
+    HasSchema::cast_mut::<DataA>(&mut a);
 }
 
 #[test]

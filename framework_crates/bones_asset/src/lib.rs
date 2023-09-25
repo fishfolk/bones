@@ -33,7 +33,7 @@ mod path;
 mod server;
 
 /// An equivalent to [`Option<T>`] that has a stable memory layout and implements [`HasSchema`].
-#[derive(HasSchema, Clone, Default, Debug)]
+#[derive(HasSchema, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Debug)]
 #[type_data(SchemaMetaAssetLoader(maybe_loader))]
 #[repr(C, u8)]
 pub enum Maybe<T> {

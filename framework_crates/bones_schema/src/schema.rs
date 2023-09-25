@@ -24,8 +24,8 @@ pub unsafe trait HasSchema: Sync + Send + 'static {
     ///
     /// Panics if the schema of `T` doesn't match the schema of `Self`.
     #[track_caller]
-    fn cast<T: HasSchema>(&self) -> &T {
-        self.try_cast().expect(SchemaMismatchError::MSG)
+    fn cast<T: HasSchema>(this: &Self) -> &T {
+        HasSchema::try_cast(this).expect(SchemaMismatchError::MSG)
     }
 
     /// Cast a reference of this type to a reference of another type with the same memory layout.
@@ -33,12 +33,12 @@ pub unsafe trait HasSchema: Sync + Send + 'static {
     /// # Errors
     ///
     /// Errors if the schema of `T` doesn't match the schema of `Self`.
-    fn try_cast<T: HasSchema>(&self) -> Result<&T, SchemaMismatchError> {
+    fn try_cast<T: HasSchema>(this: &Self) -> Result<&T, SchemaMismatchError> {
         let s1 = Self::schema();
         let s2 = T::schema();
         if s1.represents(s2) {
             // SOUND: the schemas have the same memory representation.
-            unsafe { Ok(&*(self as *const Self as *const T)) }
+            unsafe { Ok(&*(this as *const Self as *const T)) }
         } else {
             Err(SchemaMismatchError)
         }
@@ -51,8 +51,8 @@ pub unsafe trait HasSchema: Sync + Send + 'static {
     ///
     /// Panics if the schema of `T` doesn't match the schema of `Self`.
     #[track_caller]
-    fn cast_mut<T: HasSchema>(&mut self) -> &mut T {
-        self.try_cast_mut().expect(SchemaMismatchError::MSG)
+    fn cast_mut<T: HasSchema>(this: &mut Self) -> &mut T {
+        HasSchema::try_cast_mut(this).expect(SchemaMismatchError::MSG)
     }
 
     /// Cast a mutable reference of this type to a reference of another type with the same memory
@@ -61,12 +61,12 @@ pub unsafe trait HasSchema: Sync + Send + 'static {
     /// # Errors
     ///
     /// Errors if the schema of `T` doesn't match the schema of `Self`.
-    fn try_cast_mut<T: HasSchema>(&mut self) -> Result<&mut T, SchemaMismatchError> {
+    fn try_cast_mut<T: HasSchema>(this: &mut Self) -> Result<&mut T, SchemaMismatchError> {
         let s1 = Self::schema();
         let s2 = T::schema();
         if s1.represents(s2) {
             // SOUND: the schemas have the same memory representation.
-            unsafe { Ok(&mut *(self as *mut Self as *mut T)) }
+            unsafe { Ok(&mut *(this as *mut Self as *mut T)) }
         } else {
             Err(SchemaMismatchError)
         }
@@ -111,6 +111,7 @@ impl Schema {
                 },
                 (SchemaKind::Vec(v1), SchemaKind::Vec(v2)) => v1.represents(v2),
                 (SchemaKind::Primitive(p1), SchemaKind::Primitive(p2)) => p1 == p2,
+                (SchemaKind::Enum(e1), SchemaKind::Enum(e2)) => e1 == e2,
                 _ => false
             }
         })
@@ -276,7 +277,7 @@ pub struct StructSchemaInfo {
 }
 
 /// Schema data for an enum.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 pub struct EnumSchemaInfo {
     /// The layout of the enum tag.
@@ -286,7 +287,7 @@ pub struct EnumSchemaInfo {
 }
 
 /// A type for an enum tag for [`EnumSchemaInfo`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 pub enum EnumTagType {
@@ -310,7 +311,7 @@ impl EnumTagType {
 }
 
 /// Information about an enum variant for [`EnumSchemaInfo`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 pub struct VariantInfo {

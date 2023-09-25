@@ -17,7 +17,7 @@ pub use bones_schema_macros::*;
 /// The prelude.
 pub mod prelude {
     #[cfg(feature = "serde")]
-    pub use crate::ser_de::SchemaDeserialize;
+    pub use crate::ser_de::*;
     pub use crate::{
         alloc::{SMap, SVec, SchemaMap, SchemaVec},
         ptr::*,

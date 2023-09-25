@@ -10,11 +10,6 @@ use crate::prelude::*;
 
 use instant::{Duration, Instant};
 
-mod stopwatch;
-pub use stopwatch::*;
-mod timer;
-pub use timer::*;
-
 /// A clock that tracks how much it has advanced (and how much real time has elapsed) since
 /// its previous update and since its creation.
 #[derive(Clone, Copy, Debug, HasSchema)]

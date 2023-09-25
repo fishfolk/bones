@@ -10,7 +10,7 @@ fn main() {
     let menu_session = game.sessions.create("menu");
     menu_session
         // Install the default bones_framework plugin for this session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         // Add our menu system to the update stage
         .add_system_to_stage(Update, menu_system);
 

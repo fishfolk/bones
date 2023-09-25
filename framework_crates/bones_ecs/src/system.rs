@@ -233,7 +233,7 @@ impl<'a, T: HasSchema> SystemParam for ResMut<'a, T> {
             panic!(
                 "Resource of type `{}` not in world. \
                 You may need to insert or initialize the resource or use \
-                `ResInit` instead of `Res` to automatically initialize the \
+                `ResMutInit` instead of `ResMut` to automatically initialize the \
                 resource with the default value.",
                 std::any::type_name::<T>()
             )

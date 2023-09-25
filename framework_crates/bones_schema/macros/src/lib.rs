@@ -116,39 +116,23 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         }
     };
 
-    // Try to parse a `#[repr(C)]` or `#[repr(C, u8/u16/u32)]` attribute
-    let mut repr_c = false;
-    let mut repr_c_enum_tag = None;
-    input.attributes().iter().for_each(|attr| {
-        if attr.get_single_path_segment() == Some(&format_ident!("repr")) {
-            let value = attr.get_value_tokens();
-            let is_c = matches!(&value[0], TokenTree2::Ident(i) if i == &format_ident!("C"));
-
-            if is_c {
-                repr_c = true;
-                let valid_enum_tag_types = [
-                    format_ident!("u8"),
-                    format_ident!("u16"),
-                    format_ident!("u32"),
-                ];
-
-                match (&value.get(1), &value.get(2)) {
-                    (Some(TokenTree2::Punct(p)), Some(TokenTree2::Ident(i)))
-                        if valid_enum_tag_types.contains(i) && p.as_char() == ',' =>
-                    {
-                        repr_c_enum_tag = Some(format_ident!("{}", i.to_string().to_uppercase()));
-                    }
-                    _ => (),
-                }
-            }
-        }
+    // Collect repr tags
+    let mut repr_flags = get_flags_for_attr(&input, "repr");
+    repr_flags.iter_mut().for_each(|x| *x = x.to_lowercase());
+    let repr_c = repr_flags.iter().any(|x| x == "c");
+    let primitive_repr = repr_flags.iter().find_map(|x| match x.as_ref() {
+        "u8" => Some(quote!(U8)),
+        "u16" => Some(quote!(U16)),
+        "u32" => Some(quote!(U32)),
+        _ => None,
     });
 
     // Collect schema flags
     let schema_flags = get_flags_for_attr(&input, "schema");
     let no_clone = schema_flags.iter().any(|x| x.as_str() == "no_clone");
     let no_default = schema_flags.iter().any(|x| x.as_str() == "no_default");
-    let is_opaque = schema_flags.iter().any(|x| x.as_str() == "opaque") || !repr_c;
+    let is_opaque = schema_flags.iter().any(|x| x.as_str() == "opaque")
+        || !(repr_c || primitive_repr.is_some());
 
     // Get the clone and default functions based on the flags
     let clone_fn = if no_clone {
@@ -255,7 +239,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                 }
             }
             venial::Declaration::Enum(e) => {
-                let Some(tag_type) = repr_c_enum_tag else {
+                let Some(tag_type) = primitive_repr else {
                     throw!(
                         e,
                         "Enums deriving HasSchema with a `#[repr(C)]` annotation \
@@ -272,7 +256,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                         format!("{}::{}::EnumVariantSchemaData", e.name, name);
                     let fields = parse_struct_fields(&v.contents);
                     variants.push(quote! {
-                        VariantInfo {
+                        #schema_mod::VariantInfo {
                             name: #name.into(),
                             schema: {
                                 static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();

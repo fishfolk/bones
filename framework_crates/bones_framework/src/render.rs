@@ -26,7 +26,9 @@ pub mod ui;
 
 /// Bones framework rendering plugin.
 pub fn render_plugin(session: &mut Session) {
-    session.install_plugin(ui::ui_plugin);
+    session
+        .install_plugin(ui::ui_plugin)
+        .install_plugin(camera::plugin);
 }
 
 /// Trait for the interface exposed by external bones renderers.

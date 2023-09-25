@@ -23,5 +23,5 @@ bevy_prototype_lyon = "0.9"
 
 [dependencies.bevy]
 default-features = false
-features         = ["bevy_render", "bevy_core_pipeline", "bevy_sprite", "x11"]
+features         = ["bevy_render", "bevy_core_pipeline", "bevy_sprite", "x11", "bevy_gilrs"]
 version          = "0.11"

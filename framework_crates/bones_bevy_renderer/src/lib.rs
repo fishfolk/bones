@@ -11,13 +11,14 @@ pub use bevy;
 
 use bevy::{
     input::{
+        gamepad::GamepadEvent,
         keyboard::KeyboardInput,
         mouse::{MouseButtonInput, MouseMotion, MouseWheel},
     },
     prelude::*,
     render::{camera::ScalingMode, Extract, RenderApp},
-    sprite::{extract_sprites, ExtractedSprite, ExtractedSprites, SpriteSystem},
-    utils::HashMap,
+    sprite::{extract_sprites, Anchor, ExtractedSprite, ExtractedSprites, SpriteSystem},
+    utils::{HashMap, Instant},
 };
 use bevy_egui::EguiContext;
 use glam::*;
@@ -62,11 +63,19 @@ impl FromWorld for BonesGameEntity {
 }
 
 /// Resource mapping bones image IDs to their bevy handles.
-#[derive(Resource, Default, Debug, Deref, DerefMut)]
+#[derive(Resource, Debug, Deref, DerefMut)]
 pub struct BonesImageIds {
     #[deref]
     map: HashMap<u32, Handle<Image>>,
     next_id: u32,
+}
+impl Default for BonesImageIds {
+    fn default() -> Self {
+        Self {
+            map: Default::default(),
+            next_id: 1,
+        }
+    }
 }
 
 impl BonesImageIds {
@@ -111,6 +120,12 @@ impl BonesImageIds {
             map.insert(*next_id, handle);
             *image = bones::Image::External(*next_id);
             *next_id += 1;
+
+        // The image has already been loaded. This may happen if multiple asset handles use the same
+        // image data. We will end up visiting the same data twice.
+        } else {
+            // Swap the image back to it's previous value.
+            std::mem::swap(image, &mut taken_image);
         }
     }
 }
@@ -267,13 +282,19 @@ impl BonesBevyRenderer {
 
 /// Startup system to load egui fonts and textures.
 fn setup_egui(world: &mut World) {
-    world.resource_scope(|world: &mut World, bones_data: Mut<BonesData>| {
+    world.resource_scope(|world: &mut World, mut bones_data: Mut<BonesData>| {
+        let ctx = {
+            let mut egui_query = world.query_filtered::<&mut EguiContext, With<Window>>();
+            let mut egui_ctx = egui_query.get_single_mut(world).unwrap();
+            egui_ctx.get_mut().clone()
+        };
+
+        // Insert the egui context as a shared resource
+        bones_data
+            .game
+            .insert_shared_resource(bones::EguiCtx(ctx.clone()));
+
         if let Some(bones_assets) = &bones_data.asset_server {
-            let ctx = {
-                let mut egui_query = world.query_filtered::<&mut EguiContext, With<Window>>();
-                let mut egui_ctx = egui_query.get_single_mut(world).unwrap();
-                egui_ctx.get_mut().clone()
-            };
             update_egui_fonts(&ctx, &bones_assets.borrow());
 
             // Insert the bones egui textures
@@ -292,7 +313,12 @@ fn get_bones_input(
     mut mouse_motion_events: EventReader<MouseMotion>,
     mut mouse_wheel_events: EventReader<MouseWheel>,
     mut keyboard_events: EventReader<KeyboardInput>,
-) -> (bones::MouseInputs, bones::KeyboardInputs) {
+    mut gamepad_events: EventReader<GamepadEvent>,
+) -> (
+    bones::MouseInputs,
+    bones::KeyboardInputs,
+    bones::GamepadInputs,
+) {
     // TODO: investigate possible ways to avoid allocating vectors every frame for event lists.
     (
         bones::MouseInputs {
@@ -303,26 +329,55 @@ fn get_bones_input(
                 .unwrap_or_default(),
             wheel_events: mouse_wheel_events
                 .iter()
-                .map(|event| bones::MouseScrollInput {
+                .map(|event| bones::MouseScrollEvent {
                     unit: event.unit.into_bones(),
                     movement: Vec2::new(event.x, event.y),
                 })
                 .collect(),
             button_events: mouse_button_input_events
                 .iter()
-                .map(|event| bones::MouseButtonInput {
+                .map(|event| bones::MouseButtonEvent {
                     button: event.button.into_bones(),
                     state: event.state.into_bones(),
                 })
                 .collect(),
         },
         bones::KeyboardInputs {
-            keys: keyboard_events
+            key_events: keyboard_events
                 .iter()
-                .map(|event| bones::KeyboardInput {
+                .map(|event| bones::KeyboardEvent {
                     scan_code: event.scan_code,
-                    key_code: event.key_code.map(|x| x.into_bones()),
+                    key_code: event.key_code.map(|x| x.into_bones()).into(),
                     button_state: event.state.into_bones(),
+                })
+                .collect(),
+        },
+        bones::GamepadInputs {
+            gamepad_events: gamepad_events
+                .iter()
+                .map(|event| match event {
+                    GamepadEvent::Connection(c) => {
+                        bones::GamepadEvent::Connection(bones::GamepadConnectionEvent {
+                            gamepad: c.gamepad.id as u32,
+                            event: if c.connected() {
+                                bones::GamepadConnectionEventKind::Connected
+                            } else {
+                                bones::GamepadConnectionEventKind::Disconnected
+                            },
+                        })
+                    }
+                    GamepadEvent::Button(b) => {
+                        bones::GamepadEvent::Button(bones::GamepadButtonEvent {
+                            gamepad: b.gamepad.id as u32,
+                            button: b.button_type.into_bones(),
+                            value: b.value,
+                        })
+                    }
+                    GamepadEvent::Axis(a) => bones::GamepadEvent::Axis(bones::GamepadAxisEvent {
+                        gamepad: a.gamepad.id as u32,
+                        axis: a.axis_type.into_bones(),
+                        value: a.value,
+                    }),
                 })
                 .collect(),
         },
@@ -331,7 +386,11 @@ fn get_bones_input(
 
 /// System to step the bones simulation.
 fn step_bones_game(
-    In((mouse_inputs, keyboard_inputs)): In<(bones::MouseInputs, bones::KeyboardInputs)>,
+    In((mouse_inputs, keyboard_inputs, gamepad_inputs)): In<(
+        bones::MouseInputs,
+        bones::KeyboardInputs,
+        bones::GamepadInputs,
+    )>,
     world: &mut World,
 ) {
     let mut data = world.remove_resource::<BonesData>().unwrap();
@@ -341,16 +400,20 @@ fn step_bones_game(
         .unwrap();
     let mut bevy_images = world.remove_resource::<Assets<Image>>().unwrap();
 
-    let egui_ctx = {
-        let mut egui_query = world.query_filtered::<&mut EguiContext, With<Window>>();
-        let mut egui_ctx = egui_query.get_single_mut(world).unwrap();
-        egui_ctx.get_mut().clone()
-    };
+    let mut winow_query = world.query::<&Window>();
+    let window = winow_query.get_single_mut(world).unwrap();
     let BonesData { game, .. } = &mut data;
+
+    // Insert window information
+    game.insert_shared_resource(bones::Window {
+        size: vec2(window.width(), window.height()),
+    });
+
     let bevy_time = world.resource::<Time>();
 
     let mouse_inputs = bones::AtomicResource::new(mouse_inputs);
     let keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
+    let gamepad_inputs = bones::AtomicResource::new(gamepad_inputs);
 
     // Reload assets if necessary
     if let Some(mut asset_server) = game.shared_resource::<bones::AssetServer>() {
@@ -373,38 +436,15 @@ fn step_bones_game(
     }
 
     // Step the game simulation
-    game.step(|bones_world| {
-        // Insert egui context if not present
-        if !bones_world
-            .resources
-            .contains::<bones_framework::render::ui::EguiCtx>()
-        {
-            bones_world
-                .resources
-                .insert(bones_framework::render::ui::EguiCtx(egui_ctx.clone()));
-        }
-
-        // Update bones time
-        {
-            // Initialize the time resource if it doesn't exist.
-            if !bones_world.resources.contains::<bones::Time>() {
-                bones_world.init_resource::<bones::Time>();
-            }
-
-            let mut time = bones_world.resource_mut::<bones::Time>();
-
-            // Use the Bevy time if it's available, otherwise use the default time.
-            if let Some(instant) = bevy_time.last_update() {
-                time.update_with_instant(instant);
-            } else {
-                time.update();
-            }
-        }
-
-        // Update the inputs.
-        bones_world.resources.insert_cell(mouse_inputs.clone());
-        bones_world.resources.insert_cell(keyboard_inputs.clone());
-    });
+    game.step(
+        bevy_time.last_update().unwrap_or_else(Instant::now),
+        |bones_world| {
+            // Update the inputs.
+            bones_world.resources.insert_cell(mouse_inputs.clone());
+            bones_world.resources.insert_cell(keyboard_inputs.clone());
+            bones_world.resources.insert_cell(gamepad_inputs.clone());
+        },
+    );
 
     world.insert_resource(data);
     world.insert_resource(bones_image_ids);
@@ -469,12 +509,15 @@ fn sync_cameras(
         camera_ent.insert((
             Camera {
                 is_active: bones_camera.active,
-                viewport: bones_camera.viewport.map(|x| x.into_bevy()),
+                viewport: bones_camera.viewport.option().map(|x| x.into_bevy()),
                 order: bones_camera.priority as isize,
                 ..default()
             },
             OrthographicProjection {
-                scaling_mode: ScalingMode::FixedVertical(bones_camera.height),
+                scaling_mode: match bones_camera.size {
+                    bones::CameraSize::FixedHeight(h) => ScalingMode::FixedVertical(h),
+                    bones::CameraSize::FixedWidth(w) => ScalingMode::FixedHorizontal(w),
+                },
                 ..default()
             },
             bones_transform.into_bevy(),
@@ -548,6 +591,7 @@ fn extract_bones_sprites(
 
         // Extract normal sprites
         if let Ok(sprites) = world.components.get::<bones::Sprite>() {
+            let mut z_offset = 0.0;
             for (_, (sprite, transform)) in entities.iter_with((&sprites, &transforms)) {
                 let sprite_image = bones_assets.get(sprite.image);
                 let image_id = if let bones::Image::External(id) = sprite_image {
@@ -560,14 +604,20 @@ fn extract_bones_sprites(
                 };
                 extracted_sprites.sprites.push(ExtractedSprite {
                     entity: bones_renderable_entity.0,
-                    transform: transform.into_bevy().into(),
+                    transform: {
+                        let mut t: Transform = transform.into_bevy();
+                        // Add tiny z offset to enforce a consistent z-sort
+                        t.translation.z += z_offset;
+                        z_offset += 0.00001;
+                        t.into()
+                    },
                     color: sprite.color.into_bevy(),
                     rect: None,
                     custom_size: None,
                     image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
                     flip_x: sprite.flip_x,
                     flip_y: sprite.flip_y,
-                    anchor: Vec2::ZERO,
+                    anchor: Anchor::Center.as_vec(),
                 })
             }
         }
@@ -606,7 +656,7 @@ fn extract_bones_sprites(
                     image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
                     flip_x: atlas_sprite.flip_x,
                     flip_y: atlas_sprite.flip_y,
-                    anchor: Vec2::ZERO,
+                    anchor: Anchor::Center.as_vec(),
                 })
             }
         }
@@ -679,6 +729,13 @@ fn extract_bones_tilemaps(
                 };
                 let mut transform = transform.into_bevy();
                 transform.translation += tile_offset.extend(0.0);
+                // Scale up slightly to avoid bleeding between tiles.
+                // TODO: Improve tile rendering
+                // Currently we do a small hack here, scaling up the tiles a little bit, to prevent
+                // visible gaps between tiles. This solution isn't perfect and we probably need to
+                // create a proper tile renderer. That can render multiple tiles on one quad instead
+                // of using a separate quad for each tile.
+                transform.scale += Vec3::new(0.01, 0.01, 0.0);
                 extracted_sprites.sprites.push(ExtractedSprite {
                     entity: bones_renderable_entity.0,
                     transform: transform.into(),
@@ -688,7 +745,7 @@ fn extract_bones_tilemaps(
                     image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
                     flip_x: tile.flip_x,
                     flip_y: tile.flip_y,
-                    anchor: Vec2::ZERO,
+                    anchor: Anchor::BottomLeft.as_vec(),
                 })
             }
         }

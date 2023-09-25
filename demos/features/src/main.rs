@@ -41,6 +41,8 @@ struct GameMeta {
 #[repr(C)]
 #[type_data(metadata_asset("atlas-demo"))]
 struct AtlasDemoMeta {
+    /// The size of the camera.
+    camera_size: CameraSize,
     /// The sprite atlas for the player.
     pub atlas: Handle<Atlas>,
     /// The frames-per-second of the animation.
@@ -116,7 +118,7 @@ pub fn menu_plugin(session: &mut Session) {
     // Register our menu system
     session
         // Install the bones_framework default plugins for this session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         // And add our systems.
         .add_system_to_stage(Update, menu_system)
         .add_startup_system(menu_startup);
@@ -204,7 +206,7 @@ fn menu_system(
                             .install_plugin(path2d_demo_plugin);
                     }
 
-                    ui.add_space(30.0);
+                    ui.add_space(20.0);
 
                     // We can use the `widget()` method on the `Egui` to conveniently run bones
                     // systems that can modify the `egui::Ui` and return an `egui::Response`.
@@ -221,9 +223,10 @@ fn menu_system(
 /// Plugin for running the sprite demo.
 fn sprite_demo_plugin(session: &mut Session) {
     session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         .add_startup_system(sprite_demo_startup)
-        .add_system_to_stage(Update, back_to_menu_ui);
+        .add_system_to_stage(Update, back_to_menu_ui)
+        .add_system_to_stage(Update, move_sprite);
 }
 
 /// System that spawns the sprite demo.
@@ -247,10 +250,44 @@ fn sprite_demo_startup(
     );
 }
 
+fn move_sprite(
+    entities: Res<Entities>,
+    sprite: Comp<Sprite>,
+    mut transforms: CompMut<Transform>,
+    input: Res<KeyboardInputs>,
+    ctx: Egui,
+) {
+    egui::CentralPanel::default()
+        .frame(egui::Frame::none())
+        .show(&ctx, |ui| {
+            ui.label("Press left and right arrow keys to move sprite");
+        });
+
+    let mut left = false;
+    let mut right = false;
+
+    for input in &input.key_events {
+        match input.key_code {
+            Set(KeyCode::Right) => right = true,
+            Set(KeyCode::Left) => left = true,
+            _ => (),
+        }
+    }
+
+    for (_ent, (_sprite, transform)) in entities.iter_with((&sprite, &mut transforms)) {
+        if left {
+            transform.translation.x -= 2.0;
+        }
+        if right {
+            transform.translation.x += 2.0;
+        }
+    }
+}
+
 /// Plugin for running the tilemap demo.
 fn tilemap_demo_plugin(session: &mut Session) {
     session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         .add_startup_system(tilemap_startup_system)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
@@ -296,7 +333,7 @@ fn tilemap_startup_system(
 /// Plugin for running the atlas demo.
 fn atlas_demo_plugin(session: &mut Session) {
     session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         .add_startup_system(atlas_demo_startup)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
@@ -315,11 +352,12 @@ fn atlas_demo_startup(
     // Set the clear color
     **clear_color = Color::GRAY;
 
-    // Spawn the camera
-    spawn_default_camera(&mut entities, &mut transforms, &mut cameras);
-
     // Get the atlas metadata
     let demo = assets.get(meta.atlas_demo);
+
+    // Spawn the camera
+    let camera_ent = spawn_default_camera(&mut entities, &mut transforms, &mut cameras);
+    cameras.get_mut(camera_ent).unwrap().size = demo.camera_size;
 
     // Spawn the character sprite.
     let sprite_ent = entities.create();
@@ -343,7 +381,7 @@ fn atlas_demo_startup(
 
 fn path2d_demo_plugin(session: &mut Session) {
     session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         .add_startup_system(path2d_demo_startup)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
