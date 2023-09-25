@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["animation","asset","glam","input","lib","localization","params","prelude","render"],"struct":["DefaultPlugin"],"trait":["AssetServerExt"]};
+window.SIDEBAR_ITEMS = {"mod":["animation","asset","glam","input","lib","localization","params","prelude","render","time"],"struct":["DefaultSessionPlugin"],"trait":["AssetServerExt"]};

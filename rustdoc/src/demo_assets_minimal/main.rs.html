@@ -88,7 +88,7 @@
     </span><span class="kw">let </span>menu_session = game.sessions.create(<span class="string">&quot;menu&quot;</span>);
     menu_session
         <span class="comment">// Install the default bones_framework plugin for this session
-        </span>.install_plugin(DefaultPlugin)
+        </span>.install_plugin(DefaultSessionPlugin)
         <span class="comment">// Add our menu system to the update stage
         </span>.add_system_to_stage(Update, menu_system);
 

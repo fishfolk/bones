@@ -310,6 +310,24 @@
 <a href="#310" id="310">310</a>
 <a href="#311" id="311">311</a>
 <a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Camera components.
 
 </span><span class="kw">use </span>std::collections::VecDeque;
@@ -319,25 +337,42 @@
 <span class="doccomment">/// Makes an entity behave like a camera.
 ///
 /// The entity must also have a [`Transform`] component for the camera to render anything.
-</span><span class="attr">#[derive(Clone, Copy, Debug, HasSchema)]
+</span><span class="attr">#[derive(Clone, Debug, HasSchema)]
 </span><span class="comment">// TODO: make repr(C) when `Option`s are supported.
 // We don&#39;t have `Option` support in `bones_schema` right now.
 // Once we do, we can make this type `#[repr(C)]` instead of `#[schema(opaque)]`.
+</span><span class="attr">#[repr(C)]
 </span><span class="kw">pub struct </span>Camera {
     <span class="doccomment">/// The height of the camera in in-game pixels.
     ///
     /// The width of the camera will be determined from the window aspect ratio.
     </span><span class="comment">// TODO: implement different scaling modes for bones cameras.
-    </span><span class="kw">pub </span>height: f32,
+    </span><span class="kw">pub </span>size: CameraSize,
     <span class="doccomment">/// Whether or not the camera is enabled and rendering.
     </span><span class="kw">pub </span>active: bool,
     <span class="doccomment">/// An optional viewport override, allowing you to specify that the camera should render to only
     /// a portion of the window.
     ///
     /// This can be used, for example, for split screen functionality.
-    </span><span class="kw">pub </span>viewport: <span class="prelude-ty">Option</span>&lt;Viewport&gt;,
+    </span><span class="kw">pub </span>viewport: Maybe&lt;Viewport&gt;,
     <span class="doccomment">/// Cameras with a higher priority will be rendered on top of cameras with a lower priority.
     </span><span class="kw">pub </span>priority: i32,
+}
+
+<span class="doccomment">/// A size setting for a camera.
+</span><span class="attr">#[derive(HasSchema, Debug, Clone, Copy)]
+#[repr(C, u8)]
+</span><span class="kw">pub enum </span>CameraSize {
+    <span class="doccomment">/// The camera will be a fixed height with a width dependent on the aspect ratio.
+    </span>FixedHeight(f32),
+    <span class="doccomment">/// The camera will be a fixed width with a height dependent on the aspect ratio.
+    </span>FixedWidth(f32),
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>CameraSize {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::FixedHeight(<span class="number">400.</span>)
+    }
 }
 
 <span class="doccomment">/// A custom viewport specification for a [`Camera`].
@@ -359,10 +394,10 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>Camera {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            height: <span class="number">400.0</span>,
             active: <span class="bool-val">true</span>,
-            viewport: <span class="prelude-val">None</span>,
+            viewport: Unset,
             priority: <span class="number">0</span>,
+            size: default(),
         }
     }
 }
@@ -387,8 +422,9 @@
 }
 
 <span class="doccomment">/// Install the camera utilities on the given [`SystemStages`].
-</span><span class="kw">pub fn </span>plugin(core: <span class="kw-2">&amp;mut </span>Session) {
-    core.stages
+</span><span class="kw">pub fn </span>plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+    session
+        .stages
         .add_system_to_stage(CoreStage::Last, apply_shake)
         .add_system_to_stage(CoreStage::Last, apply_trauma)
         .add_system_to_stage(CoreStage::Last, decay_trauma);
@@ -489,7 +525,7 @@
 <span class="kw">fn </span>apply_trauma(
     entities: Res&lt;Entities&gt;,
     <span class="kw-2">mut </span>camera_shakes: CompMut&lt;CameraShake&gt;,
-    <span class="kw-2">mut </span>trauma_events: ResMut&lt;CameraTraumaEvents&gt;,
+    <span class="kw-2">mut </span>trauma_events: ResMutInit&lt;CameraTraumaEvents&gt;,
 ) {
     <span class="kw">for </span>(_ent, camera_shake) <span class="kw">in </span>entities.iter_with(<span class="kw-2">&amp;mut </span>camera_shakes) {
         camera_shake.add_trauma(
@@ -511,7 +547,7 @@
     <span class="kw-2">mut </span>transforms: CompMut&lt;Transform&gt;,
     camera_shakes: Comp&lt;CameraShake&gt;,
     time: Res&lt;Time&gt;,
-    noise: Res&lt;ShakeNoise&gt;,
+    noise: ResInit&lt;ShakeNoise&gt;,
 ) {
     <span class="macro">macro_rules! </span>offset_noise {
         (<span class="macro-nonterminal">$offset</span>:expr, <span class="macro-nonterminal">$shake_speed</span>:expr) =&gt; {

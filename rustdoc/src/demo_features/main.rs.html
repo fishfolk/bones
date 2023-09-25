@@ -411,6 +411,44 @@
 <a href="#411" id="411">411</a>
 <a href="#412" id="412">412</a>
 <a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::too_many_arguments)]
 
 </span><span class="kw">use </span>bones_bevy_renderer::{
@@ -454,6 +492,8 @@
 #[repr(C)]
 #[type_data(metadata_asset(<span class="string">&quot;atlas-demo&quot;</span>))]
 </span><span class="kw">struct </span>AtlasDemoMeta {
+    <span class="doccomment">/// The size of the camera.
+    </span>camera_size: CameraSize,
     <span class="doccomment">/// The sprite atlas for the player.
     </span><span class="kw">pub </span>atlas: Handle&lt;Atlas&gt;,
     <span class="doccomment">/// The frames-per-second of the animation.
@@ -529,7 +569,7 @@
     <span class="comment">// Register our menu system
     </span>session
         <span class="comment">// Install the bones_framework default plugins for this session
-        </span>.install_plugin(DefaultPlugin)
+        </span>.install_plugin(DefaultSessionPlugin)
         <span class="comment">// And add our systems.
         </span>.add_system_to_stage(Update, menu_system)
         .add_startup_system(menu_startup);
@@ -617,7 +657,7 @@
                             .install_plugin(path2d_demo_plugin);
                     }
 
-                    ui.add_space(<span class="number">30.0</span>);
+                    ui.add_space(<span class="number">20.0</span>);
 
                     <span class="comment">// We can use the `widget()` method on the `Egui` to conveniently run bones
                     // systems that can modify the `egui::Ui` and return an `egui::Response`.
@@ -634,9 +674,10 @@
 <span class="doccomment">/// Plugin for running the sprite demo.
 </span><span class="kw">fn </span>sprite_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
     session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         .add_startup_system(sprite_demo_startup)
-        .add_system_to_stage(Update, back_to_menu_ui);
+        .add_system_to_stage(Update, back_to_menu_ui)
+        .add_system_to_stage(Update, move_sprite);
 }
 
 <span class="doccomment">/// System that spawns the sprite demo.
@@ -660,10 +701,44 @@
     );
 }
 
+<span class="kw">fn </span>move_sprite(
+    entities: Res&lt;Entities&gt;,
+    sprite: Comp&lt;Sprite&gt;,
+    <span class="kw-2">mut </span>transforms: CompMut&lt;Transform&gt;,
+    input: Res&lt;KeyboardInputs&gt;,
+    ctx: Egui,
+) {
+    egui::CentralPanel::default()
+        .frame(egui::Frame::none())
+        .show(<span class="kw-2">&amp;</span>ctx, |ui| {
+            ui.label(<span class="string">&quot;Press left and right arrow keys to move sprite&quot;</span>);
+        });
+
+    <span class="kw">let </span><span class="kw-2">mut </span>left = <span class="bool-val">false</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>right = <span class="bool-val">false</span>;
+
+    <span class="kw">for </span>input <span class="kw">in </span><span class="kw-2">&amp;</span>input.key_events {
+        <span class="kw">match </span>input.key_code {
+            Set(KeyCode::Right) =&gt; right = <span class="bool-val">true</span>,
+            Set(KeyCode::Left) =&gt; left = <span class="bool-val">true</span>,
+            <span class="kw">_ </span>=&gt; (),
+        }
+    }
+
+    <span class="kw">for </span>(_ent, (_sprite, transform)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>sprite, <span class="kw-2">&amp;mut </span>transforms)) {
+        <span class="kw">if </span>left {
+            transform.translation.x -= <span class="number">2.0</span>;
+        }
+        <span class="kw">if </span>right {
+            transform.translation.x += <span class="number">2.0</span>;
+        }
+    }
+}
+
 <span class="doccomment">/// Plugin for running the tilemap demo.
 </span><span class="kw">fn </span>tilemap_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
     session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         .add_startup_system(tilemap_startup_system)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
@@ -709,7 +784,7 @@
 <span class="doccomment">/// Plugin for running the atlas demo.
 </span><span class="kw">fn </span>atlas_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
     session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         .add_startup_system(atlas_demo_startup)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
@@ -728,11 +803,12 @@
     <span class="comment">// Set the clear color
     </span><span class="kw-2">**</span>clear_color = Color::GRAY;
 
-    <span class="comment">// Spawn the camera
-    </span>spawn_default_camera(<span class="kw-2">&amp;mut </span>entities, <span class="kw-2">&amp;mut </span>transforms, <span class="kw-2">&amp;mut </span>cameras);
-
     <span class="comment">// Get the atlas metadata
     </span><span class="kw">let </span>demo = assets.get(meta.atlas_demo);
+
+    <span class="comment">// Spawn the camera
+    </span><span class="kw">let </span>camera_ent = spawn_default_camera(<span class="kw-2">&amp;mut </span>entities, <span class="kw-2">&amp;mut </span>transforms, <span class="kw-2">&amp;mut </span>cameras);
+    cameras.get_mut(camera_ent).unwrap().size = demo.camera_size;
 
     <span class="comment">// Spawn the character sprite.
     </span><span class="kw">let </span>sprite_ent = entities.create();
@@ -756,7 +832,7 @@
 
 <span class="kw">fn </span>path2d_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
     session
-        .install_plugin(DefaultPlugin)
+        .install_plugin(DefaultSessionPlugin)
         .add_startup_system(path2d_demo_startup)
         .add_system_to_stage(Update, back_to_menu_ui);
 }

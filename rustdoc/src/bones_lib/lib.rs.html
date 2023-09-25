@@ -388,6 +388,51 @@
 <a href="#388" id="388">388</a>
 <a href="#389" id="389">389</a>
 <a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -401,9 +446,13 @@
 <span class="doccomment">/// Bones lib prelude
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use crate</span>::{
-        ecs::prelude::<span class="kw-2">*</span>, Game, Plugin, Session, SessionOptions, SessionRunner, Sessions,
+        ecs::prelude::<span class="kw-2">*</span>, instant::Instant, time::<span class="kw-2">*</span>, Game, Session, SessionOptions, SessionPlugin,
+        SessionRunner, Sessions,
     };
 }
+
+<span class="kw">pub use </span>instant;
+<span class="kw">pub mod </span>time;
 
 <span class="kw">use </span>std::fmt::Debug;
 
@@ -425,6 +474,8 @@
     </span><span class="kw">pub </span>priority: i32,
     <span class="doccomment">/// The session runner to use for this session.
     </span><span class="kw">pub </span>runner: Box&lt;<span class="kw">dyn </span>SessionRunner&gt;,
+    <span class="doccomment">/// Whether or not the session systems in it&#39;s `stages` have been initialized yet.
+    </span><span class="kw">pub </span>has_initialized: bool,
 }
 
 <span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>Session {
@@ -447,7 +498,7 @@
     }
 
     <span class="doccomment">/// Install a plugin.
-    </span><span class="kw">pub fn </span>install_plugin(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plugin: <span class="kw">impl </span>Plugin) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>install_plugin(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plugin: <span class="kw">impl </span>SessionPlugin) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self </span>{
         plugin.install(<span class="self">self</span>);
         <span class="self">self
     </span>}
@@ -473,46 +524,71 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>Session {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            world: default(),
+            world: {
+                <span class="kw">let </span><span class="kw-2">mut </span>w = World::default();
+                w.init_resource::&lt;Time&gt;();
+                w
+            },
             stages: default(),
             active: <span class="bool-val">true</span>,
             visible: <span class="bool-val">true</span>,
             priority: <span class="number">0</span>,
             runner: Box::&lt;DefaultSessionRunner&gt;::default(),
+            has_initialized: <span class="bool-val">false</span>,
         }
     }
 }
 
 <span class="doccomment">/// Trait for plugins that can be installed into a [`Session`].
-</span><span class="kw">pub trait </span>Plugin {
+</span><span class="kw">pub trait </span>SessionPlugin {
     <span class="doccomment">/// Install the plugin into the [`Session`].
     </span><span class="kw">fn </span>install(<span class="self">self</span>, session: <span class="kw-2">&amp;mut </span>Session);
 }
-<span class="kw">impl</span>&lt;F: FnOnce(<span class="kw-2">&amp;mut </span>Session)&gt; Plugin <span class="kw">for </span>F {
-    <span class="kw">fn </span>install(<span class="self">self</span>, core: <span class="kw-2">&amp;mut </span>Session) {
-        (<span class="self">self</span>)(core)
+<span class="kw">impl</span>&lt;F: FnOnce(<span class="kw-2">&amp;mut </span>Session)&gt; SessionPlugin <span class="kw">for </span>F {
+    <span class="kw">fn </span>install(<span class="self">self</span>, session: <span class="kw-2">&amp;mut </span>Session) {
+        (<span class="self">self</span>)(session)
+    }
+}
+
+<span class="doccomment">/// Trait for plugins that can be installed into a [`Game`].
+</span><span class="kw">pub trait </span>GamePlugin {
+    <span class="doccomment">/// Install the plugin into the [`Game`].
+    </span><span class="kw">fn </span>install(<span class="self">self</span>, game: <span class="kw-2">&amp;mut </span>Game);
+}
+<span class="kw">impl</span>&lt;F: FnOnce(<span class="kw-2">&amp;mut </span>Game)&gt; GamePlugin <span class="kw">for </span>F {
+    <span class="kw">fn </span>install(<span class="self">self</span>, game: <span class="kw-2">&amp;mut </span>Game) {
+        (<span class="self">self</span>)(game)
     }
 }
 
 <span class="doccomment">/// A session runner is in charge of advancing a [`Session`] simulation.
 </span><span class="kw">pub trait </span>SessionRunner: Sync + Send + <span class="lifetime">&#39;static </span>{
     <span class="doccomment">/// Step the simulation once.
-    </span><span class="kw">fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World, stages: <span class="kw-2">&amp;mut </span>SystemStages);
+    ///
+    /// It is the responsibility of the session runner to update the [`Time`] resource if necessary.
+    ///
+    /// If no special behavior is desired, the simplest session runner, and the one that is
+    /// implemented by [`DefaultSessionRunner`] is as follows:
+    ///
+    /// ```
+    /// # use bones_lib::prelude::*;
+    /// # struct Example;
+    /// # impl SessionRunner for Example {
+    /// fn step(&amp;mut self, now: Instant, world: &amp;mut World, stages: &amp;mut SystemStages) {
+    ///     world.resource_mut::&lt;Time&gt;().update_with_instant(now);
+    ///     stages.run(world);
+    /// }
+    /// # }
+    /// ```
+    </span><span class="kw">fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>, now: Instant, world: <span class="kw-2">&amp;mut </span>World, stages: <span class="kw-2">&amp;mut </span>SystemStages);
 }
 
 <span class="doccomment">/// The default [`SessionRunner`], which just runs the systems once every time it is run.
 </span><span class="attr">#[derive(Default)]
-</span><span class="kw">pub struct </span>DefaultSessionRunner {
-    <span class="doccomment">/// Whether or not the systems have been initialized yet.
-    </span><span class="kw">pub </span>has_init: bool,
-}
+</span><span class="kw">pub struct </span>DefaultSessionRunner;
 <span class="kw">impl </span>SessionRunner <span class="kw">for </span>DefaultSessionRunner {
-    <span class="kw">fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World, stages: <span class="kw-2">&amp;mut </span>SystemStages) {
-        <span class="comment">// Initialize systems if they have not been initialized yet.
-        </span><span class="kw">if </span>unlikely(!<span class="self">self</span>.has_init) {
-            <span class="self">self</span>.has_init = <span class="bool-val">true</span>;
-            stages.initialize_systems(world);
-        }
+    <span class="kw">fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>, now: instant::Instant, world: <span class="kw-2">&amp;mut </span>World, stages: <span class="kw-2">&amp;mut </span>SystemStages) {
+        world.resource_mut::&lt;Time&gt;().update_with_instant(now);
         stages.run(world)
     }
 }
@@ -542,6 +618,12 @@
     </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::default()
     }
+
+    <span class="doccomment">/// Install a [`GamePlugin`].
+    </span><span class="kw">pub fn </span>install_plugin&lt;P: GamePlugin&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plugin: P) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self </span>{
+        plugin.install(<span class="self">self</span>);
+        <span class="self">self
+    </span>}
 
     <span class="doccomment">/// Get the shared resource of a given type out of this [`Game`]s shared resources.
     </span><span class="kw">pub fn </span>shared_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
@@ -574,18 +656,17 @@
 
     <span class="doccomment">/// Insert a resource that will be shared across all game sessions.
     </span><span class="kw">pub fn </span>insert_shared_resource&lt;T: HasSchema + Default&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: T) {
-        <span class="kw">let </span>resource = UntypedAtomicResource::new(SchemaBox::new(resource));
-
-        <span class="comment">// Replace an existing resource of the same type.
+        <span class="comment">// Update an existing resource of the same type.
         </span><span class="kw">for </span>r <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.shared_resources {
             <span class="kw">if </span>r.schema() == T::schema() {
-                <span class="kw-2">*</span>r = resource;
+                <span class="kw-2">*</span>r.borrow_mut().cast_mut() = resource;
                 <span class="kw">return</span>;
             }
         }
 
         <span class="comment">// Or insert a new resource if we couldn&#39;t find one
-        </span><span class="self">self</span>.shared_resources.push(resource);
+        </span><span class="self">self</span>.shared_resources
+            .push(UntypedAtomicResource::new(SchemaBox::new(resource)));
     }
 
     <span class="doccomment">/// Step the game simulation.
@@ -599,7 +680,7 @@
     ///   size.
     /// - setup other important resources such as the UI context and the asset server, if
     ///   applicable.
-    </span><span class="kw">pub fn </span>step&lt;F: FnMut(<span class="kw-2">&amp;mut </span>World)&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>apply_input: F) {
+    </span><span class="kw">pub fn </span>step&lt;F: FnMut(<span class="kw-2">&amp;mut </span>World)&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, now: instant::Instant, <span class="kw-2">mut </span>apply_input: F) {
         <span class="comment">// Sort session keys by priority
         </span><span class="self">self</span>.sorted_session_keys.clear();
         <span class="self">self</span>.sorted_session_keys.extend(<span class="self">self</span>.sessions.map.keys());
@@ -645,10 +726,19 @@
                     std::mem::swap(<span class="kw-2">&amp;mut *</span>sessions, <span class="kw-2">&amp;mut </span><span class="self">self</span>.sessions);
                 }
 
+                <span class="comment">// Initialize the session if necessary
+                </span><span class="kw">if </span>unlikely(!current_session.has_initialized) {
+                    current_session
+                        .stages
+                        .initialize_systems(<span class="kw-2">&amp;mut </span>current_session.world);
+                }
+
                 <span class="comment">// Step the current session&#39;s simulation using it&#39;s session runner
-                </span>current_session
-                    .runner
-                    .step(<span class="kw-2">&amp;mut </span>current_session.world, <span class="kw-2">&amp;mut </span>current_session.stages);
+                </span>current_session.runner.step(
+                    now,
+                    <span class="kw-2">&amp;mut </span>current_session.world,
+                    <span class="kw-2">&amp;mut </span>current_session.stages,
+                );
 
                 <span class="comment">// Pull the sessions back out of the world
                 </span>{

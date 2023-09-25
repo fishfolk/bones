@@ -1039,6 +1039,71 @@
 <a href="#1039" id="1039">1039</a>
 <a href="#1040" id="1040">1040</a>
 <a href="#1041" id="1041">1041</a>
+<a href="#1042" id="1042">1042</a>
+<a href="#1043" id="1043">1043</a>
+<a href="#1044" id="1044">1044</a>
+<a href="#1045" id="1045">1045</a>
+<a href="#1046" id="1046">1046</a>
+<a href="#1047" id="1047">1047</a>
+<a href="#1048" id="1048">1048</a>
+<a href="#1049" id="1049">1049</a>
+<a href="#1050" id="1050">1050</a>
+<a href="#1051" id="1051">1051</a>
+<a href="#1052" id="1052">1052</a>
+<a href="#1053" id="1053">1053</a>
+<a href="#1054" id="1054">1054</a>
+<a href="#1055" id="1055">1055</a>
+<a href="#1056" id="1056">1056</a>
+<a href="#1057" id="1057">1057</a>
+<a href="#1058" id="1058">1058</a>
+<a href="#1059" id="1059">1059</a>
+<a href="#1060" id="1060">1060</a>
+<a href="#1061" id="1061">1061</a>
+<a href="#1062" id="1062">1062</a>
+<a href="#1063" id="1063">1063</a>
+<a href="#1064" id="1064">1064</a>
+<a href="#1065" id="1065">1065</a>
+<a href="#1066" id="1066">1066</a>
+<a href="#1067" id="1067">1067</a>
+<a href="#1068" id="1068">1068</a>
+<a href="#1069" id="1069">1069</a>
+<a href="#1070" id="1070">1070</a>
+<a href="#1071" id="1071">1071</a>
+<a href="#1072" id="1072">1072</a>
+<a href="#1073" id="1073">1073</a>
+<a href="#1074" id="1074">1074</a>
+<a href="#1075" id="1075">1075</a>
+<a href="#1076" id="1076">1076</a>
+<a href="#1077" id="1077">1077</a>
+<a href="#1078" id="1078">1078</a>
+<a href="#1079" id="1079">1079</a>
+<a href="#1080" id="1080">1080</a>
+<a href="#1081" id="1081">1081</a>
+<a href="#1082" id="1082">1082</a>
+<a href="#1083" id="1083">1083</a>
+<a href="#1084" id="1084">1084</a>
+<a href="#1085" id="1085">1085</a>
+<a href="#1086" id="1086">1086</a>
+<a href="#1087" id="1087">1087</a>
+<a href="#1088" id="1088">1088</a>
+<a href="#1089" id="1089">1089</a>
+<a href="#1090" id="1090">1090</a>
+<a href="#1091" id="1091">1091</a>
+<a href="#1092" id="1092">1092</a>
+<a href="#1093" id="1093">1093</a>
+<a href="#1094" id="1094">1094</a>
+<a href="#1095" id="1095">1095</a>
+<a href="#1096" id="1096">1096</a>
+<a href="#1097" id="1097">1097</a>
+<a href="#1098" id="1098">1098</a>
+<a href="#1099" id="1099">1099</a>
+<a href="#1100" id="1100">1100</a>
+<a href="#1101" id="1101">1101</a>
+<a href="#1102" id="1102">1102</a>
+<a href="#1103" id="1103">1103</a>
+<a href="#1104" id="1104">1104</a>
+<a href="#1105" id="1105">1105</a>
+<a href="#1106" id="1106">1106</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::path::{Path, PathBuf};
 
 <span class="kw">use </span>anyhow::Context;
@@ -1611,7 +1676,16 @@
             .asset_ids
             .get(<span class="kw-2">&amp;</span>handle.untyped())
             .expect(NO_ASSET_MSG);
-        <span class="self">self</span>.store.assets.get(cid).expect(NO_ASSET_MSG).cast_ref()
+        <span class="kw">let </span>asset = <span class="kw-2">&amp;</span><span class="self">self</span>.store.assets.get(cid).expect(NO_ASSET_MSG).data;
+
+        <span class="comment">// If this is a handle to a schema box, then return the schema box directly without casting
+        </span><span class="kw">if </span>T::schema() == &lt;SchemaBox <span class="kw">as </span>HasSchema&gt;::schema() {
+            <span class="comment">// SOUND: the above comparison verifies that T is concretely a SchemaBox so &amp;Schemabox
+            // is the same as &amp;T.
+            </span><span class="kw">unsafe </span>{ std::mem::transmute(asset) }
+        } <span class="kw">else </span>{
+            asset.cast_ref()
+        }
     }
 
     <span class="doccomment">/// Mutably borrow a loaded asset.
@@ -1652,7 +1726,7 @@
 
 <span class="kw">pub use </span>metadata::<span class="kw-2">*</span>;
 <span class="kw">mod </span>metadata {
-    <span class="kw">use </span>serde::de::{DeserializeSeed, Error, VariantAccess, Visitor};
+    <span class="kw">use </span>serde::de::{DeserializeSeed, Error, Unexpected, VariantAccess, Visitor};
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
@@ -1742,10 +1816,22 @@
             }
 
             <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.ptr.schema().kind {
-                SchemaKind::Struct(<span class="kw">_</span>) =&gt; deserializer.deserialize_any(StructVisitor {
-                    ptr: <span class="self">self</span>.ptr,
-                    ctx: <span class="self">self</span>.ctx,
-                })<span class="question-mark">?</span>,
+                SchemaKind::Struct(s) =&gt; {
+                    <span class="comment">// If this is a newtype struct
+                    </span><span class="kw">if </span>s.fields.len() == <span class="number">1 </span>&amp;&amp; s.fields[<span class="number">0</span>].name.is_none() {
+                        <span class="comment">// Deserialize it as the inner type
+                        // SOUND: it is safe to cast a struct with one field to it&#39;s field type
+                        </span><span class="kw">let </span>ptr = <span class="kw">unsafe </span>{
+                            SchemaRefMut::from_ptr_schema(<span class="self">self</span>.ptr.as_ptr(), s.fields[<span class="number">0</span>].schema)
+                        };
+                        SchemaPtrLoadCtx { ptr, ctx: <span class="self">self</span>.ctx }.deserialize(deserializer)<span class="question-mark">?
+                    </span>} <span class="kw">else </span>{
+                        deserializer.deserialize_any(StructVisitor {
+                            ptr: <span class="self">self</span>.ptr,
+                            ctx: <span class="self">self</span>.ctx,
+                        })<span class="question-mark">?
+                    </span>}
+                }
                 SchemaKind::Vec(<span class="kw">_</span>) =&gt; deserializer.deserialize_seq(VecVisitor {
                     ptr: <span class="self">self</span>.ptr,
                     ctx: <span class="self">self</span>.ctx,
@@ -1754,14 +1840,10 @@
                     ptr: <span class="self">self</span>.ptr,
                     ctx: <span class="self">self</span>.ctx,
                 })<span class="question-mark">?</span>,
-                SchemaKind::Enum(<span class="kw">_</span>) =&gt; deserializer.deserialize_enum(
-                    <span class="kw-2">&amp;</span><span class="self">self</span>.ptr.schema().name,
-                    <span class="kw-2">&amp;</span>[], <span class="comment">// We don&#39;t have a static list of variant names
-                    </span>EnumVisitor {
-                        ptr: <span class="self">self</span>.ptr,
-                        ctx: <span class="self">self</span>.ctx,
-                    },
-                )<span class="question-mark">?</span>,
+                SchemaKind::Enum(<span class="kw">_</span>) =&gt; deserializer.deserialize_any(EnumVisitor {
+                    ptr: <span class="self">self</span>.ptr,
+                    ctx: <span class="self">self</span>.ctx,
+                })<span class="question-mark">?</span>,
                 SchemaKind::Box(<span class="kw">_</span>) =&gt; {
                     <span class="comment">// SOUND: schema asserts pointer is a SchemaBox.
                     </span><span class="kw">let </span>b = <span class="kw">unsafe </span>{ <span class="self">self</span>.ptr.deref_mut::&lt;SchemaBox&gt;() };
@@ -1791,7 +1873,7 @@
                         </span>}
                         Primitive::Opaque { .. } =&gt; {
                             <span class="kw">return </span><span class="prelude-val">Err</span>(D::Error::custom(
-                                <span class="string">&quot;Opaque types must have `SchemaDeserialize` type data in order \
+                                <span class="string">&quot;Opaque types must be #[repr(C)] or have `SchemaDeserialize` type data in order \
                                 to be loaded in a metadata asset.&quot;</span>,
                             ));
                         }
@@ -1821,6 +1903,34 @@
                 <span class="string">&quot;asset metadata matching the schema: {:#?}&quot;</span>,
                 <span class="self">self</span>.ptr.schema()
             )
+        }
+
+        <span class="kw">fn </span>visit_str&lt;E&gt;(<span class="self">self</span>, value: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, E&gt;
+        <span class="kw">where
+            </span>E: Error,
+        {
+            <span class="kw">let </span>struct_info = <span class="self">self</span>.ptr.schema().kind.as_struct().unwrap();
+            <span class="kw">if </span>struct_info.fields.len() == <span class="number">1 </span>&amp;&amp; struct_info.fields[<span class="number">0</span>].name.is_none() {
+                <span class="comment">// SOUND: we&#39;ve verified this is a struct with one field, so it is safe to cast the
+                // pointer to a pointer to the inner type.
+                </span><span class="kw">let </span><span class="kw-2">mut </span>ptr = <span class="kw">unsafe </span>{
+                    SchemaRefMut::from_ptr_schema(
+                        <span class="self">self</span>.ptr.as_ptr(),
+                        <span class="self">self</span>.ptr.schema().kind.as_struct().unwrap().fields[<span class="number">0</span>].schema,
+                    )
+                };
+                <span class="kw">let </span>v = ptr
+                    .try_cast_mut::&lt;String&gt;()
+                    .map_err(|<span class="kw">_</span>| E::invalid_type(Unexpected::Str(value), <span class="kw-2">&amp;</span><span class="self">self</span>))<span class="question-mark">?</span>;
+                <span class="kw-2">*</span>v = value.into();
+
+                <span class="prelude-val">Ok</span>(())
+            } <span class="kw">else </span>{
+                <span class="prelude-val">Err</span>(E::invalid_type(
+                    Unexpected::Other(<span class="string">&quot;value&quot;</span>),
+                    <span class="kw-2">&amp;</span><span class="string">&quot;list or map of struct fields&quot;</span>,
+                ))
+            }
         }
 
         <span class="kw">fn </span>visit_seq&lt;A&gt;(<span class="kw-2">mut </span><span class="self">self</span>, <span class="kw-2">mut </span>seq: A) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, A::Error&gt;
@@ -1991,32 +2101,52 @@
             )
         }
 
+        <span class="kw">fn </span>visit_str&lt;E&gt;(<span class="self">self</span>, v: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, E&gt;
+        <span class="kw">where
+            </span>E: Error,
+        {
+            <span class="kw">let </span>enum_info = <span class="self">self</span>.ptr.schema().kind.as_enum().unwrap();
+            <span class="kw">let </span>var_idx = enum_info
+                .variants
+                .iter()
+                .position(|x| x.name == v)
+                .ok_or_else(|| E::invalid_value(Unexpected::Str(v), <span class="kw-2">&amp;</span><span class="self">self</span>))<span class="question-mark">?</span>;
+
+            <span class="kw">if </span>!enum_info.variants[var_idx]
+                .schema
+                .kind
+                .as_struct()
+                .unwrap()
+                .fields
+                .is_empty()
+            {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(E::custom(<span class="macro">format!</span>(
+                    <span class="string">&quot;Cannot deserialize enum variant with fields from string: {v}&quot;
+                </span>)));
+            }
+
+            <span class="comment">// SOUND: we match the cast with the enum tag type.
+            </span><span class="kw">unsafe </span>{
+                <span class="kw">match </span>enum_info.tag_type {
+                    EnumTagType::U8 =&gt; <span class="self">self</span>.ptr.as_ptr().cast::&lt;u8&gt;().write(var_idx <span class="kw">as </span>u8),
+                    EnumTagType::U16 =&gt; <span class="self">self</span>.ptr.as_ptr().cast::&lt;u16&gt;().write(var_idx <span class="kw">as </span>u16),
+                    EnumTagType::U32 =&gt; <span class="self">self</span>.ptr.as_ptr().cast::&lt;u32&gt;().write(var_idx <span class="kw">as </span>u32),
+                }
+            }
+
+            <span class="prelude-val">Ok</span>(())
+        }
+
         <span class="kw">fn </span>visit_enum&lt;A&gt;(<span class="self">self</span>, data: A) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, A::Error&gt;
         <span class="kw">where
             </span>A: serde::de::EnumAccess&lt;<span class="lifetime">&#39;de</span>&gt;,
         {
             <span class="kw">let </span>(value_ptr, var_access) = data.variant_seed(EnumPtrLoadCtx { ptr: <span class="self">self</span>.ptr })<span class="question-mark">?</span>;
 
-            <span class="kw">let </span>variant_info = value_ptr.schema().kind.as_struct().unwrap();
-            <span class="kw">if </span>variant_info.fields.is_empty() {
-                var_access.unit_variant()<span class="question-mark">?</span>;
-            } <span class="kw">else if </span>variant_info.fields[<span class="number">0</span>].name.is_none() {
-                var_access.tuple_variant(
-                    variant_info.fields.len(),
-                    StructVisitor {
-                        ctx: <span class="self">self</span>.ctx,
-                        ptr: value_ptr,
-                    },
-                )<span class="question-mark">?</span>;
-            } <span class="kw">else </span>{
-                var_access.struct_variant(
-                    <span class="kw-2">&amp;</span>[], <span class="comment">// We don&#39;t have static fields list
-                    </span>StructVisitor {
-                        ctx: <span class="self">self</span>.ctx,
-                        ptr: value_ptr,
-                    },
-                )<span class="question-mark">?</span>;
-            }
+            var_access.newtype_variant_seed(SchemaPtrLoadCtx {
+                ctx: <span class="self">self</span>.ctx,
+                ptr: value_ptr,
+            })<span class="question-mark">?</span>;
 
             <span class="prelude-val">Ok</span>(())
         }

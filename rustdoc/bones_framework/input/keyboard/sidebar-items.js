@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["KeyCode"],"struct":["KeyboardInput","KeyboardInputs"]};
+window.SIDEBAR_ITEMS = {"enum":["KeyCode"],"struct":["KeyboardEvent","KeyboardInputs"]};

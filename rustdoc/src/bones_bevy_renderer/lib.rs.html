@@ -797,6 +797,63 @@
 <a href="#797" id="797">797</a>
 <a href="#798" id="798">798</a>
 <a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a>
+<a href="#841" id="841">841</a>
+<a href="#842" id="842">842</a>
+<a href="#843" id="843">843</a>
+<a href="#844" id="844">844</a>
+<a href="#845" id="845">845</a>
+<a href="#846" id="846">846</a>
+<a href="#847" id="847">847</a>
+<a href="#848" id="848">848</a>
+<a href="#849" id="849">849</a>
+<a href="#850" id="850">850</a>
+<a href="#851" id="851">851</a>
+<a href="#852" id="852">852</a>
+<a href="#853" id="853">853</a>
+<a href="#854" id="854">854</a>
+<a href="#855" id="855">855</a>
+<a href="#856" id="856">856</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -810,13 +867,14 @@
 
 <span class="kw">use </span>bevy::{
     input::{
+        gamepad::GamepadEvent,
         keyboard::KeyboardInput,
         mouse::{MouseButtonInput, MouseMotion, MouseWheel},
     },
     prelude::<span class="kw-2">*</span>,
     render::{camera::ScalingMode, Extract, RenderApp},
-    sprite::{extract_sprites, ExtractedSprite, ExtractedSprites, SpriteSystem},
-    utils::HashMap,
+    sprite::{extract_sprites, Anchor, ExtractedSprite, ExtractedSprites, SpriteSystem},
+    utils::{HashMap, Instant},
 };
 <span class="kw">use </span>bevy_egui::EguiContext;
 <span class="kw">use </span>glam::<span class="kw-2">*</span>;
@@ -861,11 +919,19 @@
 }
 
 <span class="doccomment">/// Resource mapping bones image IDs to their bevy handles.
-</span><span class="attr">#[derive(Resource, Default, Debug, Deref, DerefMut)]
+</span><span class="attr">#[derive(Resource, Debug, Deref, DerefMut)]
 </span><span class="kw">pub struct </span>BonesImageIds {
     <span class="attr">#[deref]
     </span>map: HashMap&lt;u32, Handle&lt;Image&gt;&gt;,
     next_id: u32,
+}
+<span class="kw">impl </span>Default <span class="kw">for </span>BonesImageIds {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            map: Default::default(),
+            next_id: <span class="number">1</span>,
+        }
+    }
 }
 
 <span class="kw">impl </span>BonesImageIds {
@@ -910,6 +976,12 @@
             map.insert(<span class="kw-2">*</span>next_id, handle);
             <span class="kw-2">*</span>image = bones::Image::External(<span class="kw-2">*</span>next_id);
             <span class="kw-2">*</span>next_id += <span class="number">1</span>;
+
+        <span class="comment">// The image has already been loaded. This may happen if multiple asset handles use the same
+        // image data. We will end up visiting the same data twice.
+        </span>} <span class="kw">else </span>{
+            <span class="comment">// Swap the image back to it&#39;s previous value.
+            </span>std::mem::swap(image, <span class="kw-2">&amp;mut </span>taken_image);
         }
     }
 }
@@ -1066,13 +1138,19 @@
 
 <span class="doccomment">/// Startup system to load egui fonts and textures.
 </span><span class="kw">fn </span>setup_egui(world: <span class="kw-2">&amp;mut </span>World) {
-    world.resource_scope(|world: <span class="kw-2">&amp;mut </span>World, bones_data: Mut&lt;BonesData&gt;| {
+    world.resource_scope(|world: <span class="kw-2">&amp;mut </span>World, <span class="kw-2">mut </span>bones_data: Mut&lt;BonesData&gt;| {
+        <span class="kw">let </span>ctx = {
+            <span class="kw">let </span><span class="kw-2">mut </span>egui_query = world.query_filtered::&lt;<span class="kw-2">&amp;mut </span>EguiContext, With&lt;Window&gt;&gt;();
+            <span class="kw">let </span><span class="kw-2">mut </span>egui_ctx = egui_query.get_single_mut(world).unwrap();
+            egui_ctx.get_mut().clone()
+        };
+
+        <span class="comment">// Insert the egui context as a shared resource
+        </span>bones_data
+            .game
+            .insert_shared_resource(bones::EguiCtx(ctx.clone()));
+
         <span class="kw">if let </span><span class="prelude-val">Some</span>(bones_assets) = <span class="kw-2">&amp;</span>bones_data.asset_server {
-            <span class="kw">let </span>ctx = {
-                <span class="kw">let </span><span class="kw-2">mut </span>egui_query = world.query_filtered::&lt;<span class="kw-2">&amp;mut </span>EguiContext, With&lt;Window&gt;&gt;();
-                <span class="kw">let </span><span class="kw-2">mut </span>egui_ctx = egui_query.get_single_mut(world).unwrap();
-                egui_ctx.get_mut().clone()
-            };
             update_egui_fonts(<span class="kw-2">&amp;</span>ctx, <span class="kw-2">&amp;</span>bones_assets.borrow());
 
             <span class="comment">// Insert the bones egui textures
@@ -1091,7 +1169,12 @@
     <span class="kw-2">mut </span>mouse_motion_events: EventReader&lt;MouseMotion&gt;,
     <span class="kw-2">mut </span>mouse_wheel_events: EventReader&lt;MouseWheel&gt;,
     <span class="kw-2">mut </span>keyboard_events: EventReader&lt;KeyboardInput&gt;,
-) -&gt; (bones::MouseInputs, bones::KeyboardInputs) {
+    <span class="kw-2">mut </span>gamepad_events: EventReader&lt;GamepadEvent&gt;,
+) -&gt; (
+    bones::MouseInputs,
+    bones::KeyboardInputs,
+    bones::GamepadInputs,
+) {
     <span class="comment">// TODO: investigate possible ways to avoid allocating vectors every frame for event lists.
     </span>(
         bones::MouseInputs {
@@ -1102,26 +1185,55 @@
                 .unwrap_or_default(),
             wheel_events: mouse_wheel_events
                 .iter()
-                .map(|event| bones::MouseScrollInput {
+                .map(|event| bones::MouseScrollEvent {
                     unit: event.unit.into_bones(),
                     movement: Vec2::new(event.x, event.y),
                 })
                 .collect(),
             button_events: mouse_button_input_events
                 .iter()
-                .map(|event| bones::MouseButtonInput {
+                .map(|event| bones::MouseButtonEvent {
                     button: event.button.into_bones(),
                     state: event.state.into_bones(),
                 })
                 .collect(),
         },
         bones::KeyboardInputs {
-            keys: keyboard_events
+            key_events: keyboard_events
                 .iter()
-                .map(|event| bones::KeyboardInput {
+                .map(|event| bones::KeyboardEvent {
                     scan_code: event.scan_code,
-                    key_code: event.key_code.map(|x| x.into_bones()),
+                    key_code: event.key_code.map(|x| x.into_bones()).into(),
                     button_state: event.state.into_bones(),
+                })
+                .collect(),
+        },
+        bones::GamepadInputs {
+            gamepad_events: gamepad_events
+                .iter()
+                .map(|event| <span class="kw">match </span>event {
+                    GamepadEvent::Connection(c) =&gt; {
+                        bones::GamepadEvent::Connection(bones::GamepadConnectionEvent {
+                            gamepad: c.gamepad.id <span class="kw">as </span>u32,
+                            event: <span class="kw">if </span>c.connected() {
+                                bones::GamepadConnectionEventKind::Connected
+                            } <span class="kw">else </span>{
+                                bones::GamepadConnectionEventKind::Disconnected
+                            },
+                        })
+                    }
+                    GamepadEvent::Button(b) =&gt; {
+                        bones::GamepadEvent::Button(bones::GamepadButtonEvent {
+                            gamepad: b.gamepad.id <span class="kw">as </span>u32,
+                            button: b.button_type.into_bones(),
+                            value: b.value,
+                        })
+                    }
+                    GamepadEvent::Axis(a) =&gt; bones::GamepadEvent::Axis(bones::GamepadAxisEvent {
+                        gamepad: a.gamepad.id <span class="kw">as </span>u32,
+                        axis: a.axis_type.into_bones(),
+                        value: a.value,
+                    }),
                 })
                 .collect(),
         },
@@ -1130,7 +1242,11 @@
 
 <span class="doccomment">/// System to step the bones simulation.
 </span><span class="kw">fn </span>step_bones_game(
-    In((mouse_inputs, keyboard_inputs)): In&lt;(bones::MouseInputs, bones::KeyboardInputs)&gt;,
+    In((mouse_inputs, keyboard_inputs, gamepad_inputs)): In&lt;(
+        bones::MouseInputs,
+        bones::KeyboardInputs,
+        bones::GamepadInputs,
+    )&gt;,
     world: <span class="kw-2">&amp;mut </span>World,
 ) {
     <span class="kw">let </span><span class="kw-2">mut </span>data = world.remove_resource::&lt;BonesData&gt;().unwrap();
@@ -1140,16 +1256,20 @@
         .unwrap();
     <span class="kw">let </span><span class="kw-2">mut </span>bevy_images = world.remove_resource::&lt;Assets&lt;Image&gt;&gt;().unwrap();
 
-    <span class="kw">let </span>egui_ctx = {
-        <span class="kw">let </span><span class="kw-2">mut </span>egui_query = world.query_filtered::&lt;<span class="kw-2">&amp;mut </span>EguiContext, With&lt;Window&gt;&gt;();
-        <span class="kw">let </span><span class="kw-2">mut </span>egui_ctx = egui_query.get_single_mut(world).unwrap();
-        egui_ctx.get_mut().clone()
-    };
+    <span class="kw">let </span><span class="kw-2">mut </span>winow_query = world.query::&lt;<span class="kw-2">&amp;</span>Window&gt;();
+    <span class="kw">let </span>window = winow_query.get_single_mut(world).unwrap();
     <span class="kw">let </span>BonesData { game, .. } = <span class="kw-2">&amp;mut </span>data;
+
+    <span class="comment">// Insert window information
+    </span>game.insert_shared_resource(bones::Window {
+        size: vec2(window.width(), window.height()),
+    });
+
     <span class="kw">let </span>bevy_time = world.resource::&lt;Time&gt;();
 
     <span class="kw">let </span>mouse_inputs = bones::AtomicResource::new(mouse_inputs);
     <span class="kw">let </span>keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
+    <span class="kw">let </span>gamepad_inputs = bones::AtomicResource::new(gamepad_inputs);
 
     <span class="comment">// Reload assets if necessary
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = game.shared_resource::&lt;bones::AssetServer&gt;() {
@@ -1172,38 +1292,15 @@
     }
 
     <span class="comment">// Step the game simulation
-    </span>game.step(|bones_world| {
-        <span class="comment">// Insert egui context if not present
-        </span><span class="kw">if </span>!bones_world
-            .resources
-            .contains::&lt;bones_framework::render::ui::EguiCtx&gt;()
-        {
-            bones_world
-                .resources
-                .insert(bones_framework::render::ui::EguiCtx(egui_ctx.clone()));
-        }
-
-        <span class="comment">// Update bones time
-        </span>{
-            <span class="comment">// Initialize the time resource if it doesn&#39;t exist.
-            </span><span class="kw">if </span>!bones_world.resources.contains::&lt;bones::Time&gt;() {
-                bones_world.init_resource::&lt;bones::Time&gt;();
-            }
-
-            <span class="kw">let </span><span class="kw-2">mut </span>time = bones_world.resource_mut::&lt;bones::Time&gt;();
-
-            <span class="comment">// Use the Bevy time if it&#39;s available, otherwise use the default time.
-            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(instant) = bevy_time.last_update() {
-                time.update_with_instant(instant);
-            } <span class="kw">else </span>{
-                time.update();
-            }
-        }
-
-        <span class="comment">// Update the inputs.
-        </span>bones_world.resources.insert_cell(mouse_inputs.clone());
-        bones_world.resources.insert_cell(keyboard_inputs.clone());
-    });
+    </span>game.step(
+        bevy_time.last_update().unwrap_or_else(Instant::now),
+        |bones_world| {
+            <span class="comment">// Update the inputs.
+            </span>bones_world.resources.insert_cell(mouse_inputs.clone());
+            bones_world.resources.insert_cell(keyboard_inputs.clone());
+            bones_world.resources.insert_cell(gamepad_inputs.clone());
+        },
+    );
 
     world.insert_resource(data);
     world.insert_resource(bones_image_ids);
@@ -1268,12 +1365,15 @@
         </span>camera_ent.insert((
             Camera {
                 is_active: bones_camera.active,
-                viewport: bones_camera.viewport.map(|x| x.into_bevy()),
+                viewport: bones_camera.viewport.option().map(|x| x.into_bevy()),
                 order: bones_camera.priority <span class="kw">as </span>isize,
                 ..default()
             },
             OrthographicProjection {
-                scaling_mode: ScalingMode::FixedVertical(bones_camera.height),
+                scaling_mode: <span class="kw">match </span>bones_camera.size {
+                    bones::CameraSize::FixedHeight(h) =&gt; ScalingMode::FixedVertical(h),
+                    bones::CameraSize::FixedWidth(w) =&gt; ScalingMode::FixedHorizontal(w),
+                },
                 ..default()
             },
             bones_transform.into_bevy(),
@@ -1347,6 +1447,7 @@
 
         <span class="comment">// Extract normal sprites
         </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(sprites) = world.components.get::&lt;bones::Sprite&gt;() {
+            <span class="kw">let </span><span class="kw-2">mut </span>z_offset = <span class="number">0.0</span>;
             <span class="kw">for </span>(<span class="kw">_</span>, (sprite, transform)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>sprites, <span class="kw-2">&amp;</span>transforms)) {
                 <span class="kw">let </span>sprite_image = bones_assets.get(sprite.image);
                 <span class="kw">let </span>image_id = <span class="kw">if let </span>bones::Image::External(id) = sprite_image {
@@ -1359,14 +1460,20 @@
                 };
                 extracted_sprites.sprites.push(ExtractedSprite {
                     entity: bones_renderable_entity.<span class="number">0</span>,
-                    transform: transform.into_bevy().into(),
+                    transform: {
+                        <span class="kw">let </span><span class="kw-2">mut </span>t: Transform = transform.into_bevy();
+                        <span class="comment">// Add tiny z offset to enforce a consistent z-sort
+                        </span>t.translation.z += z_offset;
+                        z_offset += <span class="number">0.00001</span>;
+                        t.into()
+                    },
                     color: sprite.color.into_bevy(),
                     rect: <span class="prelude-val">None</span>,
                     custom_size: <span class="prelude-val">None</span>,
                     image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
                     flip_x: sprite.flip_x,
                     flip_y: sprite.flip_y,
-                    anchor: Vec2::ZERO,
+                    anchor: Anchor::Center.as_vec(),
                 })
             }
         }
@@ -1405,7 +1512,7 @@
                     image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
                     flip_x: atlas_sprite.flip_x,
                     flip_y: atlas_sprite.flip_y,
-                    anchor: Vec2::ZERO,
+                    anchor: Anchor::Center.as_vec(),
                 })
             }
         }
@@ -1478,6 +1585,13 @@
                 };
                 <span class="kw">let </span><span class="kw-2">mut </span>transform = transform.into_bevy();
                 transform.translation += tile_offset.extend(<span class="number">0.0</span>);
+                <span class="comment">// Scale up slightly to avoid bleeding between tiles.
+                // TODO: Improve tile rendering
+                // Currently we do a small hack here, scaling up the tiles a little bit, to prevent
+                // visible gaps between tiles. This solution isn&#39;t perfect and we probably need to
+                // create a proper tile renderer. That can render multiple tiles on one quad instead
+                // of using a separate quad for each tile.
+                </span>transform.scale += Vec3::new(<span class="number">0.01</span>, <span class="number">0.01</span>, <span class="number">0.0</span>);
                 extracted_sprites.sprites.push(ExtractedSprite {
                     entity: bones_renderable_entity.<span class="number">0</span>,
                     transform: transform.into(),
@@ -1487,7 +1601,7 @@
                     image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
                     flip_x: tile.flip_x,
                     flip_y: tile.flip_y,
-                    anchor: Vec2::ZERO,
+                    anchor: Anchor::BottomLeft.as_vec(),
                 })
             }
         }

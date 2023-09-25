@@ -378,30 +378,34 @@
 <a href="#378" id="378">378</a>
 <a href="#379" id="379">379</a>
 <a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Keyboard input resource.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// Resource containing the keyboard input events detected on the current frame.
 </span><span class="attr">#[derive(HasSchema, Clone, Debug, Default)]
+#[repr(C)]
 </span><span class="kw">pub struct </span>KeyboardInputs {
     <span class="doccomment">/// The key events that have been detected this frame.
-    </span><span class="kw">pub </span>keys: Vec&lt;KeyboardInput&gt;,
+    </span><span class="kw">pub </span>key_events: SVec&lt;KeyboardEvent&gt;,
 }
 
 <span class="doccomment">/// A keyboard input event.
-</span><span class="attr">#[derive(Clone, Debug, Copy)]
-</span><span class="kw">pub struct </span>KeyboardInput {
+</span><span class="attr">#[derive(HasSchema, Clone, Debug, Copy, Default)]
+#[repr(C)]
+</span><span class="kw">pub struct </span>KeyboardEvent {
     <span class="doccomment">/// The scan code of the pressed key.
     </span><span class="kw">pub </span>scan_code: u32,
     <span class="doccomment">/// The key code of the pressed key, if applicable.
-    </span><span class="kw">pub </span>key_code: <span class="prelude-ty">Option</span>&lt;KeyCode&gt;,
+    </span><span class="kw">pub </span>key_code: Maybe&lt;KeyCode&gt;,
     <span class="doccomment">/// The state of the keyboard button.
     </span><span class="kw">pub </span>button_state: ButtonState,
 }
 
 <span class="doccomment">/// The key code of a keyboard key.
-</span><span class="attr">#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Hash)]
+</span><span class="attr">#[derive(HasSchema, Clone, Copy, Default, Debug, PartialEq, Eq, Hash)]
 #[repr(u32)]
 </span><span class="kw">pub enum </span>KeyCode {
     <span class="attr">#[default]

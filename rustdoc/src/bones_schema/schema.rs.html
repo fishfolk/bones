@@ -494,6 +494,7 @@
 <a href="#494" id="494">494</a>
 <a href="#495" id="495">495</a>
 <a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! [`Schema`], [`HasSchema`], [`SchemaData`], and related types.
 
 </span><span class="kw">use </span>std::{alloc::Layout, any::TypeId, borrow::Cow};
@@ -520,8 +521,8 @@
     ///
     /// Panics if the schema of `T` doesn&#39;t match the schema of `Self`.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">fn </span>cast&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>T {
-        <span class="self">self</span>.try_cast().expect(SchemaMismatchError::MSG)
+    </span><span class="kw">fn </span>cast&lt;T: HasSchema&gt;(this: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="kw-2">&amp;</span>T {
+        HasSchema::try_cast(this).expect(SchemaMismatchError::MSG)
     }
 
     <span class="doccomment">/// Cast a reference of this type to a reference of another type with the same memory layout.
@@ -529,12 +530,12 @@
     /// # Errors
     ///
     /// Errors if the schema of `T` doesn&#39;t match the schema of `Self`.
-    </span><span class="kw">fn </span>try_cast&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>T, SchemaMismatchError&gt; {
+    </span><span class="kw">fn </span>try_cast&lt;T: HasSchema&gt;(this: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>T, SchemaMismatchError&gt; {
         <span class="kw">let </span>s1 = <span class="self">Self</span>::schema();
         <span class="kw">let </span>s2 = T::schema();
         <span class="kw">if </span>s1.represents(s2) {
             <span class="comment">// SOUND: the schemas have the same memory representation.
-            </span><span class="kw">unsafe </span>{ <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;*</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self </span><span class="kw">as </span><span class="kw-2">*const </span>T)) }
+            </span><span class="kw">unsafe </span>{ <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;*</span>(this <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self </span><span class="kw">as </span><span class="kw-2">*const </span>T)) }
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         }
@@ -547,8 +548,8 @@
     ///
     /// Panics if the schema of `T` doesn&#39;t match the schema of `Self`.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">fn </span>cast_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>T {
-        <span class="self">self</span>.try_cast_mut().expect(SchemaMismatchError::MSG)
+    </span><span class="kw">fn </span>cast_mut&lt;T: HasSchema&gt;(this: <span class="kw-2">&amp;mut </span><span class="self">Self</span>) -&gt; <span class="kw-2">&amp;mut </span>T {
+        HasSchema::try_cast_mut(this).expect(SchemaMismatchError::MSG)
     }
 
     <span class="doccomment">/// Cast a mutable reference of this type to a reference of another type with the same memory
@@ -557,12 +558,12 @@
     /// # Errors
     ///
     /// Errors if the schema of `T` doesn&#39;t match the schema of `Self`.
-    </span><span class="kw">fn </span>try_cast_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;mut </span>T, SchemaMismatchError&gt; {
+    </span><span class="kw">fn </span>try_cast_mut&lt;T: HasSchema&gt;(this: <span class="kw-2">&amp;mut </span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;mut </span>T, SchemaMismatchError&gt; {
         <span class="kw">let </span>s1 = <span class="self">Self</span>::schema();
         <span class="kw">let </span>s2 = T::schema();
         <span class="kw">if </span>s1.represents(s2) {
             <span class="comment">// SOUND: the schemas have the same memory representation.
-            </span><span class="kw">unsafe </span>{ <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;mut *</span>(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*mut </span><span class="self">Self </span><span class="kw">as </span><span class="kw-2">*mut </span>T)) }
+            </span><span class="kw">unsafe </span>{ <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;mut *</span>(this <span class="kw">as </span><span class="kw-2">*mut </span><span class="self">Self </span><span class="kw">as </span><span class="kw-2">*mut </span>T)) }
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         }
@@ -607,6 +608,7 @@
                 },
                 (SchemaKind::Vec(v1), SchemaKind::Vec(v2)) =&gt; v1.represents(v2),
                 (SchemaKind::Primitive(p1), SchemaKind::Primitive(p2)) =&gt; p1 == p2,
+                (SchemaKind::Enum(e1), SchemaKind::Enum(e2)) =&gt; e1 == e2,
                 <span class="kw">_ </span>=&gt; <span class="bool-val">false
             </span>}
         })
@@ -772,7 +774,7 @@
 }
 
 <span class="doccomment">/// Schema data for an enum.
-</span><span class="attr">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Deserialize))]
 </span><span class="kw">pub struct </span>EnumSchemaInfo {
     <span class="doccomment">/// The layout of the enum tag.
@@ -782,7 +784,7 @@
 }
 
 <span class="doccomment">/// A type for an enum tag for [`EnumSchemaInfo`].
-</span><span class="attr">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Deserialize))]
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(rename_all = <span class="string">&quot;snake_case&quot;</span>))]
 </span><span class="kw">pub enum </span>EnumTagType {
@@ -806,7 +808,7 @@
 }
 
 <span class="doccomment">/// Information about an enum variant for [`EnumSchemaInfo`].
-</span><span class="attr">#[derive(Debug, Clone)]
+</span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Deserialize))]
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(rename_all = <span class="string">&quot;snake_case&quot;</span>))]
 </span><span class="kw">pub struct </span>VariantInfo {

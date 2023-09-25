@@ -211,6 +211,10 @@
 <a href="#211" id="211">211</a>
 <a href="#212" id="212">212</a>
 <a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! UI resources &amp; components.
 
 </span><span class="kw">use </span>std::sync::Arc;
@@ -303,7 +307,7 @@
 </span><span class="kw">pub struct </span>FontMeta {
     <span class="doccomment">/// The font-family to use.
     </span><span class="attr">#[serde(deserialize_with = <span class="string">&quot;deserialize_arc_str&quot;</span>)]
-    </span><span class="kw">pub </span>font: Arc&lt;str&gt;,
+    </span><span class="kw">pub </span>family: Arc&lt;str&gt;,
     <span class="doccomment">/// The font size.
     </span><span class="kw">pub </span>size: f32,
     <span class="doccomment">/// The font color.
@@ -313,7 +317,7 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>FontMeta {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            font: <span class="string">&quot;&quot;</span>.into(),
+            family: <span class="string">&quot;&quot;</span>.into(),
             size: Default::default(),
             color: Default::default(),
         }
@@ -323,7 +327,7 @@
 <span class="kw">impl </span>FontMeta {
     <span class="doccomment">/// Get the Egui font ID.
     </span><span class="kw">pub fn </span>id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; egui::FontId {
-        egui::FontId::new(<span class="self">self</span>.size, egui::FontFamily::Name(<span class="self">self</span>.font.clone()))
+        egui::FontId::new(<span class="self">self</span>.size, egui::FontFamily::Name(<span class="self">self</span>.family.clone()))
     }
 
     <span class="doccomment">/// Create an [`egui::RichText`] that can be passed to [`ui.label()`][egui::Ui::label].
@@ -346,9 +350,13 @@
             <span class="kw">let </span>face = ttf_parser::Face::parse(bytes, <span class="number">0</span>)<span class="question-mark">?</span>;
             (
                 face.names()
-                    .get(ttf_parser::name_id::FAMILY)
-                    .and_then(|x| x.to_string())
-                    .ok_or_else(|| <span class="macro">anyhow::format_err!</span>(<span class="string">&quot;Could not read font family&quot;</span>))<span class="question-mark">?
+                    .into_iter()
+                    .filter(|x| x.name_id == ttf_parser::name_id::FAMILY)
+                    .filter_map(|x| x.to_string())
+                    .next()
+                    .ok_or_else(|| {
+                        <span class="macro">anyhow::format_err!</span>(<span class="string">&quot;Could not read font family from font file&quot;</span>)
+                    })<span class="question-mark">?
                     </span>.into(),
                 face.is_monospaced(),
             )

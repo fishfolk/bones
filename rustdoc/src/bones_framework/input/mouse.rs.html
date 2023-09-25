@@ -59,27 +59,27 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
-<span class="doccomment">/// The mouse inputs made this frame.
+<span class="doccomment">/// Resource containing the mouse input events made this frame.
 </span><span class="attr">#[derive(HasSchema, Clone, Debug, Default)]
 </span><span class="kw">pub struct </span>MouseInputs {
     <span class="doccomment">/// The movement of the mouse this frame.
     </span><span class="kw">pub </span>movement: Vec2,
     <span class="doccomment">/// The mouse wheel event sent this frame.
-    </span><span class="kw">pub </span>wheel_events: Vec&lt;MouseScrollInput&gt;,
+    </span><span class="kw">pub </span>wheel_events: Vec&lt;MouseScrollEvent&gt;,
     <span class="doccomment">/// The mouse button events sent this frame.
-    </span><span class="kw">pub </span>button_events: Vec&lt;MouseButtonInput&gt;,
+    </span><span class="kw">pub </span>button_events: Vec&lt;MouseButtonEvent&gt;,
 }
 
 <span class="doccomment">/// Mouse scroll-wheel input event.
 </span><span class="attr">#[derive(Debug, Clone, Copy)]
-</span><span class="kw">pub struct </span>MouseScrollInput {
+</span><span class="kw">pub struct </span>MouseScrollEvent {
     <span class="doccomment">/// The unit the mouse scroll is in.
     </span><span class="kw">pub </span>unit: MouseScrollUnit,
     <span class="doccomment">/// the scroll movement.
     </span><span class="kw">pub </span>movement: Vec2,
 }
 
-<span class="doccomment">/// The unit that a [`MouseScrollInput`] is in.
+<span class="doccomment">/// The unit that a [`MouseScrollEvent`] is in.
 </span><span class="attr">#[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 </span><span class="kw">pub enum </span>MouseScrollUnit {
@@ -91,7 +91,7 @@
 
 <span class="doccomment">/// A mouse button input event.
 </span><span class="attr">#[derive(Debug, Clone, Copy)]
-</span><span class="kw">pub struct </span>MouseButtonInput {
+</span><span class="kw">pub struct </span>MouseButtonEvent {
     <span class="doccomment">/// The button that the event refers to.
     </span><span class="kw">pub </span>button: MouseButton,
     <span class="doccomment">/// Whether the button was pressed or released.

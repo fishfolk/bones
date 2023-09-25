@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["SchemaDeserialize"]};
+window.SIDEBAR_ITEMS = {"struct":["SchemaDeserialize","SchemaDeserializer","SchemaSerializer"]};

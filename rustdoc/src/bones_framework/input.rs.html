@@ -20,26 +20,44 @@
 <a href="#20" id="20">20</a>
 <a href="#21" id="21">21</a>
 <a href="#22" id="22">22</a>
+<a href="#23" id="23">23</a>
+<a href="#24" id="24">24</a>
+<a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Input resources.
 
-</span><span class="kw">pub mod </span>gamepad;
+</span><span class="kw">use </span>bones_schema::HasSchema;
+
+<span class="kw">pub mod </span>gamepad;
 <span class="kw">pub mod </span>keyboard;
 <span class="kw">pub mod </span>mouse;
-<span class="kw">pub mod </span>time;
 <span class="kw">pub mod </span>window;
 
 <span class="doccomment">/// The state of a button, ether pressed or released.
-</span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+</span><span class="attr">#[derive(HasSchema, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[repr(u8)]
 </span><span class="kw">pub enum </span>ButtonState {
     <span class="doccomment">/// The button is pressed.
     </span>Pressed,
-    <span class="doccomment">/// The button is released.
+    <span class="attr">#[default]
+    </span><span class="doccomment">/// The button is released.
     </span>Released,
+}
+
+<span class="kw">impl </span>ButtonState {
+    <span class="doccomment">/// Get whether or not the button is pressed.
+    </span><span class="kw">pub fn </span>pressed(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="macro">matches!</span>(<span class="self">self</span>, ButtonState::Pressed)
+    }
 }
 
 <span class="doccomment">/// Module prelude.
 </span><span class="kw">pub mod </span>prelude {
-    <span class="kw">pub use super</span>::{keyboard::<span class="kw-2">*</span>, mouse::<span class="kw-2">*</span>, time::<span class="kw-2">*</span>, window::<span class="kw-2">*</span>, ButtonState};
+    <span class="kw">pub use super</span>::{gamepad::<span class="kw-2">*</span>, keyboard::<span class="kw-2">*</span>, mouse::<span class="kw-2">*</span>, window::<span class="kw-2">*</span>, ButtonState};
 }
 </code></pre></div></section></main></body></html>

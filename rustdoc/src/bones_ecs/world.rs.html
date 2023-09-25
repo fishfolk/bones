@@ -335,6 +335,7 @@
 <a href="#335" id="335">335</a>
 <a href="#336" id="336">336</a>
 <a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Contains the ECS [`World`].
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -443,11 +444,12 @@
     }
 
     <span class="doccomment">/// Initialize a resource of type `T` by inserting it&#39;s default value.
-    </span><span class="kw">pub fn </span>init_resource&lt;R: HasSchema + FromWorld&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">if </span>!<span class="self">self</span>.resources.contains::&lt;R&gt;() {
+    </span><span class="kw">pub fn </span>init_resource&lt;R: HasSchema + FromWorld&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">&#39;_</span>, R&gt; {
+        <span class="kw">if </span>unlikely(!<span class="self">self</span>.resources.contains::&lt;R&gt;()) {
             <span class="kw">let </span>value = R::from_world(<span class="self">self</span>);
             <span class="self">self</span>.resources.insert(value);
         }
+        <span class="self">self</span>.resource_mut()
     }
 
     <span class="doccomment">/// Insert a resource.

@@ -50,6 +50,8 @@
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
 <a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Rendering components.
 
 </span><span class="kw">use </span>bones_lib::prelude::<span class="kw-2">*</span>;
@@ -78,7 +80,9 @@
 
 <span class="doccomment">/// Bones framework rendering plugin.
 </span><span class="kw">pub fn </span>render_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
-    session.install_plugin(ui::ui_plugin);
+    session
+        .install_plugin(ui::ui_plugin)
+        .install_plugin(camera::plugin);
 }
 
 <span class="doccomment">/// Trait for the interface exposed by external bones renderers.

@@ -174,7 +174,7 @@
 <span class="kw">mod </span>server;
 
 <span class="doccomment">/// An equivalent to [`Option&lt;T&gt;`] that has a stable memory layout and implements [`HasSchema`].
-</span><span class="attr">#[derive(HasSchema, Clone, Default, Debug)]
+</span><span class="attr">#[derive(HasSchema, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Debug)]
 #[type_data(SchemaMetaAssetLoader(maybe_loader))]
 #[repr(C, u8)]
 </span><span class="kw">pub enum </span>Maybe&lt;T&gt; {
