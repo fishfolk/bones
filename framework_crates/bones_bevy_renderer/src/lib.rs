@@ -214,7 +214,8 @@ impl BonesBevyRenderer {
         let mut bones_image_ids = BonesImageIds::default();
         let mut bones_egui_textures = bones::EguiTextures::default();
         'asset_load: {
-            let Some(mut asset_server) = self.game.shared_resource::<bones::AssetServer>() else {
+            let Some(mut asset_server) = self.game.shared_resource_mut::<bones::AssetServer>()
+            else {
                 break 'asset_load;
             };
 
@@ -556,14 +557,11 @@ fn step_bones_game(
 
     let bevy_time = world.resource::<Time>();
 
-    let mouse_inputs = bones::AtomicResource::new(mouse_inputs);
-    let keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
-    let gamepad_inputs = bones::AtomicResource::new(gamepad_inputs);
-
     // Reload assets if necessary
-    if let Some(mut asset_server) = game.shared_resource::<bones::AssetServer>() {
+    if let Some(mut asset_server) = game.shared_resource_mut::<bones::AssetServer>() {
         asset_server.handle_asset_changes(|asset_server, handle| {
-            let mut bones_egui_textures = game.shared_resource::<bones::EguiTextures>().unwrap();
+            let mut bones_egui_textures =
+                game.shared_resource_mut::<bones::EguiTextures>().unwrap();
             let asset = asset_server.get_untyped_mut(handle).unwrap();
 
             // TODO: hot reload changed fonts.
@@ -580,16 +578,13 @@ fn step_bones_game(
         })
     }
 
+    // Add the game inputs
+    game.insert_shared_resource(mouse_inputs);
+    game.insert_shared_resource(keyboard_inputs);
+    game.insert_shared_resource(gamepad_inputs);
+
     // Step the game simulation
-    game.step(
-        bevy_time.last_update().unwrap_or_else(Instant::now),
-        |bones_world| {
-            // Update the inputs.
-            bones_world.resources.insert_cell(mouse_inputs.clone());
-            bones_world.resources.insert_cell(keyboard_inputs.clone());
-            bones_world.resources.insert_cell(gamepad_inputs.clone());
-        },
-    );
+    game.step(bevy_time.last_update().unwrap_or_else(Instant::now));
 
     world.insert_resource(data);
     world.insert_resource(bones_image_ids);
