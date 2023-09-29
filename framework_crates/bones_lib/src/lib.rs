@@ -192,9 +192,16 @@ impl Game {
         plugin.install(self);
         self
     }
+    /// Get the shared resource of a given type out of this [`Game`]s shared resources.
+    pub fn shared_resource<T: HasSchema>(&self) -> Option<Ref<T>> {
+        self.shared_resources
+            .iter()
+            .find(|x| x.schema() == T::schema())
+            .map(|x| x.borrow().typed())
+    }
 
     /// Get the shared resource of a given type out of this [`Game`]s shared resources.
-    pub fn shared_resource<T: HasSchema>(&self) -> Option<RefMut<T>> {
+    pub fn shared_resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
         self.shared_resources
             .iter()
             .find(|x| x.schema() == T::schema())
@@ -219,7 +226,7 @@ impl Game {
         {
             self.insert_shared_resource(T::default());
         }
-        self.shared_resource::<T>().unwrap()
+        self.shared_resource_mut::<T>().unwrap()
     }
 
     /// Insert a resource that will be shared across all game sessions.
@@ -238,17 +245,7 @@ impl Game {
     }
 
     /// Step the game simulation.
-    ///
-    /// `apply_input` is a function that will be called once for every active [`Session`], allowing
-    /// you to update the world with the current frame's input, whatever form that may come in.
-    ///
-    /// Usually this will be used to:
-    /// - assign the player input to a resource so that the game can respond to player controls.
-    /// - assign the window information to a resource, so that the game can respond to the window
-    ///   size.
-    /// - setup other important resources such as the UI context and the asset server, if
-    ///   applicable.
-    pub fn step<F: FnMut(&mut World)>(&mut self, now: instant::Instant, mut apply_input: F) {
+    pub fn step(&mut self, now: instant::Instant) {
         // Pull out the game systems so that we can run them on the game
         let mut game_systems = std::mem::take(&mut self.systems);
 
@@ -307,9 +304,6 @@ impl Game {
                     delete: false,
                     visible: current_session.visible,
                 });
-
-                // Apply the game input
-                apply_input(&mut current_session.world);
 
                 // Insert the other sessions into the current session's world
                 {
