@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["ecs","instant","prelude","time"],"struct":["DefaultSessionRunner","Game","Session","SessionOptions","Sessions"],"trait":["GamePlugin","SessionPlugin","SessionRunner"]};
+window.SIDEBAR_ITEMS = {"mod":["ecs","instant","prelude","time"],"struct":["DefaultSessionRunner","Game","GameSystems","Session","SessionOptions","Sessions"],"trait":["GamePlugin","SessionPlugin","SessionRunner"],"type":["GameSystem"]};
