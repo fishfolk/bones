@@ -704,7 +704,7 @@
 
             <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.schema().kind {
                 SchemaKind::Struct(s) =&gt; {
-                    <span class="kw">if </span>s.fields.len() == <span class="number">1 </span>{
+                    <span class="kw">if </span>s.fields.len() == <span class="number">1 </span>&amp;&amp; s.fields[<span class="number">0</span>].name.is_none() {
                         <span class="comment">// Serialize just the inner field
                         // SOUND: it is safe to cast a struct with one field to it&#39;s inner type.
                         </span>SchemaSerializer(<span class="kw">unsafe </span>{

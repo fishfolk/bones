@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"static":["SCHEMA_REGISTRY"],"struct":["SchemaId","SchemaRegistry"]};
+window.SIDEBAR_ITEMS = {"static":["SCHEMA_REGISTRY"],"struct":["RegistryState","SchemaId","SchemaRegistry"]};

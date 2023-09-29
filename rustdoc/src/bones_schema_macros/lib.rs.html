@@ -615,7 +615,7 @@
                                         <span class="kw">let </span>layout = ::std::alloc::Layout::new::&lt;#ty&gt;();
                                         #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
                                             name: <span class="macro">stringify!</span>(#ty).into(),
-                                            full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), <span class="macro">stringify!</span>(#ty)).into(),
+                                            full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), <span class="string">&quot;::&quot;</span>, <span class="macro">stringify!</span>(#ty)).into(),
                                             kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
                                                 size: layout.size(),
                                                 align: layout.align(),
@@ -683,7 +683,7 @@
                                 S.get_or_init(|| {
                                     #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
                                         name: #variant_schema_name.into(),
-                                        full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), #variant_schema_name).into(),
+                                        full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), <span class="string">&quot;::&quot;</span>, #variant_schema_name).into(),
                                         type_id: <span class="prelude-val">None</span>,
                                         kind: #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
                                             fields: <span class="macro">vec!</span>[
@@ -722,7 +722,7 @@
     <span class="kw">let </span>schema_register = <span class="macro">quote! </span>{
         #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
             name: <span class="macro">stringify!</span>(#name).into(),
-            full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), <span class="macro">stringify!</span>(#name)).into(),
+            full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), <span class="string">&quot;::&quot;</span>, <span class="macro">stringify!</span>(#name)).into(),
             type_id: <span class="prelude-val">Some</span>(::std::any::TypeId::of::&lt;<span class="self">Self</span>&gt;()),
             kind: #schema_kind,
             type_data: #type_datas,

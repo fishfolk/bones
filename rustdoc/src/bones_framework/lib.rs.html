@@ -75,6 +75,7 @@
 <a href="#75" id="75">75</a>
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The bones framework for game development.
 //!
 </span><span class="attr">#![cfg_attr(feature = <span class="string">&quot;document-features&quot;</span>, doc = <span class="string">&quot;## Features&quot;</span>)]
@@ -97,8 +98,8 @@
 <span class="doccomment">/// The prelude.
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use crate</span>::{
-        animation::<span class="kw-2">*</span>, input::prelude::<span class="kw-2">*</span>, params::<span class="kw-2">*</span>, render::prelude::<span class="kw-2">*</span>, time::<span class="kw-2">*</span>, AssetServerExt,
-        DefaultSessionPlugin,
+        animation::<span class="kw-2">*</span>, input::prelude::<span class="kw-2">*</span>, params::<span class="kw-2">*</span>, render::prelude::<span class="kw-2">*</span>, storage::<span class="kw-2">*</span>, time::<span class="kw-2">*</span>,
+        AssetServerExt, DefaultSessionPlugin,
     };
     <span class="kw">pub use </span>bones_asset::anyhow::Context;
     <span class="kw">pub use </span>bones_asset::prelude::<span class="kw-2">*</span>;
@@ -113,6 +114,7 @@
 <span class="kw">pub mod </span>input;
 <span class="kw">pub mod </span>params;
 <span class="kw">pub mod </span>render;
+<span class="kw">pub mod </span>storage;
 <span class="kw">pub mod </span>time;
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;localization&quot;</span>)]
