@@ -20,8 +20,8 @@ pub use glam;
 /// The prelude.
 pub mod prelude {
     pub use crate::{
-        animation::*, input::prelude::*, params::*, render::prelude::*, time::*, AssetServerExt,
-        DefaultSessionPlugin,
+        animation::*, input::prelude::*, params::*, render::prelude::*, storage::*, time::*,
+        AssetServerExt, DefaultSessionPlugin,
     };
     pub use bones_asset::anyhow::Context;
     pub use bones_asset::prelude::*;
@@ -36,6 +36,7 @@ pub mod animation;
 pub mod input;
 pub mod params;
 pub mod render;
+pub mod storage;
 pub mod time;
 
 #[cfg(feature = "localization")]

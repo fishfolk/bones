@@ -36,7 +36,7 @@ mod serializer_deserializer {
 
             match &self.0.schema().kind {
                 SchemaKind::Struct(s) => {
-                    if s.fields.len() == 1 {
+                    if s.fields.len() == 1 && s.fields[0].name.is_none() {
                         // Serialize just the inner field
                         // SOUND: it is safe to cast a struct with one field to it's inner type.
                         SchemaSerializer(unsafe {

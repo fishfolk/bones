@@ -107,9 +107,11 @@ pub struct SchemaRegistry {
     state: OnceLock<RwLock<RegistryState>>,
 }
 
+/// The internal state o the [`SchemaRegistry`].
 #[derive(Default)]
-struct RegistryState {
-    schemas: HashMap<SchemaId, &'static Schema>,
+pub struct RegistryState {
+    /// The registered schemas.
+    pub schemas: HashMap<SchemaId, &'static Schema>,
 }
 
 impl SchemaRegistry {
@@ -160,6 +162,14 @@ impl SchemaRegistry {
             .schemas
             .get(&id)
             .expect("Reflection bug, schema Id created without associated registration")
+    }
+
+    /// Borrow the registry state for reading.
+    ///
+    /// > **Note:** This locks the registry for reading, preventing access by things that may need
+    /// > to register schemas, so it is best to hold the lock for as short as possible.
+    pub fn borrow(&self) -> bones_utils::parking_lot::RwLockReadGuard<RegistryState> {
+        self.state.get_or_init(default).read()
     }
 }
 

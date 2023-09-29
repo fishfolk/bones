@@ -20,8 +20,14 @@ bones_framework = { version = "0.3", path = "../bones_framework" }
 bevy_egui           = "0.21"
 glam                = { version = "0.24", features = ["serde"] }
 bevy_prototype_lyon = "0.9"
+serde_yaml          = "0.9"
+serde = "1.0.188"
+anyhow    = "1.0"
 
 [dependencies.bevy]
 default-features = false
 features         = ["bevy_render", "bevy_core_pipeline", "bevy_sprite", "x11", "bevy_gilrs"]
 version          = "0.11"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+directories = "5.0"
