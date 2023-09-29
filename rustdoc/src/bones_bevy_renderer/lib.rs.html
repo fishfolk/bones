@@ -994,11 +994,6 @@
 <a href="#994" id="994">994</a>
 <a href="#995" id="995">995</a>
 <a href="#996" id="996">996</a>
-<a href="#997" id="997">997</a>
-<a href="#998" id="998">998</a>
-<a href="#999" id="999">999</a>
-<a href="#1000" id="1000">1000</a>
-<a href="#1001" id="1001">1001</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -1215,7 +1210,8 @@
         <span class="kw">let </span><span class="kw-2">mut </span>bones_image_ids = BonesImageIds::default();
         <span class="kw">let </span><span class="kw-2">mut </span>bones_egui_textures = bones::EguiTextures::default();
         <span class="lifetime">&#39;asset_load</span>: {
-            <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = <span class="self">self</span>.game.shared_resource::&lt;bones::AssetServer&gt;() <span class="kw">else </span>{
+            <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = <span class="self">self</span>.game.shared_resource_mut::&lt;bones::AssetServer&gt;()
+            <span class="kw">else </span>{
                 <span class="kw">break </span><span class="lifetime">&#39;asset_load</span>;
             };
 
@@ -1557,14 +1553,11 @@
 
     <span class="kw">let </span>bevy_time = world.resource::&lt;Time&gt;();
 
-    <span class="kw">let </span>mouse_inputs = bones::AtomicResource::new(mouse_inputs);
-    <span class="kw">let </span>keyboard_inputs = bones::AtomicResource::new(keyboard_inputs);
-    <span class="kw">let </span>gamepad_inputs = bones::AtomicResource::new(gamepad_inputs);
-
     <span class="comment">// Reload assets if necessary
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = game.shared_resource::&lt;bones::AssetServer&gt;() {
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = game.shared_resource_mut::&lt;bones::AssetServer&gt;() {
         asset_server.handle_asset_changes(|asset_server, handle| {
-            <span class="kw">let </span><span class="kw-2">mut </span>bones_egui_textures = game.shared_resource::&lt;bones::EguiTextures&gt;().unwrap();
+            <span class="kw">let </span><span class="kw-2">mut </span>bones_egui_textures =
+                game.shared_resource_mut::&lt;bones::EguiTextures&gt;().unwrap();
             <span class="kw">let </span>asset = asset_server.get_untyped_mut(handle).unwrap();
 
             <span class="comment">// TODO: hot reload changed fonts.
@@ -1581,16 +1574,13 @@
         })
     }
 
+    <span class="comment">// Add the game inputs
+    </span>game.insert_shared_resource(mouse_inputs);
+    game.insert_shared_resource(keyboard_inputs);
+    game.insert_shared_resource(gamepad_inputs);
+
     <span class="comment">// Step the game simulation
-    </span>game.step(
-        bevy_time.last_update().unwrap_or_else(Instant::now),
-        |bones_world| {
-            <span class="comment">// Update the inputs.
-            </span>bones_world.resources.insert_cell(mouse_inputs.clone());
-            bones_world.resources.insert_cell(keyboard_inputs.clone());
-            bones_world.resources.insert_cell(gamepad_inputs.clone());
-        },
-    );
+    </span>game.step(bevy_time.last_update().unwrap_or_else(Instant::now));
 
     world.insert_resource(data);
     world.insert_resource(bones_image_ids);

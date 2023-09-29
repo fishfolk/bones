@@ -541,12 +541,6 @@
 <a href="#541" id="541">541</a>
 <a href="#542" id="542">542</a>
 <a href="#543" id="543">543</a>
-<a href="#544" id="544">544</a>
-<a href="#545" id="545">545</a>
-<a href="#546" id="546">546</a>
-<a href="#547" id="547">547</a>
-<a href="#548" id="548">548</a>
-<a href="#549" id="549">549</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -741,9 +735,16 @@
         plugin.install(<span class="self">self</span>);
         <span class="self">self
     </span>}
+    <span class="doccomment">/// Get the shared resource of a given type out of this [`Game`]s shared resources.
+    </span><span class="kw">pub fn </span>shared_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;T&gt;&gt; {
+        <span class="self">self</span>.shared_resources
+            .iter()
+            .find(|x| x.schema() == T::schema())
+            .map(|x| x.borrow().typed())
+    }
 
     <span class="doccomment">/// Get the shared resource of a given type out of this [`Game`]s shared resources.
-    </span><span class="kw">pub fn </span>shared_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>shared_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
         <span class="self">self</span>.shared_resources
             .iter()
             .find(|x| x.schema() == T::schema())
@@ -768,7 +769,7 @@
         {
             <span class="self">self</span>.insert_shared_resource(T::default());
         }
-        <span class="self">self</span>.shared_resource::&lt;T&gt;().unwrap()
+        <span class="self">self</span>.shared_resource_mut::&lt;T&gt;().unwrap()
     }
 
     <span class="doccomment">/// Insert a resource that will be shared across all game sessions.
@@ -787,17 +788,7 @@
     }
 
     <span class="doccomment">/// Step the game simulation.
-    ///
-    /// `apply_input` is a function that will be called once for every active [`Session`], allowing
-    /// you to update the world with the current frame&#39;s input, whatever form that may come in.
-    ///
-    /// Usually this will be used to:
-    /// - assign the player input to a resource so that the game can respond to player controls.
-    /// - assign the window information to a resource, so that the game can respond to the window
-    ///   size.
-    /// - setup other important resources such as the UI context and the asset server, if
-    ///   applicable.
-    </span><span class="kw">pub fn </span>step&lt;F: FnMut(<span class="kw-2">&amp;mut </span>World)&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, now: instant::Instant, <span class="kw-2">mut </span>apply_input: F) {
+    </span><span class="kw">pub fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>, now: instant::Instant) {
         <span class="comment">// Pull out the game systems so that we can run them on the game
         </span><span class="kw">let </span><span class="kw-2">mut </span>game_systems = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.systems);
 
@@ -856,9 +847,6 @@
                     delete: <span class="bool-val">false</span>,
                     visible: current_session.visible,
                 });
-
-                <span class="comment">// Apply the game input
-                </span>apply_input(<span class="kw-2">&amp;mut </span>current_session.world);
 
                 <span class="comment">// Insert the other sessions into the current session&#39;s world
                 </span>{
