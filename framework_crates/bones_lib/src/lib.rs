@@ -168,6 +168,9 @@ impl SessionRunner for DefaultSessionRunner {
 pub struct Game {
     /// The sessions that make up the game.
     pub sessions: Sessions,
+    /// The collection of systems that are associated to the game itself, and not a specific
+    /// session.
+    pub systems: GameSystems,
     /// List of sorted session keys.
     ///
     /// These are only guaranteed to be sorted and up-to-date immediately after calling
@@ -246,6 +249,22 @@ impl Game {
     /// - setup other important resources such as the UI context and the asset server, if
     ///   applicable.
     pub fn step<F: FnMut(&mut World)>(&mut self, now: instant::Instant, mut apply_input: F) {
+        // Pull out the game systems so that we can run them on the game
+        let mut game_systems = std::mem::take(&mut self.systems);
+
+        // Run game startup systems
+        if !game_systems.has_run_startup {
+            for system in &mut game_systems.startup {
+                system(self);
+            }
+            game_systems.has_run_startup = true;
+        }
+
+        // Run the before systems
+        for system in &mut game_systems.before {
+            system(self)
+        }
+
         // Sort session keys by priority
         self.sorted_session_keys.clear();
         self.sorted_session_keys.extend(self.sessions.map.keys());
@@ -259,6 +278,13 @@ impl Game {
 
             // If this session is active
             let options = if current_session.active {
+                // Run any before session game systems
+                if let Some(systems) = game_systems.before_session.get_mut(&session_name) {
+                    for system in systems {
+                        system(self)
+                    }
+                }
+
                 // Make sure session contains all of the shared resources
                 for r in &self.shared_resources {
                     if !current_session
@@ -338,7 +364,95 @@ impl Game {
                 // Insert the current session back into the session list
                 self.sessions.map.insert(session_name, current_session);
             }
+
+            // Run any after session game systems
+            if let Some(systems) = game_systems.after_session.get_mut(&session_name) {
+                for system in systems {
+                    system(self)
+                }
+            }
         }
+
+        // Run after systems
+        for system in &mut game_systems.after {
+            system(self)
+        }
+
+        // Replace the game systems
+        self.systems = game_systems;
+    }
+}
+
+/// A system that runs directly on a [`Game`] instead of in a specific [`Session`].
+pub type GameSystem = Box<dyn FnMut(&mut Game) + Sync + Send>;
+
+/// A collection of systems associated directly to a [`Game`] as opposed to a [`Session`].
+#[derive(Default)]
+pub struct GameSystems {
+    /// Flag which indicates whether or not the startup systems have been run yet.
+    pub has_run_startup: bool,
+    /// Startup systems.
+    pub startup: Vec<GameSystem>,
+    /// Game systems that are run before sessions are run.
+    pub before: Vec<GameSystem>,
+    /// Game systems that are run after sessions are run.
+    pub after: Vec<GameSystem>,
+    /// Game systems that are run after a specific session is run.
+    pub after_session: HashMap<Ustr, Vec<GameSystem>>,
+    /// Game systems that are run before a specific session is run.
+    pub before_session: HashMap<Ustr, Vec<GameSystem>>,
+}
+
+impl GameSystems {
+    /// Add a system that will run only once, before all of the other non-startup systems.
+    pub fn add_startup_system<F>(&mut self, system: F) -> &mut Self
+    where
+        F: FnMut(&mut Game) + Sync + Send + 'static,
+    {
+        self.startup.push(Box::new(system));
+        self
+    }
+
+    /// Add a system that will run on every step, before all of the sessions are run.
+    pub fn add_before_system<F>(&mut self, system: F) -> &mut Self
+    where
+        F: FnMut(&mut Game) + Sync + Send + 'static,
+    {
+        self.before.push(Box::new(system));
+        self
+    }
+
+    /// Add a system that will run on every step, after all of the sessions are run.
+    pub fn add_after_system<F>(&mut self, system: F) -> &mut Self
+    where
+        F: FnMut(&mut Game) + Sync + Send + 'static,
+    {
+        self.after.push(Box::new(system));
+        self
+    }
+
+    /// Add a system that will run every time the named session is run, before the session is run.
+    pub fn add_before_session_system<F>(&mut self, session: &str, system: F) -> &mut Self
+    where
+        F: FnMut(&mut Game) + Sync + Send + 'static,
+    {
+        self.before_session
+            .entry(session.into())
+            .or_default()
+            .push(Box::new(system));
+        self
+    }
+
+    /// Add a system that will run every time the named session is run, after the session is run.
+    pub fn add_after_session_system<F>(&mut self, session: &str, system: F) -> &mut Self
+    where
+        F: FnMut(&mut Game) + Sync + Send + 'static,
+    {
+        self.after_session
+            .entry(session.into())
+            .or_default()
+            .push(Box::new(system));
+        self
     }
 }
 
