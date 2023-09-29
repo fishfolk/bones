@@ -799,34 +799,6 @@ mod metadata {
             )
         }
 
-        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            let struct_info = self.ptr.schema().kind.as_struct().unwrap();
-            if struct_info.fields.len() == 1 && struct_info.fields[0].name.is_none() {
-                // SOUND: we've verified this is a struct with one field, so it is safe to cast the
-                // pointer to a pointer to the inner type.
-                let mut ptr = unsafe {
-                    SchemaRefMut::from_ptr_schema(
-                        self.ptr.as_ptr(),
-                        self.ptr.schema().kind.as_struct().unwrap().fields[0].schema,
-                    )
-                };
-                let v = ptr
-                    .try_cast_mut::<String>()
-                    .map_err(|_| E::invalid_type(Unexpected::Str(value), &self))?;
-                *v = value.into();
-
-                Ok(())
-            } else {
-                Err(E::invalid_type(
-                    Unexpected::Other("value"),
-                    &"list or map of struct fields",
-                ))
-            }
-        }
-
         fn visit_seq<A>(mut self, mut seq: A) -> Result<Self::Value, A::Error>
         where
             A: serde::de::SeqAccess<'de>,

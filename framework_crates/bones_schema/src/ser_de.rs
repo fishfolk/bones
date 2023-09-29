@@ -12,7 +12,7 @@ pub use serializer_deserializer::*;
 mod serializer_deserializer {
     use bones_utils::{ustr, Ustr};
     use serde::{
-        de::{VariantAccess, Visitor},
+        de::{Unexpected, VariantAccess, Visitor},
         ser::{SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant},
     };
 
@@ -76,9 +76,9 @@ mod serializer_deserializer {
                 }
                 SchemaKind::Enum(e) => {
                     let variant_idx = match e.tag_type {
-                        EnumTagType::U8 => self.0.as_ptr().cast::<u8>() as u32,
-                        EnumTagType::U16 => self.0.as_ptr().cast::<u16>() as u32,
-                        EnumTagType::U32 => self.0.as_ptr().cast::<u32>() as u32,
+                        EnumTagType::U8 => unsafe { self.0.as_ptr().cast::<u8>().read() as u32 },
+                        EnumTagType::U16 => unsafe { self.0.as_ptr().cast::<u16>().read() as u32 },
+                        EnumTagType::U32 => unsafe { self.0.as_ptr().cast::<u32>().read() },
                     };
 
                     let variant_info = &e.variants[variant_idx as usize];
@@ -214,9 +214,7 @@ mod serializer_deserializer {
                 }
                 SchemaKind::Vec(_) => deserializer.deserialize_seq(VecVisitor(self))?,
                 SchemaKind::Map { .. } => deserializer.deserialize_map(MapVisitor(self))?,
-                SchemaKind::Enum(_) => {
-                    deserializer.deserialize_enum(&self.schema().name, &[], EnumVisitor(self))?
-                }
+                SchemaKind::Enum(_) => deserializer.deserialize_any(EnumVisitor(self))?,
                 SchemaKind::Box(_) => {
                     // SOUND: schema asserts this is a `SchemaBox`
                     let b = unsafe { self.deref_mut::<SchemaBox>() };
@@ -392,6 +390,42 @@ mod serializer_deserializer {
                 "asset metadata matching the schema: {:#?}",
                 self.0.schema()
             )
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            let enum_info = self.0.schema().kind.as_enum().unwrap();
+            let var_idx = enum_info
+                .variants
+                .iter()
+                .position(|x| x.name == v)
+                .ok_or_else(|| E::invalid_value(Unexpected::Str(v), &self))?;
+
+            if !enum_info.variants[var_idx]
+                .schema
+                .kind
+                .as_struct()
+                .unwrap()
+                .fields
+                .is_empty()
+            {
+                return Err(E::custom(format!(
+                    "Cannot deserialize enum variant with fields from string: {v}"
+                )));
+            }
+
+            // SOUND: we match the cast with the enum tag type.
+            unsafe {
+                match enum_info.tag_type {
+                    EnumTagType::U8 => self.0.as_ptr().cast::<u8>().write(var_idx as u8),
+                    EnumTagType::U16 => self.0.as_ptr().cast::<u16>().write(var_idx as u16),
+                    EnumTagType::U32 => self.0.as_ptr().cast::<u32>().write(var_idx as u32),
+                }
+            }
+
+            Ok(())
         }
 
         fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
