@@ -666,6 +666,40 @@
 <a href="#666" id="666">666</a>
 <a href="#667" id="667">667</a>
 <a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::any::type_name;
 
 <span class="kw">use </span>erased_serde::Deserializer;
@@ -680,7 +714,7 @@
 <span class="kw">mod </span>serializer_deserializer {
     <span class="kw">use </span>bones_utils::{ustr, Ustr};
     <span class="kw">use </span>serde::{
-        de::{VariantAccess, Visitor},
+        de::{Unexpected, VariantAccess, Visitor},
         ser::{SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant},
     };
 
@@ -744,9 +778,9 @@
                 }
                 SchemaKind::Enum(e) =&gt; {
                     <span class="kw">let </span>variant_idx = <span class="kw">match </span>e.tag_type {
-                        EnumTagType::U8 =&gt; <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u8&gt;() <span class="kw">as </span>u32,
-                        EnumTagType::U16 =&gt; <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u16&gt;() <span class="kw">as </span>u32,
-                        EnumTagType::U32 =&gt; <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u32&gt;() <span class="kw">as </span>u32,
+                        EnumTagType::U8 =&gt; <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u8&gt;().read() <span class="kw">as </span>u32 },
+                        EnumTagType::U16 =&gt; <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u16&gt;().read() <span class="kw">as </span>u32 },
+                        EnumTagType::U32 =&gt; <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u32&gt;().read() },
                     };
 
                     <span class="kw">let </span>variant_info = <span class="kw-2">&amp;</span>e.variants[variant_idx <span class="kw">as </span>usize];
@@ -882,9 +916,7 @@
                 }
                 SchemaKind::Vec(<span class="kw">_</span>) =&gt; deserializer.deserialize_seq(VecVisitor(<span class="self">self</span>))<span class="question-mark">?</span>,
                 SchemaKind::Map { .. } =&gt; deserializer.deserialize_map(MapVisitor(<span class="self">self</span>))<span class="question-mark">?</span>,
-                SchemaKind::Enum(<span class="kw">_</span>) =&gt; {
-                    deserializer.deserialize_enum(<span class="kw-2">&amp;</span><span class="self">self</span>.schema().name, <span class="kw-2">&amp;</span>[], EnumVisitor(<span class="self">self</span>))<span class="question-mark">?
-                </span>}
+                SchemaKind::Enum(<span class="kw">_</span>) =&gt; deserializer.deserialize_any(EnumVisitor(<span class="self">self</span>))<span class="question-mark">?</span>,
                 SchemaKind::Box(<span class="kw">_</span>) =&gt; {
                     <span class="comment">// SOUND: schema asserts this is a `SchemaBox`
                     </span><span class="kw">let </span>b = <span class="kw">unsafe </span>{ <span class="self">self</span>.deref_mut::&lt;SchemaBox&gt;() };
@@ -1060,6 +1092,42 @@
                 <span class="string">&quot;asset metadata matching the schema: {:#?}&quot;</span>,
                 <span class="self">self</span>.<span class="number">0</span>.schema()
             )
+        }
+
+        <span class="kw">fn </span>visit_str&lt;E&gt;(<span class="self">self</span>, v: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, E&gt;
+        <span class="kw">where
+            </span>E: Error,
+        {
+            <span class="kw">let </span>enum_info = <span class="self">self</span>.<span class="number">0</span>.schema().kind.as_enum().unwrap();
+            <span class="kw">let </span>var_idx = enum_info
+                .variants
+                .iter()
+                .position(|x| x.name == v)
+                .ok_or_else(|| E::invalid_value(Unexpected::Str(v), <span class="kw-2">&amp;</span><span class="self">self</span>))<span class="question-mark">?</span>;
+
+            <span class="kw">if </span>!enum_info.variants[var_idx]
+                .schema
+                .kind
+                .as_struct()
+                .unwrap()
+                .fields
+                .is_empty()
+            {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(E::custom(<span class="macro">format!</span>(
+                    <span class="string">&quot;Cannot deserialize enum variant with fields from string: {v}&quot;
+                </span>)));
+            }
+
+            <span class="comment">// SOUND: we match the cast with the enum tag type.
+            </span><span class="kw">unsafe </span>{
+                <span class="kw">match </span>enum_info.tag_type {
+                    EnumTagType::U8 =&gt; <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u8&gt;().write(var_idx <span class="kw">as </span>u8),
+                    EnumTagType::U16 =&gt; <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u16&gt;().write(var_idx <span class="kw">as </span>u16),
+                    EnumTagType::U32 =&gt; <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u32&gt;().write(var_idx <span class="kw">as </span>u32),
+                }
+            }
+
+            <span class="prelude-val">Ok</span>(())
         }
 
         <span class="kw">fn </span>visit_enum&lt;A&gt;(<span class="self">self</span>, data: A) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, A::Error&gt;

@@ -1076,34 +1076,6 @@
 <a href="#1076" id="1076">1076</a>
 <a href="#1077" id="1077">1077</a>
 <a href="#1078" id="1078">1078</a>
-<a href="#1079" id="1079">1079</a>
-<a href="#1080" id="1080">1080</a>
-<a href="#1081" id="1081">1081</a>
-<a href="#1082" id="1082">1082</a>
-<a href="#1083" id="1083">1083</a>
-<a href="#1084" id="1084">1084</a>
-<a href="#1085" id="1085">1085</a>
-<a href="#1086" id="1086">1086</a>
-<a href="#1087" id="1087">1087</a>
-<a href="#1088" id="1088">1088</a>
-<a href="#1089" id="1089">1089</a>
-<a href="#1090" id="1090">1090</a>
-<a href="#1091" id="1091">1091</a>
-<a href="#1092" id="1092">1092</a>
-<a href="#1093" id="1093">1093</a>
-<a href="#1094" id="1094">1094</a>
-<a href="#1095" id="1095">1095</a>
-<a href="#1096" id="1096">1096</a>
-<a href="#1097" id="1097">1097</a>
-<a href="#1098" id="1098">1098</a>
-<a href="#1099" id="1099">1099</a>
-<a href="#1100" id="1100">1100</a>
-<a href="#1101" id="1101">1101</a>
-<a href="#1102" id="1102">1102</a>
-<a href="#1103" id="1103">1103</a>
-<a href="#1104" id="1104">1104</a>
-<a href="#1105" id="1105">1105</a>
-<a href="#1106" id="1106">1106</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::path::{Path, PathBuf};
 
 <span class="kw">use </span>anyhow::Context;
@@ -1903,34 +1875,6 @@
                 <span class="string">&quot;asset metadata matching the schema: {:#?}&quot;</span>,
                 <span class="self">self</span>.ptr.schema()
             )
-        }
-
-        <span class="kw">fn </span>visit_str&lt;E&gt;(<span class="self">self</span>, value: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, E&gt;
-        <span class="kw">where
-            </span>E: Error,
-        {
-            <span class="kw">let </span>struct_info = <span class="self">self</span>.ptr.schema().kind.as_struct().unwrap();
-            <span class="kw">if </span>struct_info.fields.len() == <span class="number">1 </span>&amp;&amp; struct_info.fields[<span class="number">0</span>].name.is_none() {
-                <span class="comment">// SOUND: we&#39;ve verified this is a struct with one field, so it is safe to cast the
-                // pointer to a pointer to the inner type.
-                </span><span class="kw">let </span><span class="kw-2">mut </span>ptr = <span class="kw">unsafe </span>{
-                    SchemaRefMut::from_ptr_schema(
-                        <span class="self">self</span>.ptr.as_ptr(),
-                        <span class="self">self</span>.ptr.schema().kind.as_struct().unwrap().fields[<span class="number">0</span>].schema,
-                    )
-                };
-                <span class="kw">let </span>v = ptr
-                    .try_cast_mut::&lt;String&gt;()
-                    .map_err(|<span class="kw">_</span>| E::invalid_type(Unexpected::Str(value), <span class="kw-2">&amp;</span><span class="self">self</span>))<span class="question-mark">?</span>;
-                <span class="kw-2">*</span>v = value.into();
-
-                <span class="prelude-val">Ok</span>(())
-            } <span class="kw">else </span>{
-                <span class="prelude-val">Err</span>(E::invalid_type(
-                    Unexpected::Other(<span class="string">&quot;value&quot;</span>),
-                    <span class="kw-2">&amp;</span><span class="string">&quot;list or map of struct fields&quot;</span>,
-                ))
-            }
         }
 
         <span class="kw">fn </span>visit_seq&lt;A&gt;(<span class="kw-2">mut </span><span class="self">self</span>, <span class="kw-2">mut </span>seq: A) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, A::Error&gt;
