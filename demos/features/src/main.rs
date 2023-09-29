@@ -77,11 +77,13 @@ struct TileMeta {
     idx: u32,
 }
 
+#[derive(HasSchema, Default, Clone)]
+#[repr(C)]
+struct PersistedTextData(String);
+
 fn main() {
-    assert!(Color::schema()
-        .type_data
-        .get::<SchemaDeserialize>()
-        .is_some());
+    // Register persistent data's schema so that it can be loaded by the storage loader.
+    PersistedTextData::schema();
 
     // Create a bones bevy renderer from our bones game
     BonesBevyRenderer::new(create_game())
@@ -141,6 +143,7 @@ fn menu_system(
     ctx: Egui,
     mut sessions: ResMut<Sessions>,
     mut session_options: ResMut<SessionOptions>,
+    mut storage: ResMut<Storage>,
     // Get the localization field from our `GameMeta`
     localization: Localization<GameMeta>,
 ) {
@@ -207,6 +210,21 @@ fn menu_system(
                     }
 
                     ui.add_space(20.0);
+
+                    ui.vertical_centered(|ui| {
+                        ui.set_width(300.0);
+                        {
+                            let data = storage.get_or_insert_default_mut::<PersistedTextData>();
+                            egui::TextEdit::singleline(&mut data.0)
+                                .hint_text(localization.get("persisted-text-box-content"))
+                                .show(ui);
+                        }
+                        if ui.button(localization.get("save")).clicked() {
+                            storage.save()
+                        }
+                    });
+
+                    ui.add_space(10.0);
 
                     // We can use the `widget()` method on the `Egui` to conveniently run bones
                     // systems that can modify the `egui::Ui` and return an `egui::Response`.
@@ -447,5 +465,5 @@ fn demo_widget(
     ui.label("Demo Widget");
     // When using a bones image in egui, we have to get it's corresponding egui texture
     // from the egui textures resource.
-    ui.image(egui_textures.get(meta.menu_image), [100., 100.])
+    ui.image(egui_textures.get(meta.menu_image), [50., 50.])
 }

@@ -195,7 +195,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                         let layout = ::std::alloc::Layout::new::<#ty>();
                                         #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
                                             name: stringify!(#ty).into(),
-                                            full_name: concat!(module_path!(), stringify!(#ty)).into(),
+                                            full_name: concat!(module_path!(), "::", stringify!(#ty)).into(),
                                             kind: #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
                                                 size: layout.size(),
                                                 align: layout.align(),
@@ -263,7 +263,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                 S.get_or_init(|| {
                                     #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
                                         name: #variant_schema_name.into(),
-                                        full_name: concat!(module_path!(), #variant_schema_name).into(),
+                                        full_name: concat!(module_path!(), "::", #variant_schema_name).into(),
                                         type_id: None,
                                         kind: #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
                                             fields: vec![
@@ -302,7 +302,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     let schema_register = quote! {
         #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
             name: stringify!(#name).into(),
-            full_name: concat!(module_path!(), stringify!(#name)).into(),
+            full_name: concat!(module_path!(), "::", stringify!(#name)).into(),
             type_id: Some(::std::any::TypeId::of::<Self>()),
             kind: #schema_kind,
             type_data: #type_datas,
