@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["AudioEvent"],"struct":["AudioEvents","AudioLoader","AudioSource"]};
+window.SIDEBAR_ITEMS = {"fn":["game_plugin"],"struct":["AudioLoader","AudioManager","AudioSource","StaticSoundData"]};

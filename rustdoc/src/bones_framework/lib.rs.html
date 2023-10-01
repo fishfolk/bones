@@ -76,6 +76,14 @@
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The bones framework for game development.
 //!
 </span><span class="attr">#![cfg_attr(feature = <span class="string">&quot;document-features&quot;</span>, doc = <span class="string">&quot;## Features&quot;</span>)]
@@ -99,7 +107,7 @@
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use crate</span>::{
         animation::<span class="kw-2">*</span>, input::prelude::<span class="kw-2">*</span>, params::<span class="kw-2">*</span>, render::prelude::<span class="kw-2">*</span>, storage::<span class="kw-2">*</span>, time::<span class="kw-2">*</span>,
-        AssetServerExt, DefaultSessionPlugin,
+        AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin,
     };
     <span class="kw">pub use </span>bones_asset::anyhow::Context;
     <span class="kw">pub use </span>bones_asset::prelude::<span class="kw-2">*</span>;
@@ -127,6 +135,14 @@
         session
             .install_plugin(animation::animation_plugin)
             .install_plugin(render::render_plugin);
+    }
+}
+
+<span class="doccomment">/// Default plugins for bones framework games.
+</span><span class="kw">pub struct </span>DefaultGamePlugin;
+<span class="kw">impl </span>lib::GamePlugin <span class="kw">for </span>DefaultGamePlugin {
+    <span class="kw">fn </span>install(<span class="self">self</span>, game: <span class="kw-2">&amp;mut </span>lib::Game) {
+        game.install_plugin(render::audio::game_plugin);
     }
 }
 

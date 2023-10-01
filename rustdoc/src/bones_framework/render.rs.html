@@ -52,6 +52,10 @@
 <a href="#52" id="52">52</a>
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Rendering components.
 
 </span><span class="kw">use </span>bones_lib::prelude::<span class="kw-2">*</span>;
@@ -59,15 +63,19 @@
 <span class="doccomment">/// Module prelude.
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use super</span>::{
-        audio::<span class="kw-2">*</span>, camera::<span class="kw-2">*</span>, color::<span class="kw-2">*</span>, line::<span class="kw-2">*</span>, sprite::<span class="kw-2">*</span>, tilemap::<span class="kw-2">*</span>, transform::<span class="kw-2">*</span>, Renderer,
-        RendererApi,
+        camera::<span class="kw-2">*</span>, color::<span class="kw-2">*</span>, line::<span class="kw-2">*</span>, sprite::<span class="kw-2">*</span>, tilemap::<span class="kw-2">*</span>, transform::<span class="kw-2">*</span>, Renderer, RendererApi,
     };
+
+    <span class="attr">#[cfg(feature = <span class="string">&quot;audio&quot;</span>)]
+    </span><span class="kw">pub use </span><span class="kw">super</span>::audio::<span class="kw-2">*</span>;
 
     <span class="attr">#[cfg(feature = <span class="string">&quot;ui&quot;</span>)]
     </span><span class="kw">pub use </span><span class="kw">super</span>::ui::{widgets::<span class="kw-2">*</span>, <span class="kw-2">*</span>};
 }
 
-<span class="kw">pub mod </span>audio;
+<span class="attr">#[cfg(feature = <span class="string">&quot;audio&quot;</span>)]
+</span><span class="kw">pub mod </span>audio;
+
 <span class="kw">pub mod </span>camera;
 <span class="kw">pub mod </span>color;
 <span class="kw">pub mod </span>line;

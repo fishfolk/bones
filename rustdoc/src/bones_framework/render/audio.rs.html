@@ -52,62 +52,58 @@
 <a href="#52" id="52">52</a>
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
-<a href="#55" id="55">55</a>
-<a href="#56" id="56">56</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Audio components.
 
-</span><span class="kw">use </span>std::collections::VecDeque;
+</span><span class="kw">use </span>std::{io::Cursor, sync::Arc};
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
+<span class="kw">pub use </span>kira::{<span class="self">self</span>, sound::static_sound::StaticSoundData};
+<span class="kw">use </span>kira::{
+    manager::{backend::cpal::CpalBackend, AudioManager <span class="kw">as </span>KiraAudioManager},
+    sound::SoundData,
+};
+
+<span class="doccomment">/// The game plugin for the audio system.
+</span><span class="kw">pub fn </span>game_plugin(game: <span class="kw-2">&amp;mut </span>Game) {
+    game.insert_shared_resource(AudioManager::default());
+    game.init_shared_resource::&lt;AssetServer&gt;()
+        .register_asset::&lt;AudioSource&gt;();
+}
+
+<span class="doccomment">/// The audio manager resource which can be used to play sounds.
+</span><span class="attr">#[derive(HasSchema, Clone, Deref, DerefMut)]
+</span><span class="kw">pub struct </span>AudioManager(Arc&lt;AtomicCell&lt;KiraAudioManager&gt;&gt;);
+<span class="kw">impl </span>Default <span class="kw">for </span>AudioManager {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(Arc::new(AtomicCell::new(
+            KiraAudioManager::&lt;CpalBackend&gt;::new(default()).unwrap(),
+        )))
+    }
+}
+
 <span class="doccomment">/// The audio source asset type, contains no data, but [`Handle&lt;AudioSource&gt;`] is still useful
 /// because it uniquely represents a sound/music that may be played outside of bones.
-</span><span class="attr">#[derive(Copy, Clone, HasSchema, Debug, Default)]
-#[type_data(asset_loader(<span class="string">&quot;ogg&quot;</span>, AudioLoader))]
-</span><span class="kw">pub struct </span>AudioSource;
+</span><span class="attr">#[derive(Clone, HasSchema, Debug)]
+#[schema(no_default)]
+#[type_data(asset_loader([<span class="string">&quot;ogg&quot;</span>, <span class="string">&quot;mp3&quot;</span>, <span class="string">&quot;flac&quot;</span>, <span class="string">&quot;wav&quot;</span>]</span>, AudioLoader))]
+<span class="kw">pub struct </span>AudioSource(<span class="kw">pub </span>StaticSoundData);
+
+<span class="kw">impl </span>SoundData <span class="kw">for </span><span class="kw-2">&amp;</span>AudioSource {
+    <span class="kw">type </span>Error = &lt;StaticSoundData <span class="kw">as </span>SoundData&gt;::Error;
+    <span class="kw">type </span>Handle = &lt;StaticSoundData <span class="kw">as </span>SoundData&gt;::Handle;
+
+    <span class="kw">fn </span>into_sound(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(Box&lt;<span class="kw">dyn </span>kira::sound::Sound&gt;, <span class="self">Self</span>::Handle), <span class="self">Self</span>::Error&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.clone().into_sound()
+    }
+}
 
 <span class="doccomment">/// The audio file asset loader.
 </span><span class="kw">pub struct </span>AudioLoader;
 <span class="kw">impl </span>AssetLoader <span class="kw">for </span>AudioLoader {
-    <span class="comment">// TODO: implement audio file loader.
-    </span><span class="kw">fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>, _ctx: AssetLoadCtx, _bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;SchemaBox&gt; {
-        <span class="prelude-val">Ok</span>(SchemaBox::new(AudioSource))
+    <span class="kw">fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>, _ctx: AssetLoadCtx, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;SchemaBox&gt; {
+        <span class="kw">let </span>data = StaticSoundData::from_cursor(Cursor::new(bytes.to_vec()), default())<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(SchemaBox::new(AudioSource(data)))
     }
-}
-
-<span class="doccomment">/// Resource containing the audio event queue.
-</span><span class="attr">#[derive(Default, HasSchema, Clone, Debug)]
-</span><span class="kw">pub struct </span>AudioEvents {
-    <span class="doccomment">/// List of audio events that haven&#39;t been handled by the audio system yet.
-    </span><span class="kw">pub </span>queue: VecDeque&lt;AudioEvent&gt;,
-}
-
-<span class="kw">impl </span>AudioEvents {
-    <span class="doccomment">/// Add an event to the audio event queue.
-    </span><span class="kw">pub fn </span>send(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: AudioEvent) {
-        <span class="self">self</span>.queue.push_back(event);
-    }
-
-    <span class="doccomment">/// Play a sound.
-    ///
-    /// Shortcut for sending an [`AudioEvent`] with [`send()`][Self::send].
-    </span><span class="kw">pub fn </span>play(<span class="kw-2">&amp;mut </span><span class="self">self</span>, sound_source: Handle&lt;AudioSource&gt;, volume: f64) {
-        <span class="self">self</span>.queue.push_back(AudioEvent::PlaySound {
-            sound_source,
-            volume,
-        })
-    }
-}
-
-<span class="doccomment">/// An audio event that may be sent to the [`AudioEvents`] resource.
-</span><span class="attr">#[derive(Clone, Debug)]
-</span><span class="kw">pub enum </span>AudioEvent {
-    <span class="doccomment">/// Play a sound.
-    </span>PlaySound {
-        <span class="doccomment">/// The handle to the sound to play.
-        </span>sound_source: Handle&lt;AudioSource&gt;,
-        <span class="doccomment">/// The volume to play the sound at.
-        </span>volume: f64,
-    },
 }
 </code></pre></div></section></main></body></html>

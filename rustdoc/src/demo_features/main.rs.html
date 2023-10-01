@@ -467,6 +467,76 @@
 <a href="#467" id="467">467</a>
 <a href="#468" id="468">468</a>
 <a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::too_many_arguments)]
 
 </span><span class="kw">use </span>bones_bevy_renderer::{
@@ -491,6 +561,8 @@
     </span>atlas_demo: Handle&lt;AtlasDemoMeta&gt;,
     <span class="doccomment">/// The tilemap demo metadata.
     </span>tilemap_demo: Handle&lt;TilemapDemoMeta&gt;,
+    <span class="doccomment">/// Audio track for the audio demo.
+    </span>audio_demo: Handle&lt;AudioSource&gt;,
     <span class="doccomment">/// The color the debug lines in the debug line demo.
     </span>path2d_color: Color,
     <span class="doccomment">/// Localization asset
@@ -570,7 +642,8 @@
     </span><span class="kw">let </span><span class="kw-2">mut </span>game = Game::new();
 
     <span class="comment">// Configure the asset server
-    </span>game.init_shared_resource::&lt;AssetServer&gt;()
+    </span>game.install_plugin(DefaultGamePlugin)
+        .init_shared_resource::&lt;AssetServer&gt;()
         <span class="comment">// Register the default asset types
         </span>.register_default_assets()
         <span class="comment">// Register our custom asset types
@@ -612,7 +685,6 @@
     ctx: Egui,
     <span class="kw-2">mut </span>sessions: ResMut&lt;Sessions&gt;,
     <span class="kw-2">mut </span>session_options: ResMut&lt;SessionOptions&gt;,
-    <span class="kw-2">mut </span>storage: ResMut&lt;Storage&gt;,
     <span class="comment">// Get the localization field from our `GameMeta`
     </span>localization: Localization&lt;GameMeta&gt;,
 ) {
@@ -665,6 +737,32 @@
                             .install_plugin(tilemap_demo_plugin);
                     }
 
+                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;audio-demo&quot;</span>))
+                        .show(ui)
+                        .clicked()
+                    {
+                        <span class="comment">// Delete the menu world
+                        </span>session_options.delete = <span class="bool-val">true</span>;
+
+                        <span class="comment">// Create a session for the match
+                        </span>sessions
+                            .create(<span class="string">&quot;audio_demo&quot;</span>)
+                            .install_plugin(audio_demo_plugin);
+                    }
+
+                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;storage-demo&quot;</span>))
+                        .show(ui)
+                        .clicked()
+                    {
+                        <span class="comment">// Delete the menu world
+                        </span>session_options.delete = <span class="bool-val">true</span>;
+
+                        <span class="comment">// Create a session for the match
+                        </span>sessions
+                            .create(<span class="string">&quot;storage_demo&quot;</span>)
+                            .install_plugin(storage_demo_plugin);
+                    }
+
                     <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;path2d-demo&quot;</span>))
                         .show(ui)
                         .clicked()
@@ -677,21 +775,6 @@
                             .create(<span class="string">&quot;path2d_demo&quot;</span>)
                             .install_plugin(path2d_demo_plugin);
                     }
-
-                    ui.add_space(<span class="number">20.0</span>);
-
-                    ui.vertical_centered(|ui| {
-                        ui.set_width(<span class="number">300.0</span>);
-                        {
-                            <span class="kw">let </span>data = storage.get_or_insert_default_mut::&lt;PersistedTextData&gt;();
-                            egui::TextEdit::singleline(<span class="kw-2">&amp;mut </span>data.<span class="number">0</span>)
-                                .hint_text(localization.get(<span class="string">&quot;persisted-text-box-content&quot;</span>))
-                                .show(ui);
-                        }
-                        <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;save&quot;</span>)).clicked() {
-                            storage.save()
-                        }
-                    });
 
                     ui.add_space(<span class="number">10.0</span>);
 
@@ -866,6 +949,61 @@
     );
 }
 
+<span class="kw">fn </span>audio_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+    session
+        .install_plugin(DefaultSessionPlugin)
+        .add_system_to_stage(Update, back_to_menu_ui)
+        .add_system_to_stage(Update, audio_demo_ui);
+}
+
+<span class="kw">fn </span>audio_demo_ui(
+    ctx: Egui,
+    localization: Localization&lt;GameMeta&gt;,
+    audio: Res&lt;AudioManager&gt;,
+    meta: Root&lt;GameMeta&gt;,
+    assets: Res&lt;AssetServer&gt;,
+) {
+    egui::CentralPanel::default()
+        .frame(egui::Frame::none())
+        .show(<span class="kw-2">&amp;</span>ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                ui.add_space(<span class="number">50.0</span>);
+                <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;play-sound&quot;</span>)).clicked() {
+                    audio
+                        .borrow_mut()
+                        .play(assets.get(meta.audio_demo))
+                        .unwrap();
+                }
+            })
+        });
+}
+
+<span class="kw">fn </span>storage_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+    session
+        .install_plugin(DefaultSessionPlugin)
+        .add_system_to_stage(Update, storage_demo_ui)
+        .add_system_to_stage(Update, back_to_menu_ui);
+}
+
+<span class="kw">fn </span>storage_demo_ui(ctx: Egui, <span class="kw-2">mut </span>storage: ResMut&lt;Storage&gt;, localization: Localization&lt;GameMeta&gt;) {
+    egui::CentralPanel::default().show(<span class="kw-2">&amp;</span>ctx, |ui| {
+        ui.add_space(<span class="number">20.0</span>);
+
+        ui.vertical_centered(|ui| {
+            ui.set_width(<span class="number">300.0</span>);
+            {
+                <span class="kw">let </span>data = storage.get_or_insert_default_mut::&lt;PersistedTextData&gt;();
+                egui::TextEdit::singleline(<span class="kw-2">&amp;mut </span>data.<span class="number">0</span>)
+                    .hint_text(localization.get(<span class="string">&quot;persisted-text-box-content&quot;</span>))
+                    .show(ui);
+            }
+            <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;save&quot;</span>)).clicked() {
+                storage.save()
+            }
+        });
+    });
+}
+
 <span class="kw">fn </span>path2d_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
     session
         .install_plugin(DefaultSessionPlugin)
@@ -913,11 +1051,13 @@
         .frame(egui::Frame::none())
         .show(<span class="kw-2">&amp;</span>ctx, |ui| {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
-                ui.add_space(<span class="number">20.0</span>);
-                <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;back-to-menu&quot;</span>)).clicked() {
-                    session_options.delete = <span class="bool-val">true</span>;
-                    sessions.create(<span class="string">&quot;menu&quot;</span>).install_plugin(menu_plugin);
-                }
+                ui.push_id(<span class="string">&quot;back-to-menu&quot;</span>, |ui| {
+                    ui.add_space(<span class="number">20.0</span>);
+                    <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;back-to-menu&quot;</span>)).clicked() {
+                        session_options.delete = <span class="bool-val">true</span>;
+                        sessions.create(<span class="string">&quot;menu&quot;</span>).install_plugin(menu_plugin);
+                    }
+                });
             });
         });
 }
