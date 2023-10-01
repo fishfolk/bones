@@ -2,6 +2,7 @@ menu_image: ./menu-image.png
 sprite_demo: ./sprite/fractal.png
 atlas_demo: ./atlas/atlas-demo.yaml
 tilemap_demo: ./tilemap/tilemap.yaml
+audio_demo: ./audio/blink.ogg
 localization: ./localization.yaml
 path2d_color: red
 title_font:

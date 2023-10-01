@@ -21,7 +21,7 @@ pub use glam;
 pub mod prelude {
     pub use crate::{
         animation::*, input::prelude::*, params::*, render::prelude::*, storage::*, time::*,
-        AssetServerExt, DefaultSessionPlugin,
+        AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin,
     };
     pub use bones_asset::anyhow::Context;
     pub use bones_asset::prelude::*;
@@ -49,6 +49,14 @@ impl lib::SessionPlugin for DefaultSessionPlugin {
         session
             .install_plugin(animation::animation_plugin)
             .install_plugin(render::render_plugin);
+    }
+}
+
+/// Default plugins for bones framework games.
+pub struct DefaultGamePlugin;
+impl lib::GamePlugin for DefaultGamePlugin {
+    fn install(self, game: &mut lib::Game) {
+        game.install_plugin(render::audio::game_plugin);
     }
 }
 

@@ -5,15 +5,19 @@ use bones_lib::prelude::*;
 /// Module prelude.
 pub mod prelude {
     pub use super::{
-        audio::*, camera::*, color::*, line::*, sprite::*, tilemap::*, transform::*, Renderer,
-        RendererApi,
+        camera::*, color::*, line::*, sprite::*, tilemap::*, transform::*, Renderer, RendererApi,
     };
+
+    #[cfg(feature = "audio")]
+    pub use super::audio::*;
 
     #[cfg(feature = "ui")]
     pub use super::ui::{widgets::*, *};
 }
 
+#[cfg(feature = "audio")]
 pub mod audio;
+
 pub mod camera;
 pub mod color;
 pub mod line;
