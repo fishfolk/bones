@@ -22,6 +22,8 @@ struct GameMeta {
     atlas_demo: Handle<AtlasDemoMeta>,
     /// The tilemap demo metadata.
     tilemap_demo: Handle<TilemapDemoMeta>,
+    /// Audio track for the audio demo.
+    audio_demo: Handle<AudioSource>,
     /// The color the debug lines in the debug line demo.
     path2d_color: Color,
     /// Localization asset
@@ -101,7 +103,8 @@ pub fn create_game() -> Game {
     let mut game = Game::new();
 
     // Configure the asset server
-    game.init_shared_resource::<AssetServer>()
+    game.install_plugin(DefaultGamePlugin)
+        .init_shared_resource::<AssetServer>()
         // Register the default asset types
         .register_default_assets()
         // Register our custom asset types
@@ -143,7 +146,6 @@ fn menu_system(
     ctx: Egui,
     mut sessions: ResMut<Sessions>,
     mut session_options: ResMut<SessionOptions>,
-    mut storage: ResMut<Storage>,
     // Get the localization field from our `GameMeta`
     localization: Localization<GameMeta>,
 ) {
@@ -196,6 +198,32 @@ fn menu_system(
                             .install_plugin(tilemap_demo_plugin);
                     }
 
+                    if BorderedButton::themed(&meta.button_style, localization.get("audio-demo"))
+                        .show(ui)
+                        .clicked()
+                    {
+                        // Delete the menu world
+                        session_options.delete = true;
+
+                        // Create a session for the match
+                        sessions
+                            .create("audio_demo")
+                            .install_plugin(audio_demo_plugin);
+                    }
+
+                    if BorderedButton::themed(&meta.button_style, localization.get("storage-demo"))
+                        .show(ui)
+                        .clicked()
+                    {
+                        // Delete the menu world
+                        session_options.delete = true;
+
+                        // Create a session for the match
+                        sessions
+                            .create("storage_demo")
+                            .install_plugin(storage_demo_plugin);
+                    }
+
                     if BorderedButton::themed(&meta.button_style, localization.get("path2d-demo"))
                         .show(ui)
                         .clicked()
@@ -208,21 +236,6 @@ fn menu_system(
                             .create("path2d_demo")
                             .install_plugin(path2d_demo_plugin);
                     }
-
-                    ui.add_space(20.0);
-
-                    ui.vertical_centered(|ui| {
-                        ui.set_width(300.0);
-                        {
-                            let data = storage.get_or_insert_default_mut::<PersistedTextData>();
-                            egui::TextEdit::singleline(&mut data.0)
-                                .hint_text(localization.get("persisted-text-box-content"))
-                                .show(ui);
-                        }
-                        if ui.button(localization.get("save")).clicked() {
-                            storage.save()
-                        }
-                    });
 
                     ui.add_space(10.0);
 
@@ -397,6 +410,61 @@ fn atlas_demo_startup(
     );
 }
 
+fn audio_demo_plugin(session: &mut Session) {
+    session
+        .install_plugin(DefaultSessionPlugin)
+        .add_system_to_stage(Update, back_to_menu_ui)
+        .add_system_to_stage(Update, audio_demo_ui);
+}
+
+fn audio_demo_ui(
+    ctx: Egui,
+    localization: Localization<GameMeta>,
+    audio: Res<AudioManager>,
+    meta: Root<GameMeta>,
+    assets: Res<AssetServer>,
+) {
+    egui::CentralPanel::default()
+        .frame(egui::Frame::none())
+        .show(&ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                ui.add_space(50.0);
+                if ui.button(localization.get("play-sound")).clicked() {
+                    audio
+                        .borrow_mut()
+                        .play(assets.get(meta.audio_demo))
+                        .unwrap();
+                }
+            })
+        });
+}
+
+fn storage_demo_plugin(session: &mut Session) {
+    session
+        .install_plugin(DefaultSessionPlugin)
+        .add_system_to_stage(Update, storage_demo_ui)
+        .add_system_to_stage(Update, back_to_menu_ui);
+}
+
+fn storage_demo_ui(ctx: Egui, mut storage: ResMut<Storage>, localization: Localization<GameMeta>) {
+    egui::CentralPanel::default().show(&ctx, |ui| {
+        ui.add_space(20.0);
+
+        ui.vertical_centered(|ui| {
+            ui.set_width(300.0);
+            {
+                let data = storage.get_or_insert_default_mut::<PersistedTextData>();
+                egui::TextEdit::singleline(&mut data.0)
+                    .hint_text(localization.get("persisted-text-box-content"))
+                    .show(ui);
+            }
+            if ui.button(localization.get("save")).clicked() {
+                storage.save()
+            }
+        });
+    });
+}
+
 fn path2d_demo_plugin(session: &mut Session) {
     session
         .install_plugin(DefaultSessionPlugin)
@@ -444,11 +512,13 @@ fn back_to_menu_ui(
         .frame(egui::Frame::none())
         .show(&ctx, |ui| {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
-                ui.add_space(20.0);
-                if ui.button(localization.get("back-to-menu")).clicked() {
-                    session_options.delete = true;
-                    sessions.create("menu").install_plugin(menu_plugin);
-                }
+                ui.push_id("back-to-menu", |ui| {
+                    ui.add_space(20.0);
+                    if ui.button(localization.get("back-to-menu")).clicked() {
+                        session_options.delete = true;
+                        sessions.create("menu").install_plugin(menu_plugin);
+                    }
+                });
             });
         });
 }

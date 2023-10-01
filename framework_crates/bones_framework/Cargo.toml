@@ -11,13 +11,31 @@ categories.workspace    = true
 keywords.workspace      = true
 
 [features]
-default = ["image_png", "ui", "localization"]
+default = ["image_png", "ui", "localization", "audio", "audio_ogg"]
 #! Cargo feature supported in `bones_framework`.
 
 ## Enable the `ui` module, powered by [`egui`].
 ui = ["dep:egui", "dep:ttf-parser"]
 ## Enable the localization module, powered by [`fluent`](https://github.com/projectfluent/fluent-rs).
 localization = ["dep:fluent-bundle", "dep:fluent-langneg", "dep:intl-memoizer", "dep:unic-langid", "dep:sys-locale"]
+
+## Enable the audio system.
+audio = ["dep:kira"]
+
+#! ### Audio formats
+#! These features enable different audio formats
+
+## Enable OGG audio loader.
+audio_ogg = ["kira/ogg"]
+
+## Enable MP3 audio loader.
+audio_mp3 = ["kira/mp3"]
+
+## Enable the FLAC audio loader.
+audio_flac = ["kira/flac"]
+
+## Enable the WAV audio loader.
+audio_wav = ["kira/wav"]
 
 #! ### Image Formats
 #! These features enable different image formats.
@@ -71,6 +89,9 @@ image = { version = "0.24", default-features = false }
 # Gui
 egui       = { version = "0.22", optional = true }
 ttf-parser = { version = "0.19.1", default-features = false, optional = true }
+
+# Audio
+kira = { git = "https://github.com/zicklag/kira.git", branch = "feat/sync", features = ["cpal"], default-features = false, optional = true }
 
 # Localization
 fluent-bundle  = { version = "0.15", optional = true }
