@@ -115,9 +115,7 @@ impl FontMeta {
 
     /// Create an [`egui::RichText`] that can be passed to [`ui.label()`][egui::Ui::label].
     pub fn rich(&self, t: impl Into<String>) -> egui::RichText {
-        egui::RichText::new(t)
-            .color(self.color.into_egui())
-            .font(self.id())
+        egui::RichText::new(t).color(self.color).font(self.id())
     }
 
     /// Clone the font and set a new color.
@@ -223,23 +221,5 @@ impl EguiResponseExt for egui::Response {
         } else {
             self
         }
-    }
-}
-
-/// Helper trait for converting color meta to [`egui::Color32`].
-pub trait ColorExt {
-    /// Convert into an [`egui::Color32`].
-    fn into_egui(self) -> egui::Color32;
-}
-
-impl ColorExt for Color {
-    fn into_egui(self) -> egui::Color32 {
-        let [r, g, b, a] = self.as_rgba_f32();
-        egui::Color32::from_rgba_premultiplied(
-            (r * 255.0) as u8,
-            (g * 255.0) as u8,
-            (b * 255.0) as u8,
-            (a * 255.0) as u8,
-        )
     }
 }
