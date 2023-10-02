@@ -23,6 +23,20 @@ pub enum Color {
     },
 }
 
+#[cfg(feature = "ui")]
+impl From<Color> for egui::Color32 {
+    fn from(value: Color) -> Self {
+        match value {
+            Color::Rgba {
+                red,
+                green,
+                blue,
+                alpha,
+            } => egui::Rgba::from_rgba_unmultiplied(red, green, blue, alpha).into(),
+        }
+    }
+}
+
 impl<'de> serde::Deserialize<'de> for Color {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
