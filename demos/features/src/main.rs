@@ -535,5 +535,8 @@ fn demo_widget(
     ui.label("Demo Widget");
     // When using a bones image in egui, we have to get it's corresponding egui texture
     // from the egui textures resource.
-    ui.image(egui_textures.get(meta.menu_image), [50., 50.])
+    ui.image(egui::load::SizedTexture::new(
+        egui_textures.get(meta.menu_image),
+        [50., 50.],
+    ))
 }
