@@ -541,6 +541,14 @@
 <a href="#541" id="541">541</a>
 <a href="#542" id="542">542</a>
 <a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -814,7 +822,10 @@
         <span class="comment">// For every session
         </span><span class="kw">for </span>session_name <span class="kw">in </span><span class="self">self</span>.sorted_session_keys.clone() {
             <span class="comment">// Extract the current session
-            </span><span class="kw">let </span><span class="kw-2">mut </span>current_session = <span class="self">self</span>.sessions.map.remove(<span class="kw-2">&amp;</span>session_name).unwrap();
+            </span><span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>current_session) = <span class="self">self</span>.sessions.map.remove(<span class="kw-2">&amp;</span>session_name) <span class="kw">else </span>{
+                <span class="comment">// This may happen if the session was deleted by another session.
+                </span><span class="kw">continue</span>;
+            };
 
             <span class="comment">// If this session is active
             </span><span class="kw">let </span>options = <span class="kw">if </span>current_session.active {
@@ -917,6 +928,11 @@
 
         <span class="comment">// Replace the game systems
         </span><span class="self">self</span>.systems = game_systems;
+
+        <span class="comment">// Make sure sorted session keys does not include sessions that were deleted during
+        // execution by other sessions.
+        </span><span class="self">self</span>.sorted_session_keys
+            .retain(|x| <span class="self">self</span>.sessions.iter().any(|(id, <span class="kw">_</span>)| id == x));
     }
 }
 
