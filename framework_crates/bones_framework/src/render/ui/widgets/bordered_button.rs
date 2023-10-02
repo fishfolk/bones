@@ -48,7 +48,7 @@ impl<'a> BorderedButton<'a> {
             label
                 .into()
                 .font(button_theme.font.id())
-                .color(button_theme.font.color.into_egui()),
+                .color(button_theme.font.color),
         )
         .border(&button_theme.borders.default)
         .on_click_border(Some(&button_theme.borders.clicked))
