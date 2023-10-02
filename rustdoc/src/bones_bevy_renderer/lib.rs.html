@@ -994,6 +994,24 @@
 <a href="#994" id="994">994</a>
 <a href="#995" id="995">995</a>
 <a href="#996" id="996">996</a>
+<a href="#997" id="997">997</a>
+<a href="#998" id="998">998</a>
+<a href="#999" id="999">999</a>
+<a href="#1000" id="1000">1000</a>
+<a href="#1001" id="1001">1001</a>
+<a href="#1002" id="1002">1002</a>
+<a href="#1003" id="1003">1003</a>
+<a href="#1004" id="1004">1004</a>
+<a href="#1005" id="1005">1005</a>
+<a href="#1006" id="1006">1006</a>
+<a href="#1007" id="1007">1007</a>
+<a href="#1008" id="1008">1008</a>
+<a href="#1009" id="1009">1009</a>
+<a href="#1010" id="1010">1010</a>
+<a href="#1011" id="1011">1011</a>
+<a href="#1012" id="1012">1012</a>
+<a href="#1013" id="1013">1013</a>
+<a href="#1014" id="1014">1014</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -1267,21 +1285,28 @@
         .init_resource::&lt;BonesGameEntity&gt;();
 
         <span class="comment">// Add the world sync systems
-        </span>app.add_systems(Startup, setup_egui).add_systems(
-            Update,
-            (
-                <span class="comment">// Collect input and run world simulation
-                </span>get_bones_input.pipe(step_bones_game),
-                <span class="comment">// Synchronize bones render components with the Bevy world.
-                </span>(
-                    sync_egui_settings,
-                    sync_clear_color,
-                    sync_cameras,
-                    sync_bones_path2ds,
-                ),
+        </span>app.add_systems(Startup, setup_egui)
+            .add_systems(
+                PreUpdate,
+                egui_input_hook
+                    .after(bevy_egui::EguiSet::ProcessInput)
+                    .before(bevy_egui::EguiSet::BeginFrame),
             )
-                .chain(),
-        );
+            .add_systems(
+                Update,
+                (
+                    <span class="comment">// Collect input and run world simulation
+                    </span>get_bones_input.pipe(step_bones_game),
+                    <span class="comment">// Synchronize bones render components with the Bevy world.
+                    </span>(
+                        sync_egui_settings,
+                        sync_clear_color,
+                        sync_cameras,
+                        sync_bones_path2ds,
+                    ),
+                )
+                    .chain(),
+            );
 
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app.add_systems(
@@ -1448,6 +1473,17 @@
             });
         }
     });
+}
+
+<span class="kw">fn </span>egui_input_hook(
+    <span class="kw-2">mut </span>egui_query: Query&lt;<span class="kw-2">&amp;mut </span>bevy_egui::EguiInput, With&lt;Window&gt;&gt;,
+    <span class="kw-2">mut </span>data: ResMut&lt;BonesData&gt;,
+) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(hook) = data.game.shared_resource_cell::&lt;bones::EguiInputHook&gt;() {
+        <span class="kw">let </span>hook = hook.borrow();
+        <span class="kw">let </span><span class="kw-2">mut </span>egui_input = egui_query.get_single_mut().unwrap();
+        (hook.<span class="number">0</span>)(<span class="kw-2">&amp;mut </span>data.game, <span class="kw-2">&amp;mut </span>egui_input);
+    }
 }
 
 <span class="kw">fn </span>get_bones_input(

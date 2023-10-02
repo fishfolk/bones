@@ -549,6 +549,23 @@
 <a href="#549" id="549">549</a>
 <a href="#550" id="550">550</a>
 <a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -781,7 +798,7 @@
     }
 
     <span class="doccomment">/// Insert a resource that will be shared across all game sessions.
-    </span><span class="kw">pub fn </span>insert_shared_resource&lt;T: HasSchema + Default&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: T) {
+    </span><span class="kw">pub fn </span>insert_shared_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: T) {
         <span class="comment">// Update an existing resource of the same type.
         </span><span class="kw">for </span>r <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.shared_resources {
             <span class="kw">if </span>r.schema() == T::schema() {
@@ -793,6 +810,23 @@
         <span class="comment">// Or insert a new resource if we couldn&#39;t find one
         </span><span class="self">self</span>.shared_resources
             .push(UntypedAtomicResource::new(SchemaBox::new(resource)));
+    }
+
+    <span class="doccomment">/// Remove a shared resource, if it is present in the world.
+    /// # Panics
+    /// Panics if the resource is set and it&#39;s cell has another handle to it and cannot be
+    /// unwrapped.
+    </span><span class="kw">pub fn </span>remove_shared_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
+        <span class="self">self</span>.shared_resources
+            .iter()
+            .position(|x| x.schema() == T::schema())
+            .map(|idx| {
+                <span class="self">self</span>.shared_resources
+                    .remove(idx)
+                    .try_into_inner()
+                    .unwrap()
+                    .into_inner()
+            })
     }
 
     <span class="doccomment">/// Step the game simulation.
