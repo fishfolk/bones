@@ -215,6 +215,34 @@
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
 <a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! UI resources &amp; components.
 
 </span><span class="kw">use </span>std::sync::Arc;
@@ -336,6 +364,15 @@
             .color(<span class="self">self</span>.color.into_egui())
             .font(<span class="self">self</span>.id())
     }
+
+    <span class="doccomment">/// Clone the font and set a new color.
+    </span><span class="kw">pub fn </span>with_color(<span class="kw-2">&amp;</span><span class="self">self</span>, color: Color) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            family: <span class="self">self</span>.family.clone(),
+            size: <span class="self">self</span>.size,
+            color,
+        }
+    }
 }
 
 <span class="kw">fn </span>deserialize_arc_str&lt;<span class="lifetime">&#39;de</span>, D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;&gt;(d: D) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;str&gt;, D::Error&gt; {
@@ -389,11 +426,30 @@
 </span><span class="kw">pub trait </span>EguiContextExt {
     <span class="doccomment">/// Clear the UI focus
     </span><span class="kw">fn </span>clear_focus(<span class="self">self</span>);
+
+    <span class="doccomment">/// Get a global runtime state from the EGUI context, returning the default value if it is not
+    /// present.
+    ///
+    /// This is just a convenience wrapper around Egui&#39;s built in temporary data store.
+    ///
+    /// The value will be cloned to get it out of the store without holding a lock.
+    </span><span class="kw">fn </span>get_state&lt;T: Clone + Default + Sync + Send + <span class="lifetime">&#39;static</span>&gt;(<span class="self">self</span>) -&gt; T;
+
+    <span class="doccomment">/// Set a global runtime state from the EGUI context.
+    ///
+    /// This is just a convenience wrapper around Egui&#39;s built in temporary data store.
+    </span><span class="kw">fn </span>set_state&lt;T: Clone + Default + Sync + Send + <span class="lifetime">&#39;static</span>&gt;(<span class="self">self</span>, value: T);
 }
 
 <span class="kw">impl </span>EguiContextExt <span class="kw">for </span><span class="kw-2">&amp;</span>egui::Context {
     <span class="kw">fn </span>clear_focus(<span class="self">self</span>) {
         <span class="self">self</span>.memory_mut(|r| r.request_focus(egui::Id::null()));
+    }
+    <span class="kw">fn </span>get_state&lt;T: Clone + Default + Sync + Send + <span class="lifetime">&#39;static</span>&gt;(<span class="self">self</span>) -&gt; T {
+        <span class="self">self</span>.data_mut(|data| data.get_temp_mut_or_default::&lt;T&gt;(egui::Id::null()).clone())
+    }
+    <span class="kw">fn </span>set_state&lt;T: Clone + Default + Sync + Send + <span class="lifetime">&#39;static</span>&gt;(<span class="self">self</span>, value: T) {
+        <span class="self">self</span>.data_mut(|data| <span class="kw-2">*</span>data.get_temp_mut_or_default::&lt;T&gt;(egui::Id::null()) = value);
     }
 }
 
