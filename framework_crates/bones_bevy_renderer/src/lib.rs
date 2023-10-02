@@ -271,21 +271,28 @@ impl BonesBevyRenderer {
         .init_resource::<BonesGameEntity>();
 
         // Add the world sync systems
-        app.add_systems(Startup, setup_egui).add_systems(
-            Update,
-            (
-                // Collect input and run world simulation
-                get_bones_input.pipe(step_bones_game),
-                // Synchronize bones render components with the Bevy world.
-                (
-                    sync_egui_settings,
-                    sync_clear_color,
-                    sync_cameras,
-                    sync_bones_path2ds,
-                ),
+        app.add_systems(Startup, setup_egui)
+            .add_systems(
+                PreUpdate,
+                egui_input_hook
+                    .after(bevy_egui::EguiSet::ProcessInput)
+                    .before(bevy_egui::EguiSet::BeginFrame),
             )
-                .chain(),
-        );
+            .add_systems(
+                Update,
+                (
+                    // Collect input and run world simulation
+                    get_bones_input.pipe(step_bones_game),
+                    // Synchronize bones render components with the Bevy world.
+                    (
+                        sync_egui_settings,
+                        sync_clear_color,
+                        sync_cameras,
+                        sync_bones_path2ds,
+                    ),
+                )
+                    .chain(),
+            );
 
         if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app.add_systems(
@@ -452,6 +459,17 @@ fn setup_egui(world: &mut World) {
             });
         }
     });
+}
+
+fn egui_input_hook(
+    mut egui_query: Query<&mut bevy_egui::EguiInput, With<Window>>,
+    mut data: ResMut<BonesData>,
+) {
+    if let Some(hook) = data.game.shared_resource_cell::<bones::EguiInputHook>() {
+        let hook = hook.borrow();
+        let mut egui_input = egui_query.get_single_mut().unwrap();
+        (hook.0)(&mut data.game, &mut egui_input);
+    }
 }
 
 fn get_bones_input(

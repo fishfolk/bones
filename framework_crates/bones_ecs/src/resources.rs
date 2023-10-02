@@ -13,6 +13,13 @@ pub struct UntypedAtomicResource {
     schema: &'static Schema,
 }
 
+impl std::fmt::Debug for UntypedAtomicResource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UntypedAtomicResource")
+            .finish_non_exhaustive()
+    }
+}
+
 impl UntypedAtomicResource {
     /// Creates a new [`UntypedAtomicResource`] storing the given data.
     pub fn new(resource: SchemaBox) -> Self {
@@ -54,6 +61,14 @@ impl UntypedAtomicResource {
         let (reference, borrow) = unsafe { RefMut::into_split(self.cell.borrow_mut()) };
         let schema_ref = reference.as_mut();
         AtomicSchemaRefMut { schema_ref, borrow }
+    }
+
+    /// Try to extract the inner schema box, if this is the reference to atomic resource.
+    pub fn try_into_inner(self) -> Result<SchemaBox, Self> {
+        let schema = self.schema;
+        let cell =
+            Arc::try_unwrap(self.cell).map_err(|cell| UntypedAtomicResource { cell, schema })?;
+        Ok(cell.into_inner())
     }
 
     /// Get the schema of the resource.
