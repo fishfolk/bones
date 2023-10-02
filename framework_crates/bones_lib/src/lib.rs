@@ -230,7 +230,7 @@ impl Game {
     }
 
     /// Insert a resource that will be shared across all game sessions.
-    pub fn insert_shared_resource<T: HasSchema + Default>(&mut self, resource: T) {
+    pub fn insert_shared_resource<T: HasSchema>(&mut self, resource: T) {
         // Update an existing resource of the same type.
         for r in &mut self.shared_resources {
             if r.schema() == T::schema() {
@@ -242,6 +242,23 @@ impl Game {
         // Or insert a new resource if we couldn't find one
         self.shared_resources
             .push(UntypedAtomicResource::new(SchemaBox::new(resource)));
+    }
+
+    /// Remove a shared resource, if it is present in the world.
+    /// # Panics
+    /// Panics if the resource is set and it's cell has another handle to it and cannot be
+    /// unwrapped.
+    pub fn remove_shared_resource<T: HasSchema>(&mut self) -> Option<T> {
+        self.shared_resources
+            .iter()
+            .position(|x| x.schema() == T::schema())
+            .map(|idx| {
+                self.shared_resources
+                    .remove(idx)
+                    .try_into_inner()
+                    .unwrap()
+                    .into_inner()
+            })
     }
 
     /// Step the game simulation.

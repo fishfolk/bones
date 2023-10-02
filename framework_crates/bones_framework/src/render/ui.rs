@@ -18,6 +18,22 @@ pub fn ui_plugin(_session: &mut Session) {
 #[derive(HasSchema, Clone, Debug, Default, Deref, DerefMut)]
 pub struct EguiCtx(pub egui::Context);
 
+/// [Shared resource](Game::insert_shared_resource) that, if inserted, allows you to modify the raw
+/// egui input based on the state of the last game frame.
+///
+/// This can be useful, for example, for generating arrow-key and Enter key presses from gamepad
+/// inputs.
+#[derive(HasSchema, Clone, Deref, DerefMut)]
+#[schema(no_default)]
+pub struct EguiInputHook(pub Arc<dyn Fn(&mut Game, &mut egui::RawInput) + Sync + Send + 'static>);
+
+impl EguiInputHook {
+    /// Create a new egui input hook.
+    pub fn new<F: Fn(&mut Game, &mut egui::RawInput) + Sync + Send + 'static>(hook: F) -> Self {
+        Self(Arc::new(hook))
+    }
+}
+
 /// System parameter for rendering to egui.
 #[derive(Deref)]
 pub struct Egui<'a> {
