@@ -119,6 +119,15 @@ impl FontMeta {
             .color(self.color.into_egui())
             .font(self.id())
     }
+
+    /// Clone the font and set a new color.
+    pub fn with_color(&self, color: Color) -> Self {
+        Self {
+            family: self.family.clone(),
+            size: self.size,
+            color,
+        }
+    }
 }
 
 fn deserialize_arc_str<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Arc<str>, D::Error> {
@@ -172,11 +181,30 @@ impl Default for EguiSettings {
 pub trait EguiContextExt {
     /// Clear the UI focus
     fn clear_focus(self);
+
+    /// Get a global runtime state from the EGUI context, returning the default value if it is not
+    /// present.
+    ///
+    /// This is just a convenience wrapper around Egui's built in temporary data store.
+    ///
+    /// The value will be cloned to get it out of the store without holding a lock.
+    fn get_state<T: Clone + Default + Sync + Send + 'static>(self) -> T;
+
+    /// Set a global runtime state from the EGUI context.
+    ///
+    /// This is just a convenience wrapper around Egui's built in temporary data store.
+    fn set_state<T: Clone + Default + Sync + Send + 'static>(self, value: T);
 }
 
 impl EguiContextExt for &egui::Context {
     fn clear_focus(self) {
         self.memory_mut(|r| r.request_focus(egui::Id::null()));
+    }
+    fn get_state<T: Clone + Default + Sync + Send + 'static>(self) -> T {
+        self.data_mut(|data| data.get_temp_mut_or_default::<T>(egui::Id::null()).clone())
+    }
+    fn set_state<T: Clone + Default + Sync + Send + 'static>(self, value: T) {
+        self.data_mut(|data| *data.get_temp_mut_or_default::<T>(egui::Id::null()) = value);
     }
 }
 
