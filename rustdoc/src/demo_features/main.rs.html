@@ -537,6 +537,9 @@
 <a href="#537" id="537">537</a>
 <a href="#538" id="538">538</a>
 <a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::too_many_arguments)]
 
 </span><span class="kw">use </span>bones_bevy_renderer::{
@@ -1074,6 +1077,9 @@
     ui.label(<span class="string">&quot;Demo Widget&quot;</span>);
     <span class="comment">// When using a bones image in egui, we have to get it&#39;s corresponding egui texture
     // from the egui textures resource.
-    </span>ui.image(egui_textures.get(meta.menu_image), [<span class="number">50.</span>, <span class="number">50.</span>])
+    </span>ui.image(egui::load::SizedTexture::new(
+        egui_textures.get(meta.menu_image),
+        [<span class="number">50.</span>, <span class="number">50.</span>],
+    ))
 }
 </code></pre></div></section></main></body></html>
