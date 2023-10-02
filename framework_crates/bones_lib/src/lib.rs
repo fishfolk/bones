@@ -271,7 +271,10 @@ impl Game {
         // For every session
         for session_name in self.sorted_session_keys.clone() {
             // Extract the current session
-            let mut current_session = self.sessions.map.remove(&session_name).unwrap();
+            let Some(mut current_session) = self.sessions.map.remove(&session_name) else {
+                // This may happen if the session was deleted by another session.
+                continue;
+            };
 
             // If this session is active
             let options = if current_session.active {
@@ -374,6 +377,11 @@ impl Game {
 
         // Replace the game systems
         self.systems = game_systems;
+
+        // Make sure sorted session keys does not include sessions that were deleted during
+        // execution by other sessions.
+        self.sorted_session_keys
+            .retain(|x| self.sessions.iter().any(|(id, _)| id == x));
     }
 }
 
