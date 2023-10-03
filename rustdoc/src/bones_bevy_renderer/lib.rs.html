@@ -1012,6 +1012,9 @@
 <a href="#1012" id="1012">1012</a>
 <a href="#1013" id="1013">1013</a>
 <a href="#1014" id="1014">1014</a>
+<a href="#1015" id="1015">1015</a>
+<a href="#1016" id="1016">1016</a>
+<a href="#1017" id="1017">1017</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -1288,15 +1291,16 @@
         </span>app.add_systems(Startup, setup_egui)
             .add_systems(
                 PreUpdate,
-                egui_input_hook
+                (get_bones_input.pipe(insert_bones_input), egui_input_hook)
+                    .chain()
                     .after(bevy_egui::EguiSet::ProcessInput)
                     .before(bevy_egui::EguiSet::BeginFrame),
             )
             .add_systems(
                 Update,
                 (
-                    <span class="comment">// Collect input and run world simulation
-                    </span>get_bones_input.pipe(step_bones_game),
+                    <span class="comment">// Run world simulation
+                    </span>step_bones_game,
                     <span class="comment">// Synchronize bones render components with the Bevy world.
                     </span>(
                         sync_egui_settings,
@@ -1562,15 +1566,22 @@
     )
 }
 
-<span class="doccomment">/// System to step the bones simulation.
-</span><span class="kw">fn </span>step_bones_game(
+<span class="kw">fn </span>insert_bones_input(
     In((mouse_inputs, keyboard_inputs, gamepad_inputs)): In&lt;(
         bones::MouseInputs,
         bones::KeyboardInputs,
         bones::GamepadInputs,
     )&gt;,
-    world: <span class="kw-2">&amp;mut </span>World,
+    <span class="kw-2">mut </span>data: ResMut&lt;BonesData&gt;,
 ) {
+    <span class="comment">// Add the game inputs
+    </span>data.game.insert_shared_resource(mouse_inputs);
+    data.game.insert_shared_resource(keyboard_inputs);
+    data.game.insert_shared_resource(gamepad_inputs);
+}
+
+<span class="doccomment">/// System to step the bones simulation.
+</span><span class="kw">fn </span>step_bones_game(world: <span class="kw-2">&amp;mut </span>World) {
     <span class="kw">let </span><span class="kw-2">mut </span>data = world.remove_resource::&lt;BonesData&gt;().unwrap();
     <span class="kw">let </span><span class="kw-2">mut </span>bones_image_ids = world.remove_resource::&lt;BonesImageIds&gt;().unwrap();
     <span class="kw">let </span><span class="kw-2">mut </span>bevy_egui_textures = world
@@ -1609,11 +1620,6 @@
             }
         })
     }
-
-    <span class="comment">// Add the game inputs
-    </span>game.insert_shared_resource(mouse_inputs);
-    game.insert_shared_resource(keyboard_inputs);
-    game.insert_shared_resource(gamepad_inputs);
 
     <span class="comment">// Step the game simulation
     </span>game.step(bevy_time.last_update().unwrap_or_else(Instant::now));
