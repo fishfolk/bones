@@ -89,6 +89,37 @@ pub enum GamepadButton {
     Other(u8),
 }
 
+impl std::fmt::Display for GamepadButton {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                GamepadButton::South => "South",
+                GamepadButton::East => "East",
+                GamepadButton::North => "North",
+                GamepadButton::West => "West",
+                GamepadButton::C => "C",
+                GamepadButton::Z => "Z",
+                GamepadButton::LeftTrigger => "Left Trigger",
+                GamepadButton::LeftTrigger2 => "Left Trigger 2",
+                GamepadButton::RightTrigger => "Right Trigger",
+                GamepadButton::RightTrigger2 => "Right Trigger 2",
+                GamepadButton::Select => "Select",
+                GamepadButton::Start => "Start",
+                GamepadButton::Mode => "Mode",
+                GamepadButton::LeftThumb => "Left Thumb",
+                GamepadButton::RightThumb => "Right Thumb",
+                GamepadButton::DPadUp => "DPad Up",
+                GamepadButton::DPadDown => "DPad Down",
+                GamepadButton::DPadLeft => "DPad Left",
+                GamepadButton::DPadRight => "DPad Right",
+                GamepadButton::Other(n) => return write!(f, "Button {n}"),
+            }
+        )
+    }
+}
+
 /// A gamepad axis event.
 #[derive(HasSchema, Clone, Debug)]
 #[schema(no_default)]
@@ -115,4 +146,22 @@ pub enum GamepadAxis {
     RightStickY,
     RightZ,
     Other(u8),
+}
+
+impl std::fmt::Display for GamepadAxis {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                GamepadAxis::LeftStickX => "Left Stick X",
+                GamepadAxis::LeftStickY => "Left Stick Y",
+                GamepadAxis::LeftZ => "Left Z",
+                GamepadAxis::RightStickX => "Right Stick X",
+                GamepadAxis::RightStickY => "Right Stick Y",
+                GamepadAxis::RightZ => "Right Z",
+                GamepadAxis::Other(n) => return write!(f, "Axis {n}"),
+            }
+        )
+    }
 }
