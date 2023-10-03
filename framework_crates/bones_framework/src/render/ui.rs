@@ -123,6 +123,12 @@ impl Default for FontMeta {
     }
 }
 
+impl From<FontMeta> for egui::FontSelection {
+    fn from(val: FontMeta) -> Self {
+        egui::FontSelection::FontId(val.id())
+    }
+}
+
 impl FontMeta {
     /// Get the Egui font ID.
     pub fn id(&self) -> egui::FontId {
