@@ -274,15 +274,16 @@ impl BonesBevyRenderer {
         app.add_systems(Startup, setup_egui)
             .add_systems(
                 PreUpdate,
-                egui_input_hook
+                (get_bones_input.pipe(insert_bones_input), egui_input_hook)
+                    .chain()
                     .after(bevy_egui::EguiSet::ProcessInput)
                     .before(bevy_egui::EguiSet::BeginFrame),
             )
             .add_systems(
                 Update,
                 (
-                    // Collect input and run world simulation
-                    get_bones_input.pipe(step_bones_game),
+                    // Run world simulation
+                    step_bones_game,
                     // Synchronize bones render components with the Bevy world.
                     (
                         sync_egui_settings,
@@ -548,15 +549,22 @@ fn get_bones_input(
     )
 }
 
-/// System to step the bones simulation.
-fn step_bones_game(
+fn insert_bones_input(
     In((mouse_inputs, keyboard_inputs, gamepad_inputs)): In<(
         bones::MouseInputs,
         bones::KeyboardInputs,
         bones::GamepadInputs,
     )>,
-    world: &mut World,
+    mut data: ResMut<BonesData>,
 ) {
+    // Add the game inputs
+    data.game.insert_shared_resource(mouse_inputs);
+    data.game.insert_shared_resource(keyboard_inputs);
+    data.game.insert_shared_resource(gamepad_inputs);
+}
+
+/// System to step the bones simulation.
+fn step_bones_game(world: &mut World) {
     let mut data = world.remove_resource::<BonesData>().unwrap();
     let mut bones_image_ids = world.remove_resource::<BonesImageIds>().unwrap();
     let mut bevy_egui_textures = world
@@ -595,11 +603,6 @@ fn step_bones_game(
             }
         })
     }
-
-    // Add the game inputs
-    game.insert_shared_resource(mouse_inputs);
-    game.insert_shared_resource(keyboard_inputs);
-    game.insert_shared_resource(gamepad_inputs);
 
     // Step the game simulation
     game.step(bevy_time.last_update().unwrap_or_else(Instant::now));
