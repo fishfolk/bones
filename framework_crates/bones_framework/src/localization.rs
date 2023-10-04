@@ -198,7 +198,9 @@ impl AssetLoader for FluentBundleLoader {
         let mut bundle = FluentBundle::new_concurrent(meta.locales);
 
         for resource_path in meta.resources {
-            let normalized = normalize_path_relative_to(&resource_path, self_path);
+            let normalized = resource_path
+                .absolutize_from(self_path.parent().unwrap())
+                .unwrap();
             let resource_handle = ctx.load_asset(&normalized)?.typed::<FluentResourceAsset>();
             let resource = ctx.asset_server.get(resource_handle);
             bundle.add_resource(resource.clone()).map_err(|e| {
@@ -226,7 +228,9 @@ impl AssetLoader for LocalizationLoader {
         let mut bundles = Vec::new();
 
         for bundle_path in meta.locales {
-            let normalized = normalize_path_relative_to(&bundle_path, self_path);
+            let normalized = bundle_path
+                .absolutize_from(self_path.parent().unwrap())
+                .unwrap();
             let bundle_handle = ctx.load_asset(&normalized)?.typed::<FluentBundleAsset>();
             let bundle = ctx.asset_server.get(bundle_handle);
             bundles.push(bundle.clone());

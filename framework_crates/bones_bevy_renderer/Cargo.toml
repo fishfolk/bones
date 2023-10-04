@@ -21,8 +21,8 @@ bevy_egui           = { git = "https://github.com/zicklag/bevy_egui", branch = "
 glam                = { version = "0.24", features = ["serde"] }
 bevy_prototype_lyon = "0.9"
 serde_yaml          = "0.9"
-serde = "1.0.188"
-anyhow    = "1.0"
+serde               = "1.0.188"
+anyhow              = "1.0"
 
 [dependencies.bevy]
 default-features = false

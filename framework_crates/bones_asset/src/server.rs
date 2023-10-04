@@ -307,7 +307,7 @@ impl AssetServer {
         ))?;
 
         let loc = AssetLoc {
-            path: normalize_path(loc.path),
+            path: loc.path.absolutize_from("/").unwrap().into_owned(),
             pack: loc.pack.map(|x| x.to_owned()),
         };
 
@@ -681,11 +681,13 @@ mod metadata {
                 .is_some()
             {
                 let relative_path = PathBuf::from(String::deserialize(deserializer)?);
-                let path = normalize_path_relative_to(&relative_path, self.ctx.loc.path);
+                let path = relative_path
+                    .absolutize_from(self.ctx.loc.path.parent().unwrap())
+                    .unwrap();
                 let handle = self
                     .ctx
                     .server
-                    .load_asset((path.as_path(), self.ctx.loc.pack).into())
+                    .load_asset((&*path, self.ctx.loc.pack).into())
                     .map_err(|e| D::Error::custom(e.to_string()))?;
                 self.ctx
                     .dependencies
