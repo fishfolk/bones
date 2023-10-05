@@ -1076,6 +1076,8 @@
 <a href="#1076" id="1076">1076</a>
 <a href="#1077" id="1077">1077</a>
 <a href="#1078" id="1078">1078</a>
+<a href="#1079" id="1079">1079</a>
+<a href="#1080" id="1080">1080</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::path::{Path, PathBuf};
 
 <span class="kw">use </span>anyhow::Context;
@@ -1385,7 +1387,7 @@
         ))<span class="question-mark">?</span>;
 
         <span class="kw">let </span>loc = AssetLoc {
-            path: normalize_path(loc.path),
+            path: loc.path.absolutize_from(<span class="string">&quot;/&quot;</span>).unwrap().into_owned(),
             pack: loc.pack.map(|x| x.to_owned()),
         };
 
@@ -1759,11 +1761,13 @@
                 .is_some()
             {
                 <span class="kw">let </span>relative_path = PathBuf::from(String::deserialize(deserializer)<span class="question-mark">?</span>);
-                <span class="kw">let </span>path = normalize_path_relative_to(<span class="kw-2">&amp;</span>relative_path, <span class="self">self</span>.ctx.loc.path);
+                <span class="kw">let </span>path = relative_path
+                    .absolutize_from(<span class="self">self</span>.ctx.loc.path.parent().unwrap())
+                    .unwrap();
                 <span class="kw">let </span>handle = <span class="self">self
                     </span>.ctx
                     .server
-                    .load_asset((path.as_path(), <span class="self">self</span>.ctx.loc.pack).into())
+                    .load_asset((<span class="kw-2">&amp;*</span>path, <span class="self">self</span>.ctx.loc.pack).into())
                     .map_err(|e| D::Error::custom(e.to_string()))<span class="question-mark">?</span>;
                 <span class="self">self</span>.ctx
                     .dependencies

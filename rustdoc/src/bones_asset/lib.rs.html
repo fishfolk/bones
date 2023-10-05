@@ -151,9 +151,10 @@
 <span class="doccomment">/// Helper to export the same types in the crate root and in the prelude.
 </span><span class="macro">macro_rules! </span>pub_use {
     () =&gt; {
-        <span class="kw">pub use crate</span>::{asset::<span class="kw-2">*</span>, cid::<span class="kw-2">*</span>, handle::<span class="kw-2">*</span>, io::<span class="kw-2">*</span>, path::<span class="kw-2">*</span>, server::<span class="kw-2">*</span>};
+        <span class="kw">pub use crate</span>::{asset::<span class="kw-2">*</span>, cid::<span class="kw-2">*</span>, handle::<span class="kw-2">*</span>, io::<span class="kw-2">*</span>, server::<span class="kw-2">*</span>};
         <span class="kw">pub use </span>anyhow;
         <span class="kw">pub use </span>bones_schema::prelude::<span class="kw-2">*</span>;
+        <span class="kw">pub use </span>path_absolutize::Absolutize;
         <span class="kw">pub use </span>semver::Version;
     };
 }
@@ -170,7 +171,6 @@
 <span class="kw">mod </span>handle;
 <span class="kw">mod </span>io;
 <span class="kw">mod </span>parse;
-<span class="kw">mod </span>path;
 <span class="kw">mod </span>server;
 
 <span class="doccomment">/// An equivalent to [`Option&lt;T&gt;`] that has a stable memory layout and implements [`HasSchema`].
