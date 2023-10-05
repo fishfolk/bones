@@ -91,7 +91,9 @@ egui       = { version = "0.23", optional = true }
 ttf-parser = { version = "0.19.1", default-features = false, optional = true }
 
 # Audio
-kira = { git = "https://github.com/zicklag/kira.git", branch = "feat/sync", features = ["cpal"], default-features = false, optional = true }
+kira = { git = "https://github.com/zicklag/kira.git", branch = "feat/sync", features = [
+  "cpal",
+], default-features = false, optional = true }
 
 # Localization
 fluent-bundle  = { version = "0.15", optional = true }

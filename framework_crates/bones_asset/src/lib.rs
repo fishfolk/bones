@@ -10,9 +10,10 @@ use serde::{de::DeserializeSeed, Deserializer};
 /// Helper to export the same types in the crate root and in the prelude.
 macro_rules! pub_use {
     () => {
-        pub use crate::{asset::*, cid::*, handle::*, io::*, path::*, server::*};
+        pub use crate::{asset::*, cid::*, handle::*, io::*, server::*};
         pub use anyhow;
         pub use bones_schema::prelude::*;
+        pub use path_absolutize::Absolutize;
         pub use semver::Version;
     };
 }
@@ -29,7 +30,6 @@ mod cid;
 mod handle;
 mod io;
 mod parse;
-mod path;
 mod server;
 
 /// An equivalent to [`Option<T>`] that has a stable memory layout and implements [`HasSchema`].
