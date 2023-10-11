@@ -1270,9 +1270,6 @@
 <a href="#1270" id="1270">1270</a>
 <a href="#1271" id="1271">1271</a>
 <a href="#1272" id="1272">1272</a>
-<a href="#1273" id="1273">1273</a>
-<a href="#1274" id="1274">1274</a>
-<a href="#1275" id="1275">1275</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -2158,11 +2155,8 @@
                     </span>.ctx
                     .server
                     .load_asset((<span class="kw-2">&amp;*</span>path, <span class="self">self</span>.ctx.loc.pack).into());
-                <span class="comment">// TODO: update dependencies when they have been loaded somehow.
-                // self.ctx
-                //     .dependencies
-                //     .push(*self.ctx.server.store.asset_ids.get(&amp;handle).unwrap());
-                </span><span class="kw-2">*</span><span class="self">self
+                <span class="self">self</span>.ctx.dependencies.push(handle);
+                <span class="kw-2">*</span><span class="self">self
                     </span>.ptr
                     .try_cast_mut()
                     .map_err(|e| D::Error::custom(e.to_string()))<span class="question-mark">? </span>= handle;
