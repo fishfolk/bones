@@ -29,8 +29,8 @@ impl BorderedFrame {
 
     /// Set the padding. This will be applied on the inside of the border.
     #[must_use = "You must call .show() to render the frame"]
-    pub fn padding(mut self, margin: egui::style::Margin) -> Self {
-        self.padding = margin;
+    pub fn padding(mut self, margin: impl Into<egui::style::Margin>) -> Self {
+        self.padding = margin.into();
 
         self
     }

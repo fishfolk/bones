@@ -53,7 +53,7 @@ impl<'a> BorderedButton<'a> {
         .border(&button_theme.borders.default)
         .on_click_border(Some(&button_theme.borders.clicked))
         .on_focus_border(Some(&button_theme.borders.focused))
-        .padding(button_theme.padding.into())
+        .padding(button_theme.padding)
     }
 
     /// Set whether or not the button focuses itself automatically when it is hovered over.
@@ -78,16 +78,16 @@ impl<'a> BorderedButton<'a> {
 
     /// Set the margin. This will be applied on the outside of the border.
     #[must_use = "You must call .show() to render the button"]
-    pub fn margin(mut self, margin: egui::style::Margin) -> Self {
-        self.margin = margin;
+    pub fn margin(mut self, margin: impl Into<egui::style::Margin>) -> Self {
+        self.margin = margin.into();
 
         self
     }
 
     /// Set the padding. This will be applied on the inside of the border.
     #[must_use = "You must call .show() to render the button"]
-    pub fn padding(mut self, padding: egui::style::Margin) -> Self {
-        self.padding = padding;
+    pub fn padding(mut self, padding: impl Into<egui::style::Margin>) -> Self {
+        self.padding = padding.into();
 
         self
     }
