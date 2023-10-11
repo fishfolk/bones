@@ -126,7 +126,7 @@ pub struct In<T>(pub T);
 
 /// [`SystemParam`] for getting read access to a resource.
 ///
-/// Use [`Res`] if you want to automatically initialize the resource.
+/// Use [`ResInit`] if you want to automatically initialize the resource.
 pub struct Res<'a, T: HasSchema>(Ref<'a, T>);
 impl<'a, T: HasSchema> std::ops::Deref for Res<'a, T> {
     type Target = T;
@@ -203,6 +203,21 @@ impl<'a, T: HasSchema> SystemParam for Res<'a, T> {
     }
 }
 
+impl<'a, T: HasSchema> SystemParam for Option<Res<'a, T>> {
+    type State = Option<AtomicResource<T>>;
+    type Param<'p> = Option<Res<'p, T>>;
+
+    fn initialize(_world: &mut World) {}
+
+    fn get_state(world: &World) -> Self::State {
+        world.resources.get_cell::<T>()
+    }
+
+    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
+        state.as_ref().map(|state| Res(state.borrow()))
+    }
+}
+
 impl<'a, T: HasSchema + FromWorld> SystemParam for ResInit<'a, T> {
     type State = AtomicResource<T>;
     type Param<'p> = ResInit<'p, T>;
@@ -242,6 +257,21 @@ impl<'a, T: HasSchema> SystemParam for ResMut<'a, T> {
 
     fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
         ResMut(state.borrow_mut())
+    }
+}
+
+impl<'a, T: HasSchema> SystemParam for Option<ResMut<'a, T>> {
+    type State = Option<AtomicResource<T>>;
+    type Param<'p> = Option<ResMut<'p, T>>;
+
+    fn initialize(_world: &mut World) {}
+
+    fn get_state(world: &World) -> Self::State {
+        world.resources.get_cell::<T>()
+    }
+
+    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
+        state.as_mut().map(|state| ResMut(state.borrow_mut()))
     }
 }
 
@@ -475,6 +505,26 @@ mod tests {
 
     fn sys(_var1: Res<u32>) {}
     fn send<T: Send>(_t: T) {}
+
+    #[test]
+    fn optional_resource() {
+        fn access_resource(
+            a: Option<Res<u8>>,
+            b: Option<Res<u16>>,
+            c: Option<ResMut<u32>>,
+            d: Option<ResMut<u64>>,
+        ) {
+            assert!(a.as_deref() == None);
+            assert!(b.as_deref() == Some(&1));
+            assert!(c.as_deref() == None);
+            assert!(d.as_deref() == Some(&mut 2));
+        }
+
+        let mut world = World::new();
+        world.insert_resource(1u16);
+        world.insert_resource(2u64);
+        world.run_system(access_resource, ());
+    }
 
     #[test]
     fn in_and_out() {
