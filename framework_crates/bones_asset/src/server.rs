@@ -883,10 +883,7 @@ mod metadata {
                     .ctx
                     .server
                     .load_asset((&*path, self.ctx.loc.pack).into());
-                // TODO: update dependencies when they have been loaded somehow.
-                // self.ctx
-                //     .dependencies
-                //     .push(*self.ctx.server.store.asset_ids.get(&handle).unwrap());
+                self.ctx.dependencies.push(handle);
                 *self
                     .ptr
                     .try_cast_mut()
