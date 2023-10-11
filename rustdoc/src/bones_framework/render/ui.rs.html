@@ -245,6 +245,12 @@
 <a href="#245" id="245">245</a>
 <a href="#246" id="246">246</a>
 <a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! UI resources &amp; components.
 
 </span><span class="kw">use </span>std::sync::Arc;
@@ -404,29 +410,35 @@
 <span class="doccomment">/// The [`Font`] asset loader.
 </span><span class="kw">pub struct </span>FontLoader;
 <span class="kw">impl </span>AssetLoader <span class="kw">for </span>FontLoader {
-    <span class="kw">fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>, _ctx: AssetLoadCtx, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;SchemaBox&gt; {
-        <span class="kw">let </span>(family_name, monospace) = {
-            <span class="kw">let </span>face = ttf_parser::Face::parse(bytes, <span class="number">0</span>)<span class="question-mark">?</span>;
-            (
-                face.names()
-                    .into_iter()
-                    .filter(|x| x.name_id == ttf_parser::name_id::FAMILY)
-                    .filter_map(|x| x.to_string())
-                    .next()
-                    .ok_or_else(|| {
-                        <span class="macro">anyhow::format_err!</span>(<span class="string">&quot;Could not read font family from font file&quot;</span>)
-                    })<span class="question-mark">?
-                    </span>.into(),
-                face.is_monospaced(),
-            )
-        };
-        <span class="kw">let </span>data = egui::FontData::from_owned(bytes.to_vec());
+    <span class="kw">fn </span>load(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        _ctx: AssetLoadCtx,
+        bytes: <span class="kw-2">&amp;</span>[u8],
+    ) -&gt; futures::future::Boxed&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
+        <span class="kw">let </span>bytes = bytes.to_vec();
+        Box::pin(<span class="kw">async move </span>{
+            <span class="kw">let </span>(family_name, monospace) = {
+                <span class="kw">let </span>face = ttf_parser::Face::parse(<span class="kw-2">&amp;</span>bytes, <span class="number">0</span>)<span class="question-mark">?</span>;
+                (
+                    face.names()
+                        .into_iter()
+                        .filter(|x| x.name_id == ttf_parser::name_id::FAMILY)
+                        .find_map(|x| x.to_string())
+                        .ok_or_else(|| {
+                            <span class="macro">anyhow::format_err!</span>(<span class="string">&quot;Could not read font family from font file&quot;</span>)
+                        })<span class="question-mark">?
+                        </span>.into(),
+                    face.is_monospaced(),
+                )
+            };
+            <span class="kw">let </span>data = egui::FontData::from_owned(bytes.to_vec());
 
-        <span class="prelude-val">Ok</span>(SchemaBox::new(Font {
-            family_name,
-            data,
-            monospace,
-        }))
+            <span class="prelude-val">Ok</span>(SchemaBox::new(Font {
+                family_name,
+                data,
+                monospace,
+            }))
+        })
     }
 }
 

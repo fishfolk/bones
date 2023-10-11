@@ -23,7 +23,6 @@
 <a href="#23" id="23">23</a>
 <a href="#24" id="24">24</a>
 <a href="#25" id="25">25</a>
-<a href="#26" id="26">26</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bones_utils::HashMap;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -34,7 +33,6 @@
 
 <span class="kw">impl </span>SchemaTypeMap {
     <span class="doccomment">/// Get data out of the store.
-    </span><span class="attr">#[track_caller]
     </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; {
         <span class="kw">let </span>schema = T::schema();
         <span class="self">self</span>.<span class="number">0</span>.get(<span class="kw-2">&amp;</span>schema.id()).map(|x| x.cast_ref())

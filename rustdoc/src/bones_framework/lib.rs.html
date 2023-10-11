@@ -84,6 +84,8 @@
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The bones framework for game development.
 //!
 </span><span class="attr">#![cfg_attr(feature = <span class="string">&quot;document-features&quot;</span>, doc = <span class="string">&quot;## Features&quot;</span>)]
@@ -155,17 +157,19 @@
     <span class="kw">fn </span>register_default_assets(<span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
-        <span class="self">self</span>.register_asset::&lt;Image&gt;().register_asset::&lt;Atlas&gt;();
+        <span class="comment">// Register asset schemas
+        </span>Image::schema();
+        Atlas::schema();
 
         <span class="attr">#[cfg(feature = <span class="string">&quot;localization&quot;</span>)]
         </span>{
-            <span class="self">self</span>.register_asset::&lt;LocalizationAsset&gt;()
-                .register_asset::&lt;FluentBundleAsset&gt;()
-                .register_asset::&lt;FluentResourceAsset&gt;();
+            LocalizationAsset::schema();
+            FluentBundleAsset::schema();
+            FluentResourceAsset::schema();
         }
 
         <span class="attr">#[cfg(feature = <span class="string">&quot;ui&quot;</span>)]
-        </span><span class="self">self</span>.register_asset::&lt;Font&gt;();
+        </span>Font::schema();
 
         <span class="self">self
     </span>}

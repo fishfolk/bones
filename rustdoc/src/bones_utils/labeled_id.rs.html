@@ -190,9 +190,13 @@
 <a href="#190" id="190">190</a>
 <a href="#191" id="191">191</a>
 <a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::str::FromStr;
 
 <span class="kw">use </span>ulid::Ulid;
+
+<span class="kw">use </span><span class="kw">crate</span>::UlidExt;
 
 <span class="doccomment">/// A [`Ulid`] with a human-readable ascii prefix.
 ///
@@ -237,7 +241,7 @@
 <span class="kw">impl </span>LabeledId {
     <span class="doccomment">/// Create a new labeled ID with the given prefix.
     </span><span class="kw">pub fn </span>new(prefix: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, LabeledIdCreateError&gt; {
-        <span class="self">Self</span>::new_with_ulid(prefix, Ulid::new())
+        <span class="self">Self</span>::new_with_ulid(prefix, Ulid::create())
     }
 
     <span class="doccomment">/// Create a new labeled ID with the given prefix and ULID.

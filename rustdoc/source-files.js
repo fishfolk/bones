@@ -8,7 +8,7 @@ var sourcesIndex = JSON.parse('{\
 "bones_matchmaker_proto":["",[],["lib.rs"]],\
 "bones_schema":["",[["alloc",[],["layout.rs","map.rs","resizable.rs","type_set.rs","vec.rs"]]],["alloc.rs","lib.rs","ptr.rs","raw_fns.rs","registry.rs","schema.rs","ser_de.rs","std_impls.rs"]],\
 "bones_schema_macros":["",[],["lib.rs"]],\
-"bones_utils":["",[],["collections.rs","default.rs","labeled_id.rs","lib.rs","names.rs","ptr.rs"]],\
+"bones_utils":["",[],["collections.rs","default.rs","labeled_id.rs","lib.rs","names.rs","ptr.rs","ulid.rs"]],\
 "bones_utils_macros":["",[],["lib.rs"]],\
 "demo_assets_minimal":["",[],["main.rs"]],\
 "demo_features":["",[],["main.rs"]],\

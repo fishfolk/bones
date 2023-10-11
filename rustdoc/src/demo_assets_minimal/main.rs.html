@@ -53,6 +53,9 @@
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bones_bevy_renderer::BonesBevyRenderer;
 <span class="kw">use </span>bones_framework::prelude::<span class="kw-2">*</span>;
 
@@ -79,9 +82,12 @@
 
     game
         <span class="comment">// We initialize the asset server.
-        </span>.init_shared_resource::&lt;AssetServer&gt;()
-        <span class="comment">// We must register all of our asset types before they can be loaded.
-        </span>.register_asset::&lt;GameMeta&gt;();
+        </span>.init_shared_resource::&lt;AssetServer&gt;();
+
+    <span class="comment">// We must register all of our asset types before they can be loaded by the asset server. This
+    // may be done by calling schema() on each of our types, to register them with the schema
+    // registry.
+    </span>GameMeta::schema();
 
     <span class="comment">// Create a new session for the game menu. Each session is it&#39;s own bones world with it&#39;s own
     // plugins, systems, and entities.

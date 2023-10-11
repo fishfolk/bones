@@ -648,11 +648,12 @@
     </span>game.install_plugin(DefaultGamePlugin)
         .init_shared_resource::&lt;AssetServer&gt;()
         <span class="comment">// Register the default asset types
-        </span>.register_default_assets()
-        <span class="comment">// Register our custom asset types
-        </span>.register_asset::&lt;GameMeta&gt;()
-        .register_asset::&lt;AtlasDemoMeta&gt;()
-        .register_asset::&lt;TilemapDemoMeta&gt;();
+        </span>.register_default_assets();
+
+    <span class="comment">// Register our custom asset types
+    </span>GameMeta::schema();
+    AtlasDemoMeta::schema();
+    TilemapDemoMeta::schema();
 
     <span class="comment">// Create our menu session
     </span>game.sessions.create(<span class="string">&quot;menu&quot;</span>).install_plugin(menu_plugin);
@@ -974,7 +975,7 @@
                 <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;play-sound&quot;</span>)).clicked() {
                     audio
                         .borrow_mut()
-                        .play(assets.get(meta.audio_demo))
+                        .play(<span class="kw-2">&amp;*</span>assets.get(meta.audio_demo))
                         .unwrap();
                 }
             })
@@ -1050,17 +1051,16 @@
     <span class="kw-2">mut </span>session_options: ResMut&lt;SessionOptions&gt;,
     localization: Localization&lt;GameMeta&gt;,
 ) {
-    egui::CentralPanel::default()
+    egui::TopBottomPanel::bottom(<span class="string">&quot;back-to-menu&quot;</span>)
         .frame(egui::Frame::none())
+        .show_separator_line(<span class="bool-val">false</span>)
         .show(<span class="kw-2">&amp;</span>ctx, |ui| {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
-                ui.push_id(<span class="string">&quot;back-to-menu&quot;</span>, |ui| {
-                    ui.add_space(<span class="number">20.0</span>);
-                    <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;back-to-menu&quot;</span>)).clicked() {
-                        session_options.delete = <span class="bool-val">true</span>;
-                        sessions.create(<span class="string">&quot;menu&quot;</span>).install_plugin(menu_plugin);
-                    }
-                });
+                ui.add_space(<span class="number">20.0</span>);
+                <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;back-to-menu&quot;</span>)).clicked() {
+                    session_options.delete = <span class="bool-val">true</span>;
+                    sessions.create(<span class="string">&quot;menu&quot;</span>).install_plugin(menu_plugin);
+                }
             });
         });
 }

@@ -143,52 +143,15 @@
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Global schema registry.
 
 </span><span class="kw">use </span>std::{
     alloc::Layout,
-    sync::{
-        atomic::{AtomicU32, Ordering::SeqCst},
-        OnceLock,
-    },
+    sync::atomic::{AtomicU32, Ordering::SeqCst},
 };
 
-<span class="kw">use </span>bones_utils::{parking_lot::RwLock, <span class="kw-2">*</span>};
+<span class="kw">use </span>append_only_vec::AppendOnlyVec;
+<span class="kw">use </span>bones_utils::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
@@ -196,13 +159,6 @@
 </span><span class="attr">#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
 </span><span class="kw">pub struct </span>SchemaId {
     id: u32,
-}
-
-<span class="kw">impl </span>SchemaId {
-    <span class="doccomment">/// Get the schema associated to the ID.
-    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
-        SCHEMA_REGISTRY.get(<span class="kw-2">*</span><span class="self">self</span>)
-    }
 }
 
 <span class="comment">// Note: The schema type is here in the registry module to prevent modification of registered
@@ -284,21 +240,14 @@
 /// [`&amp;&#39;static Schema`][Schema].
 </span><span class="kw">pub struct </span>SchemaRegistry {
     next_id: AtomicU32,
-    state: OnceLock&lt;RwLock&lt;RegistryState&gt;&gt;,
-}
-
-<span class="doccomment">/// The internal state o the [`SchemaRegistry`].
-</span><span class="attr">#[derive(Default)]
-</span><span class="kw">pub struct </span>RegistryState {
     <span class="doccomment">/// The registered schemas.
-    </span><span class="kw">pub </span>schemas: HashMap&lt;SchemaId, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt;,
+    </span><span class="kw">pub </span>schemas: AppendOnlyVec&lt;Schema&gt;,
 }
 
 <span class="kw">impl </span>SchemaRegistry {
     <span class="doccomment">/// Register a schema with the registry.
-    </span><span class="kw">pub fn </span>register(<span class="kw-2">&amp;</span><span class="self">self</span>, schema_data: SchemaData) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
-        <span class="kw">let </span>state = <span class="self">self</span>.state.get_or_init(default);
-
+    </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>register(<span class="kw-2">&amp;</span><span class="self">self</span>, schema_data: SchemaData) -&gt; <span class="kw-2">&amp;</span>Schema {
         <span class="comment">// Allocate a new schema ID
         </span><span class="kw">let </span>id = SchemaId {
             id: <span class="self">self</span>.next_id.fetch_add(<span class="number">1</span>, SeqCst),
@@ -319,43 +268,24 @@
         <span class="kw">let </span>field_offsets = Box::leak(field_offsets);
 
         <span class="comment">// Leak the schema to get a static reference
-        </span><span class="kw">let </span>schema = Box::leak(Box::new(Schema {
+        </span><span class="kw">let </span>schema = Schema {
             id,
             data: schema_data,
             layout,
             field_offsets,
-        }));
+        };
 
-        <span class="comment">// Inser the schema into the registry.
-        </span><span class="kw">let </span>entry = state.write().schemas.insert(id, schema);
-        <span class="macro">debug_assert!</span>(entry.is_none(), <span class="string">&quot;SchemaId already used!&quot;</span>);
+        <span class="comment">// Insert the schema into the registry.
+        </span><span class="kw">let </span>len = <span class="self">self</span>.schemas.len();
+        <span class="self">self</span>.schemas.push(schema);
 
-        schema
-    }
-
-    <span class="doccomment">/// Get a `&#39;static` reference to the schema associated to the given schema ID.
-    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, id: SchemaId) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
-        <span class="kw">let </span>schemas = <span class="self">self</span>.state.get_or_init(default);
-
-        schemas
-            .read()
-            .schemas
-            .get(<span class="kw-2">&amp;</span>id)
-            .expect(<span class="string">&quot;Reflection bug, schema Id created without associated registration&quot;</span>)
-    }
-
-    <span class="doccomment">/// Borrow the registry state for reading.
-    ///
-    /// &gt; **Note:** This locks the registry for reading, preventing access by things that may need
-    /// &gt; to register schemas, so it is best to hold the lock for as short as possible.
-    </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bones_utils::parking_lot::RwLockReadGuard&lt;RegistryState&gt; {
-        <span class="self">self</span>.state.get_or_init(default).read()
+        <span class="kw-2">&amp;</span><span class="self">self</span>.schemas[len]
     }
 }
 
 <span class="doccomment">/// Global [`SchemaRegistry`] used to register [`SchemaData`]s and produce [`Schema`]s.
 </span><span class="kw">pub static </span>SCHEMA_REGISTRY: SchemaRegistry = SchemaRegistry {
     next_id: AtomicU32::new(<span class="number">0</span>),
-    state: OnceLock::new(),
+    schemas: AppendOnlyVec::new(),
 };
 </code></pre></div></section></main></body></html>

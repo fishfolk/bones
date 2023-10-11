@@ -83,6 +83,15 @@
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Sprite rendering components.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -100,8 +109,17 @@
 
 <span class="kw">struct </span>ImageAssetLoader;
 <span class="kw">impl </span>AssetLoader <span class="kw">for </span>ImageAssetLoader {
-    <span class="kw">fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>, _ctx: AssetLoadCtx, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;SchemaBox&gt; {
-        <span class="prelude-val">Ok</span>(SchemaBox::new(Image::Data(image::load_from_memory(bytes)<span class="question-mark">?</span>)))
+    <span class="kw">fn </span>load(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        _ctx: AssetLoadCtx,
+        bytes: <span class="kw-2">&amp;</span>[u8],
+    ) -&gt; futures::future::Boxed&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
+        <span class="kw">let </span>bytes = bytes.to_vec();
+        Box::pin(<span class="kw">async move </span>{
+            <span class="prelude-val">Ok</span>(SchemaBox::new(Image::Data(image::load_from_memory(
+                <span class="kw-2">&amp;</span>bytes,
+            )<span class="question-mark">?</span>)))
+        })
     }
 }
 
