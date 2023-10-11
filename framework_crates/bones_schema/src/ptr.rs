@@ -954,7 +954,8 @@ impl<'a> std::fmt::Display for FieldIdx<'a> {
 pub struct SchemaMismatchError;
 impl SchemaMismatchError {
     /// The display error message for this error type.
-    pub const MSG: &str = "Invalid cast: the schemas of the casted types are not compatible.";
+    pub const MSG: &'static str =
+        "Invalid cast: the schemas of the casted types are not compatible.";
 }
 impl std::error::Error for SchemaMismatchError {}
 impl std::fmt::Display for SchemaMismatchError {

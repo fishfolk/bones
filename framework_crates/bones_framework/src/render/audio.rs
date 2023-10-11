@@ -12,9 +12,9 @@ use kira::{
 
 /// The game plugin for the audio system.
 pub fn game_plugin(game: &mut Game) {
+    AudioSource::schema();
     game.insert_shared_resource(AudioManager::default());
-    game.init_shared_resource::<AssetServer>()
-        .register_asset::<AudioSource>();
+    game.init_shared_resource::<AssetServer>();
 }
 
 /// The audio manager resource which can be used to play sounds.
@@ -47,8 +47,15 @@ impl SoundData for &AudioSource {
 /// The audio file asset loader.
 pub struct AudioLoader;
 impl AssetLoader for AudioLoader {
-    fn load(&self, _ctx: AssetLoadCtx, bytes: &[u8]) -> anyhow::Result<SchemaBox> {
-        let data = StaticSoundData::from_cursor(Cursor::new(bytes.to_vec()), default())?;
-        Ok(SchemaBox::new(AudioSource(data)))
+    fn load(
+        &self,
+        _ctx: AssetLoadCtx,
+        bytes: &[u8],
+    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+        let bytes = bytes.to_vec();
+        Box::pin(async move {
+            let data = StaticSoundData::from_cursor(Cursor::new(bytes), default())?;
+            Ok(SchemaBox::new(AudioSource(data)))
+        })
     }
 }

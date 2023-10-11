@@ -71,7 +71,7 @@ bones_schema = { version = "0.3", path = "../bones_schema", features = ["humanti
 # Other
 glam      = "0.24"
 thiserror = "1.0"
-instant   = "0.1"
+instant   = { version = "0.1", features = ["wasm-bindgen"] }
 hex       = "0.4"
 tracing   = "0.1"
 noise     = "0.8"

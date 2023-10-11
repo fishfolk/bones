@@ -83,6 +83,7 @@ impl LocalizationAsset {
     }
 }
 
+use dashmap::mapref::one::MappedRef;
 /// Borrow the localization field from the root asset.
 ///
 /// This parameter uses the schema implementation to find the field of the root asset that is a
@@ -90,7 +91,7 @@ impl LocalizationAsset {
 #[derive(Deref, DerefMut)]
 pub struct Localization<'a, T> {
     #[deref]
-    asset: Ref<'a, LocalizationAsset>,
+    asset: MappedRef<'a, Cid, LoadedAsset, LocalizationAsset>,
     _phantom: PhantomData<T>,
 }
 
@@ -100,10 +101,7 @@ pub struct Localization<'a, T> {
 pub struct RootLocalizationFieldIdx(OnceLock<usize>);
 
 impl<T: HasSchema> SystemParam for Localization<'_, T> {
-    type State = (
-        AtomicResource<AssetServer>,
-        AtomicResource<RootLocalizationFieldIdx>,
-    );
+    type State = (AssetServer, AtomicResource<RootLocalizationFieldIdx>);
     type Param<'s> = Localization<'s, T>;
 
     fn initialize(world: &mut World) {
@@ -111,7 +109,7 @@ impl<T: HasSchema> SystemParam for Localization<'_, T> {
     }
     fn get_state(world: &World) -> Self::State {
         (
-            world.resources.get_cell::<AssetServer>().unwrap(),
+            (*world.resources.get::<AssetServer>().unwrap()).clone(),
             world
                 .resources
                 .get_cell::<RootLocalizationFieldIdx>()
@@ -124,7 +122,6 @@ impl<T: HasSchema> SystemParam for Localization<'_, T> {
     ) -> Self::Param<'s> {
         const ERR: &str = "Could not find a `Handle<LocalizationAsset>` field on root asset, \
                            needed for `Localization` parameter to work";
-        let asset_server = asset_server.borrow();
         let field_idx = field_idx.borrow();
         let field_idx = field_idx.0.get_or_init(|| {
             let mut idx = None;
@@ -148,14 +145,13 @@ impl<T: HasSchema> SystemParam for Localization<'_, T> {
             idx.expect(ERR)
         });
 
-        let asset = Ref::map(asset_server, |asset_server| {
-            let root = asset_server.root::<T>().as_schema_ref();
-            let handle = root
-                .get_field(*field_idx)
-                .expect(ERR)
-                .cast::<Handle<LocalizationAsset>>();
-            asset_server.get(*handle)
-        });
+        let root = asset_server.root::<T>();
+        let root = root.as_schema_ref();
+        let handle = root
+            .get_field(*field_idx)
+            .expect(ERR)
+            .cast::<Handle<LocalizationAsset>>();
+        let asset = asset_server.get(*handle);
 
         Localization {
             asset,
@@ -166,104 +162,134 @@ impl<T: HasSchema> SystemParam for Localization<'_, T> {
 
 struct FluentResourceLoader;
 impl AssetLoader for FluentResourceLoader {
-    fn load(&self, _ctx: AssetLoadCtx, bytes: &[u8]) -> anyhow::Result<SchemaBox> {
-        let string =
-            String::from_utf8(bytes.to_vec()).context("Error loading fluent resource file.")?;
-        let res = FluentResource::try_new(string).map_err(|(_, errors)| {
-            let errors = errors
-                .into_iter()
-                .map(|e| e.to_string())
-                .collect::<Vec<_>>()
-                .join("\n");
+    fn load(
+        &self,
+        _ctx: AssetLoadCtx,
+        bytes: &[u8],
+    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+        let bytes = bytes.to_vec();
+        Box::pin(async move {
+            let string = String::from_utf8(bytes).context("Error loading fluent resource file.")?;
+            let res = FluentResource::try_new(string).map_err(|(_, errors)| {
+                let errors = errors
+                    .into_iter()
+                    .map(|e| e.to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n");
 
-            anyhow::format_err!("Error loading fluent resource file. \n{}", errors)
-        })?;
+                anyhow::format_err!("Error loading fluent resource file. \n{}", errors)
+            })?;
 
-        Ok(SchemaBox::new(FluentResourceAsset(Arc::new(res))))
+            Ok(SchemaBox::new(FluentResourceAsset(Arc::new(res))))
+        })
     }
 }
 
 struct FluentBundleLoader;
 impl AssetLoader for FluentBundleLoader {
-    fn load(&self, mut ctx: AssetLoadCtx, bytes: &[u8]) -> anyhow::Result<SchemaBox> {
-        let self_path = ctx.loc.path;
-        #[derive(serde::Serialize, serde::Deserialize)]
-        struct BundleMeta {
-            pub locales: Vec<LanguageIdentifier>,
-            pub resources: Vec<PathBuf>,
-        }
-        let meta: BundleMeta =
-            serde_yaml::from_slice(bytes).context("Could not parse locale YAML")?;
+    fn load(
+        &self,
+        mut ctx: AssetLoadCtx,
+        bytes: &[u8],
+    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+        let bytes = bytes.to_vec();
+        Box::pin(async move {
+            let self_path = ctx.loc.path.clone();
+            #[derive(serde::Serialize, serde::Deserialize)]
+            struct BundleMeta {
+                pub locales: Vec<LanguageIdentifier>,
+                pub resources: Vec<PathBuf>,
+            }
+            let meta: BundleMeta =
+                serde_yaml::from_slice(&bytes).context("Could not parse locale YAML")?;
 
-        let mut bundle = FluentBundle::new_concurrent(meta.locales);
+            let mut bundle = FluentBundle::new_concurrent(meta.locales);
 
-        for resource_path in meta.resources {
-            let normalized = resource_path
-                .absolutize_from(self_path.parent().unwrap())
-                .unwrap();
-            let resource_handle = ctx.load_asset(&normalized)?.typed::<FluentResourceAsset>();
-            let resource = ctx.asset_server.get(resource_handle);
-            bundle.add_resource(resource.clone()).map_err(|e| {
-                anyhow::format_err!(
+            for resource_path in meta.resources {
+                let normalized = resource_path
+                    .absolutize_from(self_path.parent().unwrap())
+                    .unwrap();
+                let resource_handle = ctx.load_asset(&normalized)?.typed::<FluentResourceAsset>();
+                let resource = loop {
+                    if let Some(resource) = ctx.asset_server.try_get(resource_handle) {
+                        break resource;
+                    }
+                    ctx.asset_server.load_progress.listen().await;
+                };
+                bundle.add_resource(resource.clone()).map_err(|e| {
+                    anyhow::format_err!(
                     "Error(s) adding resource `{normalized:?}` to bundle `{self_path:?}`: {e:?}"
                 )
-            })?;
-        }
+                })?;
+            }
 
-        Ok(SchemaBox::new(FluentBundleAsset(Arc::new(bundle))))
+            Ok(SchemaBox::new(FluentBundleAsset(Arc::new(bundle))))
+        })
     }
 }
 
 struct LocalizationLoader;
 impl AssetLoader for LocalizationLoader {
-    fn load(&self, mut ctx: AssetLoadCtx, bytes: &[u8]) -> anyhow::Result<SchemaBox> {
-        let self_path = ctx.loc.path;
-        #[derive(serde::Serialize, serde::Deserialize)]
-        struct LocalizationMeta {
-            pub locales: Vec<PathBuf>,
-        }
-        let meta: LocalizationMeta =
-            serde_yaml::from_slice(bytes).context("Could not parse locale YAML")?;
+    fn load(
+        &self,
+        mut ctx: AssetLoadCtx,
+        bytes: &[u8],
+    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+        let bytes = bytes.to_vec();
+        Box::pin(async move {
+            let self_path = ctx.loc.path.clone();
+            #[derive(serde::Serialize, serde::Deserialize)]
+            struct LocalizationMeta {
+                pub locales: Vec<PathBuf>,
+            }
+            let meta: LocalizationMeta =
+                serde_yaml::from_slice(&bytes).context("Could not parse locale YAML")?;
 
-        let mut bundles = Vec::new();
+            let mut bundles: Vec<FluentBundleAsset> = Vec::new();
 
-        for bundle_path in meta.locales {
-            let normalized = bundle_path
-                .absolutize_from(self_path.parent().unwrap())
-                .unwrap();
-            let bundle_handle = ctx.load_asset(&normalized)?.typed::<FluentBundleAsset>();
-            let bundle = ctx.asset_server.get(bundle_handle);
-            bundles.push(bundle.clone());
-        }
+            for bundle_path in meta.locales {
+                let normalized = bundle_path
+                    .absolutize_from(self_path.parent().unwrap())
+                    .unwrap();
+                let bundle_handle = ctx.load_asset(&normalized)?.typed::<FluentBundleAsset>();
+                let bundle = loop {
+                    if let Some(bundle) = ctx.asset_server.try_get(bundle_handle) {
+                        break bundle;
+                    }
+                    ctx.asset_server.load_progress.listen().await;
+                };
+                bundles.push(bundle.clone());
+            }
 
-        let available_locales = bundles
-            .iter()
-            .flat_map(|x| x.locales.iter())
-            .cloned()
-            .collect::<Vec<_>>();
+            let available_locales = bundles
+                .iter()
+                .flat_map(|x| x.locales.iter())
+                .cloned()
+                .collect::<Vec<_>>();
 
-        let en_us = LanguageIdentifier::from_str("en-US").unwrap();
-        let user_locale = sys_locale::get_locale()
-            .and_then(|x| x.parse::<LanguageIdentifier>().ok())
-            .unwrap_or(en_us.clone());
+            let en_us = LanguageIdentifier::from_str("en-US").unwrap();
+            let user_locale = sys_locale::get_locale()
+                .and_then(|x| x.parse::<LanguageIdentifier>().ok())
+                .unwrap_or(en_us.clone());
 
-        let selected_locale = fluent_langneg::negotiate_languages(
-            &[user_locale.clone()],
-            &available_locales,
-            Some(&en_us),
-            fluent_langneg::NegotiationStrategy::Filtering,
-        )[0];
+            let selected_locale = fluent_langneg::negotiate_languages(
+                &[user_locale.clone()],
+                &available_locales,
+                Some(&en_us),
+                fluent_langneg::NegotiationStrategy::Filtering,
+            )[0];
 
-        let selected_bundle = bundles
-            .iter()
-            .find(|bundle| bundle.locales.contains(selected_locale))
-            .ok_or_else(|| {
-                anyhow::format_err!("Could not find matching locale for {user_locale}")
-            })?;
+            let selected_bundle = bundles
+                .iter()
+                .find(|bundle| bundle.locales.contains(selected_locale))
+                .ok_or_else(|| {
+                    anyhow::format_err!("Could not find matching locale for {user_locale}")
+                })?;
 
-        Ok(SchemaBox::new(LocalizationAsset {
-            current_bundle: selected_bundle.clone(),
-            bundles: bundles.into_iter().collect(),
-        }))
+            Ok(SchemaBox::new(LocalizationAsset {
+                current_bundle: selected_bundle.clone(),
+                bundles: bundles.into_iter().collect(),
+            }))
+        })
     }
 }

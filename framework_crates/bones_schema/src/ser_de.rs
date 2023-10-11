@@ -550,7 +550,7 @@ impl<'de> serde::de::Visitor<'de> for StructSchemaVisitor {
 }
 
 /// Derivable schema [`type_data`][SchemaData::type_data] for types that implement
-/// [`Deserialize`][serde::Deserialize].
+/// [`Deserialize`].
 ///
 /// This allows you use serde to implement custom deserialization logic instead of the default one
 /// used for `#[repr(C)]` structs that implement [`HasSchema`].

@@ -18,13 +18,14 @@ use bevy::{
     prelude::*,
     render::{camera::ScalingMode, Extract, RenderApp},
     sprite::{extract_sprites, Anchor, ExtractedSprite, ExtractedSprites, SpriteSystem},
+    tasks::IoTaskPool,
     utils::{HashMap, Instant},
 };
 use bevy_egui::EguiContext;
 use glam::*;
 
 use bevy_prototype_lyon::prelude as lyon;
-use bones_framework::prelude::{self as bones, SchemaBox};
+use bones_framework::prelude::{self as bones, SchemaBox, SCHEMA_REGISTRY};
 use prelude::convert::{IntoBevy, IntoBones};
 use serde::{de::Visitor, Deserialize, Serialize};
 
@@ -88,13 +89,15 @@ impl BonesImageIds {
     /// Load all bones images into bevy.
     pub fn load_bones_images(
         &mut self,
-        bones_assets: &mut bones::AssetServer,
+        bones_assets: &bones::AssetServer,
         bones_egui_textures: &mut bones::EguiTextures,
         bevy_images: &mut Assets<Image>,
         bevy_egui_textures: &mut bevy_egui::EguiUserTextures,
     ) {
-        for (handle, cid) in bones_assets.store.asset_ids.iter() {
-            let asset = bones_assets.store.assets.get_mut(cid).unwrap();
+        for entry in bones_assets.store.asset_ids.iter() {
+            let handle = entry.key();
+            let cid = entry.value();
+            let mut asset = bones_assets.store.assets.get_mut(cid).unwrap();
             if let Ok(image) = asset.data.try_cast_mut::<bones::Image>() {
                 self.load_bones_image(
                     handle.typed(),
@@ -140,7 +143,8 @@ fn update_egui_fonts(ctx: &bevy_egui::egui::Context, bones_assets: &bones::Asset
     use bevy_egui::egui;
     let mut fonts = egui::FontDefinitions::default();
 
-    for asset in bones_assets.store.assets.values() {
+    for entry in bones_assets.store.assets.iter() {
+        let asset = entry.value();
         if let Ok(font) = asset.try_cast_ref::<bones::Font>() {
             let previous = fonts
                 .font_data
@@ -169,7 +173,7 @@ pub struct BonesData {
     /// The bones game.
     pub game: bones::Game,
     /// The bones asset server cell.
-    pub asset_server: Option<bones::AtomicResource<bones::AssetServer>>,
+    pub asset_server: Option<bones::AssetServer>,
     /// The bones egui texture resource.
     pub bones_egui_textures: bones::AtomicResource<bones::EguiTextures>,
 }
@@ -195,7 +199,15 @@ impl BonesBevyRenderer {
         let mut app = App::new();
 
         // Initialize Bevy plugins we use
-        let mut plugins = DefaultPlugins.build();
+        let mut plugins = DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    fit_canvas_to_parent: true,
+                    ..default()
+                }),
+                ..default()
+            })
+            .build();
         if self.pixel_art {
             plugins = plugins.set(ImagePlugin::default_nearest());
         }
@@ -211,57 +223,55 @@ impl BonesBevyRenderer {
             })
             .init_resource::<BonesImageIds>();
 
-        let mut bones_image_ids = BonesImageIds::default();
-        let mut bones_egui_textures = bones::EguiTextures::default();
         'asset_load: {
             let Some(mut asset_server) = self.game.shared_resource_mut::<bones::AssetServer>()
             else {
                 break 'asset_load;
             };
 
-            let world = app.world.cell();
-            let mut bevy_images = world.resource_mut::<Assets<Image>>();
-            let mut bevy_egui_textures = world.resource_mut::<bevy_egui::EguiUserTextures>();
-
+            // Configure the AssetIO implementation
             #[cfg(not(target_arch = "wasm32"))]
             {
-                // Configure the AssetIO
-                let io = bones::FileAssetIo::new(&self.asset_dir, &self.packs_dir, true);
+                let io = bones::FileAssetIo::new(&self.asset_dir, &self.packs_dir);
+                asset_server.set_io(io);
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                let io = bones::WebAssetIo::new("/assets/");
                 asset_server.set_io(io);
             }
 
-            // Load the game assets
-            asset_server
-                .load_assets()
-                .expect("Could not load game assets");
+            // Spawn the task to load game assets
+            let s = asset_server.clone();
+            IoTaskPool::get()
+                .spawn(async move {
+                    s.load_assets().await.unwrap();
+                })
+                .detach();
 
-            // Take all loaded image assets and conver them to external images that reference bevy handles
-            bones_image_ids.load_bones_images(
-                &mut asset_server,
-                &mut bones_egui_textures,
-                &mut bevy_images,
-                &mut bevy_egui_textures,
-            );
+            // Enable asset hot reload.
+            asset_server.watch_for_changes();
         }
 
         // Configure and load the persitent storage
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let mut storage = bones::Storage::with_backend(Box::new(StorageBackend::new(
-                &self.app_namespace.0,
-                &self.app_namespace.1,
-                &self.app_namespace.2,
-            )));
-            storage.load();
-            self.game.insert_shared_resource(storage);
-        }
+        let mut storage = bones::Storage::with_backend(Box::new(storage::StorageBackend::new(
+            &self.app_namespace.0,
+            &self.app_namespace.1,
+            &self.app_namespace.2,
+        )));
+        storage.load();
+        self.game.insert_shared_resource(storage);
 
-        self.game.insert_shared_resource(bones_egui_textures);
-        app.insert_resource(bones_image_ids);
+        self.game
+            .insert_shared_resource(bones::EguiTextures::default());
+        app.insert_resource(BonesImageIds::default());
 
         // Insert the bones data
         app.insert_resource(BonesData {
-            asset_server: self.game.shared_resource_cell::<bones::AssetServer>(),
+            asset_server: self
+                .game
+                .shared_resource::<bones::AssetServer>()
+                .map(|x| (*x).clone()),
             bones_egui_textures: self
                 .game
                 .shared_resource_cell::<bones::EguiTextures>()
@@ -270,30 +280,50 @@ impl BonesBevyRenderer {
         })
         .init_resource::<BonesGameEntity>();
 
+        let assets_are_loaded = |data: Res<BonesData>| {
+            data.asset_server
+                .as_ref()
+                .map(|x| x.load_progress.is_finished())
+                .unwrap_or(true)
+        };
+        let assets_not_loaded = |data: Res<BonesData>| {
+            data.asset_server
+                .as_ref()
+                .map(|x| !x.load_progress.is_finished())
+                .unwrap_or(true)
+        };
+
         // Add the world sync systems
-        app.add_systems(Startup, setup_egui)
-            .add_systems(
-                PreUpdate,
-                (get_bones_input.pipe(insert_bones_input), egui_input_hook)
-                    .chain()
-                    .after(bevy_egui::EguiSet::ProcessInput)
-                    .before(bevy_egui::EguiSet::BeginFrame),
+        app.add_systems(
+            PreUpdate,
+            (
+                setup_egui,
+                get_bones_input.pipe(insert_bones_input),
+                egui_input_hook,
             )
-            .add_systems(
-                Update,
+                .chain()
+                .run_if(assets_are_loaded)
+                .after(bevy_egui::EguiSet::ProcessInput)
+                .before(bevy_egui::EguiSet::BeginFrame),
+        )
+        .add_systems(Update, asset_load_status.run_if(assets_not_loaded))
+        .add_systems(
+            Update,
+            (
+                load_egui_textures,
+                // Run world simulation
+                step_bones_game,
+                // Synchronize bones render components with the Bevy world.
                 (
-                    // Run world simulation
-                    step_bones_game,
-                    // Synchronize bones render components with the Bevy world.
-                    (
-                        sync_egui_settings,
-                        sync_clear_color,
-                        sync_cameras,
-                        sync_bones_path2ds,
-                    ),
-                )
-                    .chain(),
-            );
+                    sync_egui_settings,
+                    sync_clear_color,
+                    sync_cameras,
+                    sync_bones_path2ds,
+                ),
+            )
+                .chain()
+                .run_if(assets_are_loaded),
+        );
 
         if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app.add_systems(
@@ -308,129 +338,229 @@ impl BonesBevyRenderer {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-struct StorageBackend {
-    storage_path: PathBuf,
-}
-#[cfg(not(target_arch = "wasm32"))]
-impl StorageBackend {
-    fn new(qualifier: &str, organization: &str, application: &str) -> Self {
-        let project_dirs = directories::ProjectDirs::from(qualifier, organization, application)
-            .expect("Identify system data dir path");
-        Self {
-            storage_path: project_dirs.data_dir().join("storage.yml"),
+mod storage {
+    use super::*;
+
+    #[cfg(target_arch = "wasm32")]
+    pub use wasm::StorageBackend;
+    #[cfg(target_arch = "wasm32")]
+    mod wasm {
+        use super::*;
+        pub struct StorageBackend {
+            storage_key: String,
+        }
+
+        impl StorageBackend {
+            pub fn new(qualifier: &str, organization: &str, application: &str) -> Self {
+                Self {
+                    storage_key: format!("{qualifier}.{organization}.{application}.storage"),
+                }
+            }
+        }
+
+        impl bones::StorageApi for StorageBackend {
+            fn save(&mut self, data: Vec<SchemaBox>) {
+                let mut buffer = Vec::new();
+                let mut serializer = serde_yaml::Serializer::new(&mut buffer);
+                LoadedStorage(data)
+                    .serialize(&mut serializer)
+                    .expect("Failed to serialize to storage file.");
+                let data = String::from_utf8(buffer).unwrap();
+                let window = web_sys::window().unwrap();
+                let storage = window.local_storage().unwrap().unwrap();
+                storage.set_item(&self.storage_key, &data).unwrap();
+            }
+
+            fn load(&mut self) -> Vec<SchemaBox> {
+                let window = web_sys::window().unwrap();
+                let storage = window.local_storage().unwrap().unwrap();
+                let Some(data) = storage.get_item(&self.storage_key).unwrap() else {
+                    return default();
+                };
+
+                let Ok(loaded) = serde_yaml::from_str::<LoadedStorage>(&data) else {
+                    return default();
+                };
+                loaded.0
+            }
         }
     }
-}
-#[cfg(not(target_arch = "wasm32"))]
-impl bones::StorageApi for StorageBackend {
-    fn save(&mut self, data: Vec<bones::SchemaBox>) {
-        let file = std::fs::OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .create(true)
-            .open(&self.storage_path)
-            .expect("Failed to open storage file");
-        let mut serializer = serde_yaml::Serializer::new(file);
-        LoadedStorage(data)
-            .serialize(&mut serializer)
-            .expect("Failed to serialize to storage file.");
-    }
 
-    fn load(&mut self) -> Vec<bones::SchemaBox> {
-        use anyhow::Context;
-        if self.storage_path.exists() {
-            let result: anyhow::Result<LoadedStorage> = (|| {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub use native::StorageBackend;
+    #[cfg(not(target_arch = "wasm32"))]
+    mod native {
+        use super::*;
+
+        pub struct StorageBackend {
+            storage_path: PathBuf,
+        }
+
+        impl StorageBackend {
+            pub fn new(qualifier: &str, organization: &str, application: &str) -> Self {
+                let project_dirs =
+                    directories::ProjectDirs::from(qualifier, organization, application)
+                        .expect("Identify system data dir path");
+                Self {
+                    storage_path: project_dirs.data_dir().join("storage.yml"),
+                }
+            }
+        }
+
+        impl bones::StorageApi for StorageBackend {
+            fn save(&mut self, data: Vec<bones::SchemaBox>) {
                 let file = std::fs::OpenOptions::new()
-                    .read(true)
+                    .write(true)
+                    .truncate(true)
+                    .create(true)
                     .open(&self.storage_path)
-                    .context("Failed to open storage file")?;
-                let loaded: LoadedStorage =
-                    serde_yaml::from_reader(file).context("Failed to deserialize storage file")?;
+                    .expect("Failed to open storage file");
+                let mut serializer = serde_yaml::Serializer::new(file);
+                LoadedStorage(data)
+                    .serialize(&mut serializer)
+                    .expect("Failed to serialize to storage file.");
+            }
 
-                anyhow::Result::Ok(loaded)
-            })();
-            match result {
-                Ok(loaded) => loaded.0,
-                Err(e) => {
-                    error!(
-                        "Error deserializing storage file, ignoring file, \
+            fn load(&mut self) -> Vec<bones::SchemaBox> {
+                use anyhow::Context;
+                if self.storage_path.exists() {
+                    let result: anyhow::Result<LoadedStorage> = (|| {
+                        let file = std::fs::OpenOptions::new()
+                            .read(true)
+                            .open(&self.storage_path)
+                            .context("Failed to open storage file")?;
+                        let loaded: LoadedStorage = serde_yaml::from_reader(file)
+                            .context("Failed to deserialize storage file")?;
+
+                        anyhow::Result::Ok(loaded)
+                    })();
+                    match result {
+                        Ok(loaded) => loaded.0,
+                        Err(e) => {
+                            error!(
+                                "Error deserializing storage file, ignoring file, \
                         data will be overwritten when saved: {e:?}"
-                    );
+                            );
+                            default()
+                        }
+                    }
+                } else {
+                    std::fs::create_dir_all(self.storage_path.parent().unwrap()).unwrap();
                     default()
                 }
             }
-        } else {
-            std::fs::create_dir_all(self.storage_path.parent().unwrap()).unwrap();
-            default()
         }
     }
-}
-struct LoadedStorage(Vec<SchemaBox>);
-impl Serialize for LoadedStorage {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let data: HashMap<String, bones::SchemaRef> = self
-            .0
-            .iter()
-            .map(|x| (x.schema().full_name.to_string(), x.as_ref()))
-            .collect();
 
-        use serde::ser::SerializeMap;
-        let mut map = serializer.serialize_map(Some(data.len()))?;
-
-        for (key, value) in data {
-            map.serialize_key(&key)?;
-            map.serialize_value(&bones::SchemaSerializer(value))?;
-        }
-
-        map.end()
-    }
-}
-impl<'de> Deserialize<'de> for LoadedStorage {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_map(LoadedStorageVisitor).map(Self)
-    }
-}
-struct LoadedStorageVisitor;
-impl<'de> Visitor<'de> for LoadedStorageVisitor {
-    type Value = Vec<SchemaBox>;
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(formatter, "Mapping of string type names to type data.")
-    }
-    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-    where
-        A: serde::de::MapAccess<'de>,
-    {
-        let mut data = Vec::new();
-        while let Some(type_name) = map.next_key::<String>()? {
-            let reg = bones::SCHEMA_REGISTRY.borrow();
-            let Some(schema) = reg
-                .schemas
+    struct LoadedStorage(Vec<SchemaBox>);
+    impl Serialize for LoadedStorage {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            let data: HashMap<String, bones::SchemaRef> = self
+                .0
                 .iter()
-                .map(|(_id, schema)| schema)
-                .find(|schema| schema.full_name.as_ref() == type_name)
-            else {
-                error!(
-                    "\n\nCannot find schema registration for `{}` while loading persisted \
+                .map(|x| (x.schema().full_name.to_string(), x.as_ref()))
+                .collect();
+
+            use serde::ser::SerializeMap;
+            let mut map = serializer.serialize_map(Some(data.len()))?;
+
+            for (key, value) in data {
+                map.serialize_key(&key)?;
+                map.serialize_value(&bones::SchemaSerializer(value))?;
+            }
+
+            map.end()
+        }
+    }
+    impl<'de> Deserialize<'de> for LoadedStorage {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_map(LoadedStorageVisitor).map(Self)
+        }
+    }
+    struct LoadedStorageVisitor;
+    impl<'de> Visitor<'de> for LoadedStorageVisitor {
+        type Value = Vec<SchemaBox>;
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(formatter, "Mapping of string type names to type data.")
+        }
+        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::MapAccess<'de>,
+        {
+            let mut data = Vec::new();
+            while let Some(type_name) = map.next_key::<String>()? {
+                let Some(schema) = SCHEMA_REGISTRY
+                    .schemas
+                    .iter()
+                    .find(|schema| schema.full_name.as_ref() == type_name)
+                else {
+                    error!(
+                        "\n\nCannot find schema registration for `{}` while loading persisted \
                     storage. This means you that you need to call \
                     `{}::schema()` to register your persisted storage type before \
                     creating the `BonesBevyRenderer` or that there is data from an old \
                     version of the app inside of the persistent storage file.\n\n",
-                    type_name, type_name,
-                );
-                continue;
-            };
+                        type_name, type_name,
+                    );
+                    continue;
+                };
 
-            data.push(map.next_value_seed(bones::SchemaDeserializer(schema))?);
+                data.push(map.next_value_seed(bones::SchemaDeserializer(schema))?);
+            }
+
+            Ok(data)
         }
+    }
+}
 
-        Ok(data)
+fn asset_load_status(data: Res<BonesData>, mut frame: Local<u32>) {
+    *frame = frame.wrapping_add(1);
+    if *frame % 30 != 0 {
+        return;
+    }
+    if let Some(asset_server) = &data.asset_server {
+        let to_load = asset_server.load_progress.to_load();
+        let loaded = asset_server.load_progress.loaded();
+        let downloaded = asset_server.load_progress.downloaded();
+        let errored = asset_server.load_progress.errored();
+        info!(?to_load, ?loaded, ?downloaded, ?errored, "Loading assets");
+    }
+}
+
+fn load_egui_textures(
+    mut has_initialized: Local<bool>,
+    data: ResMut<BonesData>,
+    mut bones_image_ids: ResMut<BonesImageIds>,
+    mut bevy_images: ResMut<Assets<Image>>,
+    mut bevy_egui_textures: ResMut<bevy_egui::EguiUserTextures>,
+) {
+    if !*has_initialized {
+        *has_initialized = true;
+    } else {
+        return;
+    }
+    if let Some(asset_server) = &data.asset_server {
+        let bones_egui_textures_cell = data
+            .game
+            .shared_resource_cell::<bones::EguiTextures>()
+            .unwrap();
+        // TODO: Avoid doing this every frame when there have been no assets loaded.
+        // We should should be able to use the asset load progress event listener to detect newly
+        // loaded assets that will need to be handled.
+        let mut bones_egui_textures = bones_egui_textures_cell.borrow_mut();
+        // Take all loaded image assets and conver them to external images that reference bevy handles
+        bones_image_ids.load_bones_images(
+            asset_server,
+            &mut bones_egui_textures,
+            &mut bevy_images,
+            &mut bevy_egui_textures,
+        );
     }
 }
 
@@ -449,7 +579,7 @@ fn setup_egui(world: &mut World) {
             .insert_shared_resource(bones::EguiCtx(ctx.clone()));
 
         if let Some(bones_assets) = &bones_data.asset_server {
-            update_egui_fonts(&ctx, &bones_assets.borrow());
+            update_egui_fonts(&ctx, bones_assets);
 
             // Insert the bones egui textures
             ctx.data_mut(|map| {
@@ -588,7 +718,7 @@ fn step_bones_game(world: &mut World) {
         asset_server.handle_asset_changes(|asset_server, handle| {
             let mut bones_egui_textures =
                 game.shared_resource_mut::<bones::EguiTextures>().unwrap();
-            let asset = asset_server.get_untyped_mut(handle).unwrap();
+            let mut asset = asset_server.get_untyped_mut(handle).unwrap();
 
             // TODO: hot reload changed fonts.
 
@@ -728,7 +858,6 @@ fn extract_bones_sprites(
     let Some(bones_assets) = &data.asset_server else {
         return;
     };
-    let bones_assets = bones_assets.borrow();
 
     for session_name in &game.sorted_session_keys {
         let session = game.sessions.get(*session_name).unwrap();
@@ -755,7 +884,7 @@ fn extract_bones_sprites(
             let mut z_offset = 0.0;
             for (_, (sprite, transform)) in entities.iter_with((&sprites, &transforms)) {
                 let sprite_image = bones_assets.get(sprite.image);
-                let image_id = if let bones::Image::External(id) = sprite_image {
+                let image_id = if let bones::Image::External(id) = &*sprite_image {
                     *id
                 } else {
                     panic!(
@@ -789,7 +918,7 @@ fn extract_bones_sprites(
             {
                 let atlas = bones_assets.get(atlas_sprite.atlas);
                 let atlas_image = bones_assets.get(atlas.image);
-                let image_id = if let bones::Image::External(id) = atlas_image {
+                let image_id = if let bones::Image::External(id) = &*atlas_image {
                     *id
                 } else {
                     panic!(
@@ -834,7 +963,6 @@ fn extract_bones_tilemaps(
     let Some(bones_assets) = &data.asset_server else {
         return;
     };
-    let bones_assets = bones_assets.borrow();
 
     for session_name in &game.sorted_session_keys {
         let session = game.sessions.get(*session_name).unwrap();
@@ -861,7 +989,7 @@ fn extract_bones_tilemaps(
         for (_, (tile_layer, transform)) in entities.iter_with((&tile_layers, &transforms)) {
             let atlas = bones_assets.get(tile_layer.atlas);
             let atlas_image = bones_assets.get(atlas.image);
-            let image_id = if let bones::Image::External(id) = atlas_image {
+            let image_id = if let bones::Image::External(id) = &*atlas_image {
                 *id
             } else {
                 panic!(

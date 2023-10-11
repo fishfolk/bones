@@ -1,13 +1,89 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use anyhow::Context;
+use append_only_vec::AppendOnlyVec;
+use async_channel::{Receiver, Sender};
+use bevy_tasks::IoTaskPool;
+use dashmap::{
+    mapref::one::{
+        MappedRef as MappedMapRef, MappedRefMut as MappedMapRefMut, Ref as MapRef,
+        RefMut as MapRefMut,
+    },
+    DashMap,
+};
 use once_cell::sync::Lazy;
 use semver::VersionReq;
 use serde::{de::DeserializeSeed, Deserialize};
 use ulid::Ulid;
 
 use crate::prelude::*;
-use bones_utils::*;
+use bones_utils::{
+    parking_lot::{MappedMutexGuard, MutexGuard},
+    *,
+};
+
+/// Struct responsible for loading assets into it's contained [`AssetStore`], using an [`AssetIo`]
+/// implementation.
+#[derive(HasSchema, Deref, DerefMut, Clone)]
+pub struct AssetServer {
+    #[deref]
+    /// The asset server inner state.
+    pub inner: Arc<AssetServerInner>,
+    /// The [`AssetIo`] implementation used to load assets.
+    pub io: Arc<dyn AssetIo>,
+    /// List of assets that have been changed and that we are waiting to re-load.
+    pub pending_asset_changes: Vec<UntypedHandle>,
+}
+
+/// The inner state of the asset server.
+pub struct AssetServerInner {
+    /// The version of the game. This is used to evaluate whether asset packs are compatible with
+    /// the game.
+    pub game_version: Version,
+    /// The asset store.
+    pub store: AssetStore,
+    /// Sender for asset changes, used by the [`AssetIo`] implementation or other tasks to trigger
+    /// hot reloads.
+    pub asset_change_send: Sender<ChangedAsset>,
+    /// Receiver for asset changes, used to implement hot reloads.
+    pub asset_change_recv: Receiver<ChangedAsset>,
+    /// The asset load progress.
+    pub load_progress: AssetLoadProgress,
+}
+
+/// An ID for an asset that has changed.
+pub enum ChangedAsset {
+    /// The location of an asset that has changed.
+    Loc(AssetLoc),
+    /// The [`Cid`] of an asset that has changed.
+    Handle(UntypedHandle),
+}
+
+impl Default for AssetServer {
+    fn default() -> Self {
+        Self {
+            inner: default(),
+            io: Arc::new(DummyIo::new([])),
+            pending_asset_changes: default(),
+        }
+    }
+}
+
+impl Default for AssetServerInner {
+    fn default() -> Self {
+        let (asset_change_send, asset_change_recv) = async_channel::bounded(10);
+        Self {
+            game_version: Version::new(0, 0, 0),
+            store: default(),
+            load_progress: default(),
+            asset_change_send,
+            asset_change_recv,
+        }
+    }
+}
 
 /// YAML format for the core asset pack's `pack.yaml` file.
 #[derive(Debug, Clone, Deserialize)]
@@ -79,46 +155,106 @@ impl AssetServer {
     /// Initialize a new [`AssetServer`].
     pub fn new<Io: AssetIo + 'static>(io: Io, version: Version) -> Self {
         Self {
-            io: Box::new(io),
-            game_version: version,
-            store: default(),
-            asset_types: default(),
-            incompabile_packs: default(),
-            asset_changes: default(),
+            inner: Arc::new(AssetServerInner {
+                game_version: version,
+                ..default()
+            }),
+            io: Arc::new(io),
+            pending_asset_changes: default(),
         }
     }
 
-    /// Register an asset type.
-    pub fn register_asset<T: HasSchema>(&mut self) -> &mut Self {
-        if T::schema().type_data.get::<AssetKind>().is_none() {
-            panic!(
-                "Type `{}` must have AssetType type data",
-                std::any::type_name::<T>()
-            );
+    /// Load the bytes of the asset at the given path, but return only the [`Cid`].
+    ///
+    /// The loaded bytes can be accessed from [`asset_server.store.asset_data`][AssetStore::asset_data]
+    /// using the [`Cid`].
+    ///
+    /// If `force` is false, the bytes will be loaded from cache if possible.
+    pub async fn load_asset_bytes(&self, loc: AssetLoc, force: bool) -> anyhow::Result<Cid> {
+        // Load asset data from cache if present
+        if !force {
+            let cid = self
+                .store
+                .path_handles
+                .get(&loc)
+                .and_then(|handle| self.store.asset_ids.get(&handle));
+            if let Some(cid) = cid {
+                return Ok(*cid);
+            }
         }
-        self.asset_types.push(T::schema());
 
-        self
+        // Load the data for the asset path
+        let data = self.io.load_file(loc.as_ref()).await?;
+
+        // Compute the Cid
+        let mut cid = Cid::default();
+        cid.update(&data);
+
+        // Insert the data into the cache
+        self.store.asset_data.insert(cid, data);
+
+        // Return the Cid
+        Ok(cid)
+    }
+
+    /// Tell the asset backend to watch for changes and trigger hot reloads for changed assets.
+    pub fn watch_for_changes(&self) {
+        self.io.watch(self.asset_change_send.clone());
     }
 
     /// Set the [`AssetIo`] implementation.
     ///
     /// This should almost always be called before calling [`load_assets()`][Self::load_assets].
     pub fn set_io<Io: AssetIo + 'static>(&mut self, io: Io) {
-        self.io = Box::new(io);
+        self.io = Arc::new(io);
     }
 
-    /// Load the assets.
+    /// Responds to any asset changes reported by the [`AssetIo`] implementation.
     ///
-    /// All of the assets are immediately loaded synchronously, blocking until load is complete.
-    pub fn load_assets(&mut self) -> anyhow::Result<()> {
-        let core_pack = self.load_pack(None)?;
-        let mut packs = HashMap::default();
+    /// This must be called or asset changes will be ignored. Additionally, the [`AssetIo`]
+    /// implementation must be able to detect asset changes or this will do nothing.
+    pub fn handle_asset_changes<F: FnMut(&mut AssetServer, UntypedHandle)>(
+        &mut self,
+        mut handle_change: F,
+    ) {
+        while let Ok(changed) = self.asset_change_recv.try_recv() {
+            match changed {
+                ChangedAsset::Loc(loc) => {
+                    let handle = self.load_asset_forced(loc.as_ref());
+                    self.pending_asset_changes.push(handle);
+                }
+                ChangedAsset::Handle(handle) => {
+                    let entry = self
+                        .store
+                        .path_handles
+                        .iter()
+                        .find(|entry| *entry.value() == handle)
+                        .unwrap();
+                    let loc = entry.key().to_owned();
+                    drop(entry);
+                    self.load_asset_forced(loc.as_ref());
+                    self.pending_asset_changes.push(handle);
+                }
+            }
+        }
 
-        // For every asset pack
-        for pack_dir in self.io.enumerate_packs()? {
+        if self.load_progress.is_finished() {
+            for handle in std::mem::take(&mut self.pending_asset_changes) {
+                handle_change(self, handle)
+            }
+        }
+    }
+
+    /// Load all assets. This is usually done in an async task.
+    pub async fn load_assets(&self) -> anyhow::Result<()> {
+        // Load the core asset pack
+        let core_pack = self.load_pack(None).await?;
+
+        // Load the user asset packs
+        let mut packs = HashMap::default();
+        for pack_dir in self.io.enumerate_packs().await? {
             // Load the asset pack
-            let pack_result = self.load_pack(Some(&pack_dir));
+            let pack_result = self.load_pack(Some(&pack_dir)).await;
             match pack_result {
                 // If the load was successful
                 Ok(pack) => {
@@ -134,7 +270,7 @@ impl AssetServer {
                     // Check for a compatibility error
                     Ok(e) => {
                         // Add it to the list of incompatible packs.
-                        self.incompabile_packs.insert(e.pack_dir, e.pack_meta);
+                        self.store.incompabile_packs.insert(e.pack_dir, e.pack_meta);
                     }
                     // If this is another kind of error, return the error
                     Err(e) => {
@@ -144,23 +280,31 @@ impl AssetServer {
             }
         }
 
-        self.store.packs = packs;
-        self.store.core_pack = Some(core_pack);
+        // Insert core pack into the asset server
+        *self.store.core_pack.lock() = Some(core_pack);
+        // Insert loaded packs into the asset server.
+        for (k, v) in packs.into_iter() {
+            self.store.packs.insert(k, v);
+        }
 
         Ok(())
     }
 
     /// Load the asset pack with the given folder name, or else the default pack if [`None`].
-    pub fn load_pack(&mut self, pack: Option<&str>) -> anyhow::Result<AssetPack> {
+    pub async fn load_pack(&self, pack: Option<&str>) -> anyhow::Result<AssetPack> {
         // Load the core pack differently
         if pack.is_none() {
             return self
                 .load_core_pack()
+                .await
                 .context("Error loading core asset pack");
         }
 
         // Load the asset packfile
-        let packfile_contents = self.io.load_file((Path::new("pack.yaml"), pack).into())?;
+        let packfile_contents = self
+            .io
+            .load_file((Path::new("pack.yaml"), pack).into())
+            .await?;
         let meta: PackfileMeta = serde_yaml::from_slice(&packfile_contents)?;
 
         // If the game version doesn't match, then don't continue loading this pack.
@@ -196,13 +340,7 @@ impl AssetServer {
             path: &meta.root,
             pack,
         };
-        let root_handle = self.load_asset(root_loc).map_err(|e| {
-            e.context(format!(
-                "Error loading asset from pack `{}`: {:?}",
-                pack.unwrap(),
-                meta.root
-            ))
-        })?;
+        let root_handle = self.load_asset(root_loc);
 
         // Return the loaded asset pack.
         Ok(AssetPack {
@@ -221,34 +359,16 @@ impl AssetServer {
         })
     }
 
-    /// Responds to any asset changes reported by the [`AssetIo`] implementation.
-    ///
-    /// This must be called or asset changes will be ignored. Additionally, the [`AssetIo`]
-    /// implementation must be able to detect asset changes or this will do nothing.
-    pub fn handle_asset_changes<F: FnMut(&mut AssetServer, UntypedHandle)>(
-        &mut self,
-        mut handle_change: F,
-    ) {
-        if let Some(receiver) = self.asset_changes.get_or_init(|| self.io.watch()).clone() {
-            while let Ok(loc) = receiver.try_recv() {
-                match self.load_asset_forced(loc.as_ref()) {
-                    Ok(handle) => handle_change(self, handle),
-                    Err(_) => {
-                        // TODO: Log asset errors with tracing.
-                        continue;
-                    }
-                };
-            }
-        }
-    }
-
     /// Load the core asset pack.
-    pub fn load_core_pack(&mut self) -> anyhow::Result<AssetPack> {
+    pub async fn load_core_pack(&self) -> anyhow::Result<AssetPack> {
         // Load the core asset packfile
-        let packfile_contents = self.io.load_file(AssetLocRef {
-            path: Path::new("pack.yaml"),
-            pack: None,
-        })?;
+        let packfile_contents = self
+            .io
+            .load_file(AssetLocRef {
+                path: Path::new("pack.yaml"),
+                pack: None,
+            })
+            .await?;
         let meta: CorePackfileMeta = serde_yaml::from_slice(&packfile_contents)?;
 
         if !path_is_metadata(&meta.root) {
@@ -263,9 +383,7 @@ impl AssetServer {
             path: &meta.root,
             pack: None,
         };
-        let handle = self
-            .load_asset(root_loc)
-            .map_err(|e| e.context(format!("Error loading core asset: {:?}", meta.root)))?;
+        let handle = self.load_asset(root_loc);
 
         // Return the loaded asset pack.
         Ok(AssetPack {
@@ -289,129 +407,181 @@ impl AssetServer {
     }
 
     /// Load an asset.
-    pub fn load_asset(&mut self, loc: AssetLocRef) -> anyhow::Result<UntypedHandle> {
+    pub fn load_asset(&self, loc: AssetLocRef<'_>) -> UntypedHandle {
         self.impl_load_asset(loc, false)
     }
 
     /// Like [`load_asset()`][Self::load_asset] but forces the asset to reload, even it if has
     /// already been loaded.
-    pub fn load_asset_forced(&mut self, loc: AssetLocRef) -> anyhow::Result<UntypedHandle> {
+    pub fn load_asset_forced(&self, loc: AssetLocRef<'_>) -> UntypedHandle {
         self.impl_load_asset(loc, true)
     }
 
-    fn impl_load_asset(&mut self, loc: AssetLocRef, force: bool) -> anyhow::Result<UntypedHandle> {
-        let contents = self.io.load_file(loc).context(format!(
-            "Could not load asset file: {:?} from pack {:?}",
-            loc.path,
-            loc.pack.unwrap_or("[core]")
-        ))?;
+    fn impl_load_asset(&self, loc: AssetLocRef<'_>, force: bool) -> UntypedHandle {
+        // Get the asset pool
+        let pool = IoTaskPool::get();
 
+        // Absolutize the asset location
         let loc = AssetLoc {
             path: loc.path.absolutize_from("/").unwrap().into_owned(),
             pack: loc.pack.map(|x| x.to_owned()),
         };
 
+        // If this isn't a force reload
         if !force {
+            // And we already have an asset handle created for this path
             if let Some(handle) = self.store.path_handles.get(&loc) {
-                return Ok(*handle);
+                // Return the existing handle and stop processing
+                return *handle;
             }
         }
 
-        let loc = loc.as_ref();
-
-        // Try to load a metadata asset if it has a YAML/JSON extension, if that doesn't work, and
-        // it has a schema not found error, try to load a data asset for the same path, if that
-        // doesn't work and it is an extension not found error, return the metadata error message.
-        let partial = if path_is_metadata(loc.path) {
-            match self.load_metadata_asset(loc, &contents) {
-                Err(meta_err) => {
-                    if meta_err.downcast_ref::<LoaderNotFound>().is_some() {
-                        match self.load_data_asset(loc, &contents) {
-                            Err(data_err) => {
-                                if data_err.downcast_ref::<LoaderNotFound>().is_some() {
-                                    Err(meta_err)
-                                } else {
-                                    Err(data_err)
-                                }
-                            }
-                            ok => ok,
-                        }
-                    } else {
-                        Err(meta_err)
-                    }
-                }
-                ok => ok,
-            }
-        } else {
-            self.load_data_asset(loc, &contents)
-        }?;
-
-        let loaded_asset = LoadedAsset {
-            cid: partial.cid,
-            pack_spec: loc.pack.map(|x| {
-                self.store
-                    .pack_dirs
-                    .get(x)
-                    .expect("Pack dir not loaded properly")
-                    .clone()
-            }),
-            loc: loc.to_owned(),
-            dependencies: partial.dependencies,
-            data: partial.data,
-        };
-
-        let mut reverse_deps = SmallVec::<[_; 16]>::new();
+        // Determine the handle and insert it into the path_handles map
+        let mut should_load = true;
         let handle = *self
             .store
             .path_handles
             .entry(loc.to_owned())
             // If we've already loaded this asset before
             .and_modify(|handle| {
-                // Remove the old asset data
-                let cid = self.store.asset_ids.remove(handle).unwrap();
-                let previous_asset = self.store.assets.remove(&cid).unwrap();
-
-                // Remove the previous asset's reverse dependencies
-                for dep in previous_asset.dependencies {
-                    self.store
-                        .reverse_dependencies
-                        .get_mut(&dep)
-                        .unwrap()
-                        .remove(&cid);
-                }
-
-                // Reload the assets that depended on the previous asset.
-                if let Some(rev_deps) = self.store.reverse_dependencies.get(&cid) {
-                    for dep in rev_deps {
-                        reverse_deps.push(self.store.assets.get(dep).unwrap().loc.clone());
-                    }
+                // If there is no asset data yet, but we already have a handle, we don't need to
+                // trigger another load.
+                if self.store.asset_ids.get(handle).is_some() && !force {
+                    should_load = false;
                 }
             })
-            // Otherwise, create a new handle
-            .or_insert(UntypedHandle { rid: Ulid::new() });
+            // If this is an unloaded location, create a new handle for it
+            .or_insert(UntypedHandle {
+                rid: Ulid::create(),
+            });
 
-        // Update reverse dependencies
-        for dep in &loaded_asset.dependencies {
-            self.store
-                .reverse_dependencies
-                .entry(*dep)
-                .or_default()
-                .insert(partial.cid);
+        if should_load {
+            // Add one more asset that needs loading.
+            self.load_progress.inc_to_load();
+
+            // Spawn a task to load the asset
+            let server = self.clone();
+            let loc_ = loc.clone();
+            pool.spawn(async move {
+                tracing::debug!(?loc, ?force, "Loading asset");
+                let loc = loc_;
+                let result = async {
+                    let cid = server.load_asset_bytes(loc.clone(), force).await?;
+                    server.load_progress.inc_downloaded();
+                    let data = server
+                        .store
+                        .asset_data
+                        .get(&cid)
+                        .expect("asset not loaded")
+                        .clone();
+
+                    // Try to load a metadata asset if it has a YAML/JSON extension, if that doesn't work, and
+                    // it has a schema not found error, try to load a data asset for the same path, if that
+                    // doesn't work and it is an extension not found error, return the metadata error message.
+                    let partial = if path_is_metadata(&loc.path) {
+                        let data = match server.load_metadata_asset(loc.as_ref(), &data) {
+                            Err(meta_err) => {
+                                if meta_err.downcast_ref::<LoaderNotFound>().is_some() {
+                                    match server.load_data_asset(loc.as_ref(), &data).await {
+                                        Err(data_err) => {
+                                            if data_err.downcast_ref::<LoaderNotFound>().is_some() {
+                                                Err(meta_err)
+                                            } else {
+                                                Err(data_err)
+                                            }
+                                        }
+                                        ok => ok,
+                                    }
+                                } else {
+                                    Err(meta_err)
+                                }
+                            }
+                            ok => ok,
+                        };
+                        data
+                    } else {
+                        server.load_data_asset(loc.as_ref(), &data).await
+                    }?;
+
+                    let loaded_asset = LoadedAsset {
+                        cid: partial.cid,
+                        pack_spec: loc.pack.as_ref().map(|x| {
+                            server
+                                .store
+                                .pack_dirs
+                                .get(x.as_str())
+                                .expect("Pack dir not loaded properly")
+                                .clone()
+                        }),
+                        loc: loc.to_owned(),
+                        dependencies: partial.dependencies,
+                        data: partial.data,
+                    };
+
+                    // If there is already loaded asset data for this path
+                    if let Some((_, cid)) = server.store.asset_ids.remove(&handle) {
+                        // Remove the old asset data
+                        let (_, previous_asset) = server.store.assets.remove(&cid).unwrap();
+
+                        // Remove the previous asset's reverse dependencies.
+                        //
+                        // aka. now that we are removing the old asset, none of the assets that the
+                        // old asset dependended on should have a reverse dependency record saying that
+                        // this asset depends on it.
+                        //
+                        // In other words, this asset is removed and doesn't depend on anything else
+                        // anymore.
+                        for dep in previous_asset.dependencies.iter() {
+                            server
+                                .store
+                                .reverse_dependencies
+                                .get_mut(dep)
+                                .unwrap()
+                                .remove(&handle);
+                        }
+
+                        // If there are any assets that depended on this asset, they now need to be re-loaded.
+                        if let Some(rev_deps) = server.store.reverse_dependencies.get(&handle) {
+                            for dep in rev_deps.iter() {
+                                server
+                                    .asset_change_send
+                                    .try_send(ChangedAsset::Handle(*dep))
+                                    .unwrap();
+                            }
+                        }
+                    }
+
+                    // Update reverse dependencies
+                    for dep in loaded_asset.dependencies.iter() {
+                        server
+                            .store
+                            .reverse_dependencies
+                            .entry(*dep)
+                            .or_default()
+                            .insert(handle);
+                    }
+
+                    server.store.asset_ids.insert(handle, partial.cid);
+                    server.store.assets.insert(partial.cid, loaded_asset);
+                    server.load_progress.inc_loaded();
+
+                    Ok::<_, anyhow::Error>(())
+                }
+                .await;
+
+                if let Err(e) = result {
+                    server.load_progress.inc_errored();
+                    tracing::error!("Error loading asset: {e}");
+                }
+            })
+            .detach();
         }
 
-        self.store.asset_ids.insert(handle, partial.cid);
-        self.store.assets.insert(partial.cid, loaded_asset);
-
-        // Reload any assets that depended on this asset before it was reloaded
-        for loc in reverse_deps {
-            self.load_asset_forced(loc.as_ref())?;
-        }
-
-        Ok(handle)
+        handle
     }
 
     fn load_metadata_asset(
-        &mut self,
+        &self,
         loc: AssetLocRef,
         contents: &[u8],
     ) -> anyhow::Result<PartialAsset> {
@@ -427,20 +597,23 @@ impl AssetServer {
             .rsplit_once('.')
             .map(|x| x.1)
             .unwrap_or(before_extension);
-        let schema = *self
-            .asset_types
+        let schema = SCHEMA_REGISTRY
+            .schemas
             .iter()
             .find(|schema| {
-                let asset_kind = schema.type_data.get::<AssetKind>().unwrap();
-                match asset_kind {
-                    AssetKind::Metadata { extension } => extension == schema_name,
-                    _ => false,
-                }
+                schema
+                    .type_data
+                    .get::<AssetKind>()
+                    .and_then(|asset_kind| match asset_kind {
+                        AssetKind::Metadata { extension } => Some(extension == schema_name),
+                        _ => None,
+                    })
+                    .unwrap_or(false)
             })
             .ok_or_else(|| LoaderNotFound {
                 name: schema_name.into(),
             })?;
-        let mut dependencies = Vec::new();
+        let dependencies = Arc::new(AppendOnlyVec::new());
 
         let mut cid = Cid::default();
         cid.update(contents);
@@ -448,7 +621,7 @@ impl AssetServer {
             server: self,
             loc,
             schema,
-            dependencies: &mut dependencies,
+            dependencies: dependencies.clone(),
         };
         let data = if loc.path.extension().unwrap().to_str().unwrap() == "json" {
             let mut deserializer = serde_json::Deserializer::from_slice(contents);
@@ -458,11 +631,13 @@ impl AssetServer {
             loader.deserialize(deserializer)?
         };
 
-        // Update the Cid
-        dependencies.sort();
-        for dep in &dependencies {
-            cid.update(&dep.0);
-        }
+        // TODO: Figure out whether or not to update CID with dep cids.
+
+        // // Update the Cid
+        // dependencies.sort();
+        // for dep in &dependencies {
+        //     cid.update(&dep.0);
+        // }
 
         Ok(PartialAsset {
             cid,
@@ -471,10 +646,10 @@ impl AssetServer {
         })
     }
 
-    fn load_data_asset(
-        &mut self,
-        loc: AssetLocRef,
-        contents: &[u8],
+    async fn load_data_asset<'a>(
+        &self,
+        loc: AssetLocRef<'a>,
+        contents: &'a [u8],
     ) -> anyhow::Result<PartialAsset> {
         // Get the schema for the asset
         let filename = loc
@@ -484,39 +659,42 @@ impl AssetServer {
             .to_str()
             .ok_or_else(|| anyhow::format_err!("Invalid unicode in filename"))?;
         let (_name, extension) = filename.split_once('.').unwrap();
-        let loader = self
-            .asset_types
+        let loader = SCHEMA_REGISTRY
+            .schemas
             .iter()
             .find_map(|schema| {
-                let asset_kind = schema.type_data.get::<AssetKind>().unwrap();
-                match &asset_kind {
-                    AssetKind::Custom { extensions, loader } => {
-                        if extensions
-                            .iter()
-                            .any(|ext| ext == extension || ext == filename)
-                        {
-                            Some(loader)
-                        } else {
-                            None
+                if let Some(asset_kind) = schema.type_data.get::<AssetKind>() {
+                    match asset_kind {
+                        AssetKind::Custom { extensions, loader } => {
+                            if extensions
+                                .iter()
+                                .any(|ext| ext == extension || ext == filename)
+                            {
+                                Some(loader)
+                            } else {
+                                None
+                            }
                         }
+                        _ => None,
                     }
-                    _ => None,
+                } else {
+                    None
                 }
             })
             .ok_or_else(|| LoaderNotFound {
                 name: extension.into(),
             })?;
 
-        let mut dependencies = Vec::new();
+        let dependencies = Arc::new(AppendOnlyVec::new());
         let mut cid = Cid::default();
         cid.update(contents);
 
         let ctx = AssetLoadCtx {
-            asset_server: self,
-            loc,
-            dependencies: &mut dependencies,
+            asset_server: self.clone(),
+            loc: loc.to_owned(),
+            dependencies: dependencies.clone(),
         };
-        let sbox = loader.load(ctx, contents)?;
+        let sbox = loader.load(ctx, contents).await?;
 
         Ok(PartialAsset {
             cid,
@@ -526,15 +704,15 @@ impl AssetServer {
     }
 
     /// Borrow a [`LoadedAsset`] associated to the given handle.
-    pub fn get_untyped(&self, handle: UntypedHandle) -> Option<&LoadedAsset> {
+    pub fn get_untyped(&self, handle: UntypedHandle) -> Option<MapRef<Cid, LoadedAsset>> {
         let cid = self.store.asset_ids.get(&handle)?;
-        self.store.assets.get(cid)
+        self.store.assets.get(&cid)
     }
 
     /// Borrow a [`LoadedAsset`] associated to the given handle.
-    pub fn get_untyped_mut(&mut self, handle: UntypedHandle) -> Option<&mut LoadedAsset> {
+    pub fn get_untyped_mut(&self, handle: UntypedHandle) -> Option<MapRefMut<Cid, LoadedAsset>> {
         let cid = self.store.asset_ids.get(&handle)?;
-        self.store.assets.get_mut(cid)
+        self.store.assets.get_mut(&cid)
     }
 
     /// Read the core asset pack.
@@ -543,17 +721,17 @@ impl AssetServer {
     ///
     /// Panics if the assets have not be loaded yet with [`AssetServer::load_assets`].
     #[track_caller]
-    pub fn core(&self) -> &AssetPack {
-        self.store.core_pack.as_ref().unwrap()
+    pub fn core(&self) -> MappedMutexGuard<AssetPack> {
+        MutexGuard::map(self.store.core_pack.lock(), |x| x.as_mut().unwrap())
     }
 
     /// Get the core asset pack's root asset.
-    pub fn root<T: HasSchema>(&self) -> &T {
+    pub fn root<T: HasSchema>(&self) -> MappedMapRef<Cid, LoadedAsset, T> {
         self.get(self.core().root.typed())
     }
 
     /// Read the loaded asset packs.
-    pub fn packs(&self) -> &HashMap<AssetPackSpec, AssetPack> {
+    pub fn packs(&self) -> &DashMap<AssetPackSpec, AssetPack> {
         &self.store.packs
     }
 
@@ -564,22 +742,29 @@ impl AssetServer {
     /// Panics if the asset is not loaded or if the asset asset with the given handle doesn't have a
     /// schema matching `T`.
     #[track_caller]
-    pub fn get<T: HasSchema>(&self, handle: Handle<T>) -> &T {
-        let cid = self
-            .store
-            .asset_ids
-            .get(&handle.untyped())
-            .expect(NO_ASSET_MSG);
-        let asset = &self.store.assets.get(cid).expect(NO_ASSET_MSG).data;
+    pub fn get<T: HasSchema>(&self, handle: Handle<T>) -> MappedMapRef<Cid, LoadedAsset, T> {
+        self.try_get(handle).unwrap()
+    }
 
-        // If this is a handle to a schema box, then return the schema box directly without casting
-        if T::schema() == <SchemaBox as HasSchema>::schema() {
-            // SOUND: the above comparison verifies that T is concretely a SchemaBox so &Schemabox
-            // is the same as &T.
-            unsafe { std::mem::transmute(asset) }
-        } else {
-            asset.cast_ref()
-        }
+    /// Borrow a loaded asset.
+    #[track_caller]
+    pub fn try_get<T: HasSchema>(
+        &self,
+        handle: Handle<T>,
+    ) -> Option<MappedMapRef<Cid, LoadedAsset, T>> {
+        let cid = self.store.asset_ids.get(&handle.untyped())?;
+        Some(MapRef::map(self.store.assets.get(&cid).unwrap(), |x| {
+            let asset = &x.data;
+
+            // If this is a handle to a schema box, then return the schema box directly without casting
+            if T::schema() == <SchemaBox as HasSchema>::schema() {
+                // SOUND: the above comparison verifies that T is concretely a SchemaBox so &Schemabox
+                // is the same as &T.
+                unsafe { std::mem::transmute(asset) }
+            } else {
+                asset.cast_ref()
+            }
+        }))
     }
 
     /// Mutably borrow a loaded asset.
@@ -589,17 +774,27 @@ impl AssetServer {
     /// Panics if the asset is not loaded or if the asset asset with the given handle doesn't have a
     /// schema matching `T`.
     #[track_caller]
-    pub fn get_mut<T: HasSchema>(&mut self, handle: &Handle<T>) -> &mut T {
+    pub fn get_mut<T: HasSchema>(
+        &mut self,
+        handle: &Handle<T>,
+    ) -> MappedMapRefMut<Cid, LoadedAsset, T> {
         let cid = self
             .store
             .asset_ids
             .get(&handle.untyped())
             .expect(NO_ASSET_MSG);
-        self.store
-            .assets
-            .get_mut(cid)
-            .expect(NO_ASSET_MSG)
-            .cast_mut()
+        MapRefMut::map(self.store.assets.get_mut(&cid).unwrap(), |x| {
+            let asset = &mut x.data;
+
+            // If this is a handle to a schema box, then return the schema box directly without casting
+            if T::schema() == <SchemaBox as HasSchema>::schema() {
+                // SOUND: the above comparison verifies that T is concretely a SchemaBox so &mut Schemabox
+                // is the same as &mut T.
+                unsafe { std::mem::transmute(asset) }
+            } else {
+                asset.cast_mut()
+            }
+        })
     }
 }
 
@@ -607,7 +802,7 @@ impl AssetServer {
 struct PartialAsset {
     pub cid: Cid,
     pub data: SchemaBox,
-    pub dependencies: Vec<Cid>,
+    pub dependencies: Arc<AppendOnlyVec<UntypedHandle>>,
 }
 
 const NO_ASSET_MSG: &str = "Asset not loaded";
@@ -627,10 +822,10 @@ mod metadata {
     /// Context provided while loading a metadata asset.
     pub struct MetaAssetLoadCtx<'srv> {
         /// The asset server.
-        pub server: &'srv mut AssetServer,
+        pub server: &'srv AssetServer,
         /// The dependency list of this asset. This should be updated by asset loaders as
         /// dependencies are added.
-        pub dependencies: &'srv mut Vec<Cid>,
+        pub dependencies: Arc<AppendOnlyVec<UntypedHandle>>,
         /// The location that the asset is being loaded from.
         pub loc: AssetLocRef<'srv>,
         /// The schema of the asset being loaded.
@@ -687,11 +882,11 @@ mod metadata {
                 let handle = self
                     .ctx
                     .server
-                    .load_asset((&*path, self.ctx.loc.pack).into())
-                    .map_err(|e| D::Error::custom(e.to_string()))?;
-                self.ctx
-                    .dependencies
-                    .push(*self.ctx.server.store.asset_ids.get(&handle).unwrap());
+                    .load_asset((&*path, self.ctx.loc.pack).into());
+                // TODO: update dependencies when they have been loaded somehow.
+                // self.ctx
+                //     .dependencies
+                //     .push(*self.ctx.server.store.asset_ids.get(&handle).unwrap());
                 *self
                     .ptr
                     .try_cast_mut()

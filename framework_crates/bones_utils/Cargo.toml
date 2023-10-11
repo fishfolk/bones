@@ -19,9 +19,17 @@ smallvec           = "1.11"
 fxhash             = "0.2"
 hashbrown          = { version = "0.14" }
 ulid               = "1.0"
-bevy_ptr           = "0.11.0"
+bevy_ptr           = "0.11"
 parking_lot        = "0.12"
 serde              = { version = "1.0", optional = true }
 maybe-owned        = "0.3"
 branches           = "0.1"
-ustr               = "0.10.0"
+ustr               = "0.10"
+futures-lite       = "1.13"
+rand               = "0.8"
+instant            = { version = "0.1", features = ["wasm-bindgen"] }
+
+# Make sure that the getrandom package, used in `ulid` works on web
+# when compiling for WASM.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }

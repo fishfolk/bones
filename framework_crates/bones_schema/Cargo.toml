@@ -18,10 +18,11 @@ glam      = ["dep:glam"]
 humantime = ["dep:humantime", "serde"]
 
 [dependencies]
-bones_utils = { version = "0.3", path = "../bones_utils" }
-ulid        = { version = "1.0" }
-paste       = "1.0"
-sptr        = "0.3"
+bones_utils     = { version = "0.3", path = "../bones_utils" }
+append-only-vec = "0.1"
+ulid            = { version = "1.0" }
+paste           = "1.0"
+sptr            = "0.3"
 
 # Optional deps
 bones_schema_macros = { version = "0.3", path = "./macros", optional = true }

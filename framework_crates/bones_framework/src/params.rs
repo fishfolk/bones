@@ -2,8 +2,9 @@
 
 use crate::prelude::*;
 
+use dashmap::mapref::one::MappedRef;
 /// Get the root asset of the core asset pack and cast it to type `T`.
-pub struct Root<'a, T: HasSchema>(Ref<'a, T>);
+pub struct Root<'a, T: HasSchema>(MappedRef<'a, Cid, LoadedAsset, T>);
 impl<'a, T: HasSchema> std::ops::Deref for Root<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
@@ -11,14 +12,14 @@ impl<'a, T: HasSchema> std::ops::Deref for Root<'a, T> {
     }
 }
 impl<'a, T: HasSchema> SystemParam for Root<'a, T> {
-    type State = AtomicResource<AssetServer>;
+    type State = AssetServer;
     type Param<'s> = Root<'s, T>;
 
     fn initialize(_world: &mut World) {}
     fn get_state(world: &World) -> Self::State {
-        world.resources.get_cell::<AssetServer>().unwrap()
+        (*world.resources.get::<AssetServer>().unwrap()).clone()
     }
-    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
-        Root(Ref::map(state.borrow(), |asset_server| asset_server.root()))
+    fn borrow<'s>(_world: &'s World, asset_server: &'s mut Self::State) -> Self::Param<'s> {
+        Root(asset_server.root())
     }
 }

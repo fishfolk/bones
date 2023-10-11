@@ -15,8 +15,17 @@ pub enum Image {
 
 struct ImageAssetLoader;
 impl AssetLoader for ImageAssetLoader {
-    fn load(&self, _ctx: AssetLoadCtx, bytes: &[u8]) -> anyhow::Result<SchemaBox> {
-        Ok(SchemaBox::new(Image::Data(image::load_from_memory(bytes)?)))
+    fn load(
+        &self,
+        _ctx: AssetLoadCtx,
+        bytes: &[u8],
+    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+        let bytes = bytes.to_vec();
+        Box::pin(async move {
+            Ok(SchemaBox::new(Image::Data(image::load_from_memory(
+                &bytes,
+            )?)))
+        })
     }
 }
 

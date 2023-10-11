@@ -2,6 +2,8 @@ use std::str::FromStr;
 
 use ulid::Ulid;
 
+use crate::UlidExt;
+
 /// A [`Ulid`] with a human-readable ascii prefix.
 ///
 /// This is essentially like a [TypeId](https://github.com/jetpack-io/typeid), but the prefix can be
@@ -45,7 +47,7 @@ impl std::fmt::Display for LabeledIdCreateError {
 impl LabeledId {
     /// Create a new labeled ID with the given prefix.
     pub fn new(prefix: &str) -> Result<Self, LabeledIdCreateError> {
-        Self::new_with_ulid(prefix, Ulid::new())
+        Self::new_with_ulid(prefix, Ulid::create())
     }
 
     /// Create a new labeled ID with the given prefix and ULID.
