@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["ui_plugin"],"mod":["widgets"],"struct":["Egui","EguiCtx","EguiInputHook","EguiSettings","EguiTextures","Font","FontLoader","FontMeta"],"trait":["EguiContextExt","EguiResponseExt"]};
+window.SIDEBAR_ITEMS = {"fn":["ui_plugin"],"mod":["widgets"],"struct":["EguiCtx","EguiInputHook","EguiSettings","EguiTextures","Font","FontLoader","FontMeta"],"trait":["EguiContextExt","EguiResponseExt"]};

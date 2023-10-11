@@ -540,6 +540,16 @@
 <a href="#540" id="540">540</a>
 <a href="#541" id="541">541</a>
 <a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::too_many_arguments)]
 
 </span><span class="kw">use </span>bones_bevy_renderer::{
@@ -686,11 +696,12 @@
 <span class="doccomment">/// Our main menu system.
 </span><span class="kw">fn </span>menu_system(
     meta: Root&lt;GameMeta&gt;,
-    ctx: Egui,
+    ctx: Res&lt;EguiCtx&gt;,
     <span class="kw-2">mut </span>sessions: ResMut&lt;Sessions&gt;,
     <span class="kw-2">mut </span>session_options: ResMut&lt;SessionOptions&gt;,
     <span class="comment">// Get the localization field from our `GameMeta`
     </span>localization: Localization&lt;GameMeta&gt;,
+    world: <span class="kw-2">&amp;</span>World,
 ) {
     <span class="comment">// Render the menu.
     </span>egui::CentralPanel::default()
@@ -782,11 +793,16 @@
 
                     ui.add_space(<span class="number">10.0</span>);
 
-                    <span class="comment">// We can use the `widget()` method on the `Egui` to conveniently run bones
-                    // systems that can modify the `egui::Ui` and return an `egui::Response`.
+                    <span class="comment">// We can use the `&amp;World` parameter to access the world and run systems to act
+                    // as egui widgets.
                     //
-                    // This makes it easier to compose widgets that have differing access to the bones world.
-                    </span>ctx.widget(demo_widget, ui);
+                    // This makes it easier to compose widgets that have differing access to the
+                    // bones world.
+                    //
+                    // Note that all of the parameters of the system must have been initialized
+                    // already, so if they are not initialized by another system, you have to use
+                    // `world.init_param::&lt;SomeParam&gt;()` in the session plugin to initialize them.
+                    </span>world.run_initialized_system(demo_widget, ui);
 
                     ui.add_space(<span class="number">30.0</span>);
                 });
@@ -829,7 +845,7 @@
     sprite: Comp&lt;Sprite&gt;,
     <span class="kw-2">mut </span>transforms: CompMut&lt;Transform&gt;,
     input: Res&lt;KeyboardInputs&gt;,
-    ctx: Egui,
+    ctx: Res&lt;EguiCtx&gt;,
 ) {
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
@@ -961,7 +977,7 @@
 }
 
 <span class="kw">fn </span>audio_demo_ui(
-    ctx: Egui,
+    ctx: Res&lt;EguiCtx&gt;,
     localization: Localization&lt;GameMeta&gt;,
     audio: Res&lt;AudioManager&gt;,
     meta: Root&lt;GameMeta&gt;,
@@ -989,7 +1005,11 @@
         .add_system_to_stage(Update, back_to_menu_ui);
 }
 
-<span class="kw">fn </span>storage_demo_ui(ctx: Egui, <span class="kw-2">mut </span>storage: ResMut&lt;Storage&gt;, localization: Localization&lt;GameMeta&gt;) {
+<span class="kw">fn </span>storage_demo_ui(
+    ctx: Res&lt;EguiCtx&gt;,
+    <span class="kw-2">mut </span>storage: ResMut&lt;Storage&gt;,
+    localization: Localization&lt;GameMeta&gt;,
+) {
     egui::CentralPanel::default().show(<span class="kw-2">&amp;</span>ctx, |ui| {
         ui.add_space(<span class="number">20.0</span>);
 
@@ -1046,7 +1066,7 @@
 <span class="doccomment">/// Simple UI system that shows a button at the bottom of the screen to delete the current session
 /// and  go back to the main menu.
 </span><span class="kw">fn </span>back_to_menu_ui(
-    ctx: Egui,
+    ctx: Res&lt;EguiCtx&gt;,
     <span class="kw-2">mut </span>sessions: ResMut&lt;Sessions&gt;,
     <span class="kw-2">mut </span>session_options: ResMut&lt;SessionOptions&gt;,
     localization: Localization&lt;GameMeta&gt;,

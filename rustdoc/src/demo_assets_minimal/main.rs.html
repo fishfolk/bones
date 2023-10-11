@@ -103,7 +103,7 @@
 
 <span class="doccomment">/// System to render the home menu.
 </span><span class="kw">fn </span>menu_system(
-    egui_ctx: Egui,
+    egui_ctx: Res&lt;EguiCtx&gt;,
     <span class="comment">// We can access our root asset by using the Root parameter.
     </span>meta: Root&lt;GameMeta&gt;,
 ) {
