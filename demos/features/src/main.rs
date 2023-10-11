@@ -144,11 +144,12 @@ fn menu_startup(
 /// Our main menu system.
 fn menu_system(
     meta: Root<GameMeta>,
-    ctx: Egui,
+    ctx: Res<EguiCtx>,
     mut sessions: ResMut<Sessions>,
     mut session_options: ResMut<SessionOptions>,
     // Get the localization field from our `GameMeta`
     localization: Localization<GameMeta>,
+    world: &World,
 ) {
     // Render the menu.
     egui::CentralPanel::default()
@@ -240,11 +241,16 @@ fn menu_system(
 
                     ui.add_space(10.0);
 
-                    // We can use the `widget()` method on the `Egui` to conveniently run bones
-                    // systems that can modify the `egui::Ui` and return an `egui::Response`.
+                    // We can use the `&World` parameter to access the world and run systems to act
+                    // as egui widgets.
                     //
-                    // This makes it easier to compose widgets that have differing access to the bones world.
-                    ctx.widget(demo_widget, ui);
+                    // This makes it easier to compose widgets that have differing access to the
+                    // bones world.
+                    //
+                    // Note that all of the parameters of the system must have been initialized
+                    // already, so if they are not initialized by another system, you have to use
+                    // `world.init_param::<SomeParam>()` in the session plugin to initialize them.
+                    world.run_initialized_system(demo_widget, ui);
 
                     ui.add_space(30.0);
                 });
@@ -287,7 +293,7 @@ fn move_sprite(
     sprite: Comp<Sprite>,
     mut transforms: CompMut<Transform>,
     input: Res<KeyboardInputs>,
-    ctx: Egui,
+    ctx: Res<EguiCtx>,
 ) {
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
@@ -419,7 +425,7 @@ fn audio_demo_plugin(session: &mut Session) {
 }
 
 fn audio_demo_ui(
-    ctx: Egui,
+    ctx: Res<EguiCtx>,
     localization: Localization<GameMeta>,
     audio: Res<AudioManager>,
     meta: Root<GameMeta>,
@@ -447,7 +453,11 @@ fn storage_demo_plugin(session: &mut Session) {
         .add_system_to_stage(Update, back_to_menu_ui);
 }
 
-fn storage_demo_ui(ctx: Egui, mut storage: ResMut<Storage>, localization: Localization<GameMeta>) {
+fn storage_demo_ui(
+    ctx: Res<EguiCtx>,
+    mut storage: ResMut<Storage>,
+    localization: Localization<GameMeta>,
+) {
     egui::CentralPanel::default().show(&ctx, |ui| {
         ui.add_space(20.0);
 
@@ -504,7 +514,7 @@ fn path2d_demo_startup(
 /// Simple UI system that shows a button at the bottom of the screen to delete the current session
 /// and  go back to the main menu.
 fn back_to_menu_ui(
-    ctx: Egui,
+    ctx: Res<EguiCtx>,
     mut sessions: ResMut<Sessions>,
     mut session_options: ResMut<SessionOptions>,
     localization: Localization<GameMeta>,

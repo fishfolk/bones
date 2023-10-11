@@ -34,46 +34,6 @@ impl EguiInputHook {
     }
 }
 
-/// System parameter for rendering to egui.
-#[derive(Deref)]
-pub struct Egui<'a> {
-    /// The bones world reference, needed so that the `widget` method can work.
-    pub world: &'a World,
-    /// The egui context.
-    #[deref]
-    pub context: Ref<'a, egui::Context>,
-}
-
-impl Egui<'_> {
-    /// Run a widget sub-system.
-    pub fn widget<'a, Args, S, Out>(&self, system: S, ui: &'a mut egui::Ui) -> Out
-    where
-        S: IntoSystem<Args, &'a mut egui::Ui, Out>,
-        S::Sys: 'a,
-    {
-        self.world.run_initialized_system(system, ui)
-    }
-}
-
-impl SystemParam for Egui<'_> {
-    type State = AtomicResource<EguiCtx>;
-    type Param<'s> = Egui<'s>;
-
-    fn initialize(_world: &mut World) {}
-
-    fn get_state(world: &World) -> Self::State {
-        world
-            .resources
-            .get_cell::<EguiCtx>()
-            .expect("`EguiCtx` resource doesn't exist")
-    }
-
-    fn borrow<'s>(world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
-        let context = Ref::map(state.borrow(), |x| &x.0);
-        Egui { world, context }
-    }
-}
-
 /// Resource that maps image handles to their associated egui textures.
 #[derive(HasSchema, Clone, Debug, Default, Deref, DerefMut)]
 pub struct EguiTextures(pub HashMap<Handle<Image>, egui::TextureId>);
