@@ -18,7 +18,7 @@ fn main() {
 }
 
 /// System to render the home menu.
-fn menu_system(ctx: Egui) {
+fn menu_system(ctx: Res<EguiCtx>) {
     egui::CentralPanel::default().show(&ctx, |ui| {
         ui.label("Hello World");
     });
