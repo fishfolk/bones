@@ -157,29 +157,35 @@ fn deserialize_arc_str<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Arc<str
 /// The [`Font`] asset loader.
 pub struct FontLoader;
 impl AssetLoader for FontLoader {
-    fn load(&self, _ctx: AssetLoadCtx, bytes: &[u8]) -> anyhow::Result<SchemaBox> {
-        let (family_name, monospace) = {
-            let face = ttf_parser::Face::parse(bytes, 0)?;
-            (
-                face.names()
-                    .into_iter()
-                    .filter(|x| x.name_id == ttf_parser::name_id::FAMILY)
-                    .filter_map(|x| x.to_string())
-                    .next()
-                    .ok_or_else(|| {
-                        anyhow::format_err!("Could not read font family from font file")
-                    })?
-                    .into(),
-                face.is_monospaced(),
-            )
-        };
-        let data = egui::FontData::from_owned(bytes.to_vec());
+    fn load(
+        &self,
+        _ctx: AssetLoadCtx,
+        bytes: &[u8],
+    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+        let bytes = bytes.to_vec();
+        Box::pin(async move {
+            let (family_name, monospace) = {
+                let face = ttf_parser::Face::parse(&bytes, 0)?;
+                (
+                    face.names()
+                        .into_iter()
+                        .filter(|x| x.name_id == ttf_parser::name_id::FAMILY)
+                        .find_map(|x| x.to_string())
+                        .ok_or_else(|| {
+                            anyhow::format_err!("Could not read font family from font file")
+                        })?
+                        .into(),
+                    face.is_monospaced(),
+                )
+            };
+            let data = egui::FontData::from_owned(bytes.to_vec());
 
-        Ok(SchemaBox::new(Font {
-            family_name,
-            data,
-            monospace,
-        }))
+            Ok(SchemaBox::new(Font {
+                family_name,
+                data,
+                monospace,
+            }))
+        })
     }
 }
 

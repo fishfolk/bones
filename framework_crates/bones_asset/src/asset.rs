@@ -1,9 +1,16 @@
 use std::{
     path::{Path, PathBuf},
-    sync::OnceLock,
+    pin::Pin,
+    sync::{
+        atomic::{AtomicU32, Ordering::SeqCst},
+        Arc,
+    },
 };
 
-use bones_utils::prelude::*;
+use append_only_vec::AppendOnlyVec;
+use bones_utils::{parking_lot::Mutex, prelude::*};
+use dashmap::DashMap;
+use event_listener::{Event, EventListener};
 use semver::VersionReq;
 
 use crate::prelude::*;
@@ -79,39 +86,6 @@ pub struct SchemaPath {
     pub name: String,
 }
 
-/// Struct responsible for loading assets into it's contained [`AssetStore`], using an [`AssetIo`]
-/// implementation.
-#[derive(HasSchema)]
-#[schema(opaque, no_clone)]
-pub struct AssetServer {
-    /// The version of the game. This is used to evaluate whether asset packs are compatible with
-    /// the game.
-    pub game_version: Version,
-    /// The [`AssetIo`] implementation used to load assets.
-    pub io: Box<dyn AssetIo>,
-    /// The asset store.
-    pub store: AssetStore,
-    /// List of registered asset types.
-    pub asset_types: Vec<&'static Schema>,
-    /// Lists the packs that have not been loaded due to an incompatible game version.
-    pub incompabile_packs: HashMap<String, PackfileMeta>,
-    /// Channel fro the [`AssetIo`] implementation that is used to detect asset changes.
-    pub asset_changes: OnceLock<Option<async_channel::Receiver<AssetLoc>>>,
-}
-
-impl Default for AssetServer {
-    fn default() -> Self {
-        Self {
-            game_version: Version::new(0, 0, 0),
-            io: Box::new(DummyIo::new([])),
-            store: default(),
-            asset_types: default(),
-            incompabile_packs: default(),
-            asset_changes: default(),
-        }
-    }
-}
-
 /// Struct containing all the game's loaded assets, including the default assets and
 /// asset-packs/mods.
 pub struct LoadedAssets {
@@ -121,24 +95,113 @@ pub struct LoadedAssets {
     pub packs: HashMap<String, UntypedHandle>,
 }
 
+/// The progress that has been made loading the game assets.
+#[derive(Debug, Clone, Default)]
+pub struct AssetLoadProgress {
+    assets_to_load: Arc<AtomicU32>,
+    assets_downloaded: Arc<AtomicU32>,
+    assets_loaded: Arc<AtomicU32>,
+    assets_errored: Arc<AtomicU32>,
+    /// The event notifier that is used to wake interested tasks that are waiting for asset load
+    /// to progress.
+    event: Arc<Event>,
+}
+
+impl AssetLoadProgress {
+    /// Increment the number of assets that need to be loaded by one.
+    pub fn inc_to_load(&self) {
+        self.assets_to_load.fetch_add(1, SeqCst);
+    }
+
+    /// Increment the number of assets that have errored during loading.
+    pub fn inc_errored(&self) {
+        self.assets_errored.fetch_add(1, SeqCst);
+    }
+
+    /// Increment the number of assets that have been downloaded by one.
+    pub fn inc_downloaded(&self) {
+        self.assets_downloaded.fetch_add(1, SeqCst);
+    }
+
+    /// Increment the number of assets that have been loaded by one.
+    pub fn inc_loaded(&self) {
+        self.assets_loaded.fetch_add(1, SeqCst);
+        self.event.notify(usize::MAX);
+    }
+
+    /// Get whether or not all the assets are done loading.
+    ///
+    /// > **Note:** Assets that have errored while loading are still counted as "done loading".
+    pub fn is_finished(&self) -> bool {
+        let loaded = self.assets_loaded.load(SeqCst);
+        let pending = self.assets_to_load.load(SeqCst);
+        let errored = self.assets_errored.load(SeqCst);
+        loaded != 0 && (loaded + errored) == pending
+    }
+
+    /// Get the number of assets that have been downloaded and loaded by their asset loaders.
+    pub fn loaded(&self) -> u32 {
+        self.assets_loaded.load(SeqCst)
+    }
+
+    /// Get the number of assets that have errored while loading.
+    pub fn errored(&self) -> u32 {
+        self.assets_errored.load(SeqCst)
+    }
+
+    /// Get the number of assets that must be loaded.
+    ///
+    /// Since assets are discovered as they are loaded this number may not be the final
+    /// asset count and may increase as more assets are discovered.
+    pub fn to_load(&self) -> u32 {
+        self.assets_to_load.load(SeqCst)
+    }
+
+    /// Get the number of assets that have had their data downloaded. Once an asset is downloaded
+    /// we have the raw bytes, but it may not have been processed by it's asset loader.
+    pub fn downloaded(&self) -> u32 {
+        self.assets_downloaded.load(SeqCst)
+    }
+
+    /// Get an event listener that will be notified each time asset load progress
+    /// has been updated.
+    pub fn listen(&self) -> Pin<Box<EventListener>> {
+        self.event.listen()
+    }
+}
+
+// TODO: Think of alternative to dashmap.
+// Dashmap is annoying to use because it wraps all returned assets from our API in dashmap
+// its reference container type to manage the locking. We should try to come up with a
+// way to manage the concurrent asset loading without requring the locks if possible.
+
 /// Stores assets for later retrieval.
 #[derive(Default, Clone, Debug)]
 pub struct AssetStore {
     /// Maps the handle of the asset to it's content ID.
-    pub asset_ids: HashMap<UntypedHandle, Cid>,
-    /// Maps asset content IDs, to loaded assets.
-    pub assets: HashMap<Cid, LoadedAsset>,
+    pub asset_ids: DashMap<UntypedHandle, Cid>,
+    /// Content addressed cache of raw bytes for asset data.
+    ///
+    /// Storing asset data in this ways allows you to easily replicate assets to other players over
+    /// the network by comparing available [`Cid`]s.
+    pub asset_data: DashMap<Cid, Vec<u8>>,
+    /// Maps asset content IDs, to assets that have been loaded by an asset loader from the raw
+    /// bytes.
+    pub assets: DashMap<Cid, LoadedAsset>,
     /// Maps the asset [`AssetLoc`] to it's handle.
-    pub path_handles: HashMap<AssetLoc, UntypedHandle>,
+    pub path_handles: DashMap<AssetLoc, UntypedHandle>,
+
     /// List of assets that depend on the given assets.
-    pub reverse_dependencies: HashMap<Cid, HashSet<Cid>>,
+    pub reverse_dependencies: DashMap<UntypedHandle, HashSet<UntypedHandle>>,
+    /// Lists the packs that have not been loaded due to an incompatible game version.
+    pub incompabile_packs: DashMap<String, PackfileMeta>,
 
     /// The core asset pack, if it's been loaded.
-    pub core_pack: Option<AssetPack>,
+    pub core_pack: Arc<Mutex<Option<AssetPack>>>,
     /// The asset packs that have been loaded.
-    pub packs: HashMap<AssetPackSpec, AssetPack>,
+    pub packs: DashMap<AssetPackSpec, AssetPack>,
     /// Maps the directory names of asset packs to their [`AssetPackSpec`].
-    pub pack_dirs: HashMap<String, AssetPackSpec>,
+    pub pack_dirs: DashMap<String, AssetPackSpec>,
 }
 
 /// Contains that path to an asset, and the pack_dir that it was loaded from.
@@ -206,7 +269,7 @@ pub struct LoadedAsset {
     /// The pack and path the asset was loaded from.
     pub loc: AssetLoc,
     /// The content IDs of any assets needed by this asset as a dependency.
-    pub dependencies: Vec<Cid>,
+    pub dependencies: Arc<AppendOnlyVec<UntypedHandle>>,
     /// The loaded data of the asset.
     #[deref]
     pub data: SchemaBox,
@@ -222,26 +285,25 @@ pub struct AssetInfo {
 }
 
 /// Context provided to custom asset loaders in the [`AssetLoader::load`] method.
-pub struct AssetLoadCtx<'a> {
+pub struct AssetLoadCtx {
     /// The asset server.
-    pub asset_server: &'a mut AssetServer,
+    pub asset_server: AssetServer,
     /// The location of the asset.
-    pub loc: AssetLocRef<'a>,
+    pub loc: AssetLoc,
     /// The [`Cid`]s of the assets this asset depends on.
     ///
     /// This is automatically updated when calling [`AssetLoadCtx::load_asset`].
-    pub dependencies: &'a mut Vec<Cid>,
+    pub dependencies: Arc<AppendOnlyVec<UntypedHandle>>,
 }
 
-impl AssetLoadCtx<'_> {
+impl AssetLoadCtx {
     /// Load another asset as a child of this asset.
     pub fn load_asset(&mut self, path: &Path) -> anyhow::Result<UntypedHandle> {
         let handle = self.asset_server.load_asset(AssetLocRef {
             path,
-            pack: self.loc.pack,
-        })?;
-        let cid = self.asset_server.store.asset_ids.get(&handle).unwrap();
-        self.dependencies.push(*cid);
+            pack: self.loc.as_ref().pack,
+        });
+        self.dependencies.push(handle);
         Ok(handle)
     }
 }
@@ -249,7 +311,11 @@ impl AssetLoadCtx<'_> {
 /// A custom assset loader.
 pub trait AssetLoader: Sync + Send + 'static {
     /// Load the asset from raw bytes.
-    fn load(&self, ctx: AssetLoadCtx, bytes: &[u8]) -> anyhow::Result<SchemaBox>;
+    fn load(
+        &self,
+        ctx: AssetLoadCtx,
+        bytes: &[u8],
+    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>>;
 }
 
 /// A custom asset loader implementation for a metadata asset.
@@ -335,6 +401,7 @@ pub fn metadata_asset(extension: &str) -> AssetKind {
 ///
 /// ```
 /// # use bones_asset::prelude::*;
+/// # use bones_utils::prelude::*;
 /// #[derive(HasSchema, Default, Clone)]
 /// #[type_data(asset_loader("png", PngLoader))]
 /// #[repr(C)]
@@ -346,8 +413,10 @@ pub fn metadata_asset(extension: &str) -> AssetKind {
 ///
 /// struct PngLoader;
 /// impl AssetLoader for PngLoader {
-///     fn load(&self, ctx: AssetLoadCtx, data: &[u8]) -> anyhow::Result<SchemaBox> {
-///         todo!("Load PNG from data");
+///     fn load(&self, ctx: AssetLoadCtx, data: &[u8]) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+///         Box::pin(async move {
+///             todo!("Load PNG from data");
+///         })
 ///     }
 /// }
 /// ```

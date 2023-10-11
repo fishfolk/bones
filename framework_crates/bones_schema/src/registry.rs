@@ -2,13 +2,11 @@
 
 use std::{
     alloc::Layout,
-    sync::{
-        atomic::{AtomicU32, Ordering::SeqCst},
-        OnceLock,
-    },
+    sync::atomic::{AtomicU32, Ordering::SeqCst},
 };
 
-use bones_utils::{parking_lot::RwLock, *};
+use append_only_vec::AppendOnlyVec;
+use bones_utils::*;
 
 use crate::prelude::*;
 
@@ -16,13 +14,6 @@ use crate::prelude::*;
 #[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
 pub struct SchemaId {
     id: u32,
-}
-
-impl SchemaId {
-    /// Get the schema associated to the ID.
-    pub fn schema(&self) -> &'static Schema {
-        SCHEMA_REGISTRY.get(*self)
-    }
 }
 
 // Note: The schema type is here in the registry module to prevent modification of registered
@@ -104,21 +95,14 @@ impl Schema {
 /// [`&'static Schema`][Schema].
 pub struct SchemaRegistry {
     next_id: AtomicU32,
-    state: OnceLock<RwLock<RegistryState>>,
-}
-
-/// The internal state o the [`SchemaRegistry`].
-#[derive(Default)]
-pub struct RegistryState {
     /// The registered schemas.
-    pub schemas: HashMap<SchemaId, &'static Schema>,
+    pub schemas: AppendOnlyVec<Schema>,
 }
 
 impl SchemaRegistry {
     /// Register a schema with the registry.
-    pub fn register(&self, schema_data: SchemaData) -> &'static Schema {
-        let state = self.state.get_or_init(default);
-
+    #[track_caller]
+    pub fn register(&self, schema_data: SchemaData) -> &Schema {
         // Allocate a new schema ID
         let id = SchemaId {
             id: self.next_id.fetch_add(1, SeqCst),
@@ -139,42 +123,23 @@ impl SchemaRegistry {
         let field_offsets = Box::leak(field_offsets);
 
         // Leak the schema to get a static reference
-        let schema = Box::leak(Box::new(Schema {
+        let schema = Schema {
             id,
             data: schema_data,
             layout,
             field_offsets,
-        }));
+        };
 
-        // Inser the schema into the registry.
-        let entry = state.write().schemas.insert(id, schema);
-        debug_assert!(entry.is_none(), "SchemaId already used!");
+        // Insert the schema into the registry.
+        let len = self.schemas.len();
+        self.schemas.push(schema);
 
-        schema
-    }
-
-    /// Get a `'static` reference to the schema associated to the given schema ID.
-    pub fn get(&self, id: SchemaId) -> &'static Schema {
-        let schemas = self.state.get_or_init(default);
-
-        schemas
-            .read()
-            .schemas
-            .get(&id)
-            .expect("Reflection bug, schema Id created without associated registration")
-    }
-
-    /// Borrow the registry state for reading.
-    ///
-    /// > **Note:** This locks the registry for reading, preventing access by things that may need
-    /// > to register schemas, so it is best to hold the lock for as short as possible.
-    pub fn borrow(&self) -> bones_utils::parking_lot::RwLockReadGuard<RegistryState> {
-        self.state.get_or_init(default).read()
+        &self.schemas[len]
     }
 }
 
 /// Global [`SchemaRegistry`] used to register [`SchemaData`]s and produce [`Schema`]s.
 pub static SCHEMA_REGISTRY: SchemaRegistry = SchemaRegistry {
     next_id: AtomicU32::new(0),
-    state: OnceLock::new(),
+    schemas: AppendOnlyVec::new(),
 };

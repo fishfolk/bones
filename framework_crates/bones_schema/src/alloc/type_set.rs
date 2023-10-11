@@ -8,7 +8,6 @@ pub struct SchemaTypeMap(HashMap<SchemaId, SchemaBox>);
 
 impl SchemaTypeMap {
     /// Get data out of the store.
-    #[track_caller]
     pub fn get<T: HasSchema>(&self) -> Option<&T> {
         let schema = T::schema();
         self.0.get(&schema.id()).map(|x| x.cast_ref())

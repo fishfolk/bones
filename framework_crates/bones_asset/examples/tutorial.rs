@@ -1,4 +1,6 @@
+use bevy_tasks::{IoTaskPool, TaskPool};
 use bones_asset::prelude::*;
+use bones_utils::futures;
 use glam::{UVec2, Vec2};
 
 use std::path::PathBuf;
@@ -91,6 +93,7 @@ struct PluginMeta {
 #[derive(HasSchema, Debug, Clone, Default)]
 // We specify the file extensions and the asset loader to use to load the asset.
 #[type_data(asset_loader(["png", "jpg"], ImageAssetLoader))]
+#[allow(dead_code)]
 struct Image {
     data: Vec<u8>,
     width: u32,
@@ -100,13 +103,20 @@ struct Image {
 /// Our custom loader for image assets.
 struct ImageAssetLoader;
 impl AssetLoader for ImageAssetLoader {
-    fn load(&self, _ctx: AssetLoadCtx, bytes: &[u8]) -> anyhow::Result<SchemaBox> {
+    fn load(
+        &self,
+        _ctx: AssetLoadCtx,
+        bytes: &[u8],
+    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
         // We're not going to bother actually loading the image.
-        Ok(SchemaBox::new(Image {
-            data: bytes.to_vec(),
-            width: 0,
-            height: 0,
-        }))
+        let data = bytes.to_vec();
+        Box::pin(async move {
+            Ok(SchemaBox::new(Image {
+                data,
+                width: 0,
+                height: 0,
+            }))
+        })
     }
 }
 
@@ -124,23 +134,51 @@ fn main() -> anyhow::Result<()> {
     // Create a FileAssetIo to load assets from the filesystem.
     //
     // We can implement different AssetIo implementations for things web builds or other use-cases.
-    let io = FileAssetIo::new(&core_dir, &packs_dir, true);
+    let io = FileAssetIo::new(&core_dir, &packs_dir);
 
     // Create an asset server that we can load the assets with. We must provide our AssetIo
     // implementation, and the version of our game, which is used to determine if asset packs are
     // compatible with our game version.
-    let mut asset_server = AssetServer::new(io, Version::new(0, 1, 3));
+    let asset_server = AssetServer::new(io, Version::new(0, 1, 3));
 
-    // Each asset type needs to be registered with the asset server.
-    asset_server.register_asset::<GameMeta>();
-    asset_server.register_asset::<PlayerMeta>();
-    asset_server.register_asset::<AtlasMeta>();
-    asset_server.register_asset::<PluginMeta>();
-    asset_server.register_asset::<Image>();
+    // Each asset type needs to have it's schema registered to be loaded from an asset file. Calling
+    // the schema() method accomplishes that.
+    GameMeta::schema();
+    PlayerMeta::schema();
+    AtlasMeta::schema();
+    PluginMeta::schema();
+    // Image::schema();
 
-    // Load all of the assets. This happens synchronously. After this function completes, all the
-    // assets have been loaded, or an error is returned.
-    asset_server.load_assets()?;
+    // Load assets
+    let s = asset_server.clone();
+    IoTaskPool::init(TaskPool::default);
+    println!("Loading Assets...");
+
+    // Spawn a task to load the assets
+    IoTaskPool::get()
+        .spawn(async move {
+            s.load_assets().await.unwrap();
+        })
+        .detach();
+
+    // Use the load progress listener to wait for assets to load
+    loop {
+        let mut listener = asset_server.load_progress.listen();
+        println!(
+            "    Pending: {}\t\tDownloaded: {}\t\tLoaded: {}",
+            asset_server.load_progress.to_load(),
+            asset_server.load_progress.downloaded(),
+            asset_server.load_progress.loaded()
+        );
+        if asset_server.load_progress.is_finished() {
+            break;
+        }
+        listener.as_mut().wait();
+    }
+    println!(
+        "Done loading {} assets.",
+        asset_server.load_progress.loaded()
+    );
 
     // No we can load the root asset handle of the core asset pack. We cast it to the expected type,
     // GameMeta.
@@ -150,23 +188,23 @@ fn main() -> anyhow::Result<()> {
     // type was not `GameMeta`.
     let game_meta = asset_server.get(root_handle);
 
-    dbg!(&game_meta);
+    dbg!(&*game_meta);
     assert_eq!(game_meta.gravity, 9.8);
 
     // The GameMeta contains a handle to the player asset, which we can get here.
     for (i, player_handle) in game_meta.players.iter().enumerate() {
         // And we can load the `PlayerMeta` using the handle.
-        let player_meta = asset_server.get(*player_handle);
+        let player_meta = &asset_server.get(*player_handle);
 
-        dbg!(player_meta);
+        dbg!(&**player_meta);
 
         // And we can load the player's atlas metadata in the same way.
         let atlas_handle = player_meta.atlas;
-        let atlas_meta = asset_server.get(atlas_handle);
-        dbg!(atlas_meta);
+        let atlas_meta = &asset_server.get(atlas_handle);
+        dbg!(&**atlas_meta);
 
-        let avatar = asset_server.get(player_meta.avatar);
-        dbg!(avatar.data.len(), avatar.width, avatar.height);
+        // let avatar = asset_server.get(player_meta.avatar);
+        // dbg!(avatar.data.len(), avatar.width, avatar.height);
 
         if i == 0 {
             assert_eq!(player_meta.name, "Jane");
@@ -179,7 +217,8 @@ fn main() -> anyhow::Result<()> {
 
     // We can also check out our loaded asset packs.
     println!("\n===== Asset Packs =====\n");
-    for (pack_spec, asset_pack) in asset_server.packs() {
+    for entry in asset_server.packs().iter() {
+        let (pack_spec, asset_pack) = (entry.key(), entry.value());
         // Let's load the plugin metadata from the pack.
         let plugin_handle = asset_pack.root.typed::<PluginMeta>();
         let plugin_meta = asset_server.get(plugin_handle);
@@ -193,7 +232,8 @@ fn main() -> anyhow::Result<()> {
     println!("\n===== Incompatible Asset Packs ====\n");
 
     // We can iterate over the incompatible packs, and print a message describing the mismatch.
-    for (folder_name, pack_meta) in &asset_server.incompabile_packs {
+    for entry in asset_server.store.incompabile_packs.iter() {
+        let (folder_name, pack_meta) = (entry.key(), entry.value());
         let id = pack_meta.id;
         let version = &pack_meta.version;
         let actual_game_version = &asset_server.game_version;

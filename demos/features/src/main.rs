@@ -106,11 +106,12 @@ pub fn create_game() -> Game {
     game.install_plugin(DefaultGamePlugin)
         .init_shared_resource::<AssetServer>()
         // Register the default asset types
-        .register_default_assets()
-        // Register our custom asset types
-        .register_asset::<GameMeta>()
-        .register_asset::<AtlasDemoMeta>()
-        .register_asset::<TilemapDemoMeta>();
+        .register_default_assets();
+
+    // Register our custom asset types
+    GameMeta::schema();
+    AtlasDemoMeta::schema();
+    TilemapDemoMeta::schema();
 
     // Create our menu session
     game.sessions.create("menu").install_plugin(menu_plugin);
@@ -432,7 +433,7 @@ fn audio_demo_ui(
                 if ui.button(localization.get("play-sound")).clicked() {
                     audio
                         .borrow_mut()
-                        .play(assets.get(meta.audio_demo))
+                        .play(&*assets.get(meta.audio_demo))
                         .unwrap();
                 }
             })
@@ -508,17 +509,16 @@ fn back_to_menu_ui(
     mut session_options: ResMut<SessionOptions>,
     localization: Localization<GameMeta>,
 ) {
-    egui::CentralPanel::default()
+    egui::TopBottomPanel::bottom("back-to-menu")
         .frame(egui::Frame::none())
+        .show_separator_line(false)
         .show(&ctx, |ui| {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
-                ui.push_id("back-to-menu", |ui| {
-                    ui.add_space(20.0);
-                    if ui.button(localization.get("back-to-menu")).clicked() {
-                        session_options.delete = true;
-                        sessions.create("menu").install_plugin(menu_plugin);
-                    }
-                });
+                ui.add_space(20.0);
+                if ui.button(localization.get("back-to-menu")).clicked() {
+                    session_options.delete = true;
+                    sessions.create("menu").install_plugin(menu_plugin);
+                }
             });
         });
 }

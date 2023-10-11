@@ -69,17 +69,19 @@ impl AssetServerExt for &mut bones_asset::AssetServer {
     fn register_default_assets(self) -> Self {
         use crate::prelude::*;
 
-        self.register_asset::<Image>().register_asset::<Atlas>();
+        // Register asset schemas
+        Image::schema();
+        Atlas::schema();
 
         #[cfg(feature = "localization")]
         {
-            self.register_asset::<LocalizationAsset>()
-                .register_asset::<FluentBundleAsset>()
-                .register_asset::<FluentResourceAsset>();
+            LocalizationAsset::schema();
+            FluentBundleAsset::schema();
+            FluentResourceAsset::schema();
         }
 
         #[cfg(feature = "ui")]
-        self.register_asset::<Font>();
+        Font::schema();
 
         self
     }

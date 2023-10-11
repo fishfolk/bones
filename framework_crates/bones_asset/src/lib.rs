@@ -13,6 +13,7 @@ macro_rules! pub_use {
         pub use crate::{asset::*, cid::*, handle::*, io::*, server::*};
         pub use anyhow;
         pub use bones_schema::prelude::*;
+        pub use dashmap;
         pub use path_absolutize::Absolutize;
         pub use semver::Version;
     };
