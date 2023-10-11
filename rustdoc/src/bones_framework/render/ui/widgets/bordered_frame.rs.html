@@ -309,8 +309,8 @@
 
     <span class="doccomment">/// Set the padding. This will be applied on the inside of the border.
     </span><span class="attr">#[must_use = <span class="string">&quot;You must call .show() to render the frame&quot;</span>]
-    </span><span class="kw">pub fn </span>padding(<span class="kw-2">mut </span><span class="self">self</span>, margin: egui::style::Margin) -&gt; <span class="self">Self </span>{
-        <span class="self">self</span>.padding = margin;
+    </span><span class="kw">pub fn </span>padding(<span class="kw-2">mut </span><span class="self">self</span>, margin: <span class="kw">impl </span>Into&lt;egui::style::Margin&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.padding = margin.into();
 
         <span class="self">self
     </span>}

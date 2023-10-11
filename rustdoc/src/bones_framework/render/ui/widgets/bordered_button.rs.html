@@ -269,7 +269,7 @@
         .border(<span class="kw-2">&amp;</span>button_theme.borders.default)
         .on_click_border(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>button_theme.borders.clicked))
         .on_focus_border(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>button_theme.borders.focused))
-        .padding(button_theme.padding.into())
+        .padding(button_theme.padding)
     }
 
     <span class="doccomment">/// Set whether or not the button focuses itself automatically when it is hovered over.
@@ -294,16 +294,16 @@
 
     <span class="doccomment">/// Set the margin. This will be applied on the outside of the border.
     </span><span class="attr">#[must_use = <span class="string">&quot;You must call .show() to render the button&quot;</span>]
-    </span><span class="kw">pub fn </span>margin(<span class="kw-2">mut </span><span class="self">self</span>, margin: egui::style::Margin) -&gt; <span class="self">Self </span>{
-        <span class="self">self</span>.margin = margin;
+    </span><span class="kw">pub fn </span>margin(<span class="kw-2">mut </span><span class="self">self</span>, margin: <span class="kw">impl </span>Into&lt;egui::style::Margin&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.margin = margin.into();
 
         <span class="self">self
     </span>}
 
     <span class="doccomment">/// Set the padding. This will be applied on the inside of the border.
     </span><span class="attr">#[must_use = <span class="string">&quot;You must call .show() to render the button&quot;</span>]
-    </span><span class="kw">pub fn </span>padding(<span class="kw-2">mut </span><span class="self">self</span>, padding: egui::style::Margin) -&gt; <span class="self">Self </span>{
-        <span class="self">self</span>.padding = padding;
+    </span><span class="kw">pub fn </span>padding(<span class="kw-2">mut </span><span class="self">self</span>, padding: <span class="kw">impl </span>Into&lt;egui::style::Margin&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.padding = padding.into();
 
         <span class="self">self
     </span>}
