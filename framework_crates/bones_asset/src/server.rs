@@ -74,7 +74,7 @@ impl Default for AssetServer {
 
 impl Default for AssetServerInner {
     fn default() -> Self {
-        let (asset_change_send, asset_change_recv) = async_channel::bounded(10);
+        let (asset_change_send, asset_change_recv) = async_channel::unbounded();
         Self {
             game_version: Version::new(0, 0, 0),
             store: default(),
