@@ -1,4 +1,5 @@
-use rand::Rng;
+use crate::prelude::*;
+
 pub use ulid::Ulid;
 
 /// Extension trait for [`Ulid`].
@@ -10,6 +11,9 @@ pub trait UlidExt {
 
 impl UlidExt for Ulid {
     fn create() -> Self {
-        Ulid::from_parts(instant::now().floor() as u64, rand::thread_rng().gen())
+        Ulid::from_parts(
+            instant::now().floor() as u64,
+            THREAD_RNG.with(|rng| rng.gen_u128()),
+        )
     }
 }

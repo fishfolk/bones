@@ -11,12 +11,15 @@ mod default;
 mod labeled_id;
 mod names;
 mod ptr;
+mod random;
 mod ulid;
 
 /// Helper to export the same types in the crate root and in the prelude.
 macro_rules! pub_use {
     () => {
-        pub use crate::{collections::*, default::*, labeled_id::*, names::*, ptr::*, ulid::*};
+        pub use crate::{
+            collections::*, default::*, labeled_id::*, names::*, ptr::*, random::*, ulid::*,
+        };
         pub use bevy_ptr::*;
         pub use bones_utils_macros::*;
         pub use branches::{likely, unlikely};
@@ -26,6 +29,7 @@ macro_rules! pub_use {
         pub use maybe_owned::*;
         pub use parking_lot;
         pub use smallvec::*;
+        pub use turborand::*;
         pub use ustr::{ustr, Ustr, UstrMap, UstrSet};
     };
 }

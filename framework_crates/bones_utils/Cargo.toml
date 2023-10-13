@@ -26,7 +26,7 @@ maybe-owned        = "0.3"
 branches           = "0.1"
 ustr               = "0.10"
 futures-lite       = "1.13"
-rand               = "0.8"
+turborand          = "0.10"
 instant            = { version = "0.1", features = ["wasm-bindgen"] }
 
 # Make sure that the getrandom package, used in `ulid` works on web
