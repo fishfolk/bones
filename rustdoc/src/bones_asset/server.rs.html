@@ -1346,7 +1346,7 @@
 
 <span class="kw">impl </span>Default <span class="kw">for </span>AssetServerInner {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>(asset_change_send, asset_change_recv) = async_channel::bounded(<span class="number">10</span>);
+        <span class="kw">let </span>(asset_change_send, asset_change_recv) = async_channel::unbounded();
         <span class="self">Self </span>{
             game_version: Version::new(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>),
             store: default(),
