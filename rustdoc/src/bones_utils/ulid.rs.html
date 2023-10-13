@@ -13,7 +13,12 @@
 <a href="#13" id="13">13</a>
 <a href="#14" id="14">14</a>
 <a href="#15" id="15">15</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>rand::Rng;
+<a href="#16" id="16">16</a>
+<a href="#17" id="17">17</a>
+<a href="#18" id="18">18</a>
+<a href="#19" id="19">19</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+
 <span class="kw">pub use </span>ulid::Ulid;
 
 <span class="doccomment">/// Extension trait for [`Ulid`].
@@ -25,7 +30,10 @@
 
 <span class="kw">impl </span>UlidExt <span class="kw">for </span>Ulid {
     <span class="kw">fn </span>create() -&gt; <span class="self">Self </span>{
-        Ulid::from_parts(instant::now().floor() <span class="kw">as </span>u64, rand::thread_rng().gen())
+        Ulid::from_parts(
+            instant::now().floor() <span class="kw">as </span>u64,
+            THREAD_RNG.with(|rng| rng.gen_u128()),
+        )
     }
 }
 </code></pre></div></section></main></body></html>
