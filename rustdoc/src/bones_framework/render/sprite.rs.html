@@ -92,6 +92,20 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Sprite rendering components.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -140,6 +154,20 @@
     </span><span class="kw">pub </span>padding: Vec2,
     <span class="doccomment">/// The offset of the first tile from the top-left of the image.
     </span><span class="kw">pub </span>offset: Vec2,
+}
+
+<span class="kw">impl </span>Atlas {
+    <span class="doccomment">/// Get the position in pixels of the top-left corner of the atlas tile with the given index.
+    </span><span class="kw">pub fn </span>tile_pos(<span class="kw-2">&amp;</span><span class="self">self</span>, idx: u32) -&gt; Vec2 {
+        <span class="kw">let </span>row = idx / <span class="self">self</span>.columns;
+        <span class="kw">let </span>col = idx % <span class="self">self</span>.columns;
+        uvec2(col, row).as_vec2() * <span class="self">self</span>.tile_size
+    }
+
+    <span class="doccomment">/// Get the size in pixels of the entire atlas image.
+    </span><span class="kw">pub fn </span>size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec2 {
+        uvec2(<span class="self">self</span>.columns, <span class="self">self</span>.rows).as_vec2() * <span class="self">self</span>.tile_size
+    }
 }
 
 <span class="doccomment">/// A 2D sprite component
