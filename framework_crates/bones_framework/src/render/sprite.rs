@@ -48,6 +48,20 @@ pub struct Atlas {
     pub offset: Vec2,
 }
 
+impl Atlas {
+    /// Get the position in pixels of the top-left corner of the atlas tile with the given index.
+    pub fn tile_pos(&self, idx: u32) -> Vec2 {
+        let row = idx / self.columns;
+        let col = idx % self.columns;
+        uvec2(col, row).as_vec2() * self.tile_size
+    }
+
+    /// Get the size in pixels of the entire atlas image.
+    pub fn size(&self) -> Vec2 {
+        uvec2(self.columns, self.rows).as_vec2() * self.tile_size
+    }
+}
+
 /// A 2D sprite component
 #[derive(Clone, HasSchema, Debug, Default)]
 pub struct Sprite {
