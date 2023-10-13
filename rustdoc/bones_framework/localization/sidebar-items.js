@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["FluentBundleAsset","FluentResourceAsset","Localization","LocalizationAsset","RootLocalizationFieldIdx"],"type":["FluentBundle"]};
+window.SIDEBAR_ITEMS = {"macro":["fluent_args"],"struct":["FluentBundleAsset","FluentResourceAsset","Localization","LocalizationAsset","RootLocalizationFieldIdx"],"type":["FluentBundle"]};

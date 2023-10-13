@@ -293,6 +293,7 @@
 <a href="#293" id="293">293</a>
 <a href="#294" id="294">294</a>
 <a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Localization module.
 
 </span><span class="kw">use </span>std::{
@@ -305,18 +306,19 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
-<span class="kw">use </span>fluent_bundle::{FluentArgs, FluentResource};
+<span class="kw">use </span>fluent::{FluentArgs, FluentResource};
 <span class="kw">use </span>intl_memoizer::concurrent::IntlLangMemoizer;
 <span class="kw">use </span>unic_langid::LanguageIdentifier;
 
-<span class="kw">pub use </span>fluent_bundle;
+<span class="kw">pub use </span>fluent;
+<span class="kw">pub use </span>fluent::fluent_args;
 <span class="kw">pub use </span>fluent_langneg;
 <span class="kw">pub use </span>intl_memoizer;
 <span class="kw">pub use </span>sys_locale;
 <span class="kw">pub use </span>unic_langid;
 
 <span class="doccomment">/// Specialization of of the fluent bundle that is used by bones_framework.
-</span><span class="kw">pub type </span>FluentBundle = fluent_bundle::bundle::FluentBundle&lt;FluentResourceAsset, IntlLangMemoizer&gt;;
+</span><span class="kw">pub type </span>FluentBundle = fluent::bundle::FluentBundle&lt;FluentResourceAsset, IntlLangMemoizer&gt;;
 
 <span class="doccomment">/// An asset containing a [`FluentResource`].
 </span><span class="attr">#[derive(HasSchema, Deref, DerefMut, Clone)]
