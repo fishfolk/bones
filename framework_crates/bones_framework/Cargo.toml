@@ -17,7 +17,7 @@ default = ["image_png", "ui", "localization", "audio", "audio_ogg"]
 ## Enable the `ui` module, powered by [`egui`].
 ui = ["dep:egui", "dep:ttf-parser"]
 ## Enable the localization module, powered by [`fluent`](https://github.com/projectfluent/fluent-rs).
-localization = ["dep:fluent-bundle", "dep:fluent-langneg", "dep:intl-memoizer", "dep:unic-langid", "dep:sys-locale"]
+localization = ["dep:fluent", "dep:fluent-langneg", "dep:intl-memoizer", "dep:unic-langid", "dep:sys-locale"]
 
 ## Enable the audio system.
 audio = ["dep:kira"]
@@ -96,7 +96,7 @@ kira = { git = "https://github.com/zicklag/kira.git", branch = "feat/sync", feat
 ], default-features = false, optional = true }
 
 # Localization
-fluent-bundle  = { version = "0.15", optional = true }
+fluent = { version = "0.15", optional = true }
 fluent-langneg = { version = "0.13", optional = true }
 intl-memoizer  = { version = "0.5", optional = true }
 unic-langid    = { version = "0.9", features = ["serde"], optional = true }

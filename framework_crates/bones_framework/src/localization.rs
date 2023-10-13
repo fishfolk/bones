@@ -10,18 +10,19 @@ use std::{
 
 use crate::prelude::*;
 
-use fluent_bundle::{FluentArgs, FluentResource};
+use fluent::{FluentArgs, FluentResource};
 use intl_memoizer::concurrent::IntlLangMemoizer;
 use unic_langid::LanguageIdentifier;
 
-pub use fluent_bundle;
+pub use fluent;
+pub use fluent::fluent_args;
 pub use fluent_langneg;
 pub use intl_memoizer;
 pub use sys_locale;
 pub use unic_langid;
 
 /// Specialization of of the fluent bundle that is used by bones_framework.
-pub type FluentBundle = fluent_bundle::bundle::FluentBundle<FluentResourceAsset, IntlLangMemoizer>;
+pub type FluentBundle = fluent::bundle::FluentBundle<FluentResourceAsset, IntlLangMemoizer>;
 
 /// An asset containing a [`FluentResource`].
 #[derive(HasSchema, Deref, DerefMut, Clone)]
