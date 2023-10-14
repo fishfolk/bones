@@ -713,7 +713,7 @@
     <span class="doccomment">/// The pack and path the asset was loaded from.
     </span><span class="kw">pub </span>loc: AssetLoc,
     <span class="doccomment">/// The content IDs of any assets needed by this asset as a dependency.
-    </span><span class="kw">pub </span>dependencies: Arc&lt;AppendOnlyVec&lt;UntypedHandle&gt;&gt;,
+    </span><span class="kw">pub </span>dependencies: Vec&lt;UntypedHandle&gt;,
     <span class="doccomment">/// The loaded data of the asset.
     </span><span class="attr">#[deref]
     </span><span class="kw">pub </span>data: SchemaBox,

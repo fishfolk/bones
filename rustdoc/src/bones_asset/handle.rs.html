@@ -246,7 +246,7 @@
 }
 
 <span class="doccomment">/// An untyped handle to an asset.
-</span><span class="attr">#[derive(Default, Clone, Debug, Hash, PartialEq, Eq, Copy)]
+</span><span class="attr">#[derive(Default, Clone, Debug, Hash, PartialEq, Eq, Copy, PartialOrd, Ord)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>UntypedHandle {
     <span class="doccomment">/// The runtime ID of the handle
