@@ -502,10 +502,10 @@ mod storage {
                 else {
                     error!(
                         "\n\nCannot find schema registration for `{}` while loading persisted \
-                    storage. This means you that you need to call \
-                    `{}::schema()` to register your persisted storage type before \
-                    creating the `BonesBevyRenderer` or that there is data from an old \
-                    version of the app inside of the persistent storage file.\n\n",
+                        storage. This means you that you need to call \
+                        `{}::schema()` to register your persisted storage type before \
+                        creating the `BonesBevyRenderer` or that there is data from an old \
+                        version of the app inside of the persistent storage file.\n\n",
                         type_name, type_name,
                     );
                     continue;

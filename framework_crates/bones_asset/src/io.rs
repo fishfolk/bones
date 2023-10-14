@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use anyhow::Context;
 use async_channel::Sender;
 use bones_utils::{default, futures::future::Boxed as BoxedFuture, HashMap};
 
@@ -105,7 +106,7 @@ impl AssetIo for FileAssetIo {
                 loc.path
             };
             let path = base_dir.join(path);
-            Ok(std::fs::read(path)?)
+            std::fs::read(&path).with_context(|| format!("Could not load file: {path:?}"))
         })
     }
 
@@ -188,7 +189,7 @@ impl AssetIo for WebAssetIo {
             }
             let url = format!("{}{}", asset_url, loc.path.to_str().unwrap());
             let (sender, receiver) = async_channel::bounded(1);
-            let req = ehttp::Request::get(url);
+            let req = ehttp::Request::get(&url);
             ehttp::fetch(req, move |resp| {
                 sender.send_blocking(resp.map(|resp| resp.bytes)).unwrap();
             });
@@ -196,7 +197,8 @@ impl AssetIo for WebAssetIo {
                 .recv()
                 .await
                 .unwrap()
-                .map_err(|e| anyhow::format_err!("{e}"))?;
+                .map_err(|e| anyhow::format_err!("{e}"))
+                .with_context(|| format!("Could not download file: {url}"))?;
 
             Ok(result)
         })

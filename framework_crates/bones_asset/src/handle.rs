@@ -59,7 +59,7 @@ impl<T> Handle<T> {
 }
 
 /// An untyped handle to an asset.
-#[derive(Default, Clone, Debug, Hash, PartialEq, Eq, Copy)]
+#[derive(Default, Clone, Debug, Hash, PartialEq, Eq, Copy, PartialOrd, Ord)]
 #[repr(C)]
 pub struct UntypedHandle {
     /// The runtime ID of the handle

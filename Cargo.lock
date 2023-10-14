@@ -1163,7 +1163,7 @@ dependencies = [
  "csscolorparser",
  "document-features",
  "egui",
- "fluent-bundle",
+ "fluent",
  "fluent-langneg",
  "glam",
  "hex",
@@ -1263,9 +1263,9 @@ dependencies = [
  "instant",
  "maybe-owned",
  "parking_lot",
- "rand 0.8.5",
  "serde",
  "smallvec",
+ "turborand",
  "ulid",
  "ustr",
 ]
@@ -2032,6 +2032,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fc612c5837986b7104a87a0df74a5460931f1c5274be12f8d0f40aa2f30d632"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "fluent"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc4d7142005e2066e4844caf9f271b93fc79836ee96ec85057b8c109687e629a"
+dependencies = [
+ "fluent-bundle",
+ "unic-langid",
 ]
 
 [[package]]
@@ -4587,6 +4597,16 @@ name = "ttf-parser"
 version = "0.19.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49d64318d8311fc2668e48b63969f4343e0a85c4a109aa8460d6672e364b8bd1"
+
+[[package]]
+name = "turborand"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e28d61f1c96db8c016037a77961fa5da84fc3a57fe69a15283ace0ab1647bac0"
+dependencies = [
+ "getrandom 0.2.10",
+ "instant",
+]
 
 [[package]]
 name = "type-map"

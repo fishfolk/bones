@@ -368,7 +368,8 @@ impl AssetServer {
                 path: Path::new("pack.yaml"),
                 pack: None,
             })
-            .await?;
+            .await
+            .context("Could not load pack file")?;
         let meta: CorePackfileMeta = serde_yaml::from_slice(&packfile_contents)?;
 
         if !path_is_metadata(&meta.root) {
@@ -441,10 +442,10 @@ impl AssetServer {
         let handle = *self
             .store
             .path_handles
-            .entry(loc.to_owned())
+            .entry(loc.clone())
             // If we've already loaded this asset before
             .and_modify(|handle| {
-                // If there is no asset data yet, but we already have a handle, we don't need to
+                // If we aren't forcing a reload and we already have asset data, we don't need to
                 // trigger another load.
                 if self.store.asset_ids.get(handle).is_some() && !force {
                     should_load = false;
@@ -479,7 +480,7 @@ impl AssetServer {
                     // it has a schema not found error, try to load a data asset for the same path, if that
                     // doesn't work and it is an extension not found error, return the metadata error message.
                     let partial = if path_is_metadata(&loc.path) {
-                        let data = match server.load_metadata_asset(loc.as_ref(), &data) {
+                        match server.load_metadata_asset(loc.as_ref(), &data).await {
                             Err(meta_err) => {
                                 if meta_err.downcast_ref::<LoaderNotFound>().is_some() {
                                     match server.load_data_asset(loc.as_ref(), &data).await {
@@ -497,8 +498,7 @@ impl AssetServer {
                                 }
                             }
                             ok => ok,
-                        };
-                        data
+                        }
                     } else {
                         server.load_data_asset(loc.as_ref(), &data).await
                     }?;
@@ -580,9 +580,9 @@ impl AssetServer {
         handle
     }
 
-    fn load_metadata_asset(
-        &self,
-        loc: AssetLocRef,
+    async fn load_metadata_asset<'a>(
+        &'a self,
+        loc: AssetLocRef<'a>,
         contents: &[u8],
     ) -> anyhow::Result<PartialAsset> {
         // Get the schema for the asset
@@ -613,15 +613,19 @@ impl AssetServer {
             .ok_or_else(|| LoaderNotFound {
                 name: schema_name.into(),
             })?;
-        let dependencies = Arc::new(AppendOnlyVec::new());
+        let mut dependencies = Vec::new();
 
         let mut cid = Cid::default();
+        // Use the schema name and the file contents to create a unique, content-addressed ID for
+        // the asset.
+        cid.update(schema.full_name.as_bytes());
         cid.update(contents);
+
         let loader = MetaAssetLoadCtx {
             server: self,
             loc,
             schema,
-            dependencies: dependencies.clone(),
+            dependencies: &mut dependencies,
         };
         let data = if loc.path.extension().unwrap().to_str().unwrap() == "json" {
             let mut deserializer = serde_json::Deserializer::from_slice(contents);
@@ -631,13 +635,19 @@ impl AssetServer {
             loader.deserialize(deserializer)?
         };
 
-        // TODO: Figure out whether or not to update CID with dep cids.
-
-        // // Update the Cid
-        // dependencies.sort();
-        // for dep in &dependencies {
-        //     cid.update(&dep.0);
-        // }
+        // Update Cid with the Cids of it's dependencies
+        dependencies.sort();
+        for dep in &dependencies {
+            let dep_cid = loop {
+                let listener = self.load_progress.listen();
+                let Some(cid) = self.store.asset_ids.get(dep) else {
+                    listener.await;
+                    continue;
+                };
+                break *cid;
+            };
+            cid.update(dep_cid.0.as_slice());
+        }
 
         Ok(PartialAsset {
             cid,
@@ -659,7 +669,7 @@ impl AssetServer {
             .to_str()
             .ok_or_else(|| anyhow::format_err!("Invalid unicode in filename"))?;
         let (_name, extension) = filename.split_once('.').unwrap();
-        let loader = SCHEMA_REGISTRY
+        let (loader, schema) = SCHEMA_REGISTRY
             .schemas
             .iter()
             .find_map(|schema| {
@@ -670,7 +680,7 @@ impl AssetServer {
                                 .iter()
                                 .any(|ext| ext == extension || ext == filename)
                             {
-                                Some(loader)
+                                Some((loader, schema))
                             } else {
                                 None
                             }
@@ -686,7 +696,11 @@ impl AssetServer {
             })?;
 
         let dependencies = Arc::new(AppendOnlyVec::new());
+
         let mut cid = Cid::default();
+        // Use the schema name and the file contents to create a unique, content-addressed ID for
+        // the asset.
+        cid.update(schema.full_name.as_bytes());
         cid.update(contents);
 
         let ctx = AssetLoadCtx {
@@ -695,6 +709,21 @@ impl AssetServer {
             dependencies: dependencies.clone(),
         };
         let sbox = loader.load(ctx, contents).await?;
+
+        // Update Cid with the Cids of it's dependencies
+        let mut dependencies = dependencies.iter().cloned().collect::<Vec<_>>();
+        dependencies.sort();
+        for dep in &dependencies {
+            let dep_cid = loop {
+                let listener = self.load_progress.listen();
+                let Some(cid) = self.store.asset_ids.get(dep) else {
+                    listener.await;
+                    continue;
+                };
+                break *cid;
+            };
+            cid.update(dep_cid.0.as_slice());
+        }
 
         Ok(PartialAsset {
             cid,
@@ -802,7 +831,7 @@ impl AssetServer {
 struct PartialAsset {
     pub cid: Cid,
     pub data: SchemaBox,
-    pub dependencies: Arc<AppendOnlyVec<UntypedHandle>>,
+    pub dependencies: Vec<UntypedHandle>,
 }
 
 const NO_ASSET_MSG: &str = "Asset not loaded";
@@ -825,7 +854,7 @@ mod metadata {
         pub server: &'srv AssetServer,
         /// The dependency list of this asset. This should be updated by asset loaders as
         /// dependencies are added.
-        pub dependencies: Arc<AppendOnlyVec<UntypedHandle>>,
+        pub dependencies: &'srv mut Vec<UntypedHandle>,
         /// The location that the asset is being loaded from.
         pub loc: AssetLocRef<'srv>,
         /// The schema of the asset being loaded.
@@ -988,8 +1017,8 @@ mod metadata {
             // what data it's expecting.
             write!(
                 formatter,
-                "asset metadata matching the schema: {:#?}",
-                self.ptr.schema()
+                "asset metadata matching the schema: {}",
+                self.ptr.schema().full_name
             )
         }
 
@@ -1066,8 +1095,8 @@ mod metadata {
             // TODO: Write very verbose error messages for metadata asset deserializers.
             write!(
                 formatter,
-                "asset metadata matching the schema: {:#?}",
-                self.ptr.schema()
+                "asset metadata matching the schema: {}",
+                self.ptr.schema().full_name
             )
         }
 
@@ -1109,8 +1138,8 @@ mod metadata {
             // TODO: Write very verbose error messages for metadata asset deserializers.
             write!(
                 formatter,
-                "asset metadata matching the schema: {:#?}",
-                self.ptr.schema()
+                "asset metadata matching the schema: {}",
+                self.ptr.schema().full_name
             )
         }
 
@@ -1156,8 +1185,8 @@ mod metadata {
             // TODO: Write very verbose error messages for metadata asset deserializers.
             write!(
                 formatter,
-                "asset metadata matching the schema: {:#?}",
-                self.ptr.schema()
+                "asset metadata matching the schema: {}",
+                self.ptr.schema().full_name
             )
         }
 
