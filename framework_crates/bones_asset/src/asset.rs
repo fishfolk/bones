@@ -269,7 +269,7 @@ pub struct LoadedAsset {
     /// The pack and path the asset was loaded from.
     pub loc: AssetLoc,
     /// The content IDs of any assets needed by this asset as a dependency.
-    pub dependencies: Arc<AppendOnlyVec<UntypedHandle>>,
+    pub dependencies: Vec<UntypedHandle>,
     /// The loaded data of the asset.
     #[deref]
     pub data: SchemaBox,
