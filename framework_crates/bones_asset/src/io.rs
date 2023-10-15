@@ -168,9 +168,11 @@ pub struct WebAssetIo {
 impl WebAssetIo {
     /// Create a new [`WebAssetIo`] with the given URL as the core pack root URL.
     pub fn new(asset_url: &str) -> Self {
-        Self {
-            asset_url: asset_url.into(),
+        let mut asset_url = asset_url.to_string();
+        if !asset_url.ends_with('/') {
+            asset_url.push('/');
         }
+        Self { asset_url }
     }
 }
 
