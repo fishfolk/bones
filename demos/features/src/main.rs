@@ -427,7 +427,7 @@ fn audio_demo_plugin(session: &mut Session) {
 fn audio_demo_ui(
     ctx: Res<EguiCtx>,
     localization: Localization<GameMeta>,
-    audio: Res<AudioManager>,
+    mut audio: ResMut<AudioManager>,
     meta: Root<GameMeta>,
     assets: Res<AssetServer>,
 ) {
@@ -437,10 +437,7 @@ fn audio_demo_ui(
             ui.vertical_centered(|ui| {
                 ui.add_space(50.0);
                 if ui.button(localization.get("play-sound")).clicked() {
-                    audio
-                        .borrow_mut()
-                        .play(&*assets.get(meta.audio_demo))
-                        .unwrap();
+                    audio.play(&*assets.get(meta.audio_demo)).unwrap();
                 }
             })
         });
