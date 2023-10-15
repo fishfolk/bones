@@ -253,6 +253,8 @@
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::path::PathBuf;
 
 <span class="kw">use </span>anyhow::Context;
@@ -423,9 +425,11 @@
 <span class="kw">impl </span>WebAssetIo {
     <span class="doccomment">/// Create a new [`WebAssetIo`] with the given URL as the core pack root URL.
     </span><span class="kw">pub fn </span>new(asset_url: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            asset_url: asset_url.into(),
+        <span class="kw">let </span><span class="kw-2">mut </span>asset_url = asset_url.to_string();
+        <span class="kw">if </span>!asset_url.ends_with(<span class="string">&#39;/&#39;</span>) {
+            asset_url.push(<span class="string">&#39;/&#39;</span>);
         }
+        <span class="self">Self </span>{ asset_url }
     }
 }
 
