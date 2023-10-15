@@ -37,4 +37,3 @@ required-features = ["glam"]
 
 [dev-dependencies]
 serde_yaml = "0.9"
-trybuild   = "1.0"
