@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use anyhow::Context;
 use async_channel::Sender;
 use bones_utils::{default, futures::future::Boxed as BoxedFuture, HashMap};
+use path_absolutize::Absolutize;
 
 use crate::{AssetLocRef, ChangedAsset};
 
@@ -100,11 +101,8 @@ impl AssetIo for FileAssetIo {
                 None => core_dir.clone(),
             };
             // Make sure absolute paths are relative to pack.
-            let path = if loc.path.is_absolute() {
-                loc.path.strip_prefix("/").unwrap().to_owned()
-            } else {
-                loc.path
-            };
+            let path = loc.path.absolutize_from("/").unwrap();
+            let path = path.strip_prefix("/").unwrap();
             let path = base_dir.join(path);
             std::fs::read(&path).with_context(|| format!("Could not load file: {path:?}"))
         })
@@ -168,11 +166,9 @@ pub struct WebAssetIo {
 impl WebAssetIo {
     /// Create a new [`WebAssetIo`] with the given URL as the core pack root URL.
     pub fn new(asset_url: &str) -> Self {
-        let mut asset_url = asset_url.to_string();
-        if !asset_url.ends_with('/') {
-            asset_url.push('/');
+        Self {
+            asset_url: asset_url.into(),
         }
-        Self { asset_url }
     }
 }
 
@@ -185,11 +181,14 @@ impl AssetIo for WebAssetIo {
         let loc = loc.to_owned();
         let asset_url = self.asset_url.clone();
         Box::pin(async move {
-            tracing::info!(?loc, "Loading asset in WebAssetIo");
             if loc.pack.is_some() {
                 return Err(anyhow::format_err!("Cannot load asset packs on WASM yet"));
             }
-            let url = format!("{}{}", asset_url, loc.path.to_str().unwrap());
+            let url = format!(
+                "{}{}",
+                asset_url,
+                loc.path.absolutize_from("/").unwrap().to_str().unwrap()
+            );
             let (sender, receiver) = async_channel::bounded(1);
             let req = ehttp::Request::get(&url);
             ehttp::fetch(req, move |resp| {
