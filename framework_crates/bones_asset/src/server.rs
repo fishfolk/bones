@@ -328,13 +328,6 @@ impl AssetServer {
             );
         }
 
-        if !path_is_metadata(&meta.root) {
-            anyhow::bail!(
-                "Root asset must be a JSON or YAML file with a name in the form: \
-                [filename].[asset_kind].[yaml|json]"
-            );
-        }
-
         // Load the asset and produce a handle
         let root_loc = AssetLocRef {
             path: &meta.root,
@@ -371,13 +364,6 @@ impl AssetServer {
             .await
             .context("Could not load pack file")?;
         let meta: CorePackfileMeta = serde_yaml::from_slice(&packfile_contents)?;
-
-        if !path_is_metadata(&meta.root) {
-            anyhow::bail!(
-                "Root asset must be a JSON or YAML file with a name in the form: \
-                [filename].[asset_kind].[yaml|json]"
-            );
-        }
 
         // Load the asset and produce a handle
         let root_loc = AssetLocRef {
