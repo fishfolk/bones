@@ -547,9 +547,6 @@
 <a href="#547" id="547">547</a>
 <a href="#548" id="548">548</a>
 <a href="#549" id="549">549</a>
-<a href="#550" id="550">550</a>
-<a href="#551" id="551">551</a>
-<a href="#552" id="552">552</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::too_many_arguments)]
 
 </span><span class="kw">use </span>bones_bevy_renderer::{
@@ -979,7 +976,7 @@
 <span class="kw">fn </span>audio_demo_ui(
     ctx: Res&lt;EguiCtx&gt;,
     localization: Localization&lt;GameMeta&gt;,
-    audio: Res&lt;AudioManager&gt;,
+    <span class="kw-2">mut </span>audio: ResMut&lt;AudioManager&gt;,
     meta: Root&lt;GameMeta&gt;,
     assets: Res&lt;AssetServer&gt;,
 ) {
@@ -989,10 +986,7 @@
             ui.vertical_centered(|ui| {
                 ui.add_space(<span class="number">50.0</span>);
                 <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;play-sound&quot;</span>)).clicked() {
-                    audio
-                        .borrow_mut()
-                        .play(<span class="kw-2">&amp;*</span>assets.get(meta.audio_demo))
-                        .unwrap();
+                    audio.play(<span class="kw-2">&amp;*</span>assets.get(meta.audio_demo)).unwrap();
                 }
             })
         });

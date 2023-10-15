@@ -58,10 +58,9 @@
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Audio components.
 
-</span><span class="kw">use </span>std::{io::Cursor, sync::Arc};
+</span><span class="kw">use </span>std::io::Cursor;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
@@ -79,19 +78,18 @@
 }
 
 <span class="doccomment">/// The audio manager resource which can be used to play sounds.
-</span><span class="attr">#[derive(HasSchema, Clone, Deref, DerefMut)]
-</span><span class="kw">pub struct </span>AudioManager(Arc&lt;AtomicCell&lt;KiraAudioManager&gt;&gt;);
+</span><span class="attr">#[derive(HasSchema, Deref, DerefMut)]
+#[schema(no_clone)]
+</span><span class="kw">pub struct </span>AudioManager(KiraAudioManager);
 <span class="kw">impl </span>Default <span class="kw">for </span>AudioManager {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>(Arc::new(AtomicCell::new(
-            KiraAudioManager::&lt;CpalBackend&gt;::new(default()).unwrap(),
-        )))
+        <span class="self">Self</span>(KiraAudioManager::&lt;CpalBackend&gt;::new(default()).unwrap())
     }
 }
 
 <span class="doccomment">/// The audio source asset type, contains no data, but [`Handle&lt;AudioSource&gt;`] is still useful
 /// because it uniquely represents a sound/music that may be played outside of bones.
-</span><span class="attr">#[derive(Clone, HasSchema, Debug)]
+</span><span class="attr">#[derive(Clone, HasSchema, Debug, Deref, DerefMut)]
 #[schema(no_default)]
 #[type_data(asset_loader([<span class="string">&quot;ogg&quot;</span>, <span class="string">&quot;mp3&quot;</span>, <span class="string">&quot;flac&quot;</span>, <span class="string">&quot;wav&quot;</span>]</span>, AudioLoader))]
 <span class="kw">pub struct </span>AudioSource(<span class="kw">pub </span>StaticSoundData);
