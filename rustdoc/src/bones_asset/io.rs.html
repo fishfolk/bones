@@ -254,12 +254,12 @@
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
 <a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::path::PathBuf;
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>async_channel::Sender;
 <span class="kw">use </span>bones_utils::{default, futures::future::Boxed <span class="kw">as </span>BoxedFuture, HashMap};
+<span class="kw">use </span>path_absolutize::Absolutize;
 
 <span class="kw">use crate</span>::{AssetLocRef, ChangedAsset};
 
@@ -357,11 +357,8 @@
                 <span class="prelude-val">None </span>=&gt; core_dir.clone(),
             };
             <span class="comment">// Make sure absolute paths are relative to pack.
-            </span><span class="kw">let </span>path = <span class="kw">if </span>loc.path.is_absolute() {
-                loc.path.strip_prefix(<span class="string">&quot;/&quot;</span>).unwrap().to_owned()
-            } <span class="kw">else </span>{
-                loc.path
-            };
+            </span><span class="kw">let </span>path = loc.path.absolutize_from(<span class="string">&quot;/&quot;</span>).unwrap();
+            <span class="kw">let </span>path = path.strip_prefix(<span class="string">&quot;/&quot;</span>).unwrap();
             <span class="kw">let </span>path = base_dir.join(path);
             std::fs::read(<span class="kw-2">&amp;</span>path).with_context(|| <span class="macro">format!</span>(<span class="string">&quot;Could not load file: {path:?}&quot;</span>))
         })
@@ -425,11 +422,9 @@
 <span class="kw">impl </span>WebAssetIo {
     <span class="doccomment">/// Create a new [`WebAssetIo`] with the given URL as the core pack root URL.
     </span><span class="kw">pub fn </span>new(asset_url: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>asset_url = asset_url.to_string();
-        <span class="kw">if </span>!asset_url.ends_with(<span class="string">&#39;/&#39;</span>) {
-            asset_url.push(<span class="string">&#39;/&#39;</span>);
+        <span class="self">Self </span>{
+            asset_url: asset_url.into(),
         }
-        <span class="self">Self </span>{ asset_url }
     }
 }
 
@@ -442,11 +437,14 @@
         <span class="kw">let </span>loc = loc.to_owned();
         <span class="kw">let </span>asset_url = <span class="self">self</span>.asset_url.clone();
         Box::pin(<span class="kw">async move </span>{
-            <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>loc, <span class="string">&quot;Loading asset in WebAssetIo&quot;</span>);
             <span class="kw">if </span>loc.pack.is_some() {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::format_err!</span>(<span class="string">&quot;Cannot load asset packs on WASM yet&quot;</span>));
             }
-            <span class="kw">let </span>url = <span class="macro">format!</span>(<span class="string">&quot;{}{}&quot;</span>, asset_url, loc.path.to_str().unwrap());
+            <span class="kw">let </span>url = <span class="macro">format!</span>(
+                <span class="string">&quot;{}{}&quot;</span>,
+                asset_url,
+                loc.path.absolutize_from(<span class="string">&quot;/&quot;</span>).unwrap().to_str().unwrap()
+            );
             <span class="kw">let </span>(sender, receiver) = async_channel::bounded(<span class="number">1</span>);
             <span class="kw">let </span>req = ehttp::Request::get(<span class="kw-2">&amp;</span>url);
             ehttp::fetch(req, <span class="kw">move </span>|resp| {
