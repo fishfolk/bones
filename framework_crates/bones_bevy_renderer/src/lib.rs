@@ -237,7 +237,10 @@ impl BonesBevyRenderer {
             }
             #[cfg(target_arch = "wasm32")]
             {
-                let io = bones::WebAssetIo::new("/assets/");
+                let window = web_sys::window().unwrap();
+                let path = window.location().pathname().unwrap();
+                let base = path.rsplit_once('/').map(|x| x.0).unwrap_or(&path);
+                let io = bones::WebAssetIo::new(&format!("{base}/assets"));
                 asset_server.set_io(io);
             }
 
