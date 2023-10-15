@@ -1,6 +1,6 @@
 //! Audio components.
 
-use std::{io::Cursor, sync::Arc};
+use std::io::Cursor;
 
 use crate::prelude::*;
 
@@ -18,19 +18,18 @@ pub fn game_plugin(game: &mut Game) {
 }
 
 /// The audio manager resource which can be used to play sounds.
-#[derive(HasSchema, Clone, Deref, DerefMut)]
-pub struct AudioManager(Arc<AtomicCell<KiraAudioManager>>);
+#[derive(HasSchema, Deref, DerefMut)]
+#[schema(no_clone)]
+pub struct AudioManager(KiraAudioManager);
 impl Default for AudioManager {
     fn default() -> Self {
-        Self(Arc::new(AtomicCell::new(
-            KiraAudioManager::<CpalBackend>::new(default()).unwrap(),
-        )))
+        Self(KiraAudioManager::<CpalBackend>::new(default()).unwrap())
     }
 }
 
 /// The audio source asset type, contains no data, but [`Handle<AudioSource>`] is still useful
 /// because it uniquely represents a sound/music that may be played outside of bones.
-#[derive(Clone, HasSchema, Debug)]
+#[derive(Clone, HasSchema, Debug, Deref, DerefMut)]
 #[schema(no_default)]
 #[type_data(asset_loader(["ogg", "mp3", "flac", "wav"], AudioLoader))]
 pub struct AudioSource(pub StaticSoundData);
