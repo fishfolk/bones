@@ -20,6 +20,7 @@ use bevy::{
     sprite::{extract_sprites, Anchor, ExtractedSprite, ExtractedSprites, SpriteSystem},
     tasks::IoTaskPool,
     utils::{HashMap, Instant},
+    window::WindowMode,
 };
 use bevy_egui::EguiContext;
 use glam::*;
@@ -764,14 +765,31 @@ fn step_bones_game(world: &mut World) {
         .unwrap();
     let mut bevy_images = world.remove_resource::<Assets<Image>>().unwrap();
 
-    let mut winow_query = world.query::<&Window>();
-    let window = winow_query.get_single_mut(world).unwrap();
-    let BonesData { game, .. } = &mut data;
+    let mut winow_query = world.query::<&mut Window>();
+    let mut window = winow_query.get_single_mut(world).unwrap();
+    let bones_window = match data.game.shared_resource_cell::<bones::Window>() {
+        Some(w) => w,
+        None => {
+            data.game.insert_shared_resource(bones::Window {
+                size: vec2(window.width(), window.height()),
+                fullscreen: matches!(&window.mode, WindowMode::Fullscreen),
+            });
+            data.game.shared_resource_cell().unwrap()
+        }
+    };
+    let bones_window = bones_window.borrow_mut();
 
-    // Insert window information
-    game.insert_shared_resource(bones::Window {
-        size: vec2(window.width(), window.height()),
-    });
+    let is_fullscreen = matches!(&window.mode, WindowMode::Fullscreen);
+    if is_fullscreen != bones_window.fullscreen {
+        window.mode = if bones_window.fullscreen {
+            WindowMode::Fullscreen
+        } else {
+            WindowMode::Windowed
+        };
+    }
+    drop(bones_window);
+
+    let BonesData { game, .. } = &mut data;
 
     let bevy_time = world.resource::<Time>();
 

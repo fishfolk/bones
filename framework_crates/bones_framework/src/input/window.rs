@@ -7,5 +7,10 @@ use crate::prelude::*;
 #[repr(C)]
 pub struct Window {
     /// The logical size of the window's client area.
+    ///
+    /// This is considered read-only and is updated from the window size by the rendering
+    /// integration.
     pub size: glam::Vec2,
+    /// May be set to change whether or not the game is displayed full-screen.
+    pub fullscreen: bool,
 }
