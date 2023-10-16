@@ -1205,6 +1205,24 @@
 <a href="#1205" id="1205">1205</a>
 <a href="#1206" id="1206">1206</a>
 <a href="#1207" id="1207">1207</a>
+<a href="#1208" id="1208">1208</a>
+<a href="#1209" id="1209">1209</a>
+<a href="#1210" id="1210">1210</a>
+<a href="#1211" id="1211">1211</a>
+<a href="#1212" id="1212">1212</a>
+<a href="#1213" id="1213">1213</a>
+<a href="#1214" id="1214">1214</a>
+<a href="#1215" id="1215">1215</a>
+<a href="#1216" id="1216">1216</a>
+<a href="#1217" id="1217">1217</a>
+<a href="#1218" id="1218">1218</a>
+<a href="#1219" id="1219">1219</a>
+<a href="#1220" id="1220">1220</a>
+<a href="#1221" id="1221">1221</a>
+<a href="#1222" id="1222">1222</a>
+<a href="#1223" id="1223">1223</a>
+<a href="#1224" id="1224">1224</a>
+<a href="#1225" id="1225">1225</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -1227,6 +1245,7 @@
     sprite::{extract_sprites, Anchor, ExtractedSprite, ExtractedSprites, SpriteSystem},
     tasks::IoTaskPool,
     utils::{HashMap, Instant},
+    window::WindowMode,
 };
 <span class="kw">use </span>bevy_egui::EguiContext;
 <span class="kw">use </span>glam::<span class="kw-2">*</span>;
@@ -1971,14 +1990,31 @@
         .unwrap();
     <span class="kw">let </span><span class="kw-2">mut </span>bevy_images = world.remove_resource::&lt;Assets&lt;Image&gt;&gt;().unwrap();
 
-    <span class="kw">let </span><span class="kw-2">mut </span>winow_query = world.query::&lt;<span class="kw-2">&amp;</span>Window&gt;();
-    <span class="kw">let </span>window = winow_query.get_single_mut(world).unwrap();
-    <span class="kw">let </span>BonesData { game, .. } = <span class="kw-2">&amp;mut </span>data;
+    <span class="kw">let </span><span class="kw-2">mut </span>winow_query = world.query::&lt;<span class="kw-2">&amp;mut </span>Window&gt;();
+    <span class="kw">let </span><span class="kw-2">mut </span>window = winow_query.get_single_mut(world).unwrap();
+    <span class="kw">let </span>bones_window = <span class="kw">match </span>data.game.shared_resource_cell::&lt;bones::Window&gt;() {
+        <span class="prelude-val">Some</span>(w) =&gt; w,
+        <span class="prelude-val">None </span>=&gt; {
+            data.game.insert_shared_resource(bones::Window {
+                size: vec2(window.width(), window.height()),
+                fullscreen: <span class="macro">matches!</span>(<span class="kw-2">&amp;</span>window.mode, WindowMode::Fullscreen),
+            });
+            data.game.shared_resource_cell().unwrap()
+        }
+    };
+    <span class="kw">let </span>bones_window = bones_window.borrow_mut();
 
-    <span class="comment">// Insert window information
-    </span>game.insert_shared_resource(bones::Window {
-        size: vec2(window.width(), window.height()),
-    });
+    <span class="kw">let </span>is_fullscreen = <span class="macro">matches!</span>(<span class="kw-2">&amp;</span>window.mode, WindowMode::Fullscreen);
+    <span class="kw">if </span>is_fullscreen != bones_window.fullscreen {
+        window.mode = <span class="kw">if </span>bones_window.fullscreen {
+            WindowMode::Fullscreen
+        } <span class="kw">else </span>{
+            WindowMode::Windowed
+        };
+    }
+    drop(bones_window);
+
+    <span class="kw">let </span>BonesData { game, .. } = <span class="kw-2">&amp;mut </span>data;
 
     <span class="kw">let </span>bevy_time = world.resource::&lt;Time&gt;();
 
