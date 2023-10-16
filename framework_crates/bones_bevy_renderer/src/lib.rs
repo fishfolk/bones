@@ -41,8 +41,12 @@ mod convert;
 pub struct BevyBonesEntity;
 
 /// Renderer for [`bones_framework`] [`Game`][bones::Game]s using Bevy.
-#[derive(Resource)]
 pub struct BonesBevyRenderer {
+    /// Skip the default loading screen and run the bones game immediately, so that you can
+    /// implement your own loading screen.
+    pub custom_load_progress: Option<
+        Box<dyn FnMut(&bones::AssetServer, &bevy_egui::egui::Context) + Sync + Send + 'static>,
+    >,
     /// Whether or not to use nearest-neighbor sampling for textures.
     pub pixel_art: bool,
     /// The bones game to run.
@@ -176,6 +180,10 @@ pub struct BonesData {
     pub asset_server: Option<bones::AssetServer>,
     /// The bones egui texture resource.
     pub bones_egui_textures: bones::AtomicResource<bones::EguiTextures>,
+    /// The custom load progress indicator.
+    pub custom_load_progress: Option<
+        Box<dyn FnMut(&bones::AssetServer, &bevy_egui::egui::Context) + Sync + Send + 'static>,
+    >,
 }
 
 impl BonesBevyRenderer {
@@ -186,6 +194,7 @@ impl BonesBevyRenderer {
     pub fn new(game: bones::Game) -> Self {
         BonesBevyRenderer {
             pixel_art: true,
+            custom_load_progress: None,
             game,
             game_version: bones::Version::new(0, 1, 0),
             app_namespace: ("org".into(), "fishfolk".into(), "bones_demo_game".into()),
@@ -280,6 +289,7 @@ impl BonesBevyRenderer {
                 .shared_resource_cell::<bones::EguiTextures>()
                 .unwrap(),
             game: self.game,
+            custom_load_progress: self.custom_load_progress,
         })
         .init_resource::<BonesGameEntity>();
 
@@ -522,17 +532,66 @@ mod storage {
     }
 }
 
-fn asset_load_status(data: Res<BonesData>, mut frame: Local<u32>) {
-    *frame = frame.wrapping_add(1);
-    if *frame % 30 != 0 {
+fn default_load_progress(asset_server: &bones::AssetServer, ctx: &bevy_egui::egui::Context) {
+    use bevy_egui::egui;
+    let errored = asset_server.load_progress.errored();
+
+    egui::CentralPanel::default().show(ctx, |ui| {
+        let height = ui.available_height();
+        let ctx = ui.ctx().clone();
+
+        let space_size = 0.03;
+        let spinner_size = 0.07;
+        let text_size = 0.034;
+        ui.vertical_centered(|ui| {
+            ui.add_space(height * 0.3);
+
+            if errored > 0 {
+                ui.label(
+                    egui::RichText::new("⚠")
+                        .color(egui::Color32::RED)
+                        .size(height * spinner_size),
+                );
+                ui.add_space(height * space_size);
+                ui.label(
+                    egui::RichText::new(format!(
+                        "Error loading {errored} asset{}.",
+                        if errored > 1 { "s" } else { "" }
+                    ))
+                    .color(egui::Color32::RED)
+                    .size(height * text_size * 0.75),
+                );
+            } else {
+                ui.add(egui::Spinner::new().size(height * spinner_size));
+                ui.add_space(height * space_size);
+                ui.label(egui::RichText::new("Loading").size(height * text_size));
+            }
+        });
+
+        ctx.data_mut(|d| {
+            d.insert_temp(ui.id(), (spinner_size, space_size, text_size));
+        })
+    });
+}
+
+fn asset_load_status(
+    mut data: ResMut<BonesData>,
+    mut egui_query: Query<&mut bevy_egui::EguiContext, With<Window>>,
+) {
+    let BonesData {
+        asset_server,
+        custom_load_progress,
+        ..
+    } = &mut *data;
+    let Some(asset_server) = &asset_server else {
         return;
-    }
-    if let Some(asset_server) = &data.asset_server {
-        let to_load = asset_server.load_progress.to_load();
-        let loaded = asset_server.load_progress.loaded();
-        let downloaded = asset_server.load_progress.downloaded();
-        let errored = asset_server.load_progress.errored();
-        info!(?to_load, ?loaded, ?downloaded, ?errored, "Loading assets");
+    };
+
+    let mut ctx = egui_query.single_mut();
+    if let Some(load_progress) = custom_load_progress {
+        (load_progress)(asset_server, ctx.get_mut());
+    } else {
+        default_load_progress(asset_server, ctx.get_mut());
     }
 }
 
