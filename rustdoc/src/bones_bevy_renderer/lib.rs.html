@@ -1223,6 +1223,11 @@
 <a href="#1223" id="1223">1223</a>
 <a href="#1224" id="1224">1224</a>
 <a href="#1225" id="1225">1225</a>
+<a href="#1226" id="1226">1226</a>
+<a href="#1227" id="1227">1227</a>
+<a href="#1228" id="1228">1228</a>
+<a href="#1229" id="1229">1229</a>
+<a href="#1230" id="1230">1230</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -1503,6 +1508,11 @@
         <span class="self">self</span>.game
             .insert_shared_resource(bones::EguiTextures::default());
         app.insert_resource(BonesImageIds::default());
+
+        <span class="comment">// Insert empty inputs that will be updated by the `insert_bones_input` system later.
+        </span><span class="self">self</span>.game.init_shared_resource::&lt;bones::KeyboardInputs&gt;();
+        <span class="self">self</span>.game.init_shared_resource::&lt;bones::MouseInputs&gt;();
+        <span class="self">self</span>.game.init_shared_resource::&lt;bones::GamepadInputs&gt;();
 
         <span class="comment">// Insert the bones data
         </span>app.insert_resource(BonesData {
