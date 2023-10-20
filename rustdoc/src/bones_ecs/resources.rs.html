@@ -445,17 +445,17 @@
 
     <span class="doccomment">/// Borrow the resource.
     </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicSchemaRef {
-        <span class="comment">// SOUND: we keep the borrow along with the reference.
-        </span><span class="kw">let </span>(reference, borrow) = <span class="kw">unsafe </span>{ Ref::into_split(<span class="self">self</span>.cell.borrow()) };
-        <span class="kw">let </span>schema_ref = reference.as_ref();
+        <span class="kw">let </span>(reference, borrow) = Ref::into_split(<span class="self">self</span>.cell.borrow());
+        <span class="comment">// SOUND: we keep the borrow along with the reference so that the pointer remains valid.
+        </span><span class="kw">let </span>schema_ref = <span class="kw">unsafe </span>{ reference.as_ref() }.as_ref();
         AtomicSchemaRef { schema_ref, borrow }
     }
 
     <span class="doccomment">/// Mutably borrow the resource.
     </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicSchemaRefMut {
-        <span class="comment">// SOUND: we keep the borrow along with the reference.
-        </span><span class="kw">let </span>(reference, borrow) = <span class="kw">unsafe </span>{ RefMut::into_split(<span class="self">self</span>.cell.borrow_mut()) };
-        <span class="kw">let </span>schema_ref = reference.as_mut();
+        <span class="kw">let </span>(<span class="kw-2">mut </span>reference, borrow) = RefMut::into_split(<span class="self">self</span>.cell.borrow_mut());
+        <span class="comment">// SOUND: we keep the borrow along with the reference so that the pointer remains valid.
+        </span><span class="kw">let </span>schema_ref = <span class="kw">unsafe </span>{ reference.as_mut() }.as_mut();
         AtomicSchemaRefMut { schema_ref, borrow }
     }
 
@@ -484,7 +484,7 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; AtomicSchemaRef&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="doccomment">/// # Safety
     /// You must know that T represents the data in the [`SchemaRef`].
-    </span><span class="kw">pub unsafe fn </span>deref&lt;T&gt;(<span class="self">self</span>) -&gt; Ref&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    </span><span class="kw">pub unsafe fn </span>deref&lt;T: <span class="lifetime">&#39;static</span>&gt;(<span class="self">self</span>) -&gt; Ref&lt;<span class="lifetime">&#39;a</span>, T&gt; {
         Ref::with_borrow(<span class="self">self</span>.schema_ref.deref(), <span class="self">self</span>.borrow)
     }
 
@@ -508,7 +508,7 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; AtomicSchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="doccomment">/// # Safety
     /// You must know that T represents the data in the [`SchemaRefMut`].
-    </span><span class="kw">pub unsafe fn </span>deref_mut&lt;T&gt;(<span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    </span><span class="kw">pub unsafe fn </span>deref_mut&lt;T: <span class="lifetime">&#39;static</span>&gt;(<span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
         RefMut::with_borrow(<span class="self">self</span>.schema_ref.deref_mut(), <span class="self">self</span>.borrow)
     }
 
