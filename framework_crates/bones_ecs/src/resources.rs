@@ -49,17 +49,17 @@ impl UntypedAtomicResource {
 
     /// Borrow the resource.
     pub fn borrow(&self) -> AtomicSchemaRef {
-        // SOUND: we keep the borrow along with the reference.
-        let (reference, borrow) = unsafe { Ref::into_split(self.cell.borrow()) };
-        let schema_ref = reference.as_ref();
+        let (reference, borrow) = Ref::into_split(self.cell.borrow());
+        // SOUND: we keep the borrow along with the reference so that the pointer remains valid.
+        let schema_ref = unsafe { reference.as_ref() }.as_ref();
         AtomicSchemaRef { schema_ref, borrow }
     }
 
     /// Mutably borrow the resource.
     pub fn borrow_mut(&self) -> AtomicSchemaRefMut {
-        // SOUND: we keep the borrow along with the reference.
-        let (reference, borrow) = unsafe { RefMut::into_split(self.cell.borrow_mut()) };
-        let schema_ref = reference.as_mut();
+        let (mut reference, borrow) = RefMut::into_split(self.cell.borrow_mut());
+        // SOUND: we keep the borrow along with the reference so that the pointer remains valid.
+        let schema_ref = unsafe { reference.as_mut() }.as_mut();
         AtomicSchemaRefMut { schema_ref, borrow }
     }
 
@@ -88,7 +88,7 @@ pub struct AtomicSchemaRef<'a> {
 impl<'a> AtomicSchemaRef<'a> {
     /// # Safety
     /// You must know that T represents the data in the [`SchemaRef`].
-    pub unsafe fn deref<T>(self) -> Ref<'a, T> {
+    pub unsafe fn deref<T: 'static>(self) -> Ref<'a, T> {
         Ref::with_borrow(self.schema_ref.deref(), self.borrow)
     }
 
@@ -112,7 +112,7 @@ pub struct AtomicSchemaRefMut<'a> {
 impl<'a> AtomicSchemaRefMut<'a> {
     /// # Safety
     /// You must know that T represents the data in the [`SchemaRefMut`].
-    pub unsafe fn deref_mut<T>(self) -> RefMut<'a, T> {
+    pub unsafe fn deref_mut<T: 'static>(self) -> RefMut<'a, T> {
         RefMut::with_borrow(self.schema_ref.deref_mut(), self.borrow)
     }
 

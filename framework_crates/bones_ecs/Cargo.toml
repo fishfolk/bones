@@ -24,7 +24,7 @@ bones_utils  = { version = "0.3", path = "../bones_utils" }
 bones_schema = { version = "0.3", path = "../bones_schema" }
 
 anyhow      = "1.0"
-atomicell   = "0.1"
+atomicell   = "0.2"
 bitset-core = "0.1"
 thiserror   = "1.0"
 glam        = { version = "0.24", optional = true }

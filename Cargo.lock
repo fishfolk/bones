@@ -345,9 +345,9 @@ checksum = "5450eca8ce5abcfd5520727e975ebab30ccca96030550406b0ca718b224ead10"
 
 [[package]]
 name = "atomicell"
-version = "0.1.9"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "157342dd84c64f16899b4b16c1fb2cce54b887990362aac3c590b3d13810890f"
+checksum = "bf53d6c43ea3fa42a5d18d6060081bcfddeca7c63faa64e65a59c4372bbe173b"
 
 [[package]]
 name = "autocfg"
