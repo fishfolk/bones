@@ -18,7 +18,7 @@ use bones_utils::{parking_lot::RwLock, prelude::*};
 
 /// An untyped reference that knows the [`Schema`] of the pointee and that can be cast to a matching
 /// type.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct SchemaRef<'pointer> {
     ptr: Ptr<'pointer>,
     schema: &'static Schema,
