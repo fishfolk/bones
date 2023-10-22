@@ -4,9 +4,11 @@ use std::{
     alloc::handle_alloc_error,
     any::{type_name, TypeId},
     hash::Hash,
+    iter::{Filter, Map},
     marker::PhantomData,
     mem::MaybeUninit,
     ptr::NonNull,
+    str::Split,
     sync::OnceLock,
 };
 
@@ -88,6 +90,35 @@ impl<'pointer> SchemaRef<'pointer> {
     #[track_caller]
     pub fn field<'a, I: Into<FieldIdx<'a>>>(&self, idx: I) -> SchemaRef<'pointer> {
         self.get_field(idx).unwrap()
+    }
+
+    /// Get a nested field from the box.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the field doesn't exist in the schema.
+    #[track_caller]
+    pub fn field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(
+        self,
+        path: I,
+    ) -> SchemaRef<'pointer> {
+        self.get_field_path(path).unwrap()
+    }
+
+    /// Get a nested field from the box.
+    ///
+    /// # Errors
+    ///
+    /// Errors if the field doesn't exist in the schema.
+    pub fn get_field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(
+        self,
+        path: I,
+    ) -> Result<SchemaRef<'pointer>, SchemaFieldNotFoundError<'a>> {
+        let mut schemaref = self;
+        for item in path {
+            schemaref = schemaref.get_field(item)?;
+        }
+        Ok(schemaref)
     }
 
     /// Get a pointer to a field.
@@ -304,6 +335,73 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
         idx: I,
     ) -> SchemaRefMut<'pointer, 'this> {
         self.get_field(idx).unwrap()
+    }
+
+    /// Get a nested field from the box.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the field doesn't exist in the schema.
+    #[track_caller]
+    pub fn into_field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(
+        self,
+        path: I,
+    ) -> SchemaRefMut<'pointer, 'parent> {
+        self.try_into_field_path(path).unwrap()
+    }
+
+    /// Get a nested field from the box.
+    ///
+    /// # Errors
+    ///
+    /// Errors if the field doesn't exist in the schema.
+    pub fn try_into_field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(
+        self,
+        path: I,
+    ) -> Result<SchemaRefMut<'pointer, 'parent>, Self> {
+        let mut schemaref = self;
+        for item in path {
+            schemaref = schemaref.try_into_field(item)?;
+        }
+        Ok(schemaref)
+    }
+
+    /// Get a nested field from the box.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the field doesn't exist in the schema.
+    #[track_caller]
+    pub fn get_field_path<'this, 'a, I: IntoIterator<Item = FieldIdx<'a>>>(
+        &'this mut self,
+        path: I,
+    ) -> SchemaRefMut<'pointer, 'this> {
+        self.try_get_field_path(path).unwrap()
+    }
+
+    /// Get a nested field from the box.
+    ///
+    /// # Errors
+    ///
+    /// Errors if the field doesn't exist in the schema.
+    pub fn try_get_field_path<'this, 'a, I: IntoIterator<Item = FieldIdx<'a>>>(
+        &'this mut self,
+        path: I,
+    ) -> Result<SchemaRefMut<'pointer, 'this>, SchemaFieldNotFoundError<'a>> {
+        let mut schemaref = Self {
+            // SOUND: we are cloning our mutable reference here, but we are returning only one
+            // of them, and it contains the 'this lifetime that indicates a borrow of this one,
+            // preventing both from being used at the same time.
+            ptr: unsafe { PtrMut::new(NonNull::new_unchecked(self.ptr.as_ptr())) },
+            schema: self.schema,
+            parent_lifetime: PhantomData,
+        };
+        for item in path {
+            schemaref = schemaref
+                .try_into_field(item)
+                .map_err(|_| SchemaFieldNotFoundError { idx: item })?;
+        }
+        Ok(schemaref)
     }
 
     /// Get a pointer to a field.
@@ -946,6 +1044,42 @@ impl<'a> std::fmt::Display for FieldIdx<'a> {
             Self::Idx(i) => write!(f, "{i}"),
             Self::Name(n) => write!(f, "{n}"),
         }
+    }
+}
+
+/// A wrapper type that implements [`IntoIterator<Item = FieldIdx>`] for an inner string to make
+/// it easier to use with [`SchemaRef::get_field_path()`] and other field path methods.
+pub struct FieldPath<T>(pub T);
+impl<'a> IntoIterator for FieldPath<&'a str> {
+    type Item = FieldIdx<'a>;
+    type IntoIter = Map<Filter<Split<'a, char>, fn(&&str) -> bool>, fn(&str) -> FieldIdx>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        fn flt(x: &&str) -> bool {
+            !x.is_empty()
+        }
+        fn mp(x: &str) -> FieldIdx {
+            x.parse::<usize>()
+                .map(FieldIdx::Idx)
+                .unwrap_or(FieldIdx::Name(x))
+        }
+        self.0.split('.').filter(flt as _).map(mp as _)
+    }
+}
+impl IntoIterator for FieldPath<Ustr> {
+    type Item = FieldIdx<'static>;
+    type IntoIter = Map<Filter<Split<'static, char>, fn(&&str) -> bool>, fn(&str) -> FieldIdx>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        fn flt(x: &&str) -> bool {
+            !x.is_empty()
+        }
+        fn mp(x: &str) -> FieldIdx {
+            x.parse::<usize>()
+                .map(FieldIdx::Idx)
+                .unwrap_or(FieldIdx::Name(x))
+        }
+        self.0.as_str().split('.').filter(flt as _).map(mp as _)
     }
 }
 
