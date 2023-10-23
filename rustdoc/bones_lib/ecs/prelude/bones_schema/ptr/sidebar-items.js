@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["FieldIdx"],"struct":["SBox","SchemaBox","SchemaFieldNotFoundError","SchemaMismatchError","SchemaRef","SchemaRefMut"]};
+window.SIDEBAR_ITEMS = {"enum":["FieldIdx"],"struct":["FieldPath","SBox","SchemaBox","SchemaFieldNotFoundError","SchemaMismatchError","SchemaRef","SchemaRefMut"]};
