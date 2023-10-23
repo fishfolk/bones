@@ -163,6 +163,18 @@ impl UntypedResources {
         Self::default()
     }
 
+    /// Get the number of resources in the store.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.resources.len()
+    }
+
+    /// Returns whether the store is empty.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Insert a resource.
     pub fn insert(&mut self, resource: SchemaBox) -> Option<UntypedAtomicResource> {
         let id = resource.schema().id();
@@ -217,6 +229,18 @@ impl Resources {
     /// Create an empty [`Resources`].
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Get the number of resources in the store.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.untyped.len()
+    }
+
+    /// Returns whether the store is empty.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Insert a resource.
