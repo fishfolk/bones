@@ -995,7 +995,7 @@
 
 <span class="doccomment">/// An untyped reference that knows the [`Schema`] of the pointee and that can be cast to a matching
 /// type.
-</span><span class="attr">#[derive(Clone)]
+</span><span class="attr">#[derive(Clone, Copy)]
 </span><span class="kw">pub struct </span>SchemaRef&lt;<span class="lifetime">&#39;pointer</span>&gt; {
     ptr: Ptr&lt;<span class="lifetime">&#39;pointer</span>&gt;,
     schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,

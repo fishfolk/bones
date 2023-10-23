@@ -394,6 +394,16 @@
 <a href="#394" id="394">394</a>
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! World resource storage.
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
@@ -447,7 +457,7 @@
     </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicSchemaRef {
         <span class="kw">let </span>(reference, borrow) = Ref::into_split(<span class="self">self</span>.cell.borrow());
         <span class="comment">// SOUND: we keep the borrow along with the reference so that the pointer remains valid.
-        </span><span class="kw">let </span>schema_ref = <span class="kw">unsafe </span>{ reference.as_ref() }.as_ref();
+        </span><span class="kw">let </span>schema_ref = NoClone(<span class="kw">unsafe </span>{ reference.as_ref() }.as_ref());
         AtomicSchemaRef { schema_ref, borrow }
     }
 
@@ -473,11 +483,21 @@
     }
 }
 
+<span class="doccomment">/// Wrapper type that prevents cloning or copying the inner type.
+</span><span class="attr">#[derive(Deref, DerefMut)]
+</span><span class="kw">pub struct </span>NoClone&lt;T&gt;(T);
+
 <span class="doccomment">/// An atomic borrow of a [`SchemaRef`].
 </span><span class="attr">#[derive(Deref)]
 </span><span class="kw">pub struct </span>AtomicSchemaRef&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="attr">#[deref]
-    </span>schema_ref: SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;,
+    <span class="doccomment">/// This is wrappwed in a [`NoClone`] because of the limitations of the deref trait.
+    /// We would prefer to have deref return a [`SchemaRef`] with an appropriate lifetime,
+    /// that indicates it borrows from the [`AtomicSchemaRef`], but since deref must return
+    /// a normal reference, instead we return a reference to the `SchemaRef` wrapped inside
+    /// a [`NoClone`] to prevent copying the [`SchemaRef`] out of dereference with a lifetime
+    /// that outlives the atomicborrow.
+    </span><span class="attr">#[deref]
+    </span>schema_ref: NoClone&lt;SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;&gt;,
     borrow: AtomicBorrow&lt;<span class="lifetime">&#39;a</span>&gt;,
 }
 
