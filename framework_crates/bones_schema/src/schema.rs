@@ -2,7 +2,7 @@
 
 use std::{alloc::Layout, any::TypeId, borrow::Cow};
 
-use crate::{alloc::SchemaTypeMap, prelude::*};
+use crate::{alloc::TypeDatas, prelude::*};
 
 /// Trait implemented for types that have a [`Schema`].
 ///
@@ -165,7 +165,7 @@ pub struct SchemaData {
     /// #[derive_type_data(SomeTypeData)]
     /// struct MyData;
     /// ```
-    pub type_data: SchemaTypeMap,
+    pub type_data: TypeDatas,
 
     // NOTE: The fields below could be implemented as type datas, and it would be nicely elegant to
     // do so, but for performance reasons, we put them right in the [`Schema`] struct because

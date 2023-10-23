@@ -12,5 +12,5 @@ mod vec;
 pub use map::*;
 mod map;
 
-pub use type_set::*;
-mod type_set;
+pub use type_datas::*;
+mod type_datas;

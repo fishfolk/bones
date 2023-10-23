@@ -4,7 +4,7 @@ use bones_utils::{fxhash::FxHasher, Ustr};
 #[cfg(feature = "serde")]
 use serde::{de::Error, Deserialize};
 
-use crate::{alloc::SchemaTypeMap, prelude::*, raw_fns::*};
+use crate::{alloc::TypeDatas, prelude::*, raw_fns::*};
 
 use std::{alloc::Layout, any::TypeId, hash::Hasher, sync::OnceLock, time::Duration};
 
@@ -142,7 +142,7 @@ unsafe impl HasSchema for Ustr {
                 hash_fn: Some(<Self as RawHash>::raw_hash),
                 eq_fn: Some(<Self as RawEq>::raw_eq),
                 type_data: {
-                    let mut td = SchemaTypeMap::default();
+                    let td = TypeDatas::default();
                     #[cfg(feature = "serde")]
                     td.insert(SchemaDeserialize {
                         deserialize_fn: |reference, deserializer| {
@@ -156,7 +156,8 @@ unsafe impl HasSchema for Ustr {
 
                             Ok(())
                         },
-                    });
+                    })
+                    .unwrap();
                     td
                 },
             })
@@ -183,7 +184,7 @@ unsafe impl HasSchema for Duration {
                 hash_fn: Some(<Self as RawHash>::raw_hash),
                 eq_fn: Some(<Self as RawEq>::raw_eq),
                 type_data: {
-                    let mut td = SchemaTypeMap::default();
+                    let td = TypeDatas::default();
                     #[cfg(feature = "serde")]
                     td.insert(SchemaDeserialize {
                         deserialize_fn: |reference, deserializer| {
@@ -209,7 +210,8 @@ unsafe impl HasSchema for Duration {
 
                             Ok(())
                         },
-                    });
+                    })
+                    .unwrap();
                     td
                 },
             })
