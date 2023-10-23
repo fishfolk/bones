@@ -51,7 +51,7 @@ impl UntypedAtomicResource {
     pub fn borrow(&self) -> AtomicSchemaRef {
         let (reference, borrow) = Ref::into_split(self.cell.borrow());
         // SOUND: we keep the borrow along with the reference so that the pointer remains valid.
-        let schema_ref = unsafe { reference.as_ref() }.as_ref();
+        let schema_ref = NoClone(unsafe { reference.as_ref() }.as_ref());
         AtomicSchemaRef { schema_ref, borrow }
     }
 
@@ -77,11 +77,21 @@ impl UntypedAtomicResource {
     }
 }
 
+/// Wrapper type that prevents cloning or copying the inner type.
+#[derive(Deref, DerefMut)]
+pub struct NoClone<T>(T);
+
 /// An atomic borrow of a [`SchemaRef`].
 #[derive(Deref)]
 pub struct AtomicSchemaRef<'a> {
+    /// This is wrappwed in a [`NoClone`] because of the limitations of the deref trait.
+    /// We would prefer to have deref return a [`SchemaRef`] with an appropriate lifetime,
+    /// that indicates it borrows from the [`AtomicSchemaRef`], but since deref must return
+    /// a normal reference, instead we return a reference to the `SchemaRef` wrapped inside
+    /// a [`NoClone`] to prevent copying the [`SchemaRef`] out of dereference with a lifetime
+    /// that outlives the atomicborrow.
     #[deref]
-    schema_ref: SchemaRef<'a>,
+    schema_ref: NoClone<SchemaRef<'a>>,
     borrow: AtomicBorrow<'a>,
 }
 
