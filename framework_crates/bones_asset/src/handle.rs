@@ -88,7 +88,14 @@ impl UntypedHandle {
 #[schema(opaque, no_default)]
 pub struct SchemaAssetHandle {
     /// The schema of the type pointed to by the handle, if this is not an [`UntypedHandle`].
-    pub schema: Option<&'static Schema>,
+    schema: Option<&'static Schema>,
+}
+
+impl SchemaAssetHandle {
+    /// Returns the schema of the type pointed to by the handle, if this is not an [`UntypedHandle`].
+    pub fn inner_schema(&self) -> Option<&'static Schema> {
+        self.schema
+    }
 }
 
 // SAFE: We return a valid schema.
@@ -129,10 +136,11 @@ unsafe impl<T: HasSchema> HasSchema for Handle<T> {
                 eq_fn: Some(<Self as RawEq>::raw_eq),
                 hash_fn: Some(<Self as RawHash>::raw_hash),
                 type_data: {
-                    let mut td = bones_schema::alloc::SchemaTypeMap::default();
+                    let td = bones_schema::alloc::TypeDatas::default();
                     td.insert(SchemaAssetHandle {
                         schema: Some(T::schema()),
-                    });
+                    })
+                    .unwrap();
                     td
                 },
             });
@@ -177,8 +185,8 @@ unsafe impl HasSchema for UntypedHandle {
                 eq_fn: Some(<Self as RawEq>::raw_eq),
                 hash_fn: Some(<Self as RawHash>::raw_hash),
                 type_data: {
-                    let mut td = bones_schema::alloc::SchemaTypeMap::default();
-                    td.insert(SchemaAssetHandle { schema: None });
+                    let td = bones_schema::alloc::TypeDatas::default();
+                    td.insert(SchemaAssetHandle { schema: None }).unwrap();
                     td
                 },
             })

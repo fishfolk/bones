@@ -94,7 +94,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         let add_derive_type_datas = derive_type_data_flags.into_iter().map(|ty| {
             let ty = format_ident!("{ty}");
             quote! {
-                tds.insert(<#ty as #schema_mod::FromType<#name>>::from_type());
+                tds.insert(<#ty as #schema_mod::FromType<#name>>::from_type()).unwrap();
             }
         });
         let add_type_datas = input
@@ -106,10 +106,10 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 
         quote! {
             {
-                let mut tds = #schema_mod::alloc::SchemaTypeMap::default();
+                let tds = #schema_mod::alloc::TypeDatas::default();
                 #(#add_derive_type_datas),*
                 #(
-                    tds.insert(#add_type_datas);
+                    tds.insert(#add_type_datas).unwrap();
                 ),*
                 tds
             }

@@ -514,10 +514,10 @@ mod tests {
             c: Option<ResMut<u32>>,
             d: Option<ResMut<u64>>,
         ) {
-            assert!(a.as_deref() == None);
+            assert!(a.as_deref().is_none());
             assert!(b.as_deref() == Some(&1));
-            assert!(c.as_deref() == None);
-            assert!(d.as_deref() == Some(&mut 2));
+            assert!(c.as_deref().is_none());
+            assert!(d.as_deref() == Some(&2));
         }
 
         let mut world = World::new();

@@ -144,7 +144,7 @@ impl std::fmt::Display for LoaderNotFound {
         write!(
             f,
             "Schema/loader not found for schema/extension: {}\n\
-            You may need to register the asset with asset_server.register_asset::<AssetType>()",
+            You may need to register the asset by calling `MyAsset::schema()`",
             self.name
         )
     }

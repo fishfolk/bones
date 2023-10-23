@@ -135,7 +135,7 @@ impl<T: HasSchema> SystemParam for Localization<'_, T> {
                 .enumerate()
             {
                 if let Some(handle_data) = field.schema.type_data.get::<SchemaAssetHandle>() {
-                    if let Some(schema) = handle_data.schema {
+                    if let Some(schema) = handle_data.inner_schema() {
                         if schema == LocalizationAsset::schema() {
                             idx = Some(i);
                             break;
