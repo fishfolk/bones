@@ -431,7 +431,7 @@
                 .enumerate()
             {
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(handle_data) = field.schema.type_data.get::&lt;SchemaAssetHandle&gt;() {
-                    <span class="kw">if let </span><span class="prelude-val">Some</span>(schema) = handle_data.schema {
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(schema) = handle_data.inner_schema() {
                         <span class="kw">if </span>schema == LocalizationAsset::schema() {
                             idx = <span class="prelude-val">Some</span>(i);
                             <span class="kw">break</span>;

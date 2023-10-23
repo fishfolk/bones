@@ -514,7 +514,7 @@
         <span class="kw">let </span>add_derive_type_datas = derive_type_data_flags.into_iter().map(|ty| {
             <span class="kw">let </span>ty = <span class="macro">format_ident!</span>(<span class="string">&quot;{ty}&quot;</span>);
             <span class="macro">quote! </span>{
-                tds.insert(&lt;#ty <span class="kw">as </span>#schema_mod::FromType&lt;#name&gt;&gt;::from_type());
+                tds.insert(&lt;#ty <span class="kw">as </span>#schema_mod::FromType&lt;#name&gt;&gt;::from_type()).unwrap();
             }
         });
         <span class="kw">let </span>add_type_datas = input
@@ -526,10 +526,10 @@
 
         <span class="macro">quote! </span>{
             {
-                <span class="kw">let </span><span class="kw-2">mut </span>tds = #schema_mod::alloc::SchemaTypeMap::default();
+                <span class="kw">let </span>tds = #schema_mod::alloc::TypeDatas::default();
                 #(#add_derive_type_datas),*
                 #(
-                    tds.insert(#add_type_datas);
+                    tds.insert(#add_type_datas).unwrap();
                 ),*
                 tds
             }

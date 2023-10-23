@@ -403,13 +403,15 @@
 <a href="#403" id="403">403</a>
 <a href="#404" id="404">404</a>
 <a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span><span class="kw">crate</span>::ser_de::SchemaDeserialize;
 <span class="kw">use </span>bones_utils::{fxhash::FxHasher, Ustr};
 <span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span>serde::{de::Error, Deserialize};
 
-<span class="kw">use crate</span>::{alloc::SchemaTypeMap, prelude::<span class="kw-2">*</span>, raw_fns::<span class="kw-2">*</span>};
+<span class="kw">use crate</span>::{alloc::TypeDatas, prelude::<span class="kw-2">*</span>, raw_fns::<span class="kw-2">*</span>};
 
 <span class="kw">use </span>std::{alloc::Layout, any::TypeId, hash::Hasher, sync::OnceLock, time::Duration};
 
@@ -547,7 +549,7 @@
                 hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash),
                 eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq),
                 type_data: {
-                    <span class="kw">let </span><span class="kw-2">mut </span>td = SchemaTypeMap::default();
+                    <span class="kw">let </span>td = TypeDatas::default();
                     <span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
                     </span>td.insert(SchemaDeserialize {
                         deserialize_fn: |reference, deserializer| {
@@ -561,7 +563,8 @@
 
                             <span class="prelude-val">Ok</span>(())
                         },
-                    });
+                    })
+                    .unwrap();
                     td
                 },
             })
@@ -588,7 +591,7 @@
                 hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash),
                 eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq),
                 type_data: {
-                    <span class="kw">let </span><span class="kw-2">mut </span>td = SchemaTypeMap::default();
+                    <span class="kw">let </span>td = TypeDatas::default();
                     <span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
                     </span>td.insert(SchemaDeserialize {
                         deserialize_fn: |reference, deserializer| {
@@ -614,7 +617,8 @@
 
                             <span class="prelude-val">Ok</span>(())
                         },
-                    });
+                    })
+                    .unwrap();
                     td
                 },
             })

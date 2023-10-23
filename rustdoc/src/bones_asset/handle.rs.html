@@ -185,6 +185,14 @@
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     alloc::Layout,
     any::{type_name, TypeId},
@@ -275,7 +283,14 @@
 #[schema(opaque, no_default)]
 </span><span class="kw">pub struct </span>SchemaAssetHandle {
     <span class="doccomment">/// The schema of the type pointed to by the handle, if this is not an [`UntypedHandle`].
-    </span><span class="kw">pub </span>schema: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt;,
+    </span>schema: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt;,
+}
+
+<span class="kw">impl </span>SchemaAssetHandle {
+    <span class="doccomment">/// Returns the schema of the type pointed to by the handle, if this is not an [`UntypedHandle`].
+    </span><span class="kw">pub fn </span>inner_schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt; {
+        <span class="self">self</span>.schema
+    }
 }
 
 <span class="comment">// SAFE: We return a valid schema.
@@ -316,10 +331,11 @@
                 eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq),
                 hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash),
                 type_data: {
-                    <span class="kw">let </span><span class="kw-2">mut </span>td = bones_schema::alloc::SchemaTypeMap::default();
+                    <span class="kw">let </span>td = bones_schema::alloc::TypeDatas::default();
                     td.insert(SchemaAssetHandle {
                         schema: <span class="prelude-val">Some</span>(T::schema()),
-                    });
+                    })
+                    .unwrap();
                     td
                 },
             });
@@ -364,8 +380,8 @@
                 eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq),
                 hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash),
                 type_data: {
-                    <span class="kw">let </span><span class="kw-2">mut </span>td = bones_schema::alloc::SchemaTypeMap::default();
-                    td.insert(SchemaAssetHandle { schema: <span class="prelude-val">None </span>});
+                    <span class="kw">let </span>td = bones_schema::alloc::TypeDatas::default();
+                    td.insert(SchemaAssetHandle { schema: <span class="prelude-val">None </span>}).unwrap();
                     td
                 },
             })
