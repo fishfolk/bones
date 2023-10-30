@@ -561,6 +561,7 @@
 <a href="#561" id="561">561</a>
 <a href="#562" id="562">562</a>
 <a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::time::Duration;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -598,7 +599,7 @@
     <span class="doccomment">/// Creates a new timer with a given duration in seconds.
     ///
     /// # Example
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// ```
@@ -614,7 +615,7 @@
     /// See also [`Timer::just_finished`](Timer::just_finished).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -631,7 +632,7 @@
     <span class="doccomment">/// Returns `true` only on the tick the timer reached its duration.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -651,7 +652,7 @@
     /// See also [`Stopwatch::elapsed`](Stopwatch::elapsed).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -673,7 +674,7 @@
     <span class="doccomment">/// Sets the elapsed time of the timer without any other considerations.
     ///
     /// # Example
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -690,7 +691,7 @@
     <span class="doccomment">/// Returns the duration of the timer.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let timer = Timer::new(Duration::from_secs(1), TimerMode::Once);
@@ -704,7 +705,7 @@
     <span class="doccomment">/// Sets the duration of the timer.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.5, TimerMode::Once);
@@ -719,7 +720,7 @@
     <span class="doccomment">/// Returns the mode of the timer.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Repeating);
     /// assert_eq!(timer.mode(), TimerMode::Repeating);
@@ -732,7 +733,7 @@
     <span class="doccomment">/// Sets the mode of the timer.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Repeating);
     /// timer.set_mode(TimerMode::Once);
@@ -756,7 +757,7 @@
     /// See also [`Stopwatch::tick`](Stopwatch::tick).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -805,7 +806,7 @@
     /// See also [`Stopwatch::pause`](Stopwatch::pause).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -823,7 +824,7 @@
     /// See also [`Stopwatch::unpause()`](Stopwatch::unpause).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -843,7 +844,7 @@
     /// See also [`Stopwatch::paused`](Stopwatch::paused).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// assert!(!timer.paused());
@@ -862,7 +863,7 @@
     /// See also [`Stopwatch::reset`](Stopwatch::reset).
     ///
     /// Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -881,7 +882,7 @@
     <span class="doccomment">/// Returns the percentage of the timer elapsed time (goes from 0.0 to 1.0).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(2.0, TimerMode::Once);
@@ -896,7 +897,7 @@
     <span class="doccomment">/// Returns the percentage of the timer remaining time (goes from 1.0 to 0.0).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(2.0, TimerMode::Once);
@@ -911,7 +912,7 @@
     <span class="doccomment">/// Returns the remaining time in seconds
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::cmp::Ordering;
     /// use std::time::Duration;
@@ -928,7 +929,7 @@
     <span class="doccomment">/// Returns the remaining time using Duration
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(2.0, TimerMode::Once);
@@ -947,7 +948,7 @@
     /// return 0 or 1.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Repeating);
@@ -975,7 +976,8 @@
     </span>Repeating,
 }
 
-<span class="attr">#[cfg(test)]
+<span class="comment">// To speed up CI, only do these on miri, where they complete without waiting for time to pass.
+</span><span class="attr">#[cfg(miri)]
 #[allow(clippy::float_cmp)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
