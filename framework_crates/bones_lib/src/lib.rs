@@ -11,8 +11,8 @@ pub use bones_ecs as ecs;
 /// Bones lib prelude
 pub mod prelude {
     pub use crate::{
-        ecs::prelude::*, instant::Instant, time::*, Game, Session, SessionOptions, SessionPlugin,
-        SessionRunner, Sessions,
+        ecs::prelude::*, instant::Instant, time::*, Game, GamePlugin, Session, SessionOptions,
+        SessionPlugin, SessionRunner, Sessions,
     };
 }
 
