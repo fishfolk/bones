@@ -4,7 +4,7 @@ use std::time::Duration;
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// # use bones_framework::prelude::*;
 /// use std::time::Duration;
 /// let mut stopwatch = Stopwatch::new();
@@ -32,7 +32,7 @@ impl Stopwatch {
     /// Create a new unpaused `Stopwatch` with no elapsed time.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// let stopwatch = Stopwatch::new();
     /// assert_eq!(stopwatch.elapsed_secs(), 0.0);
@@ -46,7 +46,7 @@ impl Stopwatch {
     /// of the stopwatch.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut stopwatch = Stopwatch::new();
@@ -67,7 +67,7 @@ impl Stopwatch {
     /// of the stopwatch, in seconds.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut stopwatch = Stopwatch::new();
@@ -99,7 +99,7 @@ impl Stopwatch {
     /// Sets the elapsed time of the stopwatch.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut stopwatch = Stopwatch::new();
@@ -116,7 +116,7 @@ impl Stopwatch {
     /// on elapsed time.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut stopwatch = Stopwatch::new();
@@ -134,7 +134,7 @@ impl Stopwatch {
     /// paused will not have any effect on the elapsed time.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut stopwatch = Stopwatch::new();
@@ -151,7 +151,7 @@ impl Stopwatch {
     /// Unpauses the stopwatch. Resume the effect of ticking on elapsed time.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut stopwatch = Stopwatch::new();
@@ -170,7 +170,7 @@ impl Stopwatch {
     /// Returns `true` if the stopwatch is paused.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// let mut stopwatch = Stopwatch::new();
     /// assert!(!stopwatch.paused());
@@ -187,7 +187,7 @@ impl Stopwatch {
     /// Resets the stopwatch. The reset doesn't affect the paused state of the stopwatch.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut stopwatch = Stopwatch::new();

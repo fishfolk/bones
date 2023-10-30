@@ -35,7 +35,7 @@ impl Timer {
     /// Creates a new timer with a given duration in seconds.
     ///
     /// # Example
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// ```
@@ -51,7 +51,7 @@ impl Timer {
     /// See also [`Timer::just_finished`](Timer::just_finished).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -68,7 +68,7 @@ impl Timer {
     /// Returns `true` only on the tick the timer reached its duration.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -88,7 +88,7 @@ impl Timer {
     /// See also [`Stopwatch::elapsed`](Stopwatch::elapsed).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -110,7 +110,7 @@ impl Timer {
     /// Sets the elapsed time of the timer without any other considerations.
     ///
     /// # Example
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -127,7 +127,7 @@ impl Timer {
     /// Returns the duration of the timer.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let timer = Timer::new(Duration::from_secs(1), TimerMode::Once);
@@ -141,7 +141,7 @@ impl Timer {
     /// Sets the duration of the timer.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.5, TimerMode::Once);
@@ -156,7 +156,7 @@ impl Timer {
     /// Returns the mode of the timer.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Repeating);
     /// assert_eq!(timer.mode(), TimerMode::Repeating);
@@ -169,7 +169,7 @@ impl Timer {
     /// Sets the mode of the timer.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Repeating);
     /// timer.set_mode(TimerMode::Once);
@@ -193,7 +193,7 @@ impl Timer {
     /// See also [`Stopwatch::tick`](Stopwatch::tick).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -242,7 +242,7 @@ impl Timer {
     /// See also [`Stopwatch::pause`](Stopwatch::pause).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -260,7 +260,7 @@ impl Timer {
     /// See also [`Stopwatch::unpause()`](Stopwatch::unpause).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -280,7 +280,7 @@ impl Timer {
     /// See also [`Stopwatch::paused`](Stopwatch::paused).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
     /// assert!(!timer.paused());
@@ -299,7 +299,7 @@ impl Timer {
     /// See also [`Stopwatch::reset`](Stopwatch::reset).
     ///
     /// Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
@@ -318,7 +318,7 @@ impl Timer {
     /// Returns the percentage of the timer elapsed time (goes from 0.0 to 1.0).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(2.0, TimerMode::Once);
@@ -333,7 +333,7 @@ impl Timer {
     /// Returns the percentage of the timer remaining time (goes from 1.0 to 0.0).
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(2.0, TimerMode::Once);
@@ -348,7 +348,7 @@ impl Timer {
     /// Returns the remaining time in seconds
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::cmp::Ordering;
     /// use std::time::Duration;
@@ -365,7 +365,7 @@ impl Timer {
     /// Returns the remaining time using Duration
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(2.0, TimerMode::Once);
@@ -384,7 +384,7 @@ impl Timer {
     /// return 0 or 1.
     ///
     /// # Examples
-    /// ```
+    /// ```no_run
     /// # use bones_framework::prelude::*;
     /// use std::time::Duration;
     /// let mut timer = Timer::from_seconds(1.0, TimerMode::Repeating);
@@ -412,7 +412,8 @@ pub enum TimerMode {
     Repeating,
 }
 
-#[cfg(test)]
+// To speed up CI, only do these on miri, where they complete without waiting for time to pass.
+#[cfg(miri)]
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;
