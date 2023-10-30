@@ -122,7 +122,7 @@ impl SchemaRegistry {
             .collect();
         let field_offsets = Box::leak(field_offsets);
 
-        // Leak the schema to get a static reference
+        // Create the schema struct.
         let schema = Schema {
             id,
             data: schema_data,
@@ -131,10 +131,9 @@ impl SchemaRegistry {
         };
 
         // Insert the schema into the registry.
-        let len = self.schemas.len();
-        self.schemas.push(schema);
+        let idx = self.schemas.push(schema);
 
-        &self.schemas[len]
+        &self.schemas[idx]
     }
 }
 
@@ -143,3 +142,34 @@ pub static SCHEMA_REGISTRY: SchemaRegistry = SchemaRegistry {
     next_id: AtomicU32::new(0),
     schemas: AppendOnlyVec::new(),
 };
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn registry_smoke() {
+        let mut schemas = Vec::new();
+        for i in 0..100 {
+            let data = SchemaData {
+                name: format!("data{i}").into(),
+                full_name: format!("data{i}").into(),
+                kind: SchemaKind::Primitive(Primitive::U8),
+                type_data: default(),
+                type_id: None,
+                clone_fn: None,
+                drop_fn: None,
+                default_fn: None,
+                hash_fn: None,
+                eq_fn: None,
+            };
+
+            let schema = SCHEMA_REGISTRY.register(data.clone());
+            schemas.push(schema);
+        }
+
+        for (i, schema) in schemas.iter().enumerate() {
+            assert_eq!(schema.data.name, format!("data{i}"));
+        }
+    }
+}
