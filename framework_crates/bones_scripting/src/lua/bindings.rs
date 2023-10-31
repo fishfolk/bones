@@ -19,9 +19,17 @@ pub fn schemabox_metatable(_luadata: &LuaData, ctx: Context) -> StaticTable {
         .set(
             ctx,
             "__tostring",
-            AnyCallback::from_fn(&ctx, move |_ctx, _fuel, stack| {
-                stack.pop_front();
-                stack.push_front(Value::Integer(777));
+            AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+                let this = stack.pop_front();
+                let type_err = anyhow::format_err!("World metatable `self` is invalid.");
+                let Value::UserData(this) = this else {
+                    return Err(type_err.into());
+                };
+                let this = this.downcast_static::<SchemaBox>()?;
+                stack.push_front(Value::String(piccolo::String::from_slice(
+                    &ctx,
+                    this.to_string(),
+                )));
 
                 Ok(CallbackReturn::Return)
             }),
@@ -54,10 +62,8 @@ pub fn atomicresource_metatable(_luadata: &LuaData, ctx: Context) -> StaticTable
                 if let Value::UserData(data) = value {
                     if let Ok(res) = data.downcast_static::<ResourceRef>() {
                         let data = res.cell.borrow().get_field_path(FieldPath(res.path))?;
-                        stack.push_front(
-                            piccolo::String::from_static(&ctx, data.schema().full_name.as_ref())
-                                .into(),
-                        );
+                        stack
+                            .push_front(piccolo::String::from_slice(&ctx, data.to_string()).into());
                     } else {
                         stack.push_front(
                             piccolo::String::from_slice(&ctx, &format!("{value}")).into(),
@@ -420,6 +426,45 @@ pub fn schema_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
     metatable
         .set(
             ctx,
+            "__tostring",
+            AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+                let this = stack.pop_front();
+                let type_err = anyhow::format_err!("World metatable `self` is invalid.");
+                let Value::UserData(this) = this else {
+                    return Err(type_err.into());
+                };
+                let this = this.downcast_static::<&Schema>()?;
+                let s = piccolo::String::from_slice(&ctx, &format!("Schema({})", this.full_name));
+
+                stack.push_front(Value::String(s));
+                Ok(CallbackReturn::Return)
+            }),
+        )
+        .unwrap();
+    let create_fn = ctx.state.registry.stash(
+        &ctx,
+        AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+            let this = stack.pop_front();
+            let type_err = anyhow::format_err!("World metatable `self` is invalid.");
+            let Value::UserData(this) = this else {
+                return Err(type_err.into());
+            };
+            let this = this.downcast_static::<&Schema>()?;
+            let data = AnyUserData::new_static(&ctx, SchemaBox::default(this));
+            data.set_metatable(
+                &ctx,
+                schemabox_metatable
+                    .as_ref()
+                    .map(|x| ctx.state.registry.fetch(x)),
+            );
+            stack.push_front(data.into());
+
+            Ok(CallbackReturn::Return)
+        }),
+    );
+    metatable
+        .set(
+            ctx,
             "__index",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
                 let this = stack.pop_front();
@@ -444,16 +489,7 @@ pub fn schema_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
                                 this.full_name.as_bytes(),
                             )));
                         }
-                        b"create" => {
-                            let data = AnyUserData::new_static(&ctx, SchemaBox::default(this));
-                            data.set_metatable(
-                                &ctx,
-                                schemabox_metatable
-                                    .as_ref()
-                                    .map(|x| ctx.state.registry.fetch(x)),
-                            );
-                            stack.push_front(data.into());
-                        }
+                        b"create" => stack.push_front(ctx.state.registry.fetch(&create_fn).into()),
                         _ => (),
                     }
                 }
@@ -471,36 +507,33 @@ pub fn env(luadata: &LuaData, ctx: Context) -> StaticTable {
     let env = Table::new(&ctx);
     let schema_metatable = luadata.table(ctx, schema_metatable);
 
-    env.set(
-        ctx,
-        "schema",
-        AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-            let schema_name = stack.pop_front();
-            let Value::String(schema_name) = schema_name else {
-                return Err(anyhow::format_err!("Type error: expected string schema name").into());
-            };
-            let mut matches = SCHEMA_REGISTRY.schemas.iter().filter(|schema| {
-                schema.name.as_bytes() == schema_name.as_bytes()
-                    || schema.full_name.as_bytes() == schema_name.as_bytes()
-            });
+    let schema_fn = AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+        let schema_name = stack.pop_front();
+        let Value::String(schema_name) = schema_name else {
+            return Err(anyhow::format_err!("Type error: expected string schema name").into());
+        };
+        let mut matches = SCHEMA_REGISTRY.schemas.iter().filter(|schema| {
+            schema.name.as_bytes() == schema_name.as_bytes()
+                || schema.full_name.as_bytes() == schema_name.as_bytes()
+        });
 
-            if let Some(next_match) = matches.next() {
-                if matches.next().is_some() {
-                    return Err(anyhow::format_err!("Found multiple schemas matching name.").into());
-                }
-
-                // TODO: setup `toString` implementation so that printing schemas is informative.
-                let schema = AnyUserData::new_static(&ctx, next_match);
-                schema.set_metatable(&ctx, Some(ctx.state.registry.fetch(&schema_metatable)));
-                stack.push_front(schema.into());
-            } else {
-                return Err(anyhow::format_err!("Schema not found: {schema_name}").into());
+        if let Some(next_match) = matches.next() {
+            if matches.next().is_some() {
+                return Err(anyhow::format_err!("Found multiple schemas matching name.").into());
             }
 
-            Ok(CallbackReturn::Return)
-        }),
-    )
-    .unwrap();
+            // TODO: setup `toString` implementation so that printing schemas is informative.
+            let schema = AnyUserData::new_static(&ctx, next_match);
+            schema.set_metatable(&ctx, Some(ctx.state.registry.fetch(&schema_metatable)));
+            stack.push_front(schema.into());
+        } else {
+            return Err(anyhow::format_err!("Schema not found: {schema_name}").into());
+        }
+
+        Ok(CallbackReturn::Return)
+    });
+    env.set(ctx, "schema", schema_fn).unwrap();
+    env.set(ctx, "s", schema_fn).unwrap(); // Alias for schema
 
     macro_rules! add_log_fn {
         ($level:ident) => {

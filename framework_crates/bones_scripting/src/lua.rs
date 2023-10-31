@@ -142,7 +142,7 @@ impl LuaEngine {
                 // Wrap world reference so that it can be converted to lua userdata.
                 let world = WorldRef(world);
 
-                lua.try_run(|ctx| {
+                let result = lua.try_run(|ctx| {
                     // Create a thread
                     let thread = Thread::new(&ctx);
 
@@ -159,7 +159,12 @@ impl LuaEngine {
                             .store
                             .asset_ids
                             .get(&script.untyped())
-                            .expect("Script asset not loaded");
+                            .ok_or_else(|| {
+                                tracing::warn!("Script asset not loaded.");
+                                ProtoCompileError::Parser(
+                                    piccolo::compiler::ParserError::EndOfStream { expected: None },
+                                )
+                            })?;
 
                         let mut compiled_scripts = self.state.compiled_scripts.lock();
                         let closure = compiled_scripts.get(&cid);
@@ -208,14 +213,13 @@ impl LuaEngine {
                     }
 
                     // Take the thread result and print any errors
-                    let result = thread.take_return::<()>(ctx)?;
-                    if let Err(e) = result {
-                        tracing::error!("{e}");
-                    }
+                    thread.take_return::<()>(ctx)??;
 
                     Ok(())
-                })
-                .unwrap();
+                });
+                if let Err(e) = result {
+                    tracing::error!("{e}");
+                }
             });
         });
     }

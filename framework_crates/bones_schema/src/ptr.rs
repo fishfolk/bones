@@ -195,6 +195,115 @@ impl<'pointer> SchemaRef<'pointer> {
             .hash_fn
             .map(|hash_fn| unsafe { (hash_fn)(self.ptr.as_ptr()) })
     }
+
+    /// Debug format the value stored in the schema box.
+    ///
+    /// This is used in the display and debug implementations.
+    pub fn debug_format_value(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match &self.schema.kind {
+            SchemaKind::Struct(info) => {
+                let is_tuple = info.fields.iter().any(|x| x.name.is_none());
+                if is_tuple {
+                    let mut builder = f.debug_tuple(&self.schema.name);
+                    for ((_, offset), info) in
+                        self.schema.field_offsets().iter().zip(info.fields.iter())
+                    {
+                        let schemaref = SchemaRef {
+                            ptr: unsafe { self.ptr.byte_add(*offset) },
+                            schema: info.schema,
+                        };
+                        builder.field(&SchemaRefValueDebug(schemaref));
+                    }
+                    builder.finish()
+                } else {
+                    let mut builder = f.debug_struct(&self.schema.name);
+                    for ((_, offset), info) in
+                        self.schema.field_offsets().iter().zip(info.fields.iter())
+                    {
+                        let schemaref = SchemaRef {
+                            ptr: unsafe { self.ptr.byte_add(*offset) },
+                            schema: info.schema,
+                        };
+                        builder.field(
+                            info.name
+                                .as_ref()
+                                .map(|x| x.as_ref())
+                                .unwrap_or("[unnamed]"),
+                            &SchemaRefValueDebug(schemaref),
+                        );
+                    }
+                    builder.finish()
+                }
+            }
+            SchemaKind::Vec(_) => {
+                let mut builder = f.debug_list();
+                // SOUND: the schema asserts that it is a schema vec.
+                let list = unsafe { self.ptr.deref::<SchemaVec>() };
+                for item in list.iter() {
+                    builder.entry(&SchemaRefValueDebug(item));
+                }
+                builder.finish()
+            }
+            SchemaKind::Enum(_) => {
+                todo!();
+            }
+            SchemaKind::Map { .. } => {
+                let mut builder = f.debug_map();
+                // SOUND: the schema asserts that it is a schema map.
+                let map = unsafe { self.ptr.deref::<SchemaMap>() };
+                for (key, value) in map.iter() {
+                    builder.key(&SchemaRefValueDebug(key));
+                    builder.value(&SchemaRefValueDebug(value));
+                }
+                builder.finish()
+            }
+            // SOUND: schema asserts this is a schema box
+            SchemaKind::Box(_) => unsafe { self.ptr.deref::<SchemaBox>() }
+                .as_ref()
+                .debug_format_value(f),
+            SchemaKind::Primitive(p) => match p {
+                Primitive::Bool => f.write_fmt(format_args!("{}", self.cast::<bool>())),
+                Primitive::U8 => f.write_fmt(format_args!("{}", self.cast::<u8>())),
+                Primitive::U16 => f.write_fmt(format_args!("{}", self.cast::<u16>())),
+                Primitive::U32 => f.write_fmt(format_args!("{}", self.cast::<u32>())),
+                Primitive::U64 => f.write_fmt(format_args!("{}", self.cast::<u64>())),
+                Primitive::U128 => f.write_fmt(format_args!("{}", self.cast::<u128>())),
+                Primitive::I8 => f.write_fmt(format_args!("{}", self.cast::<i8>())),
+                Primitive::I16 => f.write_fmt(format_args!("{}", self.cast::<i16>())),
+                Primitive::I32 => f.write_fmt(format_args!("{}", self.cast::<i32>())),
+                Primitive::I64 => f.write_fmt(format_args!("{}", self.cast::<i64>())),
+                Primitive::I128 => f.write_fmt(format_args!("{}", self.cast::<i128>())),
+                Primitive::F32 => f.write_fmt(format_args!("{}", self.cast::<f32>())),
+                Primitive::F64 => f.write_fmt(format_args!("{}", self.cast::<f64>())),
+                Primitive::String => f.write_fmt(format_args!("{:?}", self.cast::<String>())),
+                Primitive::Opaque { size, align } => f
+                    .debug_struct("Opaque")
+                    .field("size", size)
+                    .field("align", align)
+                    .finish(),
+            },
+        }
+    }
+}
+
+struct SchemaRefValueDebug<'a>(SchemaRef<'a>);
+impl std::fmt::Debug for SchemaRefValueDebug<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.debug_format_value(f)
+    }
+}
+
+impl std::fmt::Debug for SchemaRef<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("SchemaRef<'_>")
+            .field(&SchemaRefValueDebug(*self))
+            .finish()
+    }
+}
+impl std::fmt::Display for SchemaRef<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <SchemaRefValueDebug as std::fmt::Debug>::fmt(&SchemaRefValueDebug(*self), f)
+    }
 }
 
 /// An untyped mutable reference that knows the [`Schema`] of the pointee and that can be cast to a matching
@@ -540,8 +649,14 @@ unsafe impl Send for SchemaBox {}
 impl std::fmt::Debug for SchemaBox {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SchemaBox")
-            .field("schema", &self.schema)
+            .field("schema", &self.schema.full_name)
+            .field("value", &SchemaRefValueDebug(self.as_ref()))
             .finish_non_exhaustive()
+    }
+}
+impl std::fmt::Display for SchemaBox {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.as_ref().fmt(f)
     }
 }
 

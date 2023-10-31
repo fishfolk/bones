@@ -1,0 +1,10 @@
+[package]
+name              = "demo_scripting"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish           = false
+
+[dependencies]
+bones_framework     = { path = "../../framework_crates/bones_framework" }
+bones_bevy_renderer = { path = "../../framework_crates/bones_bevy_renderer" }
