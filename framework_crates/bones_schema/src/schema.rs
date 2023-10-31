@@ -455,6 +455,8 @@ impl SchemaData {
                     }
                 }
                 let offset = extend_layout(&mut layout, enum_value_layout);
+                // Enums have a single field offset that is the offset of the value part of the enum
+                // comming after the discriminant.
                 field_offsets.push((None, offset));
             }
             SchemaKind::Primitive(p) => {

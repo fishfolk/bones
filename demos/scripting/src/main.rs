@@ -13,6 +13,21 @@ struct GameMeta {
 struct DemoData {
     name: String,
     age: f32,
+    favorite_things: SVec<String>,
+    attributes: SMap<String, f32>,
+    best_friend: Maybe<String>,
+    state: DemoState,
+}
+
+#[derive(HasSchema, Default, Clone)]
+#[repr(C, u8)]
+pub enum DemoState {
+    #[default]
+    Ready,
+    Thinking(f32),
+    Finished {
+        score: u32,
+    },
 }
 
 fn main() {
@@ -28,6 +43,12 @@ fn main() {
     default_session.world.insert_resource(DemoData {
         name: "default name".into(),
         age: 10.0,
+        favorite_things: ["candy".into(), "rain".into()].into_iter().collect(),
+        attributes: [("coolness".into(), 50.0), ("friendliness".into(), 10.57)]
+            .into_iter()
+            .collect(),
+        best_friend: Some("Jane".into()).into(),
+        state: DemoState::Thinking(20.),
     });
 
     BonesBevyRenderer::new(game).app().run();

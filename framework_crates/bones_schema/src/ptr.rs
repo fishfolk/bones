@@ -196,90 +196,90 @@ impl<'pointer> SchemaRef<'pointer> {
             .map(|hash_fn| unsafe { (hash_fn)(self.ptr.as_ptr()) })
     }
 
+    /// Borrow the schema ref as a [`SchemaMap`] if it is one.
+    pub fn as_map(&self) -> Option<&'pointer SchemaMap> {
+        matches!(self.schema.kind, SchemaKind::Map { .. })
+            // SOUND: Schema asserts this is a schema map
+            .then_some(unsafe { self.ptr.deref::<SchemaMap>() })
+    }
+
+    /// Borrow the schema ref as a [`SchemaVec`] if it is one.
+    pub fn as_vec(&self) -> Option<&'pointer SchemaVec> {
+        matches!(self.schema.kind, SchemaKind::Vec(_))
+            // SOUND: Schema asserts this is a schema map
+            .then_some(unsafe { self.ptr.deref::<SchemaVec>() })
+    }
+
+    /// Borrow the schema ref as a [`SchemaBox`] if it is one.
+    pub fn as_box(&self) -> Option<SchemaRef<'pointer>> {
+        matches!(self.schema.kind, SchemaKind::Vec(_))
+            // SOUND: Schema asserts this is a schema box
+            .then_some(unsafe { self.ptr.deref::<SchemaBox>().as_ref() })
+    }
+
+    /// Get a helper to access the inner data at runtime.
+    pub fn access(&self) -> SchemaRefAccess<'pointer> {
+        (*self).into()
+    }
+
     /// Debug format the value stored in the schema box.
     ///
     /// This is used in the display and debug implementations.
     pub fn debug_format_value(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match &self.schema.kind {
-            SchemaKind::Struct(info) => {
-                let is_tuple = info.fields.iter().any(|x| x.name.is_none());
+        match self.access() {
+            SchemaRefAccess::Struct(s) => {
+                let is_tuple = s.fields().any(|x| x.name.is_none());
                 if is_tuple {
-                    let mut builder = f.debug_tuple(&self.schema.name);
-                    for ((_, offset), info) in
-                        self.schema.field_offsets().iter().zip(info.fields.iter())
-                    {
-                        let schemaref = SchemaRef {
-                            ptr: unsafe { self.ptr.byte_add(*offset) },
-                            schema: info.schema,
-                        };
-                        builder.field(&SchemaRefValueDebug(schemaref));
+                    let mut builder = f.debug_tuple(&s.schema().name);
+                    for field in s.fields() {
+                        builder.field(&SchemaRefValueDebug(field.value));
                     }
                     builder.finish()
                 } else {
-                    let mut builder = f.debug_struct(&self.schema.name);
-                    for ((_, offset), info) in
-                        self.schema.field_offsets().iter().zip(info.fields.iter())
-                    {
-                        let schemaref = SchemaRef {
-                            ptr: unsafe { self.ptr.byte_add(*offset) },
-                            schema: info.schema,
-                        };
-                        builder.field(
-                            info.name
-                                .as_ref()
-                                .map(|x| x.as_ref())
-                                .unwrap_or("[unnamed]"),
-                            &SchemaRefValueDebug(schemaref),
-                        );
+                    let mut builder = f.debug_struct(&s.schema().name);
+                    for field in s.fields() {
+                        builder.field(field.name.unwrap(), &SchemaRefValueDebug(field.value));
                     }
                     builder.finish()
                 }
             }
-            SchemaKind::Vec(_) => {
+            SchemaRefAccess::Vec(v) => {
                 let mut builder = f.debug_list();
-                // SOUND: the schema asserts that it is a schema vec.
-                let list = unsafe { self.ptr.deref::<SchemaVec>() };
-                for item in list.iter() {
+                for item in v.iter() {
                     builder.entry(&SchemaRefValueDebug(item));
                 }
                 builder.finish()
             }
-            SchemaKind::Enum(_) => {
-                todo!();
+            SchemaRefAccess::Enum(e) => {
+                f.write_fmt(format_args!("{:?}", SchemaRefValueDebug(e.value().0)))
             }
-            SchemaKind::Map { .. } => {
+            SchemaRefAccess::Map(m) => {
                 let mut builder = f.debug_map();
-                // SOUND: the schema asserts that it is a schema map.
-                let map = unsafe { self.ptr.deref::<SchemaMap>() };
-                for (key, value) in map.iter() {
+                for (key, value) in m.iter() {
                     builder.key(&SchemaRefValueDebug(key));
                     builder.value(&SchemaRefValueDebug(value));
                 }
                 builder.finish()
             }
-            // SOUND: schema asserts this is a schema box
-            SchemaKind::Box(_) => unsafe { self.ptr.deref::<SchemaBox>() }
-                .as_ref()
-                .debug_format_value(f),
-            SchemaKind::Primitive(p) => match p {
-                Primitive::Bool => f.write_fmt(format_args!("{}", self.cast::<bool>())),
-                Primitive::U8 => f.write_fmt(format_args!("{}", self.cast::<u8>())),
-                Primitive::U16 => f.write_fmt(format_args!("{}", self.cast::<u16>())),
-                Primitive::U32 => f.write_fmt(format_args!("{}", self.cast::<u32>())),
-                Primitive::U64 => f.write_fmt(format_args!("{}", self.cast::<u64>())),
-                Primitive::U128 => f.write_fmt(format_args!("{}", self.cast::<u128>())),
-                Primitive::I8 => f.write_fmt(format_args!("{}", self.cast::<i8>())),
-                Primitive::I16 => f.write_fmt(format_args!("{}", self.cast::<i16>())),
-                Primitive::I32 => f.write_fmt(format_args!("{}", self.cast::<i32>())),
-                Primitive::I64 => f.write_fmt(format_args!("{}", self.cast::<i64>())),
-                Primitive::I128 => f.write_fmt(format_args!("{}", self.cast::<i128>())),
-                Primitive::F32 => f.write_fmt(format_args!("{}", self.cast::<f32>())),
-                Primitive::F64 => f.write_fmt(format_args!("{}", self.cast::<f64>())),
-                Primitive::String => f.write_fmt(format_args!("{:?}", self.cast::<String>())),
-                Primitive::Opaque { size, align } => f
+            SchemaRefAccess::Primitive(p) => match p {
+                PrimitiveRef::Bool(b) => f.write_fmt(format_args!("{b}")),
+                PrimitiveRef::U8(n) => f.write_fmt(format_args!("{n}")),
+                PrimitiveRef::U16(n) => f.write_fmt(format_args!("{n}")),
+                PrimitiveRef::U32(n) => f.write_fmt(format_args!("{n}")),
+                PrimitiveRef::U64(n) => f.write_fmt(format_args!("{n}")),
+                PrimitiveRef::U128(n) => f.write_fmt(format_args!("{n}")),
+                PrimitiveRef::I8(n) => f.write_fmt(format_args!("{n}")),
+                PrimitiveRef::I16(n) => f.write_fmt(format_args!("{n}")),
+                PrimitiveRef::I32(n) => f.write_fmt(format_args!("{n}")),
+                PrimitiveRef::I64(n) => f.write_fmt(format_args!("{n}")),
+                PrimitiveRef::I128(n) => f.write_fmt(format_args!("{n}")),
+                PrimitiveRef::F32(n) => f.write_fmt(format_args!("{n}")),
+                PrimitiveRef::F64(n) => f.write_fmt(format_args!("{n}")),
+                PrimitiveRef::String(s) => f.write_fmt(format_args!("{s:?}")),
+                PrimitiveRef::Opaque { size, align } => f
                     .debug_struct("Opaque")
-                    .field("size", size)
-                    .field("align", align)
+                    .field("size", &size)
+                    .field("align", &align)
                     .finish(),
             },
         }
@@ -303,6 +303,194 @@ impl std::fmt::Debug for SchemaRef<'_> {
 impl std::fmt::Display for SchemaRef<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <SchemaRefValueDebug as std::fmt::Debug>::fmt(&SchemaRefValueDebug(*self), f)
+    }
+}
+
+/// Helper for accessing the inner data of a schema ref at runtime.
+pub enum SchemaRefAccess<'a> {
+    /// Access a struct.
+    Struct(StructRefAccess<'a>),
+    /// Access a vec.
+    Vec(&'a SchemaVec),
+    /// Access an enum.
+    Enum(EnumRefAccess<'a>),
+    /// Access a map.
+    Map(&'a SchemaMap),
+    /// Access a struct.
+    Primitive(PrimitiveRef<'a>),
+}
+
+impl<'a> From<SchemaRef<'a>> for SchemaRefAccess<'a> {
+    fn from(value: SchemaRef<'a>) -> Self {
+        match &value.schema.kind {
+            SchemaKind::Struct(_) => SchemaRefAccess::Struct(StructRefAccess(value)),
+            SchemaKind::Vec(_) => SchemaRefAccess::Vec(value.as_vec().unwrap()),
+            SchemaKind::Enum(_) => SchemaRefAccess::Enum(EnumRefAccess(value)),
+            SchemaKind::Map { .. } => SchemaRefAccess::Map(value.as_map().unwrap()),
+            SchemaKind::Box(_) => value.as_box().unwrap().access(),
+            SchemaKind::Primitive(_) => SchemaRefAccess::Primitive(value.into()),
+        }
+    }
+}
+
+/// Helper for accessing the inner data of a schema ref at runtime.
+pub struct StructRefAccess<'a>(pub SchemaRef<'a>);
+
+impl<'a> StructRefAccess<'a> {
+    /// Get the struct's schema.
+    pub fn schema(&self) -> &'static Schema {
+        self.0.schema
+    }
+
+    /// Iterate over fields in the struct.
+    pub fn fields(&self) -> StructRefFieldIter<'a> {
+        StructRefFieldIter {
+            ptr: self.0,
+            field_idx: 0,
+        }
+    }
+}
+
+/// Iterator for [`StructRefAccess::fields()`].
+pub struct StructRefFieldIter<'a> {
+    ptr: SchemaRef<'a>,
+    field_idx: usize,
+}
+
+/// A field returned by [`StructRefFieldIter`].
+pub struct StructRefFieldIterField<'a> {
+    /// The name of the field, if set.
+    pub name: Option<&'static str>,
+    /// The field's value.
+    pub value: SchemaRef<'a>,
+}
+
+impl<'a> Iterator for StructRefFieldIter<'a> {
+    type Item = StructRefFieldIterField<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (name, _) = self.ptr.schema.field_offsets().get(self.field_idx)?;
+        let ptr = self.ptr.field(self.field_idx);
+        self.field_idx += 1;
+        Some(StructRefFieldIterField {
+            name: name.as_ref().map(|x| x.as_str()),
+            value: ptr,
+        })
+    }
+}
+
+/// Helper for accessing the inner data of a schema ref at runtime.
+pub struct EnumRefAccess<'a>(pub SchemaRef<'a>);
+
+impl<'a> EnumRefAccess<'a> {
+    /// Get the enum's schema.
+    pub fn schema(&self) -> &'static Schema {
+        self.0.schema
+    }
+
+    /// Get the enum schema info.
+    pub fn info(&self) -> &'static EnumSchemaInfo {
+        let SchemaKind::Enum(info) = &self.0.schema.kind else {
+            panic!("Not an enum");
+        };
+        info
+    }
+
+    /// Get the currently-selected variant index.
+    pub fn variant_idx(&self) -> u32 {
+        let info = self.info();
+        match info.tag_type {
+            EnumTagType::U8 => unsafe { self.0.as_ptr().cast::<u8>().read() as u32 },
+            EnumTagType::U16 => unsafe { self.0.as_ptr().cast::<u16>().read() as u32 },
+            EnumTagType::U32 => unsafe { self.0.as_ptr().cast::<u32>().read() },
+        }
+    }
+
+    /// Get the name of the currently selected variant.
+    pub fn variant_name(&self) -> &'static str {
+        let info = self.info();
+        let idx = self.variant_idx();
+        info.variants[idx as usize].name.as_ref()
+    }
+
+    /// Get a reference to the enum's currently selected value.
+    pub fn value(&self) -> StructRefAccess<'a> {
+        let info = self.info();
+        let variant_idx = self.variant_idx();
+        let variant_info = &info.variants[variant_idx as usize];
+        let schema = variant_info.schema;
+        let value_offset = self.0.schema.field_offsets()[0].1;
+        StructRefAccess(SchemaRef {
+            ptr: unsafe { self.0.ptr.byte_add(value_offset) },
+            schema,
+        })
+    }
+}
+
+/// Helper for accessing the inner data of a schema ref at runtime.
+pub enum PrimitiveRef<'a> {
+    /// A [`bool`]
+    Bool(&'a bool),
+    /// A [`u8`]
+    U8(&'a u8),
+    /// A [`u16`]
+    U16(&'a u16),
+    /// A [`u32`]
+    U32(&'a u32),
+    /// A [`u64`]
+    U64(&'a u64),
+    /// A [`u128`]
+    U128(&'a u128),
+    /// An [`i8`]
+    I8(&'a i8),
+    /// An [`i16`]
+    I16(&'a i16),
+    /// An [`i32`]
+    I32(&'a i32),
+    /// An [`i64`]
+    I64(&'a i64),
+    /// An [`i128`]
+    I128(&'a i128),
+    /// An [`f23`]
+    F32(&'a f32),
+    /// An [`f64`]
+    F64(&'a f64),
+    /// A [`String`]
+    String(&'a String),
+    /// An opaque type
+    Opaque {
+        /// The size of the opaque type.
+        size: usize,
+        /// The align of the opaque type.
+        align: usize,
+    },
+}
+
+impl<'a> From<SchemaRef<'a>> for PrimitiveRef<'a> {
+    fn from(value: SchemaRef<'a>) -> Self {
+        match &value.schema.kind {
+            SchemaKind::Primitive(p) => match p {
+                Primitive::Bool => PrimitiveRef::Bool(value.cast()),
+                Primitive::U8 => PrimitiveRef::U8(value.cast()),
+                Primitive::U16 => PrimitiveRef::U16(value.cast()),
+                Primitive::U32 => PrimitiveRef::U32(value.cast()),
+                Primitive::U64 => PrimitiveRef::U64(value.cast()),
+                Primitive::U128 => PrimitiveRef::U128(value.cast()),
+                Primitive::I8 => PrimitiveRef::I8(value.cast()),
+                Primitive::I16 => PrimitiveRef::I16(value.cast()),
+                Primitive::I32 => PrimitiveRef::I32(value.cast()),
+                Primitive::I64 => PrimitiveRef::I64(value.cast()),
+                Primitive::I128 => PrimitiveRef::I128(value.cast()),
+                Primitive::F32 => PrimitiveRef::F32(value.cast()),
+                Primitive::F64 => PrimitiveRef::F64(value.cast()),
+                Primitive::String => PrimitiveRef::String(value.cast()),
+                Primitive::Opaque { size, align } => PrimitiveRef::Opaque {
+                    size: *size,
+                    align: *align,
+                },
+            },
+            _ => panic!("Schema mismatch"),
+        }
     }
 }
 
