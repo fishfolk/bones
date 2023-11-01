@@ -4,10 +4,8 @@ use bevy_tasks::{ComputeTaskPool, TaskPool, ThreadExecutor};
 use bones_lib::ecs::utils::*;
 use parking_lot::Mutex;
 use piccolo::{
-    meta_ops::{self, MetaResult},
-    AnyCallback, AnySequence, AnyUserData, CallbackReturn, Closure, Context, Error, Fuel, Lua,
-    ProtoCompileError, Sequence, SequencePoll, Stack, StaticCallback, StaticClosure, StaticTable,
-    Table, Thread, ThreadMode, Value,
+    AnyUserData, Closure, Context, Fuel, Lua, ProtoCompileError, StaticCallback, StaticClosure,
+    StaticTable, Table, Thread, ThreadMode, Value,
 };
 use send_wrapper::SendWrapper;
 use std::sync::Arc;
@@ -74,11 +72,33 @@ struct EngineState {
     compiled_scripts: Mutex<HashMap<Cid, StaticClosure>>,
 }
 
+trait CtxExt {
+    fn luadata(&self) -> &LuaData;
+}
+impl CtxExt for piccolo::Context<'_> {
+    fn luadata(&self) -> &LuaData {
+        let Value::UserData(data) = self.state.globals.get(*self, "luadata") else {
+            unreachable!();
+        };
+        data.downcast_static::<LuaData>().unwrap()
+    }
+}
+
 impl Default for EngineState {
     fn default() -> Self {
         // Initialize an empty lua engine and our lua data.
+        let mut lua = Lua::core();
+        lua.try_run(|ctx| {
+            ctx.state.globals.set(
+                ctx,
+                "luadata",
+                AnyUserData::new_static(&ctx, LuaData::default()),
+            )?;
+            Ok(())
+        })
+        .unwrap();
         Self {
-            lua: Mutex::new(Lua::core()),
+            lua: Mutex::new(lua),
             data: default(),
             compiled_scripts: default(),
         }
@@ -227,8 +247,8 @@ impl LuaEngine {
 
 /// Static lua tables and callbacks
 pub struct LuaData {
-    callbacks: AppendOnlyVec<(fn(&LuaData, Context) -> StaticCallback, StaticCallback)>,
-    tables: AppendOnlyVec<(fn(&LuaData, Context) -> StaticTable, StaticTable)>,
+    callbacks: AppendOnlyVec<(fn(Context) -> StaticCallback, StaticCallback)>,
+    tables: AppendOnlyVec<(fn(Context) -> StaticTable, StaticTable)>,
 }
 impl Default for LuaData {
     fn default() -> Self {
@@ -241,29 +261,25 @@ impl Default for LuaData {
 
 impl LuaData {
     /// Get a table from the store, initializing it if necessary.
-    pub fn table(&self, ctx: Context, f: fn(&LuaData, Context) -> StaticTable) -> StaticTable {
+    pub fn table(&self, ctx: Context, f: fn(Context) -> StaticTable) -> StaticTable {
         for (other_f, table) in self.tables.iter() {
             if *other_f == f {
                 return table.clone();
             }
         }
-        let new_table = f(self, ctx);
+        let new_table = f(ctx);
         self.tables.push((f, new_table.clone()));
         new_table
     }
 
     /// Get a callback from the store, initializing if necessary.
-    pub fn callback(
-        &self,
-        ctx: Context,
-        f: fn(&LuaData, Context) -> StaticCallback,
-    ) -> StaticCallback {
+    pub fn callback(&self, ctx: Context, f: fn(Context) -> StaticCallback) -> StaticCallback {
         for (other_f, callback) in self.callbacks.iter() {
             if *other_f == f {
                 return callback.clone();
             }
         }
-        let new_callback = f(self, ctx);
+        let new_callback = f(ctx);
         self.callbacks.push((f, new_callback.clone()));
         new_callback
     }
@@ -273,10 +289,10 @@ impl LuaData {
 /// when it is accessed in Lua scripts
 #[derive(HasSchema, Clone, Copy, Debug)]
 #[schema(no_default)]
-struct SchemaLuaMetatable(pub fn(&LuaData, Context) -> StaticTable);
+struct SchemaLuaMetatable(pub fn(Context) -> StaticTable);
 
 /// A reference to a resource
-struct ResourceRef {
+struct LuaRef {
     cell: UntypedAtomicResource,
     path: Ustr,
 }

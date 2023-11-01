@@ -252,8 +252,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 
                 for v in e.variants.items() {
                     let name = v.name.to_string();
-                    let variant_schema_name =
-                        format!("{}::{}::EnumVariantSchemaData", e.name, name);
+                    let variant_schema_name = format!("{}::{}", e.name, name);
                     let fields = parse_struct_fields(&v.contents);
                     variants.push(quote! {
                         #schema_mod::VariantInfo {

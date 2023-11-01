@@ -1,45 +1,21 @@
 use bones_lib::prelude::*;
 use gc_arena_derive::Collect;
-use piccolo::Context;
+use piccolo::{
+    meta_ops, meta_ops::MetaResult, AnyCallback, AnySequence, CallbackReturn, Context, Error,
+    Sequence, SequencePoll, Stack,
+};
 
 use super::*;
 
 /// Registers lua binding typedatas for bones_framework types.
 pub fn register_lua_typedata() {
-    <SchemaBox as HasSchema>::schema()
+    <AssetServer as HasSchema>::schema()
         .type_data
-        .insert(SchemaLuaMetatable(schemabox_metatable))
+        .insert(SchemaLuaMetatable(assetserver_metatable))
         .unwrap();
 }
 
-pub fn schemabox_metatable(_luadata: &LuaData, ctx: Context) -> StaticTable {
-    let metatable = Table::new(&ctx);
-
-    metatable
-        .set(
-            ctx,
-            "__tostring",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                let this = stack.pop_front();
-                let type_err = anyhow::format_err!("World metatable `self` is invalid.");
-                let Value::UserData(this) = this else {
-                    return Err(type_err.into());
-                };
-                let this = this.downcast_static::<SchemaBox>()?;
-                stack.push_front(Value::String(piccolo::String::from_slice(
-                    &ctx,
-                    this.to_string(),
-                )));
-
-                Ok(CallbackReturn::Return)
-            }),
-        )
-        .unwrap();
-
-    ctx.state.registry.stash(&ctx, metatable)
-}
-
-pub fn no_newindex(_luadata: &LuaData, ctx: Context) -> StaticCallback {
+pub fn no_newindex(ctx: Context) -> StaticCallback {
     ctx.state.registry.stash(
         &ctx,
         AnyCallback::from_fn(&ctx, |_ctx, _fuel, _stack| {
@@ -48,7 +24,30 @@ pub fn no_newindex(_luadata: &LuaData, ctx: Context) -> StaticCallback {
     )
 }
 
-pub fn atomicresource_metatable(_luadata: &LuaData, ctx: Context) -> StaticTable {
+pub fn assetserver_metatable(ctx: Context) -> StaticTable {
+    let metatable = Table::new(&ctx);
+    let static_metatable = ctx.state.registry.stash(&ctx, metatable);
+    metatable
+        .set(
+            ctx,
+            "__tostring",
+            AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+                let value = stack.pop_front();
+                if let Value::UserData(data) = value {
+                    let server = data.downcast_static::<LuaRef>()?;
+                    let server = server.cell.borrow();
+                    let _server = server.try_cast::<AssetServer>()?;
+                    stack.push_front(piccolo::String::from_static(&ctx, "AssetServer").into());
+                };
+                Ok(CallbackReturn::Return)
+            }),
+        )
+        .unwrap();
+
+    static_metatable
+}
+
+pub fn luaref_metatable(ctx: Context) -> StaticTable {
     let metatable = Table::new(&ctx);
     let static_metatable = ctx.state.registry.stash(&ctx, metatable);
 
@@ -60,7 +59,7 @@ pub fn atomicresource_metatable(_luadata: &LuaData, ctx: Context) -> StaticTable
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
                 let value = stack.pop_front();
                 if let Value::UserData(data) = value {
-                    if let Ok(res) = data.downcast_static::<ResourceRef>() {
+                    if let Ok(res) = data.downcast_static::<LuaRef>() {
                         let data = res.cell.borrow().get_field_path(FieldPath(res.path))?;
                         stack
                             .push_front(piccolo::String::from_slice(&ctx, data.to_string()).into());
@@ -91,7 +90,7 @@ pub fn atomicresource_metatable(_luadata: &LuaData, ctx: Context) -> StaticTable
                 let schemaref;
                 let mut path;
                 let cell;
-                if let Ok(res) = this.downcast_static::<ResourceRef>() {
+                if let Ok(res) = this.downcast_static::<LuaRef>() {
                     cell = res.cell.clone();
                     schemaref = res.cell.borrow();
                     path = res.path;
@@ -109,18 +108,19 @@ pub fn atomicresource_metatable(_luadata: &LuaData, ctx: Context) -> StaticTable
                 let schemaref = schemaref.get_field_path(FieldPath(path))?;
 
                 match &schemaref.schema().kind {
-                    SchemaKind::Struct(_) | SchemaKind::Primitive(Primitive::Opaque { .. }) => {
-                        let new_ref = AnyUserData::new_static(&ctx, ResourceRef { cell, path });
+                    SchemaKind::Struct(_)
+                    | SchemaKind::Primitive(Primitive::Opaque { .. })
+                    | SchemaKind::Vec(_)
+                    | SchemaKind::Enum(_)
+                    | SchemaKind::Map { .. }
+                    | SchemaKind::Box(_) => {
+                        let new_ref = AnyUserData::new_static(&ctx, LuaRef { cell, path });
                         new_ref.set_metatable(
                             &ctx,
                             Some(ctx.state.registry.fetch(&static_metatable_)),
                         );
                         stack.push_front(new_ref.into());
                     }
-                    SchemaKind::Vec(_) => todo!(),
-                    SchemaKind::Enum(_) => todo!(),
-                    SchemaKind::Map { .. } => todo!(),
-                    SchemaKind::Box(_) => todo!(),
                     SchemaKind::Primitive(prim) => stack.push_front(match prim {
                         Primitive::Bool => Value::Boolean(*schemaref.cast::<bool>()),
                         Primitive::U8 => Value::Integer(*schemaref.cast::<u8>() as i64),
@@ -162,7 +162,7 @@ pub fn atomicresource_metatable(_luadata: &LuaData, ctx: Context) -> StaticTable
 
                 let mut schemaref;
                 let mut path;
-                if let Ok(res) = this.downcast_static::<ResourceRef>() {
+                if let Ok(res) = this.downcast_static::<LuaRef>() {
                     schemaref = res.cell.borrow_mut();
                     path = res.path;
                 } else {
@@ -256,9 +256,10 @@ pub fn atomicresource_metatable(_luadata: &LuaData, ctx: Context) -> StaticTable
     ctx.state.registry.stash(&ctx, metatable)
 }
 
-pub fn resources_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
+pub fn resources_metatable(ctx: Context) -> StaticTable {
     let metatable = Table::new(&ctx);
-    let schemabox_metatable = luadata.table(ctx, atomicresource_metatable);
+    let luadata = ctx.luadata();
+    let luaref_metatable = luadata.table(ctx, luaref_metatable);
     metatable
         .set(
             ctx,
@@ -287,6 +288,11 @@ pub fn resources_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
                 );
             };
             let schema = schema.downcast_static::<&Schema>()?;
+            let metatable = if let Some(t) = schema.type_data.get::<SchemaLuaMetatable>() {
+                ctx.state.registry.fetch(&ctx.luadata().table(ctx, t.0))
+            } else {
+                ctx.state.registry.fetch(&luaref_metatable)
+            };
 
             world.with(|world| {
                 let cell = world.resources.untyped().get_cell(schema.id());
@@ -294,12 +300,12 @@ pub fn resources_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
                 if let Some(cell) = cell {
                     let data = AnyUserData::new_static(
                         &ctx,
-                        ResourceRef {
+                        LuaRef {
                             cell,
                             path: ustr(""),
                         },
                     );
-                    data.set_metatable(&ctx, Some(ctx.state.registry.fetch(&schemabox_metatable)));
+                    data.set_metatable(&ctx, Some(metatable));
                     stack.push_front(data.into());
                 }
             });
@@ -346,7 +352,7 @@ pub fn resources_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
     ctx.state.registry.stash(&ctx, metatable)
 }
 
-pub fn components_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
+pub fn components_metatable(ctx: Context) -> StaticTable {
     let metatable = Table::new(&ctx);
     metatable
         .set(
@@ -354,7 +360,7 @@ pub fn components_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
             "__newindex",
             ctx.state
                 .registry
-                .fetch(&luadata.callback(ctx, no_newindex)),
+                .fetch(&ctx.luadata().callback(ctx, no_newindex)),
         )
         .unwrap();
 
@@ -362,8 +368,9 @@ pub fn components_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
 }
 
 /// Build the world metatable.
-pub fn world_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
+pub fn world_metatable(ctx: Context) -> StaticTable {
     let metatable = Table::new(&ctx);
+    let luadata = ctx.luadata();
     let resources_metatable = luadata.table(ctx, resources_metatable);
     let components_metatable = luadata.table(ctx, components_metatable);
     metatable
@@ -416,12 +423,10 @@ pub fn world_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
 }
 
 /// The metatable for `&'static Schema`.
-pub fn schema_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
+pub fn schema_metatable(ctx: Context) -> StaticTable {
     let metatable = Table::new(&ctx);
-    let schemabox_metatable = <SchemaBox as HasSchema>::schema()
-        .type_data
-        .get::<SchemaLuaMetatable>()
-        .map(|x| (x.0)(luadata, ctx));
+    let luadata = ctx.luadata();
+    let luaref_metatable = luadata.table(ctx, luaref_metatable);
 
     metatable
         .set(
@@ -450,13 +455,19 @@ pub fn schema_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
                 return Err(type_err.into());
             };
             let this = this.downcast_static::<&Schema>()?;
-            let data = AnyUserData::new_static(&ctx, SchemaBox::default(this));
-            data.set_metatable(
+            let metatable = if let Some(t) = this.type_data.get::<SchemaLuaMetatable>() {
+                ctx.state.registry.fetch(&ctx.luadata().table(ctx, t.0))
+            } else {
+                ctx.state.registry.fetch(&luaref_metatable)
+            };
+            let data = AnyUserData::new_static(
                 &ctx,
-                schemabox_metatable
-                    .as_ref()
-                    .map(|x| ctx.state.registry.fetch(x)),
+                LuaRef {
+                    cell: UntypedAtomicResource::new(SchemaBox::default(this)),
+                    path: default(),
+                },
             );
+            data.set_metatable(&ctx, Some(metatable));
             stack.push_front(data.into());
 
             Ok(CallbackReturn::Return)
@@ -503,8 +514,9 @@ pub fn schema_metatable(luadata: &LuaData, ctx: Context) -> StaticTable {
 }
 
 /// Generate the environment table for executing scripts under.
-pub fn env(luadata: &LuaData, ctx: Context) -> StaticTable {
+pub fn env(ctx: Context) -> StaticTable {
     let env = Table::new(&ctx);
+    let luadata = ctx.luadata();
     let schema_metatable = luadata.table(ctx, schema_metatable);
 
     let schema_fn = AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {

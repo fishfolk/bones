@@ -1,2 +1,2 @@
-local data = world.resources:get(s"DemoData")
+local data = world.resources:get(s"AssetServer")
 info(data)
