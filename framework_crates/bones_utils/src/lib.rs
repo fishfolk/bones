@@ -10,17 +10,13 @@ mod collections;
 mod default;
 mod labeled_id;
 mod names;
-mod ptr;
 mod random;
 mod ulid;
 
 /// Helper to export the same types in the crate root and in the prelude.
 macro_rules! pub_use {
     () => {
-        pub use crate::{
-            collections::*, default::*, labeled_id::*, names::*, ptr::*, random::*, ulid::*,
-        };
-        pub use bevy_ptr::*;
+        pub use crate::{collections::*, default::*, labeled_id::*, names::*, random::*, ulid::*};
         pub use bones_utils_macros::*;
         pub use branches::{likely, unlikely};
         pub use futures_lite as futures;

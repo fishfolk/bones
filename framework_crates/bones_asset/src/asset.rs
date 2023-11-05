@@ -328,7 +328,7 @@ pub trait AssetLoader: Sync + Send + 'static {
 pub struct SchemaMetaAssetLoader(
     pub  fn(
         ctx: &mut MetaAssetLoadCtx,
-        ptr: SchemaRefMut<'_, '_>,
+        ptr: SchemaRefMut<'_>,
         deserialzer: &mut dyn erased_serde::Deserializer,
     ) -> anyhow::Result<()>,
 );
@@ -338,7 +338,7 @@ impl SchemaMetaAssetLoader {
     pub fn load<'a, 'de, D>(
         &self,
         ctx: &mut MetaAssetLoadCtx,
-        ptr: SchemaRefMut<'a, 'a>,
+        ptr: SchemaRefMut<'a>,
         deserializer: D,
     ) -> Result<(), erased_serde::Error>
     where

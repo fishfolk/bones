@@ -9,10 +9,10 @@ use super::*;
 
 /// Registers lua binding typedatas for bones_framework types.
 pub fn register_lua_typedata() {
-    <AssetServer as HasSchema>::schema()
-        .type_data
-        .insert(SchemaLuaMetatable(assetserver_metatable))
-        .unwrap();
+    // <AssetServer as HasSchema>::schema()
+    //     .type_data
+    //     .insert(SchemaLuaMetatable(assetserver_metatable))
+    //     .unwrap();
 }
 
 pub fn no_newindex(ctx: Context) -> StaticCallback {
@@ -24,53 +24,30 @@ pub fn no_newindex(ctx: Context) -> StaticCallback {
     )
 }
 
-pub fn assetserver_metatable(ctx: Context) -> StaticTable {
-    let metatable = Table::new(&ctx);
-    let static_metatable = ctx.state.registry.stash(&ctx, metatable);
-    metatable
-        .set(
-            ctx,
-            "__tostring",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                let value = stack.pop_front();
-                if let Value::UserData(data) = value {
-                    let server = data.downcast_static::<LuaRef>()?;
-                    let server = server.cell.borrow();
-                    let _server = server.try_cast::<AssetServer>()?;
-                    stack.push_front(piccolo::String::from_static(&ctx, "AssetServer").into());
-                };
-                Ok(CallbackReturn::Return)
-            }),
-        )
-        .unwrap();
-
-    static_metatable
-}
-
 pub fn luaref_metatable(ctx: Context) -> StaticTable {
     let metatable = Table::new(&ctx);
     let static_metatable = ctx.state.registry.stash(&ctx, metatable);
-
     let static_metatable_ = static_metatable.clone();
+
     metatable
         .set(
             ctx,
             "__tostring",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                let value = stack.pop_front();
-                if let Value::UserData(data) = value {
-                    if let Ok(res) = data.downcast_static::<LuaRef>() {
-                        let data = res.cell.borrow().get_field_path(FieldPath(res.path))?;
-                        stack
-                            .push_front(piccolo::String::from_slice(&ctx, data.to_string()).into());
-                    } else {
-                        stack.push_front(
-                            piccolo::String::from_slice(&ctx, &format!("{value}")).into(),
-                        );
-                    }
-                } else {
-                    stack.push_front(piccolo::String::from_slice(&ctx, &format!("{value}")).into());
+                let this = stack.pop_front();
+                let Value::UserData(this) = this else {
+                    return Err(anyhow::format_err!("Invalid type").into());
                 };
+                let this = this.downcast_static::<EcsRef>()?;
+                let b = this.data.borrow();
+                if let Some(value) = b.access() {
+                    if let Some(value) = value.field_path(FieldPath(this.path)) {
+                        stack.push_front(Value::String(piccolo::String::from_slice(
+                            &ctx,
+                            format!("{value:?}"),
+                        )));
+                    }
+                }
                 Ok(CallbackReturn::Return)
             }),
         )
@@ -82,65 +59,56 @@ pub fn luaref_metatable(ctx: Context) -> StaticTable {
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
                 let this = stack.pop_front();
                 let key = stack.pop_front();
-                let type_err = "Invalid type for `self` in schemabox metatable.";
                 let Value::UserData(this) = this else {
-                    return Err(anyhow::format_err!(type_err).into());
+                    return Err(anyhow::format_err!(
+                        "Invalid type for `self` in schemabox metatable."
+                    )
+                    .into());
                 };
+                let this = this.downcast_static::<EcsRef>()?;
+                let b = this.data.borrow();
+                let newpath = ustr(&format!("{}.{key}", this.path));
 
-                let schemaref;
-                let mut path;
-                let cell;
-                if let Ok(res) = this.downcast_static::<LuaRef>() {
-                    cell = res.cell.clone();
-                    schemaref = res.cell.borrow();
-                    path = res.path;
-                } else {
-                    return Err(anyhow::format_err!(type_err).into());
-                };
-
-                if let Value::String(key) = key {
-                    path = ustr(&format!("{path}.{}", key.to_str()?));
-                } else if let Value::Integer(i) = key {
-                    path = ustr(&format!("{path}.{i}"));
-                } else {
-                    return Err(anyhow::format_err!("Invalid index: {key}").into());
-                }
-                let schemaref = schemaref.get_field_path(FieldPath(path))?;
-
-                match &schemaref.schema().kind {
-                    SchemaKind::Struct(_)
-                    | SchemaKind::Primitive(Primitive::Opaque { .. })
-                    | SchemaKind::Vec(_)
-                    | SchemaKind::Enum(_)
-                    | SchemaKind::Map { .. }
-                    | SchemaKind::Box(_) => {
-                        let new_ref = AnyUserData::new_static(&ctx, LuaRef { cell, path });
-                        new_ref.set_metatable(
-                            &ctx,
-                            Some(ctx.state.registry.fetch(&static_metatable_)),
-                        );
-                        stack.push_front(new_ref.into());
+                if let Some(field) = b.access().and_then(|x| x.field_path(FieldPath(newpath))) {
+                    match field {
+                        SchemaRefAccess::Primitive(p)
+                            if !matches!(p, PrimitiveRef::Opaque { .. }) =>
+                        {
+                            match p {
+                                PrimitiveRef::Bool(b) => stack.push_front(Value::Boolean(*b)),
+                                PrimitiveRef::U8(n) => stack.push_front(Value::Integer(*n as i64)),
+                                PrimitiveRef::U16(n) => stack.push_front(Value::Integer(*n as i64)),
+                                PrimitiveRef::U32(n) => stack.push_front(Value::Integer(*n as i64)),
+                                PrimitiveRef::U64(n) => stack.push_front(Value::Integer(*n as i64)),
+                                PrimitiveRef::U128(n) => {
+                                    stack.push_front(Value::Integer(*n as i64))
+                                }
+                                PrimitiveRef::I8(n) => stack.push_front(Value::Integer(*n as i64)),
+                                PrimitiveRef::I16(n) => stack.push_front(Value::Integer(*n as i64)),
+                                PrimitiveRef::I32(n) => stack.push_front(Value::Integer(*n as i64)),
+                                PrimitiveRef::I64(n) => stack.push_front(Value::Integer(*n)),
+                                PrimitiveRef::I128(n) => {
+                                    stack.push_front(Value::Integer(*n as i64))
+                                }
+                                PrimitiveRef::F32(n) => stack.push_front(Value::Number(*n as f64)),
+                                PrimitiveRef::F64(n) => stack.push_front(Value::Number(*n)),
+                                PrimitiveRef::String(s) => stack.push_front(Value::String(
+                                    piccolo::String::from_slice(&ctx, s),
+                                )),
+                                PrimitiveRef::Opaque { .. } => unreachable!(),
+                            }
+                        }
+                        _ => {
+                            let mut newref = this.clone();
+                            newref.path = newpath;
+                            let data = AnyUserData::new_static(&ctx, newref);
+                            data.set_metatable(
+                                &ctx,
+                                Some(ctx.state.registry.fetch(&static_metatable_)),
+                            );
+                            stack.push_front(data.into());
+                        }
                     }
-                    SchemaKind::Primitive(prim) => stack.push_front(match prim {
-                        Primitive::Bool => Value::Boolean(*schemaref.cast::<bool>()),
-                        Primitive::U8 => Value::Integer(*schemaref.cast::<u8>() as i64),
-                        Primitive::U16 => Value::Integer(*schemaref.cast::<u16>() as i64),
-                        Primitive::U32 => Value::Integer(*schemaref.cast::<u32>() as i64),
-                        Primitive::U64 => Value::Integer(*schemaref.cast::<u64>() as i64),
-                        Primitive::U128 => Value::Integer(*schemaref.cast::<u128>() as i64),
-                        Primitive::I8 => Value::Integer(*schemaref.cast::<i16>() as i64),
-                        Primitive::I16 => Value::Integer(*schemaref.cast::<i16>() as i64),
-                        Primitive::I32 => Value::Integer(*schemaref.cast::<i32>() as i64),
-                        Primitive::I64 => Value::Integer(*schemaref.cast::<i64>()),
-                        Primitive::I128 => Value::Integer(*schemaref.cast::<i128>() as i64),
-                        Primitive::F32 => Value::Number(*schemaref.cast::<f32>() as f64),
-                        Primitive::F64 => Value::Number(*schemaref.cast::<f64>()),
-                        Primitive::String => Value::String(piccolo::String::from_slice(
-                            &ctx,
-                            schemaref.cast::<String>().clone(),
-                        )),
-                        Primitive::Opaque { .. } => unreachable!(),
-                    }),
                 }
 
                 Ok(CallbackReturn::Return)
@@ -151,101 +119,117 @@ pub fn luaref_metatable(ctx: Context) -> StaticTable {
         .set(
             ctx,
             "__newindex",
-            AnyCallback::from_fn(&ctx, move |_ctx, _fuel, stack| {
+            AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
                 let this = stack.pop_front();
                 let key = stack.pop_front();
                 let newvalue = stack.pop_front();
-                let type_err = "Invalid type for `self` in schemabox metatable.";
                 let Value::UserData(this) = this else {
-                    return Err(anyhow::format_err!(type_err).into());
+                    return Err(anyhow::format_err!(
+                        "Invalid type for `self` in schemabox metatable."
+                    )
+                    .into());
+                };
+                let this = this.downcast_static::<EcsRef>()?;
+                let mut borrow = this.data.borrow_mut();
+                let Some(access) = borrow.access_mut() else {
+                    return Err(anyhow::format_err!("Value not found").into());
+                };
+                let newpath = ustr(&format!("{}.{key}", this.path));
+
+                let field_idx = match key {
+                    Value::Integer(i) => FieldIdx::Idx(i as usize),
+                    Value::String(s) => FieldIdx::Name(match s.to_str() {
+                        Ok(s) => s,
+                        Err(_) => return Err(anyhow::format_err!("Non UTF-8 string").into()),
+                    }),
+                    _ => return Err(anyhow::format_err!("Invalid index: {key}").into()),
                 };
 
-                let mut schemaref;
-                let mut path;
-                if let Ok(res) = this.downcast_static::<LuaRef>() {
-                    schemaref = res.cell.borrow_mut();
-                    path = res.path;
-                } else {
-                    return Err(anyhow::format_err!(type_err).into());
-                };
-
-                if let Value::String(key) = key {
-                    path = ustr(&format!("{path}.{}", key.to_str()?));
-                } else if let Value::Integer(i) = key {
-                    path = ustr(&format!("{path}.{i}"));
-                } else {
-                    return Err(anyhow::format_err!("Invalid index: {key}").into());
-                }
-                let mut schemaref =
-                    schemaref.try_get_field_path(FieldPath(path)).map_err(|_| {
-                        piccolo::Error::from(anyhow::format_err!("Attribute doesn't exist: {path}"))
-                    })?;
-
-                match &schemaref.schema().kind {
-                    SchemaKind::Struct(_) | SchemaKind::Primitive(Primitive::Opaque { .. }) => {
-                        return Err(anyhow::format_err!("Cannot assign to structs directly").into());
+                match access {
+                    SchemaRefMutAccess::Struct(s) => {
+                        match s
+                            .into_field(field_idx)
+                            .map_err(|_| anyhow::format_err!("Field not found: {field_idx}"))?
+                        {
+                            SchemaRefMutAccess::Struct(s) => {
+                                if s.into_field(field_idx).is_ok() {
+                                    let newecsref = EcsRef {
+                                        data: this.data.clone(),
+                                        path: newpath,
+                                    };
+                                    let newecsref = AnyUserData::new_static(&ctx, newecsref);
+                                    newecsref.set_metatable(
+                                        &ctx,
+                                        Some(ctx.state.registry.fetch(&static_metatable)),
+                                    );
+                                    stack.push_front(newecsref.into());
+                                }
+                            }
+                            SchemaRefMutAccess::Vec(_)
+                            | SchemaRefMutAccess::Enum(_)
+                            | SchemaRefMutAccess::Map(_) => {
+                                todo!("Implement vec, enum, and map assigment")
+                            }
+                            SchemaRefMutAccess::Primitive(p) => match (p, newvalue) {
+                                (PrimitiveRefMut::Bool(b), Value::Boolean(newb)) => *b = newb,
+                                (PrimitiveRefMut::U8(n), Value::Integer(newi)) => {
+                                    *n = newi.try_into().unwrap()
+                                }
+                                (PrimitiveRefMut::U16(n), Value::Integer(newi)) => {
+                                    *n = newi.try_into().unwrap()
+                                }
+                                (PrimitiveRefMut::U32(n), Value::Integer(newi)) => {
+                                    *n = newi.try_into().unwrap()
+                                }
+                                (PrimitiveRefMut::U64(n), Value::Integer(newi)) => {
+                                    *n = newi.try_into().unwrap()
+                                }
+                                (PrimitiveRefMut::U128(n), Value::Integer(newi)) => {
+                                    *n = newi.try_into().unwrap()
+                                }
+                                (PrimitiveRefMut::I8(n), Value::Integer(newi)) => {
+                                    *n = newi.try_into().unwrap()
+                                }
+                                (PrimitiveRefMut::I16(n), Value::Integer(newi)) => {
+                                    *n = newi.try_into().unwrap()
+                                }
+                                (PrimitiveRefMut::I32(n), Value::Integer(newi)) => {
+                                    *n = newi.try_into().unwrap()
+                                }
+                                (PrimitiveRefMut::I64(n), Value::Integer(newi)) => *n = newi,
+                                (PrimitiveRefMut::I128(n), Value::Integer(newi)) => {
+                                    *n = newi.try_into().unwrap()
+                                }
+                                (PrimitiveRefMut::F32(n), Value::Number(newf)) => *n = newf as f32,
+                                (PrimitiveRefMut::F64(n), Value::Number(newf)) => *n = newf,
+                                (PrimitiveRefMut::String(s), Value::String(news)) => {
+                                    if let Ok(news) = news.to_str() {
+                                        s.clear();
+                                        s.push_str(news);
+                                    } else {
+                                        return Err(anyhow::format_err!(
+                                            "Non UTF-8 string assignment."
+                                        )
+                                        .into());
+                                    }
+                                }
+                                (PrimitiveRefMut::Opaque { .. }, Value::UserData(_)) => {
+                                    todo!("Opaque type assignment")
+                                }
+                                _ => return Err(anyhow::format_err!("Invalid type").into()),
+                            },
+                        }
                     }
-                    SchemaKind::Vec(_) => todo!(),
-                    SchemaKind::Enum(_) => todo!(),
-                    SchemaKind::Map { .. } => todo!(),
-                    SchemaKind::Box(_) => todo!(),
-                    SchemaKind::Primitive(prim) => match (prim, newvalue) {
-                        (Primitive::Bool, Value::Boolean(value)) => {
-                            *schemaref.cast_mut::<bool>() = value;
-                        }
-                        (Primitive::U8, Value::Integer(value)) => {
-                            *schemaref.cast_mut::<u8>() = value as u8;
-                        }
-                        (Primitive::U16, Value::Integer(value)) => {
-                            *schemaref.cast_mut::<u16>() = value as u16;
-                        }
-                        (Primitive::U32, Value::Integer(value)) => {
-                            *schemaref.cast_mut::<u32>() = value as u32;
-                        }
-                        (Primitive::U64, Value::Integer(value)) => {
-                            *schemaref.cast_mut::<u64>() = value as u64;
-                        }
-                        (Primitive::U128, Value::Integer(value)) => {
-                            *schemaref.cast_mut::<u128>() = value as u128;
-                        }
-                        (Primitive::I8, Value::Integer(value)) => {
-                            *schemaref.cast_mut::<i8>() = value as i8;
-                        }
-                        (Primitive::I16, Value::Integer(value)) => {
-                            *schemaref.cast_mut::<i16>() = value as i16;
-                        }
-                        (Primitive::I32, Value::Integer(value)) => {
-                            *schemaref.cast_mut::<i32>() = value as i32;
-                        }
-                        (Primitive::I64, Value::Integer(value)) => {
-                            *schemaref.cast_mut::<i64>() = value;
-                        }
-                        (Primitive::I128, Value::Integer(value)) => {
-                            *schemaref.cast_mut::<i128>() = value as i128;
-                        }
-                        (Primitive::F32, Value::Integer(value)) => {
-                            *schemaref.cast_mut::<f32>() = value as f32;
-                        }
-                        (Primitive::F64, Value::Integer(value)) => {
-                            *schemaref.cast_mut::<f32>() = value as f32;
-                        }
-                        (Primitive::F32, Value::Number(value)) => {
-                            *schemaref.cast_mut::<f32>() = value as f32;
-                        }
-                        (Primitive::F64, Value::Number(value)) => {
-                            *schemaref.cast_mut::<f64>() = value;
-                        }
-                        (Primitive::String, Value::String(string)) => {
-                            *schemaref.cast_mut::<String>() = string.to_str()?.to_owned();
-                        }
-                        (Primitive::Opaque { .. }, _) => unreachable!(),
-                        _ => {
-                            return Err(anyhow::format_err!(
-                                "Type mismatch, expected `{prim:?}` found {newvalue:?}"
-                            )
-                            .into())
-                        }
-                    },
+                    SchemaRefMutAccess::Vec(_)
+                    | SchemaRefMutAccess::Enum(_)
+                    | SchemaRefMutAccess::Map(_) => {
+                        todo!("Implement vec, enum, and map assigment.")
+                    }
+                    SchemaRefMutAccess::Primitive(_) => {
+                        return Err(
+                            anyhow::format_err!("Cannot assign to field of primitive.").into()
+                        )
+                    }
                 }
 
                 Ok(CallbackReturn::Return)
@@ -288,24 +272,18 @@ pub fn resources_metatable(ctx: Context) -> StaticTable {
                 );
             };
             let schema = schema.downcast_static::<&Schema>()?;
-            let metatable = if let Some(t) = schema.type_data.get::<SchemaLuaMetatable>() {
-                ctx.state.registry.fetch(&ctx.luadata().table(ctx, t.0))
-            } else {
-                ctx.state.registry.fetch(&luaref_metatable)
-            };
 
             world.with(|world| {
                 let cell = world.resources.untyped().get_cell(schema.id());
-
                 if let Some(cell) = cell {
                     let data = AnyUserData::new_static(
                         &ctx,
-                        LuaRef {
-                            cell,
-                            path: ustr(""),
+                        EcsRef {
+                            data: EcsRefData::Resource(cell),
+                            path: default(),
                         },
                     );
-                    data.set_metatable(&ctx, Some(metatable));
+                    data.set_metatable(&ctx, Some(ctx.state.registry.fetch(&luaref_metatable)));
                     stack.push_front(data.into());
                 }
             });
@@ -426,7 +404,7 @@ pub fn world_metatable(ctx: Context) -> StaticTable {
 pub fn schema_metatable(ctx: Context) -> StaticTable {
     let metatable = Table::new(&ctx);
     let luadata = ctx.luadata();
-    let luaref_metatable = luadata.table(ctx, luaref_metatable);
+    let ecsref_metatable = luadata.table(ctx, luaref_metatable);
 
     metatable
         .set(
@@ -455,19 +433,15 @@ pub fn schema_metatable(ctx: Context) -> StaticTable {
                 return Err(type_err.into());
             };
             let this = this.downcast_static::<&Schema>()?;
-            let metatable = if let Some(t) = this.type_data.get::<SchemaLuaMetatable>() {
-                ctx.state.registry.fetch(&ctx.luadata().table(ctx, t.0))
-            } else {
-                ctx.state.registry.fetch(&luaref_metatable)
-            };
+
             let data = AnyUserData::new_static(
                 &ctx,
-                LuaRef {
-                    cell: UntypedAtomicResource::new(SchemaBox::default(this)),
+                EcsRef {
+                    data: EcsRefData::Free(Rc::new(AtomicCell::new(SchemaBox::default(this)))),
                     path: default(),
                 },
             );
-            data.set_metatable(&ctx, Some(metatable));
+            data.set_metatable(&ctx, Some(ctx.state.registry.fetch(&ecsref_metatable)));
             stack.push_front(data.into());
 
             Ok(CallbackReturn::Return)

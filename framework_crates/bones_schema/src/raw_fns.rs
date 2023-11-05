@@ -1,7 +1,10 @@
 //! Traits implementing raw function calls for cloning, dropping, and creating default values for
 //! Rust types.
 
-use std::hash::{Hash, Hasher};
+use std::{
+    ffi::c_void,
+    hash::{Hash, Hasher},
+};
 
 use bones_utils::fxhash::FxHasher;
 
@@ -15,10 +18,10 @@ pub trait RawClone {
     /// The `dst` pointer must be aligned, writable, and have the same layout that this function is
     /// assocated to, and the `src` pointer must be readable and point to a valid instance of the
     /// type that this function is associated with.
-    unsafe extern "C-unwind" fn raw_clone(src: *const u8, dst: *mut u8);
+    unsafe extern "C-unwind" fn raw_clone(src: *const c_void, dst: *mut c_void);
 }
 impl<T: Clone> RawClone for T {
-    unsafe extern "C-unwind" fn raw_clone(src: *const u8, dst: *mut u8) {
+    unsafe extern "C-unwind" fn raw_clone(src: *const c_void, dst: *mut c_void) {
         let t = &*(src as *const T);
         let t = t.clone();
         (dst as *mut T).write(t)
@@ -34,10 +37,10 @@ pub trait RawDrop {
     ///
     /// The pointer must be aligned, writable, and have the same layout that this function is
     /// assocated to.
-    unsafe extern "C-unwind" fn raw_drop(ptr: *mut u8);
+    unsafe extern "C-unwind" fn raw_drop(ptr: *mut c_void);
 }
 impl<T> RawDrop for T {
-    unsafe extern "C-unwind" fn raw_drop(ptr: *mut u8) {
+    unsafe extern "C-unwind" fn raw_drop(ptr: *mut c_void) {
         if std::mem::needs_drop::<T>() {
             (ptr as *mut T).drop_in_place()
         }
@@ -53,10 +56,10 @@ pub trait RawHash {
     ///
     /// The pointer must be aligned, readable, and be a pointer to the type that this Hash function
     /// was created for.
-    unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64;
+    unsafe extern "C-unwind" fn raw_hash(ptr: *const c_void) -> u64;
 }
 impl<T: Hash> RawHash for T {
-    unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64 {
+    unsafe extern "C-unwind" fn raw_hash(ptr: *const c_void) -> u64 {
         let this = unsafe { &*(ptr as *const Self) };
         let mut hasher = FxHasher::default();
         this.hash(&mut hasher);
@@ -73,10 +76,10 @@ pub trait RawEq {
     ///
     /// The pointer must be aligned, readable, and be a pointer to the type that this Hash function
     /// was created for.
-    unsafe extern "C-unwind" fn raw_eq(a: *const u8, b: *const u8) -> bool;
+    unsafe extern "C-unwind" fn raw_eq(a: *const c_void, b: *const c_void) -> bool;
 }
 impl<T: Eq> RawEq for T {
-    unsafe extern "C-unwind" fn raw_eq(a: *const u8, b: *const u8) -> bool {
+    unsafe extern "C-unwind" fn raw_eq(a: *const c_void, b: *const c_void) -> bool {
         let a = unsafe { &*(a as *const Self) };
         let b = unsafe { &*(b as *const Self) };
         a.eq(b)
@@ -92,10 +95,10 @@ pub trait RawDefault {
     ///
     /// The pointer must be aligned, writable, and have the same layout that this function is
     /// assocated to.
-    unsafe extern "C-unwind" fn raw_default(dst: *mut u8);
+    unsafe extern "C-unwind" fn raw_default(dst: *mut c_void);
 }
 impl<T: Default> RawDefault for T {
-    unsafe extern "C-unwind" fn raw_default(dst: *mut u8) {
+    unsafe extern "C-unwind" fn raw_default(dst: *mut c_void) {
         let d = T::default();
         (dst as *mut T).write(d)
     }

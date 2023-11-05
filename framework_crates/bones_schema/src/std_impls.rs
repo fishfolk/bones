@@ -4,6 +4,8 @@ use bones_utils::{fxhash::FxHasher, Ustr};
 #[cfg(feature = "serde")]
 use serde::{de::Error, Deserialize};
 
+use std::ffi::c_void;
+
 use crate::{alloc::TypeDatas, prelude::*, raw_fns::*};
 
 use std::{alloc::Layout, any::TypeId, hash::Hasher, sync::OnceLock, time::Duration};
@@ -312,10 +314,10 @@ mod impl_glam {
     macro_rules! custom_fns_impl_bvec {
         ($ty:ident) => {
             impl CustomRawFns for glam::$ty {
-                unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64 {
+                unsafe extern "C-unwind" fn raw_hash(ptr: *const c_void) -> u64 {
                     <Self as RawHash>::raw_hash(ptr)
                 }
-                unsafe extern "C-unwind" fn raw_eq(a: *const u8, b: *const u8) -> bool {
+                unsafe extern "C-unwind" fn raw_eq(a: *const c_void, b: *const c_void) -> bool {
                     <Self as RawEq>::raw_eq(a, b)
                 }
             }
@@ -328,23 +330,23 @@ mod impl_glam {
     macro_rules! custom_fns_impl_glam {
         ($t:ty, $prim:ident, $($field:ident),+) => {
             impl CustomRawFns for $t {
-                unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64 {
+                unsafe extern "C-unwind" fn raw_hash(ptr: *const c_void) -> u64 {
                     let this = unsafe { &*(ptr as *const Self) };
                     let mut hasher = FxHasher::default();
                     $(
-                        hasher.write_u64($prim::raw_hash(&this.$field as *const $prim as *const u8));
+                        hasher.write_u64($prim::raw_hash(&this.$field as *const $prim as *const c_void));
                     )+
                     hasher.finish()
                 }
 
-                unsafe extern "C-unwind" fn raw_eq(a: *const u8, b: *const u8) -> bool {
+                unsafe extern "C-unwind" fn raw_eq(a: *const c_void, b: *const c_void) -> bool {
                     let a = unsafe { &*(a as *const Self) };
                     let b = unsafe { &*(b as *const Self) };
 
                     $(
                         $prim::raw_eq(
-                            &a.$field as *const $prim as *const u8,
-                            &b.$field as *const $prim as *const u8,
+                            &a.$field as *const $prim as *const c_void,
+                            &b.$field as *const $prim as *const c_void,
                         )
                     )&&+
                 }
@@ -368,14 +370,14 @@ mod impl_glam {
 
 /// Trait for types that require specific implementations of eq and hash fns, for use in this module only.
 trait CustomRawFns {
-    unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64;
-    unsafe extern "C-unwind" fn raw_eq(a: *const u8, b: *const u8) -> bool;
+    unsafe extern "C-unwind" fn raw_hash(ptr: *const c_void) -> u64;
+    unsafe extern "C-unwind" fn raw_eq(a: *const c_void, b: *const c_void) -> bool;
 }
 
 macro_rules! custom_fns_impl_float {
     ($ty:ident) => {
         impl CustomRawFns for $ty {
-            unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64 {
+            unsafe extern "C-unwind" fn raw_hash(ptr: *const c_void) -> u64 {
                 let this = unsafe { &*(ptr as *const Self) };
 
                 let mut hasher = FxHasher::default();
@@ -391,7 +393,7 @@ macro_rules! custom_fns_impl_float {
                 hasher.finish()
             }
 
-            unsafe extern "C-unwind" fn raw_eq(a: *const u8, b: *const u8) -> bool {
+            unsafe extern "C-unwind" fn raw_eq(a: *const c_void, b: *const c_void) -> bool {
                 let a = unsafe { &*(a as *const Self) };
                 let b = unsafe { &*(b as *const Self) };
                 if a.is_nan() && a.is_nan() {

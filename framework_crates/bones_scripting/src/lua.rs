@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use append_only_vec::AppendOnlyVec;
 use bevy_tasks::{ComputeTaskPool, TaskPool, ThreadExecutor};
+use bones_asset::dashmap::mapref::one::{MappedRef, MappedRefMut};
 use bones_lib::ecs::utils::*;
 use parking_lot::Mutex;
 use piccolo::{
@@ -8,7 +9,7 @@ use piccolo::{
     StaticTable, Table, Thread, ThreadMode, Value,
 };
 use send_wrapper::SendWrapper;
-use std::sync::Arc;
+use std::{rc::Rc, sync::Arc};
 
 #[macro_use]
 mod freeze;
@@ -285,14 +286,143 @@ impl LuaData {
     }
 }
 
-/// Schema [type data][TypeDatas] that may be used to create a custom lua metatable for this type
-/// when it is accessed in Lua scripts
-#[derive(HasSchema, Clone, Copy, Debug)]
-#[schema(no_default)]
-struct SchemaLuaMetatable(pub fn(Context) -> StaticTable);
+/// A reference to an ECS-compatible value.
+#[derive(Clone)]
+pub struct EcsRef {
+    /// The kind of reference.
+    pub data: EcsRefData,
+    /// The path to the desired field.
+    pub path: Ustr,
+}
 
-/// A reference to a resource
-struct LuaRef {
-    cell: UntypedAtomicResource,
-    path: Ustr,
+/// The kind of value reference for [`EcsRef`].
+#[derive(Clone)]
+pub enum EcsRefData {
+    /// A resource ref.
+    Resource(UntypedAtomicResource),
+    /// A component ref.
+    Component(ComponentRef),
+    /// An asset ref.
+    Asset(AssetRef),
+    /// A free-standing ref, not stored in the ECS.
+    Free(Rc<AtomicCell<SchemaBox>>),
+}
+
+pub enum EcsRefBorrowKind<'a> {
+    Resource(AtomicSchemaRef<'a>),
+    Component(ComponentBorrow<'a>),
+    Free(Ref<'a, SchemaBox>),
+    Asset(Option<MappedRef<'a, Cid, LoadedAsset, SchemaBox>>),
+}
+
+impl EcsRefBorrowKind<'_> {
+    /// Will return none if the value does not exist, such as an unloaded asset or a component
+    /// that is not set for a given entity.
+    pub fn access(&self) -> Option<SchemaRefAccess> {
+        match self {
+            EcsRefBorrowKind::Resource(r) => Some(r.as_ref().access()),
+            EcsRefBorrowKind::Component(c) => c.borrow.get_ref(c.entity).map(|x| x.access()),
+            EcsRefBorrowKind::Free(f) => Some(f.as_ref().access()),
+            EcsRefBorrowKind::Asset(a) => a.as_ref().map(|x| x.as_ref().access()),
+        }
+    }
+}
+
+pub struct ComponentBorrow<'a> {
+    pub borrow: Ref<'a, UntypedComponentStore>,
+    pub entity: Entity,
+}
+
+pub struct ComponentBorrowMut<'a> {
+    pub borrow: RefMut<'a, UntypedComponentStore>,
+    pub entity: Entity,
+}
+
+pub enum EcsRefBorrowMutKind<'a> {
+    Resource(AtomicSchemaRefMut<'a>),
+    Component(ComponentBorrowMut<'a>),
+    Free(RefMut<'a, SchemaBox>),
+    Asset(Option<MappedRefMut<'a, Cid, LoadedAsset, SchemaBox>>),
+}
+
+impl EcsRefBorrowMutKind<'_> {
+    pub fn access_mut(&mut self) -> Option<SchemaRefMutAccess> {
+        match self {
+            EcsRefBorrowMutKind::Resource(r) => Some(r.access_mut()),
+            EcsRefBorrowMutKind::Component(c) => {
+                c.borrow.get_ref_mut(c.entity).map(|x| x.into_access_mut())
+            }
+            EcsRefBorrowMutKind::Free(f) => Some(f.as_mut().into_access_mut()),
+            EcsRefBorrowMutKind::Asset(a) => a.as_mut().map(|x| x.as_mut().into_access_mut()),
+        }
+    }
+}
+
+impl EcsRefData {
+    pub fn borrow(&self) -> EcsRefBorrowKind {
+        match self {
+            EcsRefData::Resource(resource) => {
+                let b = resource.borrow();
+                EcsRefBorrowKind::Resource(b)
+            }
+            EcsRefData::Component(componentref) => {
+                let b = componentref.store.borrow();
+                EcsRefBorrowKind::Component(ComponentBorrow {
+                    borrow: b,
+                    entity: componentref.entity,
+                })
+            }
+            EcsRefData::Asset(assetref) => {
+                let b = assetref.server.try_get_untyped(assetref.handle);
+                EcsRefBorrowKind::Asset(b)
+            }
+            EcsRefData::Free(rc) => {
+                let b = rc.borrow();
+                EcsRefBorrowKind::Free(b)
+            }
+        }
+    }
+
+    /// Mutably borrow the ref.
+    pub fn borrow_mut(&self) -> EcsRefBorrowMutKind {
+        match self {
+            EcsRefData::Resource(resource) => {
+                let b = resource.borrow_mut();
+                EcsRefBorrowMutKind::Resource(b)
+            }
+            EcsRefData::Component(componentref) => {
+                let b = componentref.store.borrow_mut();
+                EcsRefBorrowMutKind::Component(ComponentBorrowMut {
+                    borrow: b,
+                    entity: componentref.entity,
+                })
+            }
+            EcsRefData::Asset(assetref) => {
+                let b = assetref.server.try_get_untyped_mut(assetref.handle);
+                EcsRefBorrowMutKind::Asset(b)
+            }
+            EcsRefData::Free(rc) => {
+                let b = rc.borrow_mut();
+                EcsRefBorrowMutKind::Free(b)
+            }
+        }
+    }
+}
+
+/// A resource ref.
+#[derive(Clone)]
+pub struct ComponentRef {
+    /// The component store.
+    pub store: UntypedAtomicComponentStore,
+    /// The entity to get the component data for.
+    pub entity: Entity,
+}
+
+/// An asset ref.
+#[derive(Clone)]
+pub struct AssetRef {
+    /// The asset server handle.
+    pub server: AssetServer,
+    /// The kind of asset we are referencing.
+    pub handle: UntypedHandle,
 }

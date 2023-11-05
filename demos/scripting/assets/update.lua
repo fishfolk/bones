@@ -1,2 +1,3 @@
-local data = world.resources:get(s"AssetServer")
-info(data)
+local data = world.resources:get(s"DemoData")
+data = s"DemoData":create()
+info(data.age)

@@ -1,6 +1,6 @@
 //! [`Schema`], [`HasSchema`], [`SchemaData`], and related types.
 
-use std::{alloc::Layout, any::TypeId, borrow::Cow};
+use std::{alloc::Layout, any::TypeId, borrow::Cow, ffi::c_void};
 
 use crate::{alloc::TypeDatas, prelude::*};
 
@@ -188,20 +188,20 @@ pub struct SchemaData {
     pub type_id: Option<TypeId>,
     /// The function pointer that may be used to clone data with this schema.
     #[cfg_attr(feature = "serde", serde(skip))]
-    pub clone_fn: Option<unsafe extern "C-unwind" fn(src: *const u8, dst: *mut u8)>,
+    pub clone_fn: Option<unsafe extern "C-unwind" fn(src: *const c_void, dst: *mut c_void)>,
     /// The function pointer that may be used to drop data with this schema.
     #[cfg_attr(feature = "serde", serde(skip))]
-    pub drop_fn: Option<unsafe extern "C-unwind" fn(ptr: *mut u8)>,
+    pub drop_fn: Option<unsafe extern "C-unwind" fn(ptr: *mut c_void)>,
     /// The function pointer that may be used to write a default value to a pointer.
     #[cfg_attr(feature = "serde", serde(skip))]
-    pub default_fn: Option<unsafe extern "C-unwind" fn(ptr: *mut u8)>,
+    pub default_fn: Option<unsafe extern "C-unwind" fn(ptr: *mut c_void)>,
     /// The function pointer that may be used to hash the value.
     #[cfg_attr(feature = "serde", serde(skip))]
-    pub hash_fn: Option<unsafe extern "C-unwind" fn(ptr: *const u8) -> u64>,
+    pub hash_fn: Option<unsafe extern "C-unwind" fn(ptr: *const c_void) -> u64>,
     /// The function pointer that may be used to compare two values for equality. Note that this is
     /// total equality, not partial equality.
     #[cfg_attr(feature = "serde", serde(skip))]
-    pub eq_fn: Option<unsafe extern "C-unwind" fn(a: *const u8, b: *const u8) -> bool>,
+    pub eq_fn: Option<unsafe extern "C-unwind" fn(a: *const c_void, b: *const c_void) -> bool>,
 }
 
 /// A schema describes the data layout of a type, to enable dynamic access to the type's data

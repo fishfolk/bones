@@ -12,7 +12,10 @@ pub use iterator::*;
 pub use typed::*;
 pub use untyped::*;
 
-type AtomicComponentStore<T> = Arc<AtomicCell<ComponentStore<T>>>;
+/// An atomic component store.
+pub type AtomicComponentStore<T> = Arc<AtomicCell<ComponentStore<T>>>;
+/// An untyped atomic component store.
+pub type UntypedAtomicComponentStore = Arc<AtomicCell<UntypedComponentStore>>;
 
 /// A collection of [`ComponentStore<T>`].
 ///
@@ -20,7 +23,7 @@ type AtomicComponentStore<T> = Arc<AtomicCell<ComponentStore<T>>>;
 /// initialized for that world.
 #[derive(Default)]
 pub struct ComponentStores {
-    pub(crate) components: HashMap<SchemaId, Arc<AtomicCell<UntypedComponentStore>>>,
+    pub(crate) components: HashMap<SchemaId, UntypedAtomicComponentStore>,
 }
 
 /// An error returned when trying to access an uninitialized component.

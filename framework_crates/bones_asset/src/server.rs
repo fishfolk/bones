@@ -34,8 +34,6 @@ pub struct AssetServer {
     pub inner: Arc<AssetServerInner>,
     /// The [`AssetIo`] implementation used to load assets.
     pub io: Arc<dyn AssetIo>,
-    /// List of assets that have been changed and that we are waiting to re-load.
-    pub pending_asset_changes: Vec<UntypedHandle>,
 }
 
 /// The inner state of the asset server.
@@ -67,7 +65,6 @@ impl Default for AssetServer {
         Self {
             inner: default(),
             io: Arc::new(DummyIo::new([])),
-            pending_asset_changes: default(),
         }
     }
 }
@@ -160,7 +157,6 @@ impl AssetServer {
                 ..default()
             }),
             io: Arc::new(io),
-            pending_asset_changes: default(),
         }
     }
 
@@ -217,11 +213,12 @@ impl AssetServer {
         &mut self,
         mut handle_change: F,
     ) {
+        let mut pending_asset_changes = Vec::new();
         while let Ok(changed) = self.asset_change_recv.try_recv() {
             match changed {
                 ChangedAsset::Loc(loc) => {
                     let handle = self.load_asset_forced(loc.as_ref());
-                    self.pending_asset_changes.push(handle);
+                    pending_asset_changes.push(handle);
                 }
                 ChangedAsset::Handle(handle) => {
                     let entry = self
@@ -233,13 +230,13 @@ impl AssetServer {
                     let loc = entry.key().to_owned();
                     drop(entry);
                     self.load_asset_forced(loc.as_ref());
-                    self.pending_asset_changes.push(handle);
+                    pending_asset_changes.push(handle);
                 }
             }
         }
 
         if self.load_progress.is_finished() {
-            for handle in std::mem::take(&mut self.pending_asset_changes) {
+            for handle in std::mem::take(&mut pending_asset_changes) {
                 handle_change(self, handle)
             }
         }
@@ -719,13 +716,16 @@ impl AssetServer {
     }
 
     /// Borrow a [`LoadedAsset`] associated to the given handle.
-    pub fn get_untyped(&self, handle: UntypedHandle) -> Option<MapRef<Cid, LoadedAsset>> {
+    pub fn get_asset_untyped(&self, handle: UntypedHandle) -> Option<MapRef<Cid, LoadedAsset>> {
         let cid = self.store.asset_ids.get(&handle)?;
         self.store.assets.get(&cid)
     }
 
     /// Borrow a [`LoadedAsset`] associated to the given handle.
-    pub fn get_untyped_mut(&self, handle: UntypedHandle) -> Option<MapRefMut<Cid, LoadedAsset>> {
+    pub fn get_asset_untyped_mut(
+        &self,
+        handle: UntypedHandle,
+    ) -> Option<MapRefMut<Cid, LoadedAsset>> {
         let cid = self.store.asset_ids.get(&handle)?;
         self.store.assets.get_mut(&cid)
     }
@@ -745,6 +745,11 @@ impl AssetServer {
         self.get(self.core().root.typed())
     }
 
+    /// Get the core asset pack's root asset as a type-erased [`SchemaBox`].
+    pub fn untyped_root(&self) -> MappedMapRef<Cid, LoadedAsset, SchemaBox> {
+        self.get_untyped(self.core().root)
+    }
+
     /// Read the loaded asset packs.
     pub fn packs(&self) -> &DashMap<AssetPackSpec, AssetPack> {
         &self.store.packs
@@ -762,7 +767,29 @@ impl AssetServer {
     }
 
     /// Borrow a loaded asset.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the asset is not loaded.
     #[track_caller]
+    pub fn get_untyped(&self, handle: UntypedHandle) -> MappedMapRef<Cid, LoadedAsset, SchemaBox> {
+        self.try_get_untyped(handle).unwrap()
+    }
+
+    /// Borrow a loaded asset.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the asset is not loaded.
+    #[track_caller]
+    pub fn get_untyped_mut(
+        &self,
+        handle: UntypedHandle,
+    ) -> MappedMapRefMut<Cid, LoadedAsset, SchemaBox> {
+        self.try_get_untyped_mut(handle).unwrap()
+    }
+
+    /// Borrow a loaded asset.
     pub fn try_get<T: HasSchema>(
         &self,
         handle: Handle<T>,
@@ -780,6 +807,29 @@ impl AssetServer {
                 asset.cast_ref()
             }
         }))
+    }
+
+    /// Borrow a loaded asset.
+    pub fn try_get_untyped(
+        &self,
+        handle: UntypedHandle,
+    ) -> Option<MappedMapRef<Cid, LoadedAsset, SchemaBox>> {
+        let cid = self.store.asset_ids.get(&handle)?;
+        Some(MapRef::map(self.store.assets.get(&cid).unwrap(), |x| {
+            &x.data
+        }))
+    }
+
+    /// Borrow a loaded asset.
+    pub fn try_get_untyped_mut(
+        &self,
+        handle: UntypedHandle,
+    ) -> Option<MappedMapRefMut<Cid, LoadedAsset, SchemaBox>> {
+        let cid = self.store.asset_ids.get_mut(&handle)?;
+        Some(MapRefMut::map(
+            self.store.assets.get_mut(&cid).unwrap(),
+            |x| &mut x.data,
+        ))
     }
 
     /// Mutably borrow a loaded asset.
@@ -868,14 +918,14 @@ mod metadata {
     }
 
     /// The load context for a [`SchemaRefMut`].
-    pub struct SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'prnt> {
+    pub struct SchemaPtrLoadCtx<'a, 'srv, 'ptr> {
         /// The metadata asset load context.
         pub ctx: &'a mut MetaAssetLoadCtx<'srv>,
         /// The pointer to load.
-        pub ptr: SchemaRefMut<'ptr, 'prnt>,
+        pub ptr: SchemaRefMut<'ptr>,
     }
 
-    impl<'a, 'srv, 'ptr, 'prnt, 'de> DeserializeSeed<'de> for SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'prnt> {
+    impl<'a, 'srv, 'ptr, 'de> DeserializeSeed<'de> for SchemaPtrLoadCtx<'a, 'srv, 'ptr> {
         type Value = ();
 
         fn deserialize<D>(mut self, deserializer: D) -> Result<Self::Value, D::Error>
@@ -947,15 +997,11 @@ mod metadata {
                     ptr: self.ptr,
                     ctx: self.ctx,
                 })?,
-                SchemaKind::Box(_) => {
-                    // SOUND: schema asserts pointer is a SchemaBox.
-                    let b = unsafe { self.ptr.deref_mut::<SchemaBox>() };
-                    SchemaPtrLoadCtx {
-                        ctx: self.ctx,
-                        ptr: b.as_mut(),
-                    }
-                    .deserialize(deserializer)?
+                SchemaKind::Box(_) => SchemaPtrLoadCtx {
+                    ctx: self.ctx,
+                    ptr: self.ptr.into_box().unwrap(),
                 }
+                .deserialize(deserializer)?,
                 SchemaKind::Primitive(p) => {
                     match p {
                         Primitive::Bool => *self.ptr.cast_mut() = bool::deserialize(deserializer)?,
@@ -988,12 +1034,12 @@ mod metadata {
         }
     }
 
-    struct StructVisitor<'a, 'srv, 'ptr, 'prnt> {
+    struct StructVisitor<'a, 'srv, 'ptr> {
         ctx: &'a mut MetaAssetLoadCtx<'srv>,
-        ptr: SchemaRefMut<'ptr, 'prnt>,
+        ptr: SchemaRefMut<'ptr>,
     }
 
-    impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for StructVisitor<'a, 'srv, 'ptr, 'prnt> {
+    impl<'a, 'srv, 'ptr, 'de> Visitor<'de> for StructVisitor<'a, 'srv, 'ptr> {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -1015,11 +1061,11 @@ mod metadata {
             let field_count = self.ptr.schema().kind.as_struct().unwrap().fields.len();
 
             for i in 0..field_count {
-                let field = self.ptr.get_field(i).unwrap();
+                let field = self.ptr.access_mut().field(i).unwrap();
                 if seq
                     .next_element_seed(SchemaPtrLoadCtx {
                         ctx: self.ctx,
-                        ptr: field,
+                        ptr: field.into_schema_ref_mut(),
                     })?
                     .is_none()
                 {
@@ -1035,11 +1081,11 @@ mod metadata {
             A: serde::de::MapAccess<'de>,
         {
             while let Some(key) = map.next_key::<String>()? {
-                match self.ptr.get_field(&key) {
+                match self.ptr.access_mut().field(&key) {
                     Ok(field) => {
                         map.next_value_seed(SchemaPtrLoadCtx {
                             ctx: self.ctx,
-                            ptr: field,
+                            ptr: field.into_schema_ref_mut(),
                         })?;
                     }
                     Err(_) => {
@@ -1069,12 +1115,12 @@ mod metadata {
         }
     }
 
-    struct VecVisitor<'a, 'srv, 'ptr, 'prnt> {
+    struct VecVisitor<'a, 'srv, 'ptr> {
         ctx: &'a mut MetaAssetLoadCtx<'srv>,
-        ptr: SchemaRefMut<'ptr, 'prnt>,
+        ptr: SchemaRefMut<'ptr>,
     }
 
-    impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for VecVisitor<'a, 'srv, 'ptr, 'prnt> {
+    impl<'a, 'srv, 'ptr, 'de> Visitor<'de> for VecVisitor<'a, 'srv, 'ptr> {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -1112,12 +1158,12 @@ mod metadata {
         }
     }
 
-    struct MapVisitor<'a, 'srv, 'ptr, 'prnt> {
+    struct MapVisitor<'a, 'srv, 'ptr> {
         ctx: &'a mut MetaAssetLoadCtx<'srv>,
-        ptr: SchemaRefMut<'ptr, 'prnt>,
+        ptr: SchemaRefMut<'ptr>,
     }
 
-    impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for MapVisitor<'a, 'srv, 'ptr, 'prnt> {
+    impl<'a, 'srv, 'ptr, 'de> Visitor<'de> for MapVisitor<'a, 'srv, 'ptr> {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -1159,12 +1205,12 @@ mod metadata {
         }
     }
 
-    struct EnumVisitor<'a, 'srv, 'ptr, 'prnt> {
+    struct EnumVisitor<'a, 'srv, 'ptr> {
         ctx: &'a mut MetaAssetLoadCtx<'srv>,
-        ptr: SchemaRefMut<'ptr, 'prnt>,
+        ptr: SchemaRefMut<'ptr>,
     }
 
-    impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for EnumVisitor<'a, 'srv, 'ptr, 'prnt> {
+    impl<'a, 'srv, 'ptr, 'de> Visitor<'de> for EnumVisitor<'a, 'srv, 'ptr> {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -1227,12 +1273,12 @@ mod metadata {
         }
     }
 
-    struct EnumPtrLoadCtx<'ptr, 'prnt> {
-        ptr: SchemaRefMut<'ptr, 'prnt>,
+    struct EnumPtrLoadCtx<'ptr> {
+        ptr: SchemaRefMut<'ptr>,
     }
 
-    impl<'ptr, 'prnt, 'de> DeserializeSeed<'de> for EnumPtrLoadCtx<'ptr, 'prnt> {
-        type Value = SchemaRefMut<'ptr, 'prnt>;
+    impl<'ptr, 'de> DeserializeSeed<'de> for EnumPtrLoadCtx<'ptr> {
+        type Value = SchemaRefMut<'ptr>;
 
         fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where
@@ -1261,7 +1307,7 @@ mod metadata {
             // Write the enum variant
             // SOUND: the schema asserts that the write to the enum discriminant is valid
             match enum_info.tag_type {
-                EnumTagType::U8 => unsafe { self.ptr.as_ptr().write(var_idx as u8) },
+                EnumTagType::U8 => unsafe { self.ptr.as_ptr().cast::<u8>().write(var_idx as u8) },
                 EnumTagType::U16 => unsafe {
                     self.ptr.as_ptr().cast::<u16>().write(var_idx as u16)
                 },

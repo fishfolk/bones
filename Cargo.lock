@@ -1221,6 +1221,7 @@ name = "bones_schema"
 version = "0.3.0"
 dependencies = [
  "append-only-vec",
+ "bevy_ptr",
  "bones_schema_macros",
  "bones_utils",
  "erased-serde",
@@ -1262,7 +1263,6 @@ dependencies = [
 name = "bones_utils"
 version = "0.3.0"
 dependencies = [
- "bevy_ptr",
  "bones_utils_macros",
  "branches",
  "futures-lite",

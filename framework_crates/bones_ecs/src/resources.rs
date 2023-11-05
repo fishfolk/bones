@@ -51,7 +51,7 @@ impl UntypedAtomicResource {
     pub fn borrow(&self) -> AtomicSchemaRef {
         let (reference, borrow) = Ref::into_split(self.cell.borrow());
         // SOUND: we keep the borrow along with the reference so that the pointer remains valid.
-        let schema_ref = NoClone(unsafe { reference.as_ref() }.as_ref());
+        let schema_ref = unsafe { reference.as_ref() }.as_ref();
         AtomicSchemaRef { schema_ref, borrow }
     }
 
@@ -77,35 +77,33 @@ impl UntypedAtomicResource {
     }
 }
 
-/// Wrapper type that prevents cloning or copying the inner type.
-#[derive(Deref, DerefMut)]
-pub struct NoClone<T>(T);
-
 /// An atomic borrow of a [`SchemaRef`].
-#[derive(Deref)]
 pub struct AtomicSchemaRef<'a> {
-    /// This is wrappwed in a [`NoClone`] because of the limitations of the deref trait.
-    /// We would prefer to have deref return a [`SchemaRef`] with an appropriate lifetime,
-    /// that indicates it borrows from the [`AtomicSchemaRef`], but since deref must return
-    /// a normal reference, instead we return a reference to the `SchemaRef` wrapped inside
-    /// a [`NoClone`] to prevent copying the [`SchemaRef`] out of dereference with a lifetime
-    /// that outlives the atomicborrow.
-    #[deref]
-    schema_ref: NoClone<SchemaRef<'a>>,
+    schema_ref: SchemaRef<'a>,
     borrow: AtomicBorrow<'a>,
 }
 
 impl<'a> AtomicSchemaRef<'a> {
+    /// Get a [`SchemaRef`] that points to the inner value.
+    ///
+    /// > **Note:** Ideally this method would be unnecessary, but it is impossible to properly
+    /// implement [`Deref`][std::ops::Deref] because deref must return a reference and we actually
+    /// need to return a [`SchemaRef`] with a shortened lifetime, binding it to this
+    /// [`AtomicSchemaRef`] borrow.
+    pub fn as_ref(&self) -> SchemaRef<'_> {
+        self.schema_ref
+    }
+
     /// # Safety
     /// You must know that T represents the data in the [`SchemaRef`].
     pub unsafe fn deref<T: 'static>(self) -> Ref<'a, T> {
-        Ref::with_borrow(self.schema_ref.deref(), self.borrow)
+        Ref::with_borrow(self.schema_ref.cast_into_unchecked(), self.borrow)
     }
 
     /// Convert into typed [`Ref`]. This panics if the schema doesn't match.
     #[track_caller]
     pub fn typed<T: HasSchema>(self) -> Ref<'a, T> {
-        assert_eq!(T::schema(), self.schema(), "Schema mismatch");
+        assert_eq!(T::schema(), self.schema_ref.schema(), "Schema mismatch");
         // SOUND: we've checked for matching schema.
         unsafe { self.deref() }
     }
@@ -115,7 +113,7 @@ impl<'a> AtomicSchemaRef<'a> {
 #[derive(Deref, DerefMut)]
 pub struct AtomicSchemaRefMut<'a> {
     #[deref]
-    schema_ref: SchemaRefMut<'a, 'a>,
+    schema_ref: SchemaRefMut<'a>,
     borrow: AtomicBorrowMut<'a>,
 }
 
@@ -123,7 +121,7 @@ impl<'a> AtomicSchemaRefMut<'a> {
     /// # Safety
     /// You must know that T represents the data in the [`SchemaRefMut`].
     pub unsafe fn deref_mut<T: 'static>(self) -> RefMut<'a, T> {
-        RefMut::with_borrow(self.schema_ref.deref_mut(), self.borrow)
+        RefMut::with_borrow(self.schema_ref.cast_into_mut_unchecked(), self.borrow)
     }
 
     /// Convert into typed [`RefMut`]. This panics if the schema doesn't match.
@@ -425,6 +423,6 @@ mod test {
         // Validate that data1 is unchanged
         let data1_cell = store.get_cell(data1_schema.id()).unwrap();
         let data1_borrow = data1_cell.borrow();
-        assert_eq!(data1_borrow.cast::<usize>(), &0);
+        assert_eq!(data1_borrow.as_ref().cast::<usize>(), &0);
     }
 }

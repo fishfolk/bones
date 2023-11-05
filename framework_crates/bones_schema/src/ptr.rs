@@ -3,6 +3,7 @@
 use std::{
     alloc::handle_alloc_error,
     any::{type_name, TypeId},
+    ffi::c_void,
     hash::Hash,
     iter::{Filter, Map},
     marker::PhantomData,
@@ -22,11 +23,26 @@ use bones_utils::{parking_lot::RwLock, prelude::*};
 /// type.
 #[derive(Clone, Copy)]
 pub struct SchemaRef<'pointer> {
-    ptr: Ptr<'pointer>,
+    ptr: NonNull<c_void>,
     schema: &'static Schema,
+    _phantom: PhantomData<&'pointer ()>,
 }
 
 impl<'pointer> SchemaRef<'pointer> {
+    /// Unsafely cast this pointer to a specifc Rust type.
+    /// # Safety
+    /// All of the safety requirements of [`NonNull::as_ref()`] must be met.
+    pub unsafe fn cast_unchecked<T>(&self) -> &T {
+        self.ptr.cast::<T>().as_ref()
+    }
+
+    /// Unsafely cast this pointer to a specifc Rust type.
+    /// # Safety
+    /// All of the safety requirements of [`NonNull::as_ref()`] must be met.
+    pub unsafe fn cast_into_unchecked<T>(self) -> &'pointer T {
+        self.ptr.cast::<T>().as_ref()
+    }
+
     /// Cast this pointer to a reference to a type with a matching [`Schema`].
     ///
     /// # Panics
@@ -45,7 +61,7 @@ impl<'pointer> SchemaRef<'pointer> {
     pub fn try_cast<T: HasSchema>(&self) -> Result<&'pointer T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
             // SOUND: the schemas have the same memory representation.
-            Ok(unsafe { self.ptr.deref() })
+            Ok(unsafe { self.cast_into_unchecked() })
         } else {
             Err(SchemaMismatchError)
         }
@@ -55,8 +71,10 @@ impl<'pointer> SchemaRef<'pointer> {
     pub fn new<T: HasSchema>(v: &'pointer T) -> SchemaRef<'pointer> {
         let schema = T::schema();
         SchemaRef {
-            ptr: v.into(),
+            /// SOUND: The &T passed in cannot be null.
+            ptr: unsafe { NonNull::new_unchecked(v as *const T as *mut c_void) },
             schema,
+            _phantom: PhantomData,
         }
     }
 
@@ -71,117 +89,17 @@ impl<'pointer> SchemaRef<'pointer> {
     /// - The lifetime `'a` must be constrained such that this [`PtrMut`] will stay valid and
     ///   nothing else can read or mutate the pointee while this [`PtrMut`] is live.
     #[track_caller]
-    pub unsafe fn from_ptr_schema(ptr: *const u8, schema: &'static Schema) -> Self {
+    pub unsafe fn from_ptr_schema(ptr: *const c_void, schema: &'static Schema) -> Self {
         Self {
-            // SOUND: casting the `*const u8` to a `*mut u8` is dangerous but sound in this case
-            // because we are passing the `NonNull` to a read-only `Ptr`. Unfortunately there's not
-            // a read-only `NonNull` type to do that to instead. Also, the user verifies that the
-            // pointer is non-null.
-            ptr: unsafe { Ptr::new(NonNull::new_unchecked(ptr as *mut u8)) },
+            ptr: NonNull::new_unchecked(ptr as *mut c_void),
             schema,
-        }
-    }
-
-    /// Get a pointer to a field.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the field doesn't exist in the schema.
-    #[track_caller]
-    pub fn field<'a, I: Into<FieldIdx<'a>>>(&self, idx: I) -> SchemaRef<'pointer> {
-        self.get_field(idx).unwrap()
-    }
-
-    /// Get a nested field from the box.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the field doesn't exist in the schema.
-    #[track_caller]
-    pub fn field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(
-        self,
-        path: I,
-    ) -> SchemaRef<'pointer> {
-        self.get_field_path(path).unwrap()
-    }
-
-    /// Get a nested field from the box.
-    ///
-    /// # Errors
-    ///
-    /// Errors if the field doesn't exist in the schema.
-    pub fn get_field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(
-        self,
-        path: I,
-    ) -> Result<SchemaRef<'pointer>, SchemaFieldNotFoundError<'a>> {
-        let mut schemaref = self;
-        for item in path {
-            schemaref = schemaref.get_field(item)?;
-        }
-        Ok(schemaref)
-    }
-
-    /// Get a pointer to a field.
-    ///
-    /// # Errors
-    ///
-    /// Errors if the field doesn't exist in the schema.
-    pub fn get_field<'a, I: Into<FieldIdx<'a>>>(
-        &self,
-        idx: I,
-    ) -> Result<SchemaRef<'pointer>, SchemaFieldNotFoundError<'a>> {
-        let idx = idx.into();
-        let not_found = Err(SchemaFieldNotFoundError { idx });
-        match &self.schema.kind {
-            SchemaKind::Struct(s) => {
-                let field_offsets = self.schema.field_offsets();
-                let Some((idx, offset)) =
-                    field_offsets
-                        .iter()
-                        .enumerate()
-                        .find_map(|(i, (name, offset))| {
-                            let matches = match idx {
-                                FieldIdx::Idx(n) => n == i,
-                                FieldIdx::Name(n) => name.as_deref() == Some(n),
-                            };
-                            if matches {
-                                Some((i, *offset))
-                            } else {
-                                None
-                            }
-                        })
-                else {
-                    return not_found;
-                };
-                let field = &s.fields[idx];
-
-                Ok(SchemaRef {
-                    // SOUND: the schema certifies the soundness of the offset for the given field.
-                    ptr: unsafe { self.ptr.byte_add(offset) },
-                    schema: field.schema,
-                })
-            }
-            SchemaKind::Box(_) => {
-                // SOUND: schema asserts that type is box
-                let the_box = unsafe { self.ptr.deref::<SchemaBox>() };
-                the_box.get_field(idx)
-            }
-            SchemaKind::Vec(_)
-            | SchemaKind::Primitive(_)
-            | SchemaKind::Map { .. }
-            | SchemaKind::Enum(_) => not_found,
+            _phantom: PhantomData,
         }
     }
 
     /// Get the pointer.
-    pub fn as_ptr(&self) -> *const u8 {
+    pub fn as_ptr(&self) -> *const c_void {
         self.ptr.as_ptr()
-    }
-
-    /// # Safety
-    /// Assert that the pointer is valid for type T, and that the lifetime is valid.
-    pub unsafe fn deref<T>(&self) -> &'pointer T {
-        self.ptr.deref()
     }
 
     /// Get the [`Schema`] for the pointer.
@@ -200,33 +118,91 @@ impl<'pointer> SchemaRef<'pointer> {
     pub fn as_map(&self) -> Option<&'pointer SchemaMap> {
         matches!(self.schema.kind, SchemaKind::Map { .. })
             // SOUND: Schema asserts this is a schema map
-            .then_some(unsafe { self.ptr.deref::<SchemaMap>() })
+            .then_some(unsafe { self.cast_into_unchecked::<SchemaMap>() })
     }
 
     /// Borrow the schema ref as a [`SchemaVec`] if it is one.
     pub fn as_vec(&self) -> Option<&'pointer SchemaVec> {
         matches!(self.schema.kind, SchemaKind::Vec(_))
             // SOUND: Schema asserts this is a schema map
-            .then_some(unsafe { self.ptr.deref::<SchemaVec>() })
+            .then_some(unsafe { self.cast_into_unchecked::<SchemaVec>() })
     }
 
     /// Borrow the schema ref as a [`SchemaBox`] if it is one.
     pub fn as_box(&self) -> Option<SchemaRef<'pointer>> {
         matches!(self.schema.kind, SchemaKind::Vec(_))
             // SOUND: Schema asserts this is a schema box
-            .then_some(unsafe { self.ptr.deref::<SchemaBox>().as_ref() })
-    }
-
-    /// Get a helper to access the inner data at runtime.
-    pub fn access(&self) -> SchemaRefAccess<'pointer> {
-        (*self).into()
+            .then_some(unsafe { self.cast_into_unchecked::<SchemaBox>().as_ref() })
     }
 
     /// Debug format the value stored in the schema box.
     ///
     /// This is used in the display and debug implementations.
     pub fn debug_format_value(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self.access() {
+        f.write_fmt(format_args!("{:?}", self.access_borrowed()))
+    }
+
+    /// Get a helper to access the inner data.
+    pub fn access(self) -> SchemaRefAccess<'pointer> {
+        SchemaRefAccess::new(self)
+    }
+
+    /// Get a helper to access the inner without consuming this reference.
+    fn access_borrowed(&self) -> SchemaRefAccess {
+        SchemaRefAccess::new_borrowed(self)
+    }
+
+    /// Get the reference to a field.
+    /// # Panics
+    /// Panics if the field does not exist.
+    #[track_caller]
+    pub fn field<'a, I: Into<FieldIdx<'a>>>(&self, field_idx: I) -> SchemaRef {
+        self.get_field(field_idx).unwrap()
+    }
+
+    /// Get the reference to a field.
+    pub fn get_field<'a, I: Into<FieldIdx<'a>>>(&self, field_idx: I) -> Option<SchemaRef> {
+        Some(self.access().field(field_idx).ok()?.into_schema_ref())
+    }
+}
+
+struct SchemaRefValueDebug<'a>(SchemaRef<'a>);
+impl std::fmt::Debug for SchemaRefValueDebug<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.debug_format_value(f)
+    }
+}
+
+impl std::fmt::Debug for SchemaRef<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("SchemaRef<'_>")
+            .field(&SchemaRefValueDebug(*self))
+            .finish()
+    }
+}
+impl std::fmt::Display for SchemaRef<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <SchemaRefValueDebug as std::fmt::Debug>::fmt(&SchemaRefValueDebug(*self), f)
+    }
+}
+
+/// Helper for accessing the inner data of a schema ref at runtime.
+pub enum SchemaRefAccess<'a> {
+    /// Access a struct.
+    Struct(StructRefAccess<'a>),
+    /// Access a vec.
+    Vec(SchemaVecAccess<'a>),
+    /// Access an enum.
+    Enum(EnumRefAccess<'a>),
+    /// Access a map.
+    Map(SchemaMapAccess<'a>),
+    /// Access a struct.
+    Primitive(PrimitiveRef<'a>),
+}
+
+impl std::fmt::Debug for SchemaRefAccess<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
             SchemaRefAccess::Struct(s) => {
                 let is_tuple = s.fields().any(|x| x.name.is_none());
                 if is_tuple {
@@ -276,7 +252,7 @@ impl<'pointer> SchemaRef<'pointer> {
                 PrimitiveRef::F32(n) => f.write_fmt(format_args!("{n}")),
                 PrimitiveRef::F64(n) => f.write_fmt(format_args!("{n}")),
                 PrimitiveRef::String(s) => f.write_fmt(format_args!("{s:?}")),
-                PrimitiveRef::Opaque { size, align } => f
+                PrimitiveRef::Opaque { size, align, .. } => f
                     .debug_struct("Opaque")
                     .field("size", &size)
                     .field("align", &align)
@@ -286,55 +262,121 @@ impl<'pointer> SchemaRef<'pointer> {
     }
 }
 
-struct SchemaRefValueDebug<'a>(SchemaRef<'a>);
-impl std::fmt::Debug for SchemaRefValueDebug<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.debug_format_value(f)
-    }
-}
-
-impl std::fmt::Debug for SchemaRef<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("SchemaRef<'_>")
-            .field(&SchemaRefValueDebug(*self))
-            .finish()
-    }
-}
-impl std::fmt::Display for SchemaRef<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        <SchemaRefValueDebug as std::fmt::Debug>::fmt(&SchemaRefValueDebug(*self), f)
-    }
-}
-
-/// Helper for accessing the inner data of a schema ref at runtime.
-pub enum SchemaRefAccess<'a> {
-    /// Access a struct.
-    Struct(StructRefAccess<'a>),
-    /// Access a vec.
-    Vec(&'a SchemaVec),
-    /// Access an enum.
-    Enum(EnumRefAccess<'a>),
-    /// Access a map.
-    Map(&'a SchemaMap),
-    /// Access a struct.
-    Primitive(PrimitiveRef<'a>),
-}
-
-impl<'a> From<SchemaRef<'a>> for SchemaRefAccess<'a> {
-    fn from(value: SchemaRef<'a>) -> Self {
+impl<'ptr> SchemaRefAccess<'ptr> {
+    /// Create a new [`SchemaRefAccess`] for the given [`SchemaRef`].
+    ///
+    /// This will create a new independent [`SchemaRefAccess`] that may be used even after
+    /// the original [`SchemaRef`] is dropped ( but not beyond the safe lifetime of the
+    /// original schema ref ).
+    pub fn new(value: SchemaRef) -> SchemaRefAccess {
         match &value.schema.kind {
             SchemaKind::Struct(_) => SchemaRefAccess::Struct(StructRefAccess(value)),
-            SchemaKind::Vec(_) => SchemaRefAccess::Vec(value.as_vec().unwrap()),
+            SchemaKind::Vec(_) => SchemaRefAccess::Vec(SchemaVecAccess {
+                vec: value.as_vec().unwrap(),
+                orig_ref: value,
+            }),
             SchemaKind::Enum(_) => SchemaRefAccess::Enum(EnumRefAccess(value)),
-            SchemaKind::Map { .. } => SchemaRefAccess::Map(value.as_map().unwrap()),
+            SchemaKind::Map { .. } => SchemaRefAccess::Map(SchemaMapAccess {
+                map: value.as_map().unwrap(),
+                orig_ref: value,
+            }),
             SchemaKind::Box(_) => value.as_box().unwrap().access(),
             SchemaKind::Primitive(_) => SchemaRefAccess::Primitive(value.into()),
         }
     }
+
+    /// Create a new [`SchemaRefAccess`] for the given [`SchemaRef`] that borrows the original
+    /// [`SchemaRef`].
+    ///
+    /// This is subtly different from [`SchemaRefAccess::new()`] because it requires that it hold
+    /// a borrow to the original schema ref it was created from. This is specifically useful becuse
+    /// it lets you create a [`SchemaRefAccess`] from a refeence to a schema ref, which is required
+    /// when accessing a schema ref that is behind an atomic resource borrow, for example.
+    pub fn new_borrowed<'borrow>(value: &'borrow SchemaRef<'_>) -> SchemaRefAccess<'borrow> {
+        match &value.schema.kind {
+            SchemaKind::Struct(_) => SchemaRefAccess::Struct(StructRefAccess(*value)),
+            SchemaKind::Vec(_) => SchemaRefAccess::Vec(SchemaVecAccess {
+                vec: value.as_vec().unwrap(),
+                orig_ref: *value,
+            }),
+            SchemaKind::Enum(_) => SchemaRefAccess::Enum(EnumRefAccess(*value)),
+            SchemaKind::Map { .. } => SchemaRefAccess::Map(SchemaMapAccess {
+                map: value.as_map().unwrap(),
+                orig_ref: *value,
+            }),
+            SchemaKind::Box(_) => value.as_box().unwrap().access(),
+            SchemaKind::Primitive(_) => SchemaRefAccess::Primitive((*value).into()),
+        }
+    }
+
+    /// Get field with the given index.
+    pub fn field<'a, I: Into<FieldIdx<'a>>>(self, field_idx: I) -> Result<Self, Self> {
+        let field_idx = field_idx.into();
+        match self {
+            SchemaRefAccess::Struct(s) => s.field(field_idx).map_err(SchemaRefAccess::Struct),
+            other @ (SchemaRefAccess::Vec(_)
+            | SchemaRefAccess::Enum(_)
+            | SchemaRefAccess::Map(_)
+            | SchemaRefAccess::Primitive(_)) => Err(other),
+        }
+    }
+
+    /// Get the field pointed to by the given path.
+    pub fn field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(self, path: I) -> Option<Self> {
+        let mut current_field = self;
+        for field_idx in path {
+            current_field = current_field.field(field_idx).ok()?;
+        }
+        Some(current_field)
+    }
+
+    /// Borrow this [`SchemaRefMutAccess`] as a [`SchemaRefAccess`].
+    pub fn into_schema_ref(self) -> SchemaRef<'ptr> {
+        match self {
+            SchemaRefAccess::Struct(s) => s.0,
+            SchemaRefAccess::Vec(v) => v.into_schema_ref(),
+            SchemaRefAccess::Enum(e) => e.0,
+            SchemaRefAccess::Map(m) => m.into_schema_ref(),
+            SchemaRefAccess::Primitive(p) => p.into_schema_ref(),
+        }
+    }
+}
+
+/// Access helper for a [`SchemaVec`].
+#[derive(Deref, DerefMut)]
+pub struct SchemaVecAccess<'a> {
+    /// The schema vec borrow.
+    #[deref]
+    vec: &'a SchemaVec,
+    orig_ref: SchemaRef<'a>,
+}
+
+impl<'a> SchemaVecAccess<'a> {
+    /// Convert back to a [`SchemaRefMut`]
+    pub fn into_schema_ref(self) -> SchemaRef<'a> {
+        self.orig_ref
+    }
+}
+
+/// Access helper for a [`SchemaMap`].
+#[derive(Deref, DerefMut)]
+pub struct SchemaMapAccess<'a> {
+    /// The schema map borrow.
+    #[deref]
+    map: &'a SchemaMap,
+    orig_ref: SchemaRef<'a>,
+}
+
+impl<'a> SchemaMapAccess<'a> {
+    /// Convert back to a [`SchemaRefMut`]
+    pub fn into_schema_ref(self) -> SchemaRef<'a> {
+        self.orig_ref
+    }
 }
 
 /// Helper for accessing the inner data of a schema ref at runtime.
-pub struct StructRefAccess<'a>(pub SchemaRef<'a>);
+#[derive(Clone, Copy)]
+pub struct StructRefAccess<'a>(SchemaRef<'a>);
 
 impl<'a> StructRefAccess<'a> {
     /// Get the struct's schema.
@@ -342,12 +384,65 @@ impl<'a> StructRefAccess<'a> {
         self.0.schema
     }
 
-    /// Iterate over fields in the struct.
-    pub fn fields(&self) -> StructRefFieldIter<'a> {
+    /// Get the [`StructSchemaInfo`] for this struct.
+    pub fn info(&self) -> &'static StructSchemaInfo {
+        self.0.schema.kind.as_struct().unwrap()
+    }
+
+    /// Interate over the fields on the struct.
+    pub fn fields(&self) -> StructRefFieldIter {
         StructRefFieldIter {
             ptr: self.0,
             field_idx: 0,
         }
+    }
+
+    /// Access a field, if it exists.
+    pub fn field<'i, I: Into<FieldIdx<'i>>>(
+        self,
+        field_idx: I,
+    ) -> Result<SchemaRefAccess<'a>, Self> {
+        let field_idx = field_idx.into();
+        let field_idx = match field_idx {
+            FieldIdx::Name(name) => {
+                if let Some(idx) = self
+                    .info()
+                    .fields
+                    .iter()
+                    .position(|x| x.name.as_ref().map(|x| x.as_ref()) == Some(name))
+                {
+                    idx
+                } else {
+                    return Err(self);
+                }
+            }
+            FieldIdx::Idx(idx) => idx,
+        };
+        let field_schema = self
+            .0
+            .schema
+            .kind
+            .as_struct()
+            .unwrap()
+            .fields
+            .get(field_idx)
+            .unwrap()
+            .schema;
+        let (_, field_offset) = self.0.schema.field_offsets().get(field_idx).unwrap();
+
+        Ok(unsafe {
+            SchemaRef {
+                ptr: NonNull::new_unchecked(self.0.as_ptr().add(*field_offset) as *mut c_void),
+                schema: field_schema,
+                _phantom: PhantomData,
+            }
+            .access()
+        })
+    }
+
+    /// Convert to a [`SchemaRef`].
+    pub fn as_schema_ref(&self) -> SchemaRef<'a> {
+        self.0
     }
 }
 
@@ -370,7 +465,12 @@ impl<'a> Iterator for StructRefFieldIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let (name, _) = self.ptr.schema.field_offsets().get(self.field_idx)?;
-        let ptr = self.ptr.field(self.field_idx);
+        let ptr = self
+            .ptr
+            .access()
+            .field(self.field_idx)
+            .unwrap()
+            .into_schema_ref();
         self.field_idx += 1;
         Some(StructRefFieldIterField {
             name: name.as_ref().map(|x| x.as_str()),
@@ -394,6 +494,16 @@ impl<'a> EnumRefAccess<'a> {
             panic!("Not an enum");
         };
         info
+    }
+
+    /// Get the [`VariantInfo`] for the current variant.
+    pub fn variant_info(&self) -> &'static VariantInfo {
+        &self.info().variants[self.variant_idx() as usize]
+    }
+
+    /// Get the [`StructSchemaInfo`] for the current variant.
+    pub fn variant_struct_info(&self) -> &'static StructSchemaInfo {
+        self.variant_info().schema.kind.as_struct().unwrap()
     }
 
     /// Get the currently-selected variant index.
@@ -421,8 +531,9 @@ impl<'a> EnumRefAccess<'a> {
         let schema = variant_info.schema;
         let value_offset = self.0.schema.field_offsets()[0].1;
         StructRefAccess(SchemaRef {
-            ptr: unsafe { self.0.ptr.byte_add(value_offset) },
+            ptr: unsafe { NonNull::new_unchecked(self.0.ptr.as_ptr().add(value_offset)) },
             schema,
+            _phantom: PhantomData,
         })
     }
 }
@@ -463,7 +574,31 @@ pub enum PrimitiveRef<'a> {
         size: usize,
         /// The align of the opaque type.
         align: usize,
+        /// The schema ref.
+        schema_ref: SchemaRef<'a>,
     },
+}
+
+impl<'ptr> PrimitiveRef<'ptr> {
+    fn into_schema_ref(self) -> SchemaRef<'ptr> {
+        match self {
+            PrimitiveRef::Bool(b) => SchemaRef::new(b),
+            PrimitiveRef::U8(n) => SchemaRef::new(n),
+            PrimitiveRef::U16(n) => SchemaRef::new(n),
+            PrimitiveRef::U32(n) => SchemaRef::new(n),
+            PrimitiveRef::U64(n) => SchemaRef::new(n),
+            PrimitiveRef::U128(n) => SchemaRef::new(n),
+            PrimitiveRef::I8(n) => SchemaRef::new(n),
+            PrimitiveRef::I16(n) => SchemaRef::new(n),
+            PrimitiveRef::I32(n) => SchemaRef::new(n),
+            PrimitiveRef::I64(n) => SchemaRef::new(n),
+            PrimitiveRef::I128(n) => SchemaRef::new(n),
+            PrimitiveRef::F32(n) => SchemaRef::new(n),
+            PrimitiveRef::F64(n) => SchemaRef::new(n),
+            PrimitiveRef::String(s) => SchemaRef::new(s),
+            PrimitiveRef::Opaque { schema_ref, .. } => schema_ref,
+        }
+    }
 }
 
 impl<'a> From<SchemaRef<'a>> for PrimitiveRef<'a> {
@@ -487,6 +622,7 @@ impl<'a> From<SchemaRef<'a>> for PrimitiveRef<'a> {
                 Primitive::Opaque { size, align } => PrimitiveRef::Opaque {
                     size: *size,
                     align: *align,
+                    schema_ref: value,
                 },
             },
             _ => panic!("Schema mismatch"),
@@ -496,31 +632,13 @@ impl<'a> From<SchemaRef<'a>> for PrimitiveRef<'a> {
 
 /// An untyped mutable reference that knows the [`Schema`] of the pointee and that can be cast to a matching
 /// type.
-// TODO: Re-evaluate whether or not it is necessary to have two lifetimes for `SchemaRefMut`.
-// I believe the current implementation is sound, and the extra liftime is not a huge annoyance, but
-// it would be good to simplify if possible. See the comment below on `parent_lifetime` for a
-// description of the purpose of the second lifetime. We need to maintain the effect of the
-// lifetime, but we might be able to do that by using the '`pointer` lifetime to represent the
-// `'parent` lifetime when necessary. **Note:** This is a little more advanced rust than "normal".
-// This is not a beginner issue.
-pub struct SchemaRefMut<'pointer, 'parent> {
-    ptr: PtrMut<'pointer>,
+pub struct SchemaRefMut<'pointer> {
+    ptr: NonNull<c_void>,
     schema: &'static Schema,
-    /// This `'parent` lifetime is used to lock the borrow to the parent [`SchemaRefMut`] if this
-    /// was created by borrowing the field of another [`SchemaRefMut`].
-    ///
-    /// A top-level [`SchemaRefMut`] that doesn't borrow from another one will have the 'parent
-    /// lifetime equal to the 'pointer lifetime.
-    ///
-    /// This allows us to prevent borrowing the [`SchemaRefMut`], while one of the children
-    /// [`SchemaRefMut`]s are potentially writing to the fields.
-    ///
-    /// In other words, this represents that the child [`SchemaRefMut`] may borrow mutably from it's
-    /// parent schema walker.
-    parent_lifetime: PhantomData<&'parent mut ()>,
+    _phantom: PhantomData<&'pointer mut ()>,
 }
 
-impl<'pointer, 'parent> std::fmt::Debug for SchemaRefMut<'pointer, 'parent> {
+impl<'pointer> std::fmt::Debug for SchemaRefMut<'pointer> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SchemaRefMut")
             // .field("ptr", &self.ptr)
@@ -530,7 +648,21 @@ impl<'pointer, 'parent> std::fmt::Debug for SchemaRefMut<'pointer, 'parent> {
     }
 }
 
-impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
+impl<'pointer> SchemaRefMut<'pointer> {
+    /// Cast this pointer to a mutable reference.
+    /// # Safety
+    /// You must uphold all safety requirements of [`NonNull::as_mut()`].
+    pub unsafe fn cast_mut_unchecked<T>(&mut self) -> &mut T {
+        self.ptr.cast::<T>().as_mut()
+    }
+
+    /// Cast this pointer to a mutable reference.
+    /// # Safety
+    /// You must uphold all safety requirements of [`NonNull::as_mut()`].
+    pub unsafe fn cast_into_mut_unchecked<T>(self) -> &'pointer mut T {
+        self.ptr.cast::<T>().as_mut()
+    }
+
     /// Cast this pointer to a reference to a type with a matching [`Schema`].
     ///
     /// # Panics
@@ -547,16 +679,8 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
     pub fn try_cast_mut<T: HasSchema>(&mut self) -> Result<&mut T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
-            // SOUND: here we clone our mutable pointer and dereference it. This is dangerous, but
-            // sound in this case because we don't use our pointer at the same time as it, and we
-            // make sure that we lock ourselves with a mutable borrow until the user drops the
-            // reference that we gave them.
-            unsafe {
-                let copied_ptr: PtrMut<'_, Aligned> =
-                    PtrMut::new(NonNull::new_unchecked(self.ptr.as_ptr()));
-
-                Ok(copied_ptr.deref_mut())
-            }
+            // SOUND: this pointer has the same memory representation as T.
+            unsafe { Ok(self.ptr.cast::<T>().as_mut()) }
         } else {
             Err(SchemaMismatchError)
         }
@@ -583,20 +707,21 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
     pub fn try_cast_into_mut<T: HasSchema>(self) -> Result<&'pointer mut T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
-            // We've checked that the pointer represents T
-            Ok(unsafe { self.ptr.deref_mut() })
+            // SOUND: We've checked that the pointer represents T
+            Ok(unsafe { self.ptr.cast::<T>().as_mut() })
         } else {
             Err(SchemaMismatchError)
         }
     }
 
     /// Create a new [`SchemaRefMut`] from a reference to a type that implements [`HasSchema`].
-    pub fn new<T: HasSchema>(v: &'pointer mut T) -> SchemaRefMut<'pointer, 'static> {
+    pub fn new<T: HasSchema>(v: &'pointer mut T) -> SchemaRefMut<'pointer> {
         let schema = T::schema();
         SchemaRefMut {
-            ptr: v.into(),
+            // SOUND: the &mut T reference cannot be null.
+            ptr: unsafe { NonNull::new_unchecked(v as *mut T as *mut c_void) },
             schema,
-            parent_lifetime: PhantomData,
+            _phantom: PhantomData,
         }
     }
 
@@ -608,210 +733,56 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
     /// - If the `A` type parameter is [`Aligned`] then `inner` must be sufficiently aligned for the
     ///   pointee type.
     /// - `ptr` must have correct provenance to allow read and writes of the pointee type.
-    /// - The lifetime `'a` must be constrained such that this [`PtrMut`] will stay valid and
+    /// - The lifetime `'pointer` must be constrained such that this [`PtrMut`] will stay valid and
     ///   nothing else can read or mutate the pointee while this [`PtrMut`] is live.
     pub unsafe fn from_ptr_schema(
-        ptr: *mut u8,
+        ptr: *mut c_void,
         schema: &'static Schema,
-    ) -> SchemaRefMut<'pointer, 'parent> {
+    ) -> SchemaRefMut<'pointer> {
         Self {
-            ptr: PtrMut::new(NonNull::new_unchecked(ptr)),
+            ptr: NonNull::new_unchecked(ptr),
             schema,
-            parent_lifetime: PhantomData,
+            _phantom: PhantomData,
         }
     }
 
-    /// Get a pointer to a field.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the field doesn't exist in the schema.
-    #[track_caller]
-    pub fn field<'this, 'b, I: Into<FieldIdx<'b>>>(
-        &'this mut self,
-        idx: I,
-    ) -> SchemaRefMut<'pointer, 'this> {
-        self.get_field(idx).unwrap()
+    /// Borrow the schema ref as a [`SchemaMap`] if it is one.
+    pub fn into_map(self) -> Result<&'pointer mut SchemaMap, Self> {
+        matches!(self.schema.kind, SchemaKind::Map { .. })
+            // SOUND: Schema asserts this is a schema map
+            .then_some(unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaMap) })
+            .ok_or(self)
     }
 
-    /// Get a nested field from the box.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the field doesn't exist in the schema.
-    #[track_caller]
-    pub fn into_field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(
-        self,
-        path: I,
-    ) -> SchemaRefMut<'pointer, 'parent> {
-        self.try_into_field_path(path).unwrap()
+    /// Borrow the schema ref as a [`SchemaVec`] if it is one.
+    pub fn into_vec(self) -> Result<&'pointer mut SchemaVec, Self> {
+        matches!(self.schema.kind, SchemaKind::Vec(_))
+            // SOUND: Schema asserts this is a schema map
+            .then_some(unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaVec) })
+            .ok_or(self)
     }
 
-    /// Get a nested field from the box.
-    ///
-    /// # Errors
-    ///
-    /// Errors if the field doesn't exist in the schema.
-    pub fn try_into_field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(
-        self,
-        path: I,
-    ) -> Result<SchemaRefMut<'pointer, 'parent>, Self> {
-        let mut schemaref = self;
-        for item in path {
-            schemaref = schemaref.try_into_field(item)?;
-        }
-        Ok(schemaref)
+    /// Borrow the schema ref as a [`SchemaBox`] if it is one.
+    pub fn into_box(self) -> Result<SchemaRefMut<'pointer>, Self> {
+        matches!(self.schema.kind, SchemaKind::Vec(_))
+            // SOUND: Schema asserts this is a schema box
+            .then_some(unsafe { (*(self.ptr.as_ptr() as *mut SchemaBox)).as_mut() })
+            .ok_or(self)
     }
 
-    /// Get a nested field from the box.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the field doesn't exist in the schema.
-    #[track_caller]
-    pub fn get_field_path<'this, 'a, I: IntoIterator<Item = FieldIdx<'a>>>(
-        &'this mut self,
-        path: I,
-    ) -> SchemaRefMut<'pointer, 'this> {
-        self.try_get_field_path(path).unwrap()
+    /// Convert into an accessor for the inner data.
+    pub fn into_access_mut(self) -> SchemaRefMutAccess<'pointer> {
+        SchemaRefMutAccess::new(self)
     }
 
-    /// Get a nested field from the box.
-    ///
-    /// # Errors
-    ///
-    /// Errors if the field doesn't exist in the schema.
-    pub fn try_get_field_path<'this, 'a, I: IntoIterator<Item = FieldIdx<'a>>>(
-        &'this mut self,
-        path: I,
-    ) -> Result<SchemaRefMut<'pointer, 'this>, SchemaFieldNotFoundError<'a>> {
-        let mut schemaref = Self {
-            // SOUND: we are cloning our mutable reference here, but we are returning only one
-            // of them, and it contains the 'this lifetime that indicates a borrow of this one,
-            // preventing both from being used at the same time.
-            ptr: unsafe { PtrMut::new(NonNull::new_unchecked(self.ptr.as_ptr())) },
-            schema: self.schema,
-            parent_lifetime: PhantomData,
-        };
-        for item in path {
-            schemaref = schemaref
-                .try_into_field(item)
-                .map_err(|_| SchemaFieldNotFoundError { idx: item })?;
-        }
-        Ok(schemaref)
-    }
-
-    /// Get a pointer to a field.
-    ///
-    /// # Errors
-    ///
-    /// Errors if the field doesn't exist in the schema.
-    pub fn get_field<'this, 'idx, I: Into<FieldIdx<'idx>>>(
-        &'this mut self,
-        idx: I,
-    ) -> Result<SchemaRefMut<'pointer, 'this>, SchemaFieldNotFoundError<'idx>> {
-        let idx = idx.into();
-        let not_found = Err(SchemaFieldNotFoundError { idx });
-        match &self.schema.kind {
-            SchemaKind::Struct(s) => {
-                let field_offsets = self.schema.field_offsets();
-                let Some((idx, offset)) =
-                    field_offsets
-                        .iter()
-                        .enumerate()
-                        .find_map(|(i, (name, offset))| {
-                            let matches = match idx {
-                                FieldIdx::Idx(n) => n == i,
-                                FieldIdx::Name(n) => name.as_deref() == Some(n),
-                            };
-                            if matches {
-                                Some((i, *offset))
-                            } else {
-                                None
-                            }
-                        })
-                else {
-                    return not_found;
-                };
-                let field = &s.fields[idx];
-
-                // SOUND: here we clone our mutable pointer, and then offset it according to the
-                // field. This is dangerous, but sound because we make sure that this
-                // `get_field` method returns a `SchemaWalkerMut` with a virtual mutable borrow
-                // to this one.
-                //
-                // This means that Rust will not let anybody use this `SchemaWalkerMut`, until
-                // the other one is dropped. That means all we have to do is not use our
-                // `self.ptr` while the `offset_ptr` exists.
-                //
-                // Additionally, the `new_unchecked` is sound because our pointer cannot be null
-                // because it comes out of a `PtrMut`.
-                let offset_ptr = unsafe {
-                    PtrMut::new(NonNull::new_unchecked(self.ptr.as_ptr())).byte_add(offset)
-                };
-
-                Ok(SchemaRefMut {
-                    ptr: offset_ptr,
-                    schema: field.schema,
-                    parent_lifetime: PhantomData,
-                })
-            }
-            SchemaKind::Box(_) => {
-                // SOUND: schema asserts that type is box
-                let the_box = unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaBox) };
-                the_box.get_field_mut(idx)
-            }
-            SchemaKind::Map { .. }
-            | SchemaKind::Vec(_)
-            | SchemaKind::Primitive(_)
-            | SchemaKind::Enum(_) => not_found,
-        }
-    }
-
-    /// Convert this ref into a ref to one of it's fields.
-    ///
-    /// This is useful because it consumes self and avoids keeping a reference to it's parent
-    /// [`SchemaRefMut`].
-    /// # Panics
-    /// Panics if the field does not exist.
-    #[inline]
-    #[track_caller]
-    pub fn into_field<'idx, I: Into<FieldIdx<'idx>>>(
-        self,
-        idx: I,
-    ) -> SchemaRefMut<'pointer, 'parent> {
-        self.try_into_field(idx).unwrap()
-    }
-
-    /// Convert this ref into a ref to one of it's fields.
-    ///
-    /// This is useful because it consumes self and avoids keeping a reference to it's parent
-    /// [`SchemaRefMut`].
-    /// # Errors
-    /// Errors if the field does not exist.
-    pub fn try_into_field<'idx, I: Into<FieldIdx<'idx>>>(
-        mut self,
-        idx: I,
-    ) -> Result<SchemaRefMut<'pointer, 'parent>, Self> {
-        match self.get_field(idx) {
-            Ok(r) => Ok(SchemaRefMut {
-                ptr: r.ptr,
-                schema: r.schema,
-                parent_lifetime: PhantomData,
-            }),
-            Err(_) => Err(self),
-        }
+    /// Get a mutable access helper to this reference.
+    pub fn access_mut(&mut self) -> SchemaRefMutAccess<'_> {
+        SchemaRefMutAccess::new_borrowed(self)
     }
 
     /// Get the raw pointer
-    pub fn as_ptr(&self) -> *mut u8 {
+    pub fn as_ptr(&self) -> *mut c_void {
         self.ptr.as_ptr()
-    }
-
-    /// # Safety
-    /// You assert that the pointer points to a valid instance of T with the given lifetime.
-    pub unsafe fn deref_mut<T>(self) -> &'pointer mut T {
-        self.ptr.deref_mut()
     }
 
     /// Get the [`Schema`] for the pointer.
@@ -825,11 +796,539 @@ impl<'pointer, 'parent> SchemaRefMut<'pointer, 'parent> {
             .hash_fn
             .map(|hash_fn| unsafe { (hash_fn)(self.ptr.as_ptr()) })
     }
+
+    /// Borrow this [`SchemaRefMut`] as a [`SchemaRef`].
+    pub fn as_ref(&self) -> SchemaRef<'_> {
+        SchemaRef {
+            ptr: self.ptr,
+            schema: self.schema,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Convert a borrowed [`SchemaRefMut`] to an owned [`SchemaRefMut`] with a lifetime matching
+    /// That of the borrow.
+    pub fn reborrow(&mut self) -> SchemaRefMut<'_> {
+        SchemaRefMut {
+            ptr: self.ptr,
+            schema: self.schema,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Get the reference to a field.
+    /// # Panics
+    /// Panics if the field does not exist.
+    #[track_caller]
+    pub fn field<'a, I: Into<FieldIdx<'a>>>(&mut self, field_idx: I) -> SchemaRefMut {
+        self.get_field(field_idx).unwrap()
+    }
+
+    /// Get the reference to a field.
+    pub fn get_field<'a, I: Into<FieldIdx<'a>>>(&mut self, field_idx: I) -> Option<SchemaRefMut> {
+        Some(
+            self.access_mut()
+                .field(field_idx)
+                .ok()?
+                .into_schema_ref_mut(),
+        )
+    }
+
+    /// Get the reference to a field.
+    /// # Panics
+    /// Panics if the field does not exist.
+    #[track_caller]
+    pub fn into_field<'a, I: Into<FieldIdx<'a>>>(self, field_idx: I) -> SchemaRefMut<'pointer> {
+        self.try_into_field(field_idx).unwrap()
+    }
+
+    /// Get the reference to a field.
+    pub fn try_into_field<'a, I: Into<FieldIdx<'a>>>(
+        self,
+        field_idx: I,
+    ) -> Result<SchemaRefMut<'pointer>, Self> {
+        self.into_access_mut()
+            .field(field_idx)
+            .map(|x| x.into_schema_ref_mut())
+            .map_err(|access| access.into_schema_ref_mut())
+    }
+}
+
+/// Access a schema
+pub enum SchemaRefMutAccess<'a> {
+    /// Access a struct.
+    Struct(StructRefMutAccess<'a>),
+    /// Access a vec.
+    Vec(SchemaVecMutAccess<'a>),
+    /// Access an enum.
+    Enum(EnumRefMutAccess<'a>),
+    /// Access a map.
+    Map(SchemaMapMutAccess<'a>),
+    /// Access a struct.
+    Primitive(PrimitiveRefMut<'a>),
+}
+
+/// Mutable [`SchemaVec`] access helper.
+#[derive(Deref, DerefMut)]
+pub struct SchemaVecMutAccess<'a> {
+    /// The schema vec borrow.
+    #[deref]
+    vec: &'a mut SchemaVec,
+    /// The original pointer and schema to allow us to convert back to a [`SchemaRefMut`]
+    /// WARNING: This pointer aliases with the `vec: &'a SchemaVec` reference and mut not be used
+    /// until the borrow to the schema vec is dropped.
+    orig_ptr: *mut c_void,
+    orig_schema: &'static Schema,
+}
+
+impl<'a> SchemaVecMutAccess<'a> {
+    /// Convert back to a [`SchemaRefMut`]
+    pub fn as_mut(self) -> SchemaRefMut<'a> {
+        // SOUND: we are taking ownership of self and dropping the reference that aliases,
+        // so that we can return a valid [`SchemaRefMut`].
+        unsafe { SchemaRefMut::from_ptr_schema(self.orig_ptr, self.orig_schema) }
+    }
+}
+
+/// Mutable [`SchemaMap`] access helper.
+#[derive(Deref, DerefMut)]
+pub struct SchemaMapMutAccess<'a> {
+    /// The schema map borrow.
+    #[deref]
+    map: &'a mut SchemaMap,
+    /// The original pointer and schema to allow us to convert back to a [`SchemaRefMut`]
+    /// WARNING: This pointer aliases with the `vec: &'a SchemaVec` reference and mut not be used
+    /// until the borrow to the schema vec is dropped.
+    orig_ptr: *mut c_void,
+    orig_schema: &'static Schema,
+}
+
+impl<'a> SchemaMapMutAccess<'a> {
+    /// Convert back to a [`SchemaRefMut`]
+    pub fn into_schema_ref_mut(self) -> SchemaRefMut<'a> {
+        // SOUND: we are taking ownership of self and dropping the reference that aliases,
+        // so that we can return a valid [`SchemaRefMut`].
+        unsafe { SchemaRefMut::from_ptr_schema(self.orig_ptr, self.orig_schema) }
+    }
+}
+
+impl std::fmt::Debug for SchemaRefMutAccess<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.as_ref().fmt(f)
+    }
+}
+
+impl<'pointer> SchemaRefMutAccess<'pointer> {
+    /// Create a new [`SchemaRefAccess`] for the given [`SchemaRef`].
+    ///
+    /// This will create a new independent [`SchemaRefAccess`] that may be used even after
+    /// the original [`SchemaRef`] is dropped ( but not beyond the safe lifetime of the
+    /// original schema ref ).
+    pub fn new(value: SchemaRefMut) -> SchemaRefMutAccess {
+        match &value.schema.kind {
+            SchemaKind::Struct(_) => SchemaRefMutAccess::Struct(StructRefMutAccess(value)),
+            SchemaKind::Vec(_) => SchemaRefMutAccess::Vec(SchemaVecMutAccess {
+                orig_ptr: value.as_ptr(),
+                orig_schema: value.schema,
+                vec: value.into_vec().unwrap(),
+            }),
+            SchemaKind::Enum(_) => SchemaRefMutAccess::Enum(EnumRefMutAccess(value)),
+            SchemaKind::Map { .. } => SchemaRefMutAccess::Map(SchemaMapMutAccess {
+                orig_ptr: value.as_ptr(),
+                orig_schema: value.schema,
+                map: value.into_map().unwrap(),
+            }),
+            SchemaKind::Box(_) => value.into_box().unwrap().into_access_mut(),
+            SchemaKind::Primitive(_) => SchemaRefMutAccess::Primitive(value.into()),
+        }
+    }
+
+    /// Create a new [`SchemaRefAccess`] for the given [`SchemaRef`] that borrows the original
+    /// [`SchemaRef`].
+    ///
+    /// This is subtly different from [`SchemaRefAccess::new()`] because it requires that it hold
+    /// a borrow to the original schema ref it was created from. This is specifically useful becuse
+    /// it lets you create a [`SchemaRefAccess`] from a refeence to a schema ref, which is required
+    /// when accessing a schema ref that is behind an atomic resource borrow, for example.
+    pub fn new_borrowed<'borrow>(
+        value: &'borrow mut SchemaRefMut<'_>,
+    ) -> SchemaRefMutAccess<'borrow> {
+        match &value.schema.kind {
+            SchemaKind::Struct(_) => {
+                SchemaRefMutAccess::Struct(StructRefMutAccess(value.reborrow()))
+            }
+            SchemaKind::Vec(_) => SchemaRefMutAccess::Vec(SchemaVecMutAccess {
+                orig_ptr: value.as_ptr(),
+                orig_schema: value.schema,
+                vec: value.reborrow().into_vec().unwrap(),
+            }),
+            SchemaKind::Enum(_) => SchemaRefMutAccess::Enum(EnumRefMutAccess(value.reborrow())),
+            SchemaKind::Map { .. } => SchemaRefMutAccess::Map(SchemaMapMutAccess {
+                orig_ptr: value.as_ptr(),
+                orig_schema: value.schema,
+                map: value.reborrow().into_map().unwrap(),
+            }),
+            SchemaKind::Box(_) => value.reborrow().into_box().unwrap().into_access_mut(),
+            SchemaKind::Primitive(_) => SchemaRefMutAccess::Primitive(value.reborrow().into()),
+        }
+    }
+
+    /// Convert this to a [`SchemaRefMut`].
+    pub fn into_schema_ref_mut(self) -> SchemaRefMut<'pointer> {
+        match self {
+            SchemaRefMutAccess::Struct(s) => s.0,
+            SchemaRefMutAccess::Vec(v) => v.as_mut(),
+            SchemaRefMutAccess::Enum(e) => e.0,
+            SchemaRefMutAccess::Map(m) => m.into_schema_ref_mut(),
+            SchemaRefMutAccess::Primitive(p) => p.into_schema_ref_mut(),
+        }
+    }
+
+    /// Get field with the given index.
+    pub fn field<'a, I: Into<FieldIdx<'a>>>(self, field_idx: I) -> Result<Self, Self> {
+        let field_idx = field_idx.into();
+        match self {
+            SchemaRefMutAccess::Struct(s) => {
+                s.into_field(field_idx).map_err(SchemaRefMutAccess::Struct)
+            }
+            other @ (SchemaRefMutAccess::Vec(_)
+            | SchemaRefMutAccess::Enum(_)
+            | SchemaRefMutAccess::Map(_)
+            | SchemaRefMutAccess::Primitive(_)) => Err(other),
+        }
+    }
+
+    /// Get the field pointed to by the given path.
+    pub fn field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(self, path: I) -> Option<Self> {
+        let mut current_field = self;
+        for field_idx in path {
+            current_field = current_field.field(field_idx).ok()?;
+        }
+        Some(current_field)
+    }
+
+    /// Borrow this [`SchemaRefMutAccess`] as a [`SchemaRefAccess`].
+    pub fn as_ref(&self) -> SchemaRefAccess {
+        match self {
+            SchemaRefMutAccess::Struct(s) => SchemaRefAccess::Struct(StructRefAccess(s.0.as_ref())),
+            SchemaRefMutAccess::Vec(v) => SchemaRefAccess::Vec(SchemaVecAccess {
+                vec: &*v.vec,
+                // SOUND: We hold an exclusive borrow which we are allowed to downgrade to a read-only reference.
+                orig_ref: unsafe {
+                    SchemaRef::from_ptr_schema(
+                        (&*v.vec) as *const SchemaVec as *const c_void,
+                        v.orig_schema,
+                    )
+                },
+            }),
+            SchemaRefMutAccess::Enum(e) => SchemaRefAccess::Enum(EnumRefAccess(e.0.as_ref())),
+            SchemaRefMutAccess::Map(m) => SchemaRefAccess::Map(SchemaMapAccess {
+                map: &*m.map,
+                // SOUND: We hold an exclusive borrow which we are allowed to downgrade to a read-only reference.
+                orig_ref: unsafe {
+                    SchemaRef::from_ptr_schema(
+                        (&*m.map) as *const SchemaMap as *const c_void,
+                        m.orig_schema,
+                    )
+                },
+            }),
+            SchemaRefMutAccess::Primitive(p) => SchemaRefAccess::Primitive(p.as_ref()),
+        }
+    }
+}
+
+/// Helper for accessing the inner data of a schema ref at runtime.
+pub struct StructRefMutAccess<'a>(pub SchemaRefMut<'a>);
+
+impl<'a> StructRefMutAccess<'a> {
+    /// Get the struct's schema.
+    pub fn schema(&self) -> &'static Schema {
+        self.0.schema
+    }
+
+    /// Get the [`StructSchemaInfo`] for this struct.
+    pub fn info(&self) -> &'static StructSchemaInfo {
+        self.0.schema.kind.as_struct().unwrap()
+    }
+
+    /// Access a field, if it exists.
+    pub fn into_field<'i, I: Into<FieldIdx<'i>>>(
+        self,
+        field_idx: I,
+    ) -> Result<SchemaRefMutAccess<'a>, Self> {
+        let field_idx = field_idx.into();
+        let field_idx = match field_idx {
+            FieldIdx::Name(name) => {
+                if let Some(idx) = self
+                    .info()
+                    .fields
+                    .iter()
+                    .position(|x| x.name.as_ref().map(|x| x.as_ref()) == Some(name))
+                {
+                    idx
+                } else {
+                    return Err(self);
+                }
+            }
+            FieldIdx::Idx(idx) => idx,
+        };
+        let field_schema = self
+            .0
+            .schema
+            .kind
+            .as_struct()
+            .unwrap()
+            .fields
+            .get(field_idx)
+            .unwrap()
+            .schema;
+        let (_, field_offset) = self.0.schema.field_offsets().get(field_idx).unwrap();
+
+        Ok(unsafe {
+            SchemaRefMut {
+                ptr: NonNull::new_unchecked(self.0.as_ptr().add(*field_offset)),
+                schema: field_schema,
+                _phantom: PhantomData,
+            }
+            .into_access_mut()
+        })
+    }
+
+    /// Iterate over fields in the struct.
+    pub fn fields(&mut self) -> StructRefMutFieldIter<'_> {
+        StructRefMutFieldIter {
+            ptr: self.0.reborrow(),
+            field_idx: 0,
+        }
+    }
+
+    /// Consume to create an iterator over fields in the struct.
+    pub fn into_fields(self) -> StructRefMutFieldIter<'a> {
+        StructRefMutFieldIter {
+            ptr: self.0,
+            field_idx: 0,
+        }
+    }
+}
+
+/// Iterator for [`StructRefAccess::fields()`].
+pub struct StructRefMutFieldIter<'a> {
+    ptr: SchemaRefMut<'a>,
+    field_idx: usize,
+}
+
+/// A field returned by [`StructRefFieldIter`].
+pub struct StructRefMutFieldIterField<'a> {
+    /// The name of the field, if set.
+    pub name: Option<&'static str>,
+    /// The field's value.
+    pub value: SchemaRefMut<'a>,
+}
+
+impl<'a> Iterator for StructRefMutFieldIter<'a> {
+    type Item = StructRefMutFieldIterField<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let field_schema = self
+            .ptr
+            .schema
+            .kind
+            .as_struct()
+            .unwrap()
+            .fields
+            .get(self.field_idx)?
+            .schema;
+        let (name, field_offset) = self.ptr.schema.field_offsets().get(self.field_idx)?;
+        self.field_idx += 1;
+
+        Some(StructRefMutFieldIterField {
+            name: name.as_ref().map(|x| x.as_str()),
+            // SOUND: Return a new SchemaRefMut with the 'a lifetime. This is sound because we
+            // don't return mutliple `SchemaRefMut`s to the same data.
+            value: unsafe {
+                SchemaRefMut {
+                    ptr: NonNull::new_unchecked(self.ptr.as_ptr().add(*field_offset)),
+                    schema: field_schema,
+                    _phantom: PhantomData,
+                }
+            },
+        })
+    }
+}
+
+/// Helper for accessing the inner data of a schema ref at runtime.
+pub struct EnumRefMutAccess<'a>(pub SchemaRefMut<'a>);
+
+impl<'a> EnumRefMutAccess<'a> {
+    /// Get the enum's schema.
+    pub fn schema(&self) -> &'static Schema {
+        self.0.schema
+    }
+
+    /// Get the enum schema info.
+    pub fn info(&self) -> &'static EnumSchemaInfo {
+        let SchemaKind::Enum(info) = &self.0.schema.kind else {
+            panic!("Not an enum");
+        };
+        info
+    }
+
+    /// Get the currently-selected variant index.
+    pub fn variant_idx(&self) -> u32 {
+        let info = self.info();
+        match info.tag_type {
+            EnumTagType::U8 => unsafe { self.0.as_ptr().cast::<u8>().read() as u32 },
+            EnumTagType::U16 => unsafe { self.0.as_ptr().cast::<u16>().read() as u32 },
+            EnumTagType::U32 => unsafe { self.0.as_ptr().cast::<u32>().read() },
+        }
+    }
+
+    /// Get the name of the currently selected variant.
+    pub fn variant_name(&self) -> &'static str {
+        let info = self.info();
+        let idx = self.variant_idx();
+        info.variants[idx as usize].name.as_ref()
+    }
+
+    /// Get a reference to the enum's currently selected value.
+    pub fn value(&self) -> StructRefMutAccess<'a> {
+        let info = self.info();
+        let variant_idx = self.variant_idx();
+        let variant_info = &info.variants[variant_idx as usize];
+        let schema = variant_info.schema;
+        let value_offset = self.0.schema.field_offsets()[0].1;
+        StructRefMutAccess(SchemaRefMut {
+            ptr: unsafe { NonNull::new_unchecked(self.0.ptr.as_ptr().add(value_offset)) },
+            schema,
+            _phantom: PhantomData,
+        })
+    }
+}
+
+/// Helper for accessing the inner data of a schema ref at runtime.
+pub enum PrimitiveRefMut<'a> {
+    /// A [`bool`]
+    Bool(&'a mut bool),
+    /// A [`u8`]
+    U8(&'a mut u8),
+    /// A [`u16`]
+    U16(&'a mut u16),
+    /// A [`u32`]
+    U32(&'a mut u32),
+    /// A [`u64`]
+    U64(&'a mut u64),
+    /// A [`u128`]
+    U128(&'a mut u128),
+    /// An [`i8`]
+    I8(&'a mut i8),
+    /// An [`i16`]
+    I16(&'a mut i16),
+    /// An [`i32`]
+    I32(&'a mut i32),
+    /// An [`i64`]
+    I64(&'a mut i64),
+    /// An [`i128`]
+    I128(&'a mut i128),
+    /// An [`f23`]
+    F32(&'a mut f32),
+    /// An [`f64`]
+    F64(&'a mut f64),
+    /// A [`String`]
+    String(&'a mut String),
+    /// An opaque type
+    Opaque {
+        /// The size of the opaque type.
+        size: usize,
+        /// The align of the opaque type.
+        align: usize,
+        /// The schema ref.
+        schema_ref: SchemaRefMut<'a>,
+    },
+}
+
+impl<'ptr> PrimitiveRefMut<'ptr> {
+    /// Convert to an immutable [`PrimitiveRef`].
+    pub fn as_ref(&self) -> PrimitiveRef {
+        match self {
+            PrimitiveRefMut::Bool(b) => PrimitiveRef::Bool(b),
+            PrimitiveRefMut::U8(n) => PrimitiveRef::U8(n),
+            PrimitiveRefMut::U16(n) => PrimitiveRef::U16(n),
+            PrimitiveRefMut::U32(n) => PrimitiveRef::U32(n),
+            PrimitiveRefMut::U64(n) => PrimitiveRef::U64(n),
+            PrimitiveRefMut::U128(n) => PrimitiveRef::U128(n),
+            PrimitiveRefMut::I8(n) => PrimitiveRef::I8(n),
+            PrimitiveRefMut::I16(n) => PrimitiveRef::I16(n),
+            PrimitiveRefMut::I32(n) => PrimitiveRef::I32(n),
+            PrimitiveRefMut::I64(n) => PrimitiveRef::I64(n),
+            PrimitiveRefMut::I128(n) => PrimitiveRef::I128(n),
+            PrimitiveRefMut::F32(n) => PrimitiveRef::F32(n),
+            PrimitiveRefMut::F64(n) => PrimitiveRef::F64(n),
+            PrimitiveRefMut::String(n) => PrimitiveRef::String(n),
+            PrimitiveRefMut::Opaque {
+                size,
+                align,
+                schema_ref,
+            } => PrimitiveRef::Opaque {
+                size: *size,
+                align: *align,
+                schema_ref: schema_ref.as_ref(),
+            },
+        }
+    }
+
+    fn into_schema_ref_mut(self) -> SchemaRefMut<'ptr> {
+        match self {
+            PrimitiveRefMut::Bool(b) => SchemaRefMut::new(b),
+            PrimitiveRefMut::U8(n) => SchemaRefMut::new(n),
+            PrimitiveRefMut::U16(n) => SchemaRefMut::new(n),
+            PrimitiveRefMut::U32(n) => SchemaRefMut::new(n),
+            PrimitiveRefMut::U64(n) => SchemaRefMut::new(n),
+            PrimitiveRefMut::U128(n) => SchemaRefMut::new(n),
+            PrimitiveRefMut::I8(n) => SchemaRefMut::new(n),
+            PrimitiveRefMut::I16(n) => SchemaRefMut::new(n),
+            PrimitiveRefMut::I32(n) => SchemaRefMut::new(n),
+            PrimitiveRefMut::I64(n) => SchemaRefMut::new(n),
+            PrimitiveRefMut::I128(n) => SchemaRefMut::new(n),
+            PrimitiveRefMut::F32(n) => SchemaRefMut::new(n),
+            PrimitiveRefMut::F64(n) => SchemaRefMut::new(n),
+            PrimitiveRefMut::String(s) => SchemaRefMut::new(s),
+            PrimitiveRefMut::Opaque { schema_ref, .. } => schema_ref,
+        }
+    }
+}
+
+impl<'a> From<SchemaRefMut<'a>> for PrimitiveRefMut<'a> {
+    fn from(value: SchemaRefMut<'a>) -> Self {
+        match &value.schema.kind {
+            SchemaKind::Primitive(p) => match p {
+                Primitive::Bool => PrimitiveRefMut::Bool(value.cast_into_mut()),
+                Primitive::U8 => PrimitiveRefMut::U8(value.cast_into_mut()),
+                Primitive::U16 => PrimitiveRefMut::U16(value.cast_into_mut()),
+                Primitive::U32 => PrimitiveRefMut::U32(value.cast_into_mut()),
+                Primitive::U64 => PrimitiveRefMut::U64(value.cast_into_mut()),
+                Primitive::U128 => PrimitiveRefMut::U128(value.cast_into_mut()),
+                Primitive::I8 => PrimitiveRefMut::I8(value.cast_into_mut()),
+                Primitive::I16 => PrimitiveRefMut::I16(value.cast_into_mut()),
+                Primitive::I32 => PrimitiveRefMut::I32(value.cast_into_mut()),
+                Primitive::I64 => PrimitiveRefMut::I64(value.cast_into_mut()),
+                Primitive::I128 => PrimitiveRefMut::I128(value.cast_into_mut()),
+                Primitive::F32 => PrimitiveRefMut::F32(value.cast_into_mut()),
+                Primitive::F64 => PrimitiveRefMut::F64(value.cast_into_mut()),
+                Primitive::String => PrimitiveRefMut::String(value.cast_into_mut()),
+                Primitive::Opaque { size, align } => PrimitiveRefMut::Opaque {
+                    size: *size,
+                    align: *align,
+                    schema_ref: value,
+                },
+            },
+            _ => panic!("Schema mismatch"),
+        }
+    }
 }
 
 /// A owning, type-erased [`Box`]-like container for types with a [`Schema`].
 pub struct SchemaBox {
-    ptr: OwningPtr<'static>,
+    ptr: NonNull<c_void>,
     schema: &'static Schema,
 }
 unsafe impl Sync for SchemaBox {}
@@ -883,14 +1382,14 @@ impl Clone for SchemaBox {
 
         let layout = self.schema.layout();
         let new_ptr = if layout.size() == 0 {
-            NonNull::<u8>::dangling().as_ptr()
+            NonNull::<c_void>::dangling().as_ptr()
         } else {
             // SOUND: Non-zero size for layout
-            unsafe { std::alloc::alloc(layout) }
+            unsafe { std::alloc::alloc(layout) as *mut c_void }
         };
         let new_ptr = unsafe {
-            (clone_fn)(self.ptr.as_ref().as_ptr(), new_ptr);
-            OwningPtr::new(NonNull::new(new_ptr).unwrap_or_else(|| handle_alloc_error(layout)))
+            (clone_fn)(self.ptr.as_ptr(), new_ptr);
+            NonNull::new(new_ptr).unwrap_or_else(|| handle_alloc_error(layout))
         };
         Self {
             ptr: new_ptr,
@@ -900,6 +1399,11 @@ impl Clone for SchemaBox {
 }
 
 impl SchemaBox {
+    /// Get a raw pointer to the box data.
+    pub fn as_ptr(&self) -> *mut c_void {
+        self.ptr.as_ptr()
+    }
+
     /// Cast this box to it's inner type and return it.
     /// # Panics
     /// Panics if the schema of the box does not match that of the type you are casting to.
@@ -930,7 +1434,7 @@ impl SchemaBox {
         // Copy the data from the box into the stack.
         // SOUND: We've validated that the box has the same schema as T
         unsafe {
-            (ret.as_mut_ptr() as *mut u8)
+            (ret.as_mut_ptr() as *mut c_void)
                 .copy_from_nonoverlapping(self.ptr.as_ptr(), self.schema.layout().size());
         }
 
@@ -955,7 +1459,7 @@ impl SchemaBox {
     pub fn try_cast_ref<T: HasSchema>(&self) -> Result<&T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
             // SOUND: the schemas have the same memory representation.
-            unsafe { Ok(self.ptr.as_ref().deref()) }
+            unsafe { Ok(self.ptr.cast::<T>().as_ref()) }
         } else {
             Err(SchemaMismatchError)
         }
@@ -975,7 +1479,7 @@ impl SchemaBox {
     pub fn try_cast_mut<T: HasSchema>(&mut self) -> Result<&mut T, SchemaMismatchError> {
         if self.schema.represents(T::schema()) {
             // SOUND: the schemas have the same memory representation.
-            unsafe { Ok(self.ptr.as_mut().deref_mut()) }
+            unsafe { Ok(self.ptr.cast::<T>().as_mut()) }
         } else {
             Err(SchemaMismatchError)
         }
@@ -984,17 +1488,18 @@ impl SchemaBox {
     /// Borrow this box as a [`SchemaRef`].
     pub fn as_ref(&self) -> SchemaRef<'_> {
         SchemaRef {
-            ptr: self.ptr.as_ref(),
+            ptr: self.ptr,
             schema: self.schema,
+            _phantom: PhantomData,
         }
     }
 
     /// Borrow this box as a [`SchemaRefMut`].
-    pub fn as_mut(&mut self) -> SchemaRefMut<'_, '_> {
+    pub fn as_mut(&mut self) -> SchemaRefMut<'_> {
         SchemaRefMut {
-            ptr: self.ptr.as_mut(),
+            ptr: self.ptr,
             schema: self.schema,
-            parent_lifetime: PhantomData,
+            _phantom: PhantomData,
         }
     }
 
@@ -1020,15 +1525,13 @@ impl SchemaBox {
         let layout = schema.layout();
 
         let ptr = if layout.size() == 0 {
-            NonNull::<u8>::dangling().as_ptr()
+            NonNull::<c_void>::dangling().as_ptr()
         } else {
             // SOUND: Non-zero size for layout
-            unsafe { std::alloc::alloc(layout) }
+            std::alloc::alloc(layout) as *mut c_void
         };
         // SOUND: The pointer is allocated for the layout matching the schema.
-        let ptr = unsafe {
-            OwningPtr::new(NonNull::new(ptr).unwrap_or_else(|| handle_alloc_error(layout)))
-        };
+        let ptr = NonNull::new(ptr).unwrap_or_else(|| handle_alloc_error(layout));
 
         Self { ptr, schema }
     }
@@ -1087,7 +1590,7 @@ impl SchemaBox {
     /// # Safety
     ///
     /// - You must insure that the pointer is valid for the given schema.
-    pub unsafe fn from_raw_parts(ptr: OwningPtr<'static>, schema: &'static Schema) -> Self {
+    pub unsafe fn from_raw_parts(ptr: NonNull<c_void>, schema: &'static Schema) -> Self {
         Self { ptr, schema }
     }
 
@@ -1114,44 +1617,10 @@ impl SchemaBox {
         self.try_hash().expect("Schema doesn't implement hash")
     }
 
-    /// Get a ref to the field with the given name/index, and panic if it doesn't exist.
-    #[inline]
-    #[track_caller]
-    pub fn field<'idx, I: Into<FieldIdx<'idx>>>(&self, idx: I) -> SchemaRef {
-        self.get_field(idx).unwrap()
-    }
-
-    /// Get a reference to the field with the given name/index, if it exists.
-    pub fn get_field<'idx, 'ptr, I: Into<FieldIdx<'idx>>>(
-        &'ptr self,
-        idx: I,
-    ) -> Result<SchemaRef<'ptr>, SchemaFieldNotFoundError<'idx>> {
-        self.as_ref().get_field(idx)
-    }
-
-    /// Get a ref to the field with the given name/index, and panic if it doesn't exist.
-    #[inline]
-    #[track_caller]
-    pub fn field_mut<'idx, I: Into<FieldIdx<'idx>>>(&mut self, idx: I) -> SchemaRefMut {
-        self.get_field_mut(idx).unwrap()
-    }
-
-    /// Get a mutable reference to the field with the given name/index, if it exists.
-    pub fn get_field_mut<'idx, 'ptr, I: Into<FieldIdx<'idx>>>(
-        &'ptr mut self,
-        idx: I,
-    ) -> Result<SchemaRefMut<'ptr, 'ptr>, SchemaFieldNotFoundError<'idx>> {
-        let idx = idx.into();
-        match self.as_mut().try_into_field(idx) {
-            Ok(r) => Ok(r),
-            Err(_) => Err(SchemaFieldNotFoundError { idx }),
-        }
-    }
-
     /// Deallocate the memory in the box.
     unsafe fn dealloc(&mut self) {
         if self.schema.layout().size() > 0 {
-            std::alloc::dealloc(self.ptr.as_ptr(), self.schema.layout())
+            std::alloc::dealloc(self.ptr.as_ptr() as *mut u8, self.schema.layout())
         }
     }
 
@@ -1159,7 +1628,7 @@ impl SchemaBox {
     unsafe fn drop_inner(&mut self) {
         if let Some(drop_fn) = self.schema.drop_fn {
             // Drop the type
-            (drop_fn)(self.ptr.as_mut().as_ptr());
+            (drop_fn)(self.ptr.as_ptr());
         }
     }
 }
@@ -1309,12 +1778,13 @@ impl<T: HasSchema> std::ops::Deref for SBox<T> {
 
     fn deref(&self) -> &Self::Target {
         // SOUND: `SBox`s always contain their type `T`.
-        unsafe { self.b.ptr.as_ref().deref() }
+        unsafe { self.b.ptr.cast::<T>().as_ref() }
     }
 }
 impl<T: HasSchema> std::ops::DerefMut for SBox<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { self.b.ptr.as_mut().deref_mut() }
+        // SOUND: `SBox`s always contain their type `T`.
+        unsafe { self.b.ptr.cast::<T>().as_mut() }
     }
 }
 

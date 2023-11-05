@@ -4,6 +4,6 @@ local menuData = world.resources:get(schema("MenuData"))
 menuData.frame = menuData.frame + 1
 
 if menuData.frame % 30 == 0 then 
-  info("Menu frame: ", menuData.frame)
+  info(menuData)
 end
 
