@@ -15,7 +15,7 @@ use kira::{
 
 /// The game plugin for the audio system.
 pub fn game_plugin(game: &mut Game) {
-    AudioSource::schema();
+    AudioSource::register_schema();
     game.insert_shared_resource(AudioManager::default());
     game.init_shared_resource::<AssetServer>();
 }

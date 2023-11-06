@@ -29,7 +29,7 @@ fn main() {
     // We must register all of our asset types before they can be loaded by the asset server. This
     // may be done by calling schema() on each of our types, to register them with the schema
     // registry.
-    GameMeta::schema();
+    GameMeta::register_schema();
 
     // Create a new session for the game menu. Each session is it's own bones world with it's own
     // plugins, systems, and entities.

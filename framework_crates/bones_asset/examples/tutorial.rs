@@ -141,13 +141,11 @@ fn main() -> anyhow::Result<()> {
     // compatible with our game version.
     let asset_server = AssetServer::new(io, Version::new(0, 1, 3));
 
-    // Each asset type needs to have it's schema registered to be loaded from an asset file. Calling
-    // the schema() method accomplishes that.
-    GameMeta::schema();
-    PlayerMeta::schema();
-    AtlasMeta::schema();
-    PluginMeta::schema();
-    // Image::schema();
+    // Each asset type needs to have it's schema registered to be loaded from an asset file.
+    GameMeta::register_schema();
+    PlayerMeta::register_schema();
+    AtlasMeta::register_schema();
+    PluginMeta::register_schema();
 
     // Load assets
     let s = asset_server.clone();
