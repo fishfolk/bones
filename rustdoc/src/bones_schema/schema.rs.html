@@ -495,6 +495,17 @@
 <a href="#495" id="495">495</a>
 <a href="#496" id="496">496</a>
 <a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! [`Schema`], [`HasSchema`], [`SchemaData`], and related types.
 
 </span><span class="kw">use </span>std::{alloc::Layout, any::TypeId, borrow::Cow};
@@ -513,7 +524,18 @@
 /// of the type, or else accessing the type according to the schema would be unsound.
 </span><span class="kw">pub unsafe trait </span>HasSchema: Sync + Send + <span class="lifetime">&#39;static </span>{
     <span class="doccomment">/// Get this type&#39;s [`Schema`].
+    </span><span class="attr">#[must_use = <span class="string">&quot;If you are only calling schema() for it&#39;s side-effect of registering the
+        schema, it is more clear to use register_schema() instead.&quot;</span>]
     </span><span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema;
+
+    <span class="doccomment">/// Register this schema with the global schema registry.
+    ///
+    /// This is automatically done by the framework in many cases, whenever
+    /// [`schema()`][HasSchema::schema] is called, but it may be necessary sometimes to
+    /// manually register it.
+    </span><span class="kw">fn </span>register_schema() {
+        <span class="kw">let _ </span>= <span class="self">Self</span>::schema();
+    }
 
     <span class="doccomment">/// Cast a reference of this type to a reference of another type with the same memory layout.
     ///

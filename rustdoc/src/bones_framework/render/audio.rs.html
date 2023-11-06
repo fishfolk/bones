@@ -115,7 +115,7 @@
 
 <span class="doccomment">/// The game plugin for the audio system.
 </span><span class="kw">pub fn </span>game_plugin(game: <span class="kw-2">&amp;mut </span>Game) {
-    AudioSource::schema();
+    AudioSource::register_schema();
     game.insert_shared_resource(AudioManager::default());
     game.init_shared_resource::&lt;AssetServer&gt;();
 }

@@ -158,18 +158,18 @@
         <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
         <span class="comment">// Register asset schemas
-        </span>Image::schema();
-        Atlas::schema();
+        </span>Image::register_schema();
+        Atlas::register_schema();
 
         <span class="attr">#[cfg(feature = <span class="string">&quot;localization&quot;</span>)]
         </span>{
-            LocalizationAsset::schema();
-            FluentBundleAsset::schema();
-            FluentResourceAsset::schema();
+            LocalizationAsset::register_schema();
+            FluentBundleAsset::register_schema();
+            FluentResourceAsset::register_schema();
         }
 
         <span class="attr">#[cfg(feature = <span class="string">&quot;ui&quot;</span>)]
-        </span>Font::schema();
+        </span>Font::register_schema();
 
         <span class="self">self
     </span>}

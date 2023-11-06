@@ -634,7 +634,7 @@
 
 <span class="kw">fn </span>main() {
     <span class="comment">// Register persistent data&#39;s schema so that it can be loaded by the storage loader.
-    </span>PersistedTextData::schema();
+    </span>PersistedTextData::register_schema();
 
     <span class="comment">// Create a bones bevy renderer from our bones game
     </span>BonesBevyRenderer::new(create_game())
@@ -658,9 +658,9 @@
         </span>.register_default_assets();
 
     <span class="comment">// Register our custom asset types
-    </span>GameMeta::schema();
-    AtlasDemoMeta::schema();
-    TilemapDemoMeta::schema();
+    </span>GameMeta::register_schema();
+    AtlasDemoMeta::register_schema();
+    TilemapDemoMeta::register_schema();
 
     <span class="comment">// Create our menu session
     </span>game.sessions.create(<span class="string">&quot;menu&quot;</span>).install_plugin(menu_plugin);
