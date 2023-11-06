@@ -85,7 +85,7 @@ struct PersistedTextData(String);
 
 fn main() {
     // Register persistent data's schema so that it can be loaded by the storage loader.
-    PersistedTextData::schema();
+    PersistedTextData::register_schema();
 
     // Create a bones bevy renderer from our bones game
     BonesBevyRenderer::new(create_game())
@@ -109,9 +109,9 @@ pub fn create_game() -> Game {
         .register_default_assets();
 
     // Register our custom asset types
-    GameMeta::schema();
-    AtlasDemoMeta::schema();
-    TilemapDemoMeta::schema();
+    GameMeta::register_schema();
+    AtlasDemoMeta::register_schema();
+    TilemapDemoMeta::register_schema();
 
     // Create our menu session
     game.sessions.create("menu").install_plugin(menu_plugin);

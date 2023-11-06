@@ -16,7 +16,18 @@ use crate::{alloc::TypeDatas, prelude::*};
 /// of the type, or else accessing the type according to the schema would be unsound.
 pub unsafe trait HasSchema: Sync + Send + 'static {
     /// Get this type's [`Schema`].
+    #[must_use = "If you are only calling schema() for it's side-effect of registering the
+        schema, it is more clear to use register_schema() instead."]
     fn schema() -> &'static Schema;
+
+    /// Register this schema with the global schema registry.
+    ///
+    /// This is automatically done by the framework in many cases, whenever
+    /// [`schema()`][HasSchema::schema] is called, but it may be necessary sometimes to
+    /// manually register it.
+    fn register_schema() {
+        let _ = Self::schema();
+    }
 
     /// Cast a reference of this type to a reference of another type with the same memory layout.
     ///
