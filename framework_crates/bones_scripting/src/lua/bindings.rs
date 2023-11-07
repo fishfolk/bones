@@ -24,7 +24,7 @@ pub fn no_newindex(ctx: Context) -> StaticCallback {
     )
 }
 
-pub fn luaref_metatable(ctx: Context) -> StaticTable {
+pub fn ecsref_metatable(ctx: Context) -> StaticTable {
     let metatable = Table::new(&ctx);
     let static_metatable = ctx.state.registry.stash(&ctx, metatable);
     let static_metatable_ = static_metatable.clone();
@@ -243,7 +243,7 @@ pub fn luaref_metatable(ctx: Context) -> StaticTable {
 pub fn resources_metatable(ctx: Context) -> StaticTable {
     let metatable = Table::new(&ctx);
     let luadata = ctx.luadata();
-    let luaref_metatable = luadata.table(ctx, luaref_metatable);
+    let ecsref_metatable = luadata.table(ctx, ecsref_metatable);
     metatable
         .set(
             ctx,
@@ -251,6 +251,16 @@ pub fn resources_metatable(ctx: Context) -> StaticTable {
             ctx.state
                 .registry
                 .fetch(&luadata.callback(ctx, no_newindex)),
+        )
+        .unwrap();
+    metatable
+        .set(
+            ctx,
+            "__tostring",
+            AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
+                stack.push_front(piccolo::String::from_static(&ctx, "world.resources").into());
+                Ok(CallbackReturn::Return)
+            }),
         )
         .unwrap();
 
@@ -283,7 +293,7 @@ pub fn resources_metatable(ctx: Context) -> StaticTable {
                             path: default(),
                         },
                     );
-                    data.set_metatable(&ctx, Some(ctx.state.registry.fetch(&luaref_metatable)));
+                    data.set_metatable(&ctx, Some(ctx.state.registry.fetch(&ecsref_metatable)));
                     stack.push_front(data.into());
                 }
             });
@@ -335,6 +345,16 @@ pub fn components_metatable(ctx: Context) -> StaticTable {
     metatable
         .set(
             ctx,
+            "__tostring",
+            AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
+                stack.push_front(piccolo::String::from_static(&ctx, "world.components").into());
+                Ok(CallbackReturn::Return)
+            }),
+        )
+        .unwrap();
+    metatable
+        .set(
+            ctx,
             "__newindex",
             ctx.state
                 .registry
@@ -345,12 +365,132 @@ pub fn components_metatable(ctx: Context) -> StaticTable {
     ctx.state.registry.stash(&ctx, metatable)
 }
 
+pub fn assets_metatable(ctx: Context) -> StaticTable {
+    let metatable = Table::new(&ctx);
+    let luadata = ctx.luadata();
+    let ecsref_metatable = luadata.table(ctx, ecsref_metatable);
+    let ecsref_metatable_ = ecsref_metatable.clone();
+    metatable
+        .set(
+            ctx,
+            "__newindex",
+            ctx.state
+                .registry
+                .fetch(&ctx.luadata().callback(ctx, no_newindex)),
+        )
+        .unwrap();
+    metatable
+        .set(
+            ctx,
+            "__tostring",
+            AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
+                stack.push_front(piccolo::String::from_static(&ctx, "world.assets").into());
+                Ok(CallbackReturn::Return)
+            }),
+        )
+        .unwrap();
+
+    let get_callback = ctx.state.registry.stash(
+        &ctx,
+        AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+            let world = stack.pop_front();
+            let Value::UserData(world) = world else {
+                return Err(
+                    anyhow::format_err!("Type error on `self` of resources metatable.").into(),
+                );
+            };
+            let world = world.downcast_static::<WorldRef>()?;
+
+            let ecsref = stack.pop_front();
+            let Value::UserData(ecsref) = ecsref else {
+                return Err(
+                    anyhow::format_err!("Type error on `self` of resources metatable.").into(),
+                );
+            };
+            let ecsref = ecsref.downcast_static::<EcsRef>()?;
+            let b = ecsref.data.borrow();
+            let Some(b) = b.access() else {
+                return Err(anyhow::format_err!("Unable to get value").into());
+            };
+            let Some(b) = b.field_path(FieldPath(ecsref.path)) else {
+                return Err(anyhow::format_err!("Unable to get value").into());
+            };
+            let handle = b.into_schema_ref().try_cast::<UntypedHandle>()?;
+
+            let assetref = world.with(|world| EcsRef {
+                data: EcsRefData::Asset(AssetRef {
+                    server: (*world.resources.get::<AssetServer>().unwrap()).clone(),
+                    handle: *handle,
+                }),
+                path: default(),
+            });
+            let assetref = AnyUserData::new_static(&ctx, assetref);
+            assetref.set_metatable(&ctx, Some(ctx.state.registry.fetch(&ecsref_metatable_)));
+
+            stack.push_front(assetref.into());
+
+            Ok(CallbackReturn::Return)
+        }),
+    );
+
+    metatable
+        .set(
+            ctx,
+            "__index",
+            AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+                let this = stack.pop_front();
+                let key = stack.pop_front();
+                let Value::UserData(world) = this else {
+                    return Err(anyhow::format_err!(
+                        "Type error on `self` of resources metatable."
+                    )
+                    .into());
+                };
+                let world = world.downcast_static::<WorldRef>()?;
+
+                if let Value::String(key) = key {
+                    #[allow(clippy::single_match)]
+                    match key.as_bytes() {
+                        b"root" => {
+                            world.with(|world| {
+                                let asset_server = world.resources.get::<AssetServer>().unwrap();
+                                let root = asset_server.core().root;
+                                let assetref = EcsRef {
+                                    data: EcsRefData::Asset(AssetRef {
+                                        server: (*asset_server).clone(),
+                                        handle: root,
+                                    }),
+                                    path: default(),
+                                };
+                                let assetref = AnyUserData::new_static(&ctx, assetref);
+                                assetref.set_metatable(
+                                    &ctx,
+                                    Some(ctx.state.registry.fetch(&ecsref_metatable)),
+                                );
+                                stack.push_front(assetref.into());
+                            });
+                        }
+                        b"get" => {
+                            stack.push_front(ctx.state.registry.fetch(&get_callback).into());
+                        }
+                        _ => (),
+                    }
+                }
+
+                Ok(CallbackReturn::Return)
+            }),
+        )
+        .unwrap();
+    ctx.state.registry.stash(&ctx, metatable)
+}
+
 /// Build the world metatable.
 pub fn world_metatable(ctx: Context) -> StaticTable {
     let metatable = Table::new(&ctx);
     let luadata = ctx.luadata();
     let resources_metatable = luadata.table(ctx, resources_metatable);
     let components_metatable = luadata.table(ctx, components_metatable);
+    let assets_metatable = luadata.table(ctx, assets_metatable);
     metatable
         .set(
             ctx,
@@ -375,6 +515,7 @@ pub fn world_metatable(ctx: Context) -> StaticTable {
 
                 let resources_metatable = ctx.state.registry.fetch(&resources_metatable);
                 let components_metatable = ctx.state.registry.fetch(&components_metatable);
+                let assets_metatable = ctx.state.registry.fetch(&assets_metatable);
 
                 if let Value::String(key) = key {
                     match key.as_bytes() {
@@ -387,6 +528,11 @@ pub fn world_metatable(ctx: Context) -> StaticTable {
                             let components = AnyUserData::new_static(&ctx, this.clone());
                             components.set_metatable(&ctx, Some(components_metatable));
                             stack.push_front(components.into());
+                        }
+                        b"assets" => {
+                            let assets = AnyUserData::new_static(&ctx, this.clone());
+                            assets.set_metatable(&ctx, Some(assets_metatable));
+                            stack.push_front(assets.into());
                         }
                         _ => (),
                     }
@@ -404,7 +550,7 @@ pub fn world_metatable(ctx: Context) -> StaticTable {
 pub fn schema_metatable(ctx: Context) -> StaticTable {
     let metatable = Table::new(&ctx);
     let luadata = ctx.luadata();
-    let ecsref_metatable = luadata.table(ctx, luaref_metatable);
+    let ecsref_metatable = luadata.table(ctx, ecsref_metatable);
 
     metatable
         .set(

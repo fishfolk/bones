@@ -1,1 +1,3 @@
 update: ./update.lua
+version: 1
+info: ./info.yaml

@@ -23,7 +23,7 @@ pub mod bindings;
 /// Install the scripting plugin.
 pub fn lua_game_plugin(game: &mut Game) {
     // Register asset type.
-    LuaScript::schema();
+    LuaScript::register_schema();
 
     // Add `SchemaLuaMetatable` type data for common types.
     bindings::register_lua_typedata();

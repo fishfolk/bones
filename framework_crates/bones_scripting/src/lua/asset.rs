@@ -4,6 +4,7 @@ use crate::prelude::*;
 #[derive(HasSchema)]
 #[schema(no_clone, no_default)]
 #[type_data(asset_loader("lua", LuaScriptLoader))]
+#[repr(C)]
 pub struct LuaScript {
     pub source: String,
 }

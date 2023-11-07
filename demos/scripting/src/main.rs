@@ -6,6 +6,16 @@ use bones_framework::prelude::*;
 #[repr(C)]
 struct GameMeta {
     update: Handle<LuaScript>,
+    version: u32,
+    info: Handle<GameInfoMeta>,
+}
+
+#[derive(HasSchema, Default, Clone)]
+#[repr(C)]
+#[type_data(metadata_asset("info"))]
+struct GameInfoMeta {
+    name: String,
+    gravity: f32,
 }
 
 #[derive(HasSchema, Default, Clone)]
@@ -33,8 +43,8 @@ pub enum DemoState {
 fn main() {
     let mut game = Game::new();
     game.install_plugin(DefaultGamePlugin);
-    GameMeta::schema();
-    DemoData::schema();
+    GameMeta::register_schema();
+    DemoData::register_schema();
 
     let default_session = game.sessions.create("default");
     default_session
@@ -51,7 +61,13 @@ fn main() {
         state: DemoState::Thinking(20.),
     });
 
-    BonesBevyRenderer::new(game).app().run();
+    let mut renderer = BonesBevyRenderer::new(game);
+    renderer.app_namespace = (
+        "org".into(),
+        "fishfolk".into(),
+        "bones.demo_scripting".into(),
+    );
+    renderer.app().run();
 }
 
 fn update_script(world: &World, lua_engine: Res<LuaEngine>, meta: Root<GameMeta>) {

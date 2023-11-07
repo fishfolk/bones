@@ -81,13 +81,9 @@ impl<'pointer> SchemaRef<'pointer> {
     /// Create a new [`SchemaRef`] from a raw pointer and it's schema.
     ///
     /// # Safety
-    /// - `ptr` must point to valid value of whatever the pointee type is.
-    /// - `ptr` must not be null.
-    /// - If the `A` type parameter is [`Aligned`] then `inner` must be sufficiently aligned for the
-    ///   pointee type.
-    /// - `inner` must have correct provenance to allow read and writes of the pointee type.
-    /// - The lifetime `'a` must be constrained such that this [`PtrMut`] will stay valid and
-    ///   nothing else can read or mutate the pointee while this [`PtrMut`] is live.
+    /// - The pointee of `ptr` must be accurately described by the given `schema`.
+    /// - `inner` must have correct provenance to allow read of the pointee type.
+    /// - The pointer must be valid for the full lifetime of this [`SchemaRef`].
     #[track_caller]
     pub unsafe fn from_ptr_schema(ptr: *const c_void, schema: &'static Schema) -> Self {
         Self {
@@ -562,7 +558,7 @@ pub enum PrimitiveRef<'a> {
     I64(&'a i64),
     /// An [`i128`]
     I128(&'a i128),
-    /// An [`f23`]
+    /// An [`f32`]
     F32(&'a f32),
     /// An [`f64`]
     F64(&'a f64),
@@ -728,13 +724,9 @@ impl<'pointer> SchemaRefMut<'pointer> {
     /// Create a new [`SchemaRefMut`] from a raw pointer and it's schema.
     ///
     /// # Safety
-    /// - `ptr` must point to valid value of whatever the pointee type is.
-    /// - `ptr` must not be null.
-    /// - If the `A` type parameter is [`Aligned`] then `inner` must be sufficiently aligned for the
-    ///   pointee type.
-    /// - `ptr` must have correct provenance to allow read and writes of the pointee type.
-    /// - The lifetime `'pointer` must be constrained such that this [`PtrMut`] will stay valid and
-    ///   nothing else can read or mutate the pointee while this [`PtrMut`] is live.
+    /// - The pointee of `ptr` must be accurately described by the given `schema`.
+    /// - `inner` must have correct provenance to allow reads and writes of the pointee type.
+    /// - The pointer must be valid for the full lifetime of this [`SchemaRef`].
     pub unsafe fn from_ptr_schema(
         ptr: *mut c_void,
         schema: &'static Schema,
@@ -1229,7 +1221,7 @@ pub enum PrimitiveRefMut<'a> {
     I64(&'a mut i64),
     /// An [`i128`]
     I128(&'a mut i128),
-    /// An [`f23`]
+    /// An [`f32`]
     F32(&'a mut f32),
     /// An [`f64`]
     F64(&'a mut f64),
@@ -1821,7 +1813,7 @@ impl<'a> std::fmt::Display for FieldIdx<'a> {
 }
 
 /// A wrapper type that implements [`IntoIterator<Item = FieldIdx>`] for an inner string to make
-/// it easier to use with [`SchemaRef::get_field_path()`] and other field path methods.
+/// it easier to use with [`SchemaRefAccess::field_path()`] and other field path methods.
 pub struct FieldPath<T>(pub T);
 impl<'a> IntoIterator for FieldPath<&'a str> {
     type Item = FieldIdx<'a>;

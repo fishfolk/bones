@@ -91,8 +91,16 @@ fn main() {
     PersistedTextData::register_schema();
 
     // Create a bones bevy renderer from our bones game
-    BonesBevyRenderer::new(create_game())
-        // Get a bevy app for running our game
+    let mut renderer = BonesBevyRenderer::new(create_game());
+    // Set the app namespace which will be used by the renderer to decide where to put
+    // persistent storage files.
+    renderer.app_namespace = (
+        "org".into(),
+        "fishfolk".into(),
+        "bones.demo_features".into(),
+    );
+    // Get a bevy app for running our game
+    renderer
         .app()
         // We can add our own bevy plugins now
         .add_plugins((FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin::default()))
