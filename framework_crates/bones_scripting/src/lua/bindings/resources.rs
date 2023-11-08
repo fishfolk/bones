@@ -1,16 +1,10 @@
 use super::*;
 
-pub fn metatable(ctx: Context) -> StaticTable {
+pub fn metatable(ctx: Context) -> Table {
     let metatable = Table::new(&ctx);
-    let luadata = ctx.luadata();
+    let singletons = ctx.singletons();
     metatable
-        .set(
-            ctx,
-            "__newindex",
-            ctx.state
-                .registry
-                .fetch(&luadata.callback(ctx, no_newindex)),
-        )
+        .set(ctx, "__newindex", singletons.get(ctx, no_newindex))
         .unwrap();
     metatable
         .set(
@@ -53,9 +47,9 @@ pub fn metatable(ctx: Context) -> StaticTable {
                         data: EcsRefData::Resource(cell),
                         path: default(),
                     };
-                    let metatable = ctx.luadata().table(ctx, ecsref.metatable_fn());
+                    let metatable = ctx.singletons().get(ctx, ecsref.metatable_fn());
                     let data = AnyUserData::new_static(&ctx, ecsref);
-                    data.set_metatable(&ctx, Some(ctx.state.registry.fetch(&metatable)));
+                    data.set_metatable(&ctx, Some(metatable));
                     stack.push_front(data.into());
                 }
             });
@@ -99,5 +93,5 @@ pub fn metatable(ctx: Context) -> StaticTable {
         )
         .unwrap();
 
-    ctx.state.registry.stash(&ctx, metatable)
+    metatable
 }

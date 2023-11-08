@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn metatable(ctx: Context) -> StaticTable {
+pub fn metatable(ctx: Context) -> Table {
     let metatable = Table::new(&ctx);
 
     metatable
@@ -75,9 +75,9 @@ pub fn metatable(ctx: Context) -> StaticTable {
                         _ => {
                             let mut newref = this.clone();
                             newref.path = newpath;
-                            let metatable = ctx.luadata().table(ctx, newref.metatable_fn());
+                            let metatable = ctx.singletons().get(ctx, newref.metatable_fn());
                             let data = AnyUserData::new_static(&ctx, newref);
-                            data.set_metatable(&ctx, Some(ctx.state.registry.fetch(&metatable)));
+                            data.set_metatable(&ctx, Some(metatable));
                             stack.push_front(data.into());
                         }
                     }
@@ -132,12 +132,9 @@ pub fn metatable(ctx: Context) -> StaticTable {
                                         path: newpath,
                                     };
                                     let metatable =
-                                        ctx.luadata().table(ctx, newecsref.metatable_fn());
+                                        ctx.singletons().get(ctx, newecsref.metatable_fn());
                                     let newecsref = AnyUserData::new_static(&ctx, newecsref);
-                                    newecsref.set_metatable(
-                                        &ctx,
-                                        Some(ctx.state.registry.fetch(&metatable)),
-                                    );
+                                    newecsref.set_metatable(&ctx, Some(metatable));
                                     stack.push_front(newecsref.into());
                                 }
                             }
@@ -213,5 +210,5 @@ pub fn metatable(ctx: Context) -> StaticTable {
         )
         .unwrap();
 
-    ctx.state.registry.stash(&ctx, metatable)
+    metatable
 }

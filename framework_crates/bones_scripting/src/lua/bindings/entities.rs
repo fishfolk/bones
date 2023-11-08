@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn entities_metatable(ctx: Context) -> StaticTable {
+pub fn entities_metatable(ctx: Context) -> Table {
     let metatable = Table::new(&ctx);
     metatable
         .set(
@@ -15,13 +15,7 @@ pub fn entities_metatable(ctx: Context) -> StaticTable {
         )
         .unwrap();
     metatable
-        .set(
-            ctx,
-            "__newindex",
-            ctx.state
-                .registry
-                .fetch(&ctx.luadata().callback(ctx, no_newindex)),
-        )
+        .set(ctx, "__newindex", ctx.singletons().get(ctx, no_newindex))
         .unwrap();
 
     let create_callback = ctx.state.registry.stash(
@@ -47,9 +41,9 @@ pub fn entities_metatable(ctx: Context) -> StaticTable {
                 data: EcsRefData::Free(Rc::new(AtomicCell::new(SchemaBox::new(entity)))),
                 path: default(),
             };
-            let metatable = ctx.luadata().table(ctx, newecsref.metatable_fn());
+            let metatable = ctx.singletons().get(ctx, newecsref.metatable_fn());
             let newecsref = AnyUserData::new_static(&ctx, newecsref);
-            newecsref.set_metatable(&ctx, Some(ctx.state.registry.fetch(&metatable)));
+            newecsref.set_metatable(&ctx, Some(metatable));
 
             stack.push_front(newecsref.into());
 
@@ -121,7 +115,7 @@ pub fn entities_metatable(ctx: Context) -> StaticTable {
         )
         .unwrap();
 
-    ctx.state.registry.stash(&ctx, metatable)
+    metatable
 }
 
 // pub fn entity_metatable(ctx: Context) -> StaticTable {

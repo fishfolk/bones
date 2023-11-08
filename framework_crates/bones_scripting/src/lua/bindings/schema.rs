@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn metatable(ctx: Context) -> StaticTable {
+pub fn metatable(ctx: Context) -> Table {
     let metatable = Table::new(&ctx);
     metatable
         .set(
@@ -34,9 +34,9 @@ pub fn metatable(ctx: Context) -> StaticTable {
                 data: EcsRefData::Free(Rc::new(AtomicCell::new(SchemaBox::default(this)))),
                 path: default(),
             };
-            let metatable = ctx.luadata().table(ctx, ecsref.metatable_fn());
+            let metatable = ctx.singletons().get(ctx, ecsref.metatable_fn());
             let data = AnyUserData::new_static(&ctx, ecsref);
-            data.set_metatable(&ctx, Some(ctx.state.registry.fetch(&metatable)));
+            data.set_metatable(&ctx, Some(metatable));
             stack.push_front(data.into());
 
             Ok(CallbackReturn::Return)
@@ -79,5 +79,5 @@ pub fn metatable(ctx: Context) -> StaticTable {
         )
         .unwrap();
 
-    ctx.state.registry.stash(&ctx, metatable)
+    metatable
 }

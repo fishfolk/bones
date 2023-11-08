@@ -1,11 +1,7 @@
 use super::*;
 
-pub fn metatable(ctx: Context) -> StaticTable {
+pub fn metatable(ctx: Context) -> Table {
     let metatable = Table::new(&ctx);
-    let luadata = ctx.luadata();
-    let resources_metatable = luadata.table(ctx, super::resources::metatable);
-    let components_metatable = luadata.table(ctx, super::components::metatable);
-    let assets_metatable = luadata.table(ctx, super::assets::metatable);
     metatable
         .set(
             ctx,
@@ -21,13 +17,7 @@ pub fn metatable(ctx: Context) -> StaticTable {
         .unwrap();
 
     metatable
-        .set(
-            ctx,
-            "__newindex",
-            ctx.state
-                .registry
-                .fetch(&luadata.callback(ctx, no_newindex)),
-        )
+        .set(ctx, "__newindex", ctx.singletons().get(ctx, no_newindex))
         .unwrap();
     metatable
         .set(
@@ -42,9 +32,10 @@ pub fn metatable(ctx: Context) -> StaticTable {
                 };
                 let this = this.downcast_static::<WorldRef>()?;
 
-                let resources_metatable = ctx.state.registry.fetch(&resources_metatable);
-                let components_metatable = ctx.state.registry.fetch(&components_metatable);
-                let assets_metatable = ctx.state.registry.fetch(&assets_metatable);
+                let singletons = ctx.singletons();
+                let resources_metatable = singletons.get(ctx, super::resources::metatable);
+                let components_metatable = singletons.get(ctx, super::components::metatable);
+                let assets_metatable = singletons.get(ctx, super::assets::metatable);
 
                 if let Value::String(key) = key {
                     match key.as_bytes() {
@@ -72,5 +63,5 @@ pub fn metatable(ctx: Context) -> StaticTable {
         )
         .unwrap();
 
-    ctx.state.registry.stash(&ctx, metatable)
+    metatable
 }

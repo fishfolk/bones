@@ -1,15 +1,17 @@
 use crate::prelude::*;
-use append_only_vec::AppendOnlyVec;
+
 use bevy_tasks::{ComputeTaskPool, TaskPool, ThreadExecutor};
 use bones_asset::dashmap::mapref::one::{MappedRef, MappedRefMut};
 use bones_lib::ecs::utils::*;
+
 use parking_lot::Mutex;
 use piccolo::{
-    AnyUserData, Closure, Context, Fuel, Lua, ProtoCompileError, StaticCallback, StaticClosure,
-    StaticTable, Table, Thread, ThreadMode, Value,
+    registry::{Fetchable, Stashable},
+    AnyUserData, Closure, Context, Fuel, Lua, ProtoCompileError, StaticClosure, Table, Thread,
+    ThreadMode, Value,
 };
 use send_wrapper::SendWrapper;
-use std::{rc::Rc, sync::Arc};
+use std::{any::Any, rc::Rc, sync::Arc};
 
 #[macro_use]
 mod freeze;
@@ -68,20 +70,20 @@ struct EngineState {
     lua: Mutex<Lua>,
     /// Persisted lua data we need stored in Rust, such as the environment table, world
     /// metatable, etc.
-    data: LuaData,
+    data: LuaSingletons,
     /// Cache of the content IDs of loaded scripts, and their compiled lua closures.
     compiled_scripts: Mutex<HashMap<Cid, StaticClosure>>,
 }
 
 trait CtxExt {
-    fn luadata(&self) -> &LuaData;
+    fn singletons(&self) -> &LuaSingletons;
 }
 impl CtxExt for piccolo::Context<'_> {
-    fn luadata(&self) -> &LuaData {
-        let Value::UserData(data) = self.state.globals.get(*self, "luadata") else {
+    fn singletons(&self) -> &LuaSingletons {
+        let Value::UserData(data) = self.state.globals.get(*self, "luasingletons") else {
             unreachable!();
         };
-        data.downcast_static::<LuaData>().unwrap()
+        data.downcast_static::<LuaSingletons>().unwrap()
     }
 }
 
@@ -92,8 +94,8 @@ impl Default for EngineState {
         lua.try_run(|ctx| {
             ctx.state.globals.set(
                 ctx,
-                "luadata",
-                AnyUserData::new_static(&ctx, LuaData::default()),
+                "luasingletons",
+                AnyUserData::new_static(&ctx, LuaSingletons::default()),
             )?;
             Ok(())
         })
@@ -168,10 +170,7 @@ impl LuaEngine {
                     let thread = Thread::new(&ctx);
 
                     // Fetch the env table
-                    let env = ctx
-                        .state
-                        .registry
-                        .fetch(&self.state.data.table(ctx, bindings::env));
+                    let env = self.state.data.get(ctx, bindings::env);
 
                     // Compile the script
                     let closure = world.with(|world| {
@@ -205,12 +204,8 @@ impl LuaEngine {
                     })?;
 
                     // Insert the world ref into the global scope
-                    let world = world.into_userdata(
-                        ctx,
-                        ctx.state
-                            .registry
-                            .fetch(&self.state.data.table(ctx, bindings::world::metatable)),
-                    );
+                    let world = world
+                        .into_userdata(ctx, self.state.data.get(ctx, bindings::world::metatable));
                     env.set(ctx, "world", world)?;
 
                     // Start the thread
@@ -246,43 +241,44 @@ impl LuaEngine {
     }
 }
 
-/// Static lua tables and callbacks
-pub struct LuaData {
-    callbacks: AppendOnlyVec<(fn(Context) -> StaticCallback, StaticCallback)>,
-    tables: AppendOnlyVec<(fn(Context) -> StaticTable, StaticTable)>,
+pub struct LuaSingletons {
+    singletons: Rc<AtomicCell<HashMap<usize, Box<dyn Any>>>>,
 }
-impl Default for LuaData {
+impl Default for LuaSingletons {
     fn default() -> Self {
         Self {
-            callbacks: AppendOnlyVec::new(),
-            tables: AppendOnlyVec::new(),
+            singletons: Rc::new(AtomicCell::new(HashMap::default())),
         }
     }
 }
-
-impl LuaData {
-    /// Get a table from the store, initializing it if necessary.
-    pub fn table(&self, ctx: Context, f: fn(Context) -> StaticTable) -> StaticTable {
-        for (other_f, table) in self.tables.iter() {
-            if *other_f == f {
-                return table.clone();
-            }
+impl LuaSingletons {
+    /// Fetch a lua singleton, initializing it if it has not yet been created.
+    ///
+    /// The singleton is defined by a function pointer that returns a stashable value.
+    fn get<
+        'gc,
+        S: Fetchable<'gc, Fetched = T> + 'static,
+        T: Stashable<'gc, Stashed = S> + Clone + Copy + 'gc,
+    >(
+        &self,
+        ctx: Context<'gc>,
+        singleton: fn(Context<'gc>) -> T,
+    ) -> T {
+        let map = self.singletons.borrow_mut();
+        let id = singleton as usize;
+        if let Some(entry) = map.get(&id) {
+            let stashed = entry.downcast_ref::<S>().expect(
+                "Encountered two functions with different return types and \
+                the same function pointer.",
+            );
+            ctx.state.registry.fetch(stashed)
+        } else {
+            drop(map); // Make sure we don't deadlock
+            let v = singleton(ctx);
+            let stashed = ctx.state.registry.stash(&ctx, v);
+            self.singletons.borrow_mut().insert(id, Box::new(stashed));
+            v
         }
-        let new_table = f(ctx);
-        self.tables.push((f, new_table.clone()));
-        new_table
-    }
-
-    /// Get a callback from the store, initializing if necessary.
-    pub fn callback(&self, ctx: Context, f: fn(Context) -> StaticCallback) -> StaticCallback {
-        for (other_f, callback) in self.callbacks.iter() {
-            if *other_f == f {
-                return callback.clone();
-            }
-        }
-        let new_callback = f(ctx);
-        self.callbacks.push((f, new_callback.clone()));
-        new_callback
     }
 }
 
@@ -290,7 +286,7 @@ impl LuaData {
 /// used in an [`EcsRef`] in the lua API.
 #[derive(HasSchema)]
 #[schema(no_clone, no_default)]
-struct SchemaLuaEcsRefMetatable(pub fn(piccolo::Context) -> piccolo::StaticTable);
+struct SchemaLuaEcsRefMetatable(pub fn(piccolo::Context) -> piccolo::Table);
 
 /// A reference to an ECS-compatible value.
 #[derive(Clone)]
@@ -303,7 +299,7 @@ pub struct EcsRef {
 
 impl EcsRef {
     /// Get the function that may be used to retrieve the metatable to use for this [`EcsRef`].
-    pub fn metatable_fn(&self) -> fn(piccolo::Context) -> piccolo::StaticTable {
+    pub fn metatable_fn(&self) -> fn(piccolo::Context) -> piccolo::Table {
         (|| {
             let data = self.data.borrow();
             let field = data.access()?.field_path(FieldPath(self.path))?;

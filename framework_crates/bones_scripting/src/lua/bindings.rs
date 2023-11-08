@@ -23,22 +23,20 @@ pub fn register_lua_typedata() {
         .unwrap();
 }
 
-pub fn no_newindex(ctx: Context) -> StaticCallback {
-    ctx.state.registry.stash(
-        &ctx,
-        AnyCallback::from_fn(&ctx, |_ctx, _fuel, _stack| {
-            Err(anyhow::format_err!("Creating fields not allowed on this type").into())
-        }),
-    )
+pub fn no_newindex(ctx: Context) -> AnyCallback {
+    AnyCallback::from_fn(&ctx, |_ctx, _fuel, _stack| {
+        Err(anyhow::format_err!("Creating fields not allowed on this type").into())
+    })
 }
 
 /// Generate the environment table for executing scripts under.
-pub fn env(ctx: Context) -> StaticTable {
+pub fn env(ctx: Context) -> Table {
     let env = Table::new(&ctx);
-    let luadata = ctx.luadata();
-    let schema_metatable = luadata.table(ctx, schema::metatable);
 
     let schema_fn = AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+        let singletons = ctx.singletons();
+        let schema_metatable = singletons.get(ctx, schema::metatable);
+
         let schema_name = stack.pop_front();
         let Value::String(schema_name) = schema_name else {
             return Err(anyhow::format_err!("Type error: expected string schema name").into());
@@ -55,7 +53,7 @@ pub fn env(ctx: Context) -> StaticTable {
 
             // TODO: setup `toString` implementation so that printing schemas gives more information.
             let schema = AnyUserData::new_static(&ctx, next_match);
-            schema.set_metatable(&ctx, Some(ctx.state.registry.fetch(&schema_metatable)));
+            schema.set_metatable(&ctx, Some(schema_metatable));
             stack.push_front(schema.into());
         } else {
             return Err(anyhow::format_err!("Schema not found: {schema_name}").into());
@@ -155,5 +153,5 @@ pub fn env(ctx: Context) -> StaticTable {
         .unwrap();
     env.set_metatable(&ctx, Some(metatable));
 
-    ctx.state.registry.stash(&ctx, env)
+    env
 }

@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn metatable(ctx: Context) -> StaticTable {
+pub fn metatable(ctx: Context) -> Table {
     let metatable = Table::new(&ctx);
     metatable
         .set(
@@ -13,14 +13,8 @@ pub fn metatable(ctx: Context) -> StaticTable {
         )
         .unwrap();
     metatable
-        .set(
-            ctx,
-            "__newindex",
-            ctx.state
-                .registry
-                .fetch(&ctx.luadata().callback(ctx, no_newindex)),
-        )
+        .set(ctx, "__newindex", ctx.singletons().get(ctx, no_newindex))
         .unwrap();
 
-    ctx.state.registry.stash(&ctx, metatable)
+    metatable
 }

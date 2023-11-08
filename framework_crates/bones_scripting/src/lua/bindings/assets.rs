@@ -1,15 +1,9 @@
 use super::*;
 
-pub fn metatable(ctx: Context) -> StaticTable {
+pub fn metatable(ctx: Context) -> Table {
     let metatable = Table::new(&ctx);
     metatable
-        .set(
-            ctx,
-            "__newindex",
-            ctx.state
-                .registry
-                .fetch(&ctx.luadata().callback(ctx, no_newindex)),
-        )
+        .set(ctx, "__newindex", ctx.singletons().get(ctx, no_newindex))
         .unwrap();
     metatable
         .set(
@@ -56,9 +50,9 @@ pub fn metatable(ctx: Context) -> StaticTable {
                 }),
                 path: default(),
             });
-            let metatable = ctx.luadata().table(ctx, assetref.metatable_fn());
+            let metatable = ctx.singletons().get(ctx, assetref.metatable_fn());
             let assetref = AnyUserData::new_static(&ctx, assetref);
-            assetref.set_metatable(&ctx, Some(ctx.state.registry.fetch(&metatable)));
+            assetref.set_metatable(&ctx, Some(metatable));
 
             stack.push_front(assetref.into());
 
@@ -95,12 +89,9 @@ pub fn metatable(ctx: Context) -> StaticTable {
                                     }),
                                     path: default(),
                                 };
-                                let metatable = ctx.luadata().table(ctx, assetref.metatable_fn());
+                                let metatable = ctx.singletons().get(ctx, assetref.metatable_fn());
                                 let assetref = AnyUserData::new_static(&ctx, assetref);
-                                assetref.set_metatable(
-                                    &ctx,
-                                    Some(ctx.state.registry.fetch(&metatable)),
-                                );
+                                assetref.set_metatable(&ctx, Some(metatable));
                                 stack.push_front(assetref.into());
                             });
                         }
@@ -115,5 +106,6 @@ pub fn metatable(ctx: Context) -> StaticTable {
             }),
         )
         .unwrap();
-    ctx.state.registry.stash(&ctx, metatable)
+
+    metatable
 }
