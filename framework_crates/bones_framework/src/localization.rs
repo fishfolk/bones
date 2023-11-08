@@ -149,7 +149,7 @@ impl<T: HasSchema> SystemParam for Localization<'_, T> {
         let root = asset_server.root::<T>();
         let root = root.as_schema_ref();
         let handle = root
-            .get_field(*field_idx)
+            .field(*field_idx)
             .expect(ERR)
             .cast::<Handle<LocalizationAsset>>();
         let asset = asset_server.get(*handle);

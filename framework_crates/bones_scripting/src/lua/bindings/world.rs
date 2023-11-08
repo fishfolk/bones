@@ -24,13 +24,8 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__index",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                let this = stack.pop_front();
+                pop_world!(stack, world);
                 let key = stack.pop_front();
-                let type_err = anyhow::format_err!("World metatable `self` is invalid.");
-                let Value::UserData(this) = this else {
-                    return Err(type_err.into());
-                };
-                let this = this.downcast_static::<WorldRef>()?;
 
                 let singletons = ctx.singletons();
                 let resources_metatable = singletons.get(ctx, super::resources::metatable);
@@ -40,17 +35,17 @@ pub fn metatable(ctx: Context) -> Table {
                 if let Value::String(key) = key {
                     match key.as_bytes() {
                         b"resources" => {
-                            let resources = AnyUserData::new_static(&ctx, this.clone());
+                            let resources = AnyUserData::new_static(&ctx, world.clone());
                             resources.set_metatable(&ctx, Some(resources_metatable));
                             stack.push_front(resources.into());
                         }
                         b"components" => {
-                            let components = AnyUserData::new_static(&ctx, this.clone());
+                            let components = AnyUserData::new_static(&ctx, world.clone());
                             components.set_metatable(&ctx, Some(components_metatable));
                             stack.push_front(components.into());
                         }
                         b"assets" => {
-                            let assets = AnyUserData::new_static(&ctx, this.clone());
+                            let assets = AnyUserData::new_static(&ctx, world.clone());
                             assets.set_metatable(&ctx, Some(assets_metatable));
                             stack.push_front(assets.into());
                         }

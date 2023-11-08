@@ -21,20 +21,14 @@ pub fn entities_metatable(ctx: Context) -> Table {
     let create_callback = ctx.state.registry.stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-            let this = stack.pop_front();
-            let Value::UserData(this) = this else {
-                return Err(
-                    anyhow::format_err!("Type error on `self` of resources metatable.").into(),
-                );
-            };
-            let ecsref = this.downcast_static::<EcsRef>()?;
+            pop_user_data!(stack, EcsRef, ecsref);
+
             let mut b = ecsref.data.borrow_mut();
             let mut binding = b
-                .access_mut()
+                .schema_ref_mut()
                 .unwrap()
-                .field_path(FieldPath(ecsref.path))
-                .unwrap()
-                .into_schema_ref_mut();
+                .into_field_path(FieldPath(ecsref.path))
+                .unwrap();
             let entities = binding.cast_mut::<Entities>();
             let entity = entities.create();
             let newecsref = EcsRef {
@@ -53,36 +47,22 @@ pub fn entities_metatable(ctx: Context) -> Table {
     let kill_callback = ctx.state.registry.stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |_ctx, _fuel, stack| {
-            let this = stack.pop_front();
-            let Value::UserData(this) = this else {
-                return Err(
-                    anyhow::format_err!("Type error on `self` of resources metatable.").into(),
-                );
-            };
-            let ecsref = this.downcast_static::<EcsRef>()?;
+            pop_user_data!(stack, EcsRef, ecsref);
             let mut b = ecsref.data.borrow_mut();
             let mut binding = b
-                .access_mut()
+                .schema_ref_mut()
                 .unwrap()
-                .field_path(FieldPath(ecsref.path))
-                .unwrap()
-                .into_schema_ref_mut();
+                .into_field_path(FieldPath(ecsref.path))
+                .unwrap();
             let entities = binding.cast_mut::<Entities>();
 
-            let entity = stack.pop_front();
-            let Value::UserData(entity) = entity else {
-                return Err(
-                    anyhow::format_err!("Type error on `self` of resources metatable.").into(),
-                );
-            };
-            let ecsref = entity.downcast_static::<EcsRef>()?;
-            let b = ecsref.data.borrow();
+            pop_user_data!(stack, EcsRef, entity_ecsref);
+            let b = entity_ecsref.data.borrow();
             let binding = b
-                .access()
+                .schema_ref()
                 .unwrap()
-                .field_path(FieldPath(ecsref.path))
-                .unwrap()
-                .into_schema_ref();
+                .field_path(FieldPath(entity_ecsref.path))
+                .unwrap();
             let entity = binding.cast::<Entity>();
             entities.kill(*entity);
 
@@ -117,28 +97,3 @@ pub fn entities_metatable(ctx: Context) -> Table {
 
     metatable
 }
-
-// pub fn entity_metatable(ctx: Context) -> StaticTable {
-//     let metatable = Table::new(&ctx);
-//     metatable
-//         .set(
-//             ctx,
-//             "__tostring",
-//             AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
-//                 stack.push_front(piccolo::String::from_static(&ctx, "Entities").into());
-//                 Ok(CallbackReturn::Return)
-//             }),
-//         )
-//         .unwrap();
-//     metatable
-//         .set(
-//             ctx,
-//             "__newindex",
-//             ctx.state
-//                 .registry
-//                 .fetch(&ctx.luadata().callback(ctx, no_newindex)),
-//         )
-//         .unwrap();
-
-//     ctx.state.registry.stash(&ctx, metatable)
-// }

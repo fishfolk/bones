@@ -22,23 +22,8 @@ pub fn metatable(ctx: Context) -> Table {
     let get_callback = ctx.state.registry.stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-            let world = stack.pop_front();
-            let Value::UserData(world) = world else {
-                return Err(anyhow::format_err!(
-                    "`get` must be called as a method: resources:get()"
-                )
-                .into());
-            };
-            let world = world.downcast_static::<WorldRef>()?;
-
-            let schema = stack.pop_front();
-            let Value::UserData(schema) = schema else {
-                return Err(anyhow::format_err!(
-                    "Type error in `get()`: argument must be a Schema.`"
-                )
-                .into());
-            };
-            let schema = schema.downcast_static::<&Schema>()?;
+            pop_world!(stack, world);
+            pop_user_data!(stack, &Schema, schema);
 
             world.with(|world| {
                 let cell = world.resources.untyped().get_cell(schema.id());
@@ -63,15 +48,8 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__index",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                let this = stack.pop_front();
+                pop_world!(stack, world);
                 let key = stack.pop_front();
-                let Value::UserData(world) = this else {
-                    return Err(anyhow::format_err!(
-                        "Type error on `self` of resources metatable."
-                    )
-                    .into());
-                };
-                let world = world.downcast_static::<WorldRef>()?;
 
                 if let Value::String(key) = key {
                     #[allow(clippy::single_match)]

@@ -149,16 +149,17 @@ impl<'pointer> SchemaRef<'pointer> {
     }
 
     /// Get the reference to a field.
-    /// # Panics
-    /// Panics if the field does not exist.
-    #[track_caller]
-    pub fn field<'a, I: Into<FieldIdx<'a>>>(&self, field_idx: I) -> SchemaRef {
-        self.get_field(field_idx).unwrap()
+    pub fn field<'a, I: Into<FieldIdx<'a>>>(self, field_idx: I) -> Option<SchemaRef<'pointer>> {
+        Some(self.access().field(field_idx)?.into_schema_ref())
     }
 
-    /// Get the reference to a field.
-    pub fn get_field<'a, I: Into<FieldIdx<'a>>>(&self, field_idx: I) -> Option<SchemaRef> {
-        Some(self.access().field(field_idx).ok()?.into_schema_ref())
+    /// Get the field pointed to by the given path.
+    pub fn field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(self, path: I) -> Option<Self> {
+        let mut current_field = self;
+        for field_idx in path {
+            current_field = current_field.field(field_idx)?;
+        }
+        Some(current_field)
     }
 }
 
@@ -183,6 +184,7 @@ impl std::fmt::Display for SchemaRef<'_> {
 }
 
 /// Helper for accessing the inner data of a schema ref at runtime.
+#[derive(Clone, Copy)]
 pub enum SchemaRefAccess<'a> {
     /// Access a struct.
     Struct(StructRefAccess<'a>),
@@ -312,14 +314,14 @@ impl<'ptr> SchemaRefAccess<'ptr> {
     }
 
     /// Get field with the given index.
-    pub fn field<'a, I: Into<FieldIdx<'a>>>(self, field_idx: I) -> Result<Self, Self> {
+    pub fn field<'a, I: Into<FieldIdx<'a>>>(self, field_idx: I) -> Option<Self> {
         let field_idx = field_idx.into();
         match self {
-            SchemaRefAccess::Struct(s) => s.field(field_idx).map_err(SchemaRefAccess::Struct),
-            other @ (SchemaRefAccess::Vec(_)
+            SchemaRefAccess::Struct(s) => s.field(field_idx),
+            SchemaRefAccess::Vec(_)
             | SchemaRefAccess::Enum(_)
             | SchemaRefAccess::Map(_)
-            | SchemaRefAccess::Primitive(_)) => Err(other),
+            | SchemaRefAccess::Primitive(_) => None,
         }
     }
 
@@ -327,7 +329,7 @@ impl<'ptr> SchemaRefAccess<'ptr> {
     pub fn field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(self, path: I) -> Option<Self> {
         let mut current_field = self;
         for field_idx in path {
-            current_field = current_field.field(field_idx).ok()?;
+            current_field = current_field.field(field_idx)?;
         }
         Some(current_field)
     }
@@ -345,7 +347,7 @@ impl<'ptr> SchemaRefAccess<'ptr> {
 }
 
 /// Access helper for a [`SchemaVec`].
-#[derive(Deref, DerefMut)]
+#[derive(Deref, DerefMut, Clone, Copy)]
 pub struct SchemaVecAccess<'a> {
     /// The schema vec borrow.
     #[deref]
@@ -361,7 +363,7 @@ impl<'a> SchemaVecAccess<'a> {
 }
 
 /// Access helper for a [`SchemaMap`].
-#[derive(Deref, DerefMut)]
+#[derive(Deref, DerefMut, Clone, Copy)]
 pub struct SchemaMapAccess<'a> {
     /// The schema map borrow.
     #[deref]
@@ -400,24 +402,14 @@ impl<'a> StructRefAccess<'a> {
     }
 
     /// Access a field, if it exists.
-    pub fn field<'i, I: Into<FieldIdx<'i>>>(
-        self,
-        field_idx: I,
-    ) -> Result<SchemaRefAccess<'a>, Self> {
+    pub fn field<'i, I: Into<FieldIdx<'i>>>(self, field_idx: I) -> Option<SchemaRefAccess<'a>> {
         let field_idx = field_idx.into();
         let field_idx = match field_idx {
-            FieldIdx::Name(name) => {
-                if let Some(idx) = self
-                    .info()
-                    .fields
-                    .iter()
-                    .position(|x| x.name.as_ref().map(|x| x.as_ref()) == Some(name))
-                {
-                    idx
-                } else {
-                    return Err(self);
-                }
-            }
+            FieldIdx::Name(name) => self
+                .info()
+                .fields
+                .iter()
+                .position(|x| x.name.as_ref().map(|x| x.as_ref()) == Some(name))?,
             FieldIdx::Idx(idx) => idx,
         };
         let field_schema = self
@@ -432,7 +424,7 @@ impl<'a> StructRefAccess<'a> {
             .schema;
         let (_, field_offset) = self.0.schema.field_offsets().get(field_idx).unwrap();
 
-        Ok(unsafe {
+        Some(unsafe {
             SchemaRef {
                 ptr: NonNull::new_unchecked(self.0.as_ptr().add(*field_offset) as *mut c_void),
                 schema: field_schema,
@@ -482,6 +474,7 @@ impl<'a> Iterator for StructRefFieldIter<'a> {
 }
 
 /// Helper for accessing the inner data of a schema ref at runtime.
+#[derive(Clone, Copy)]
 pub struct EnumRefAccess<'a>(pub SchemaRef<'a>);
 
 impl<'a> EnumRefAccess<'a> {
@@ -541,6 +534,7 @@ impl<'a> EnumRefAccess<'a> {
 }
 
 /// Helper for accessing the inner data of a schema ref at runtime.
+#[derive(Clone, Copy)]
 pub enum PrimitiveRef<'a> {
     /// A [`bool`]
     Bool(&'a bool),
@@ -815,15 +809,7 @@ impl<'pointer> SchemaRefMut<'pointer> {
     }
 
     /// Get the reference to a field.
-    /// # Panics
-    /// Panics if the field does not exist.
-    #[track_caller]
-    pub fn field<'a, I: Into<FieldIdx<'a>>>(&mut self, field_idx: I) -> SchemaRefMut {
-        self.get_field(field_idx).unwrap()
-    }
-
-    /// Get the reference to a field.
-    pub fn get_field<'a, I: Into<FieldIdx<'a>>>(&mut self, field_idx: I) -> Option<SchemaRefMut> {
+    pub fn field<'a, I: Into<FieldIdx<'a>>>(&mut self, field_idx: I) -> Option<SchemaRefMut> {
         Some(
             self.access_mut()
                 .field(field_idx)
@@ -832,16 +818,28 @@ impl<'pointer> SchemaRefMut<'pointer> {
         )
     }
 
-    /// Get the reference to a field.
-    /// # Panics
-    /// Panics if the field does not exist.
-    #[track_caller]
-    pub fn into_field<'a, I: Into<FieldIdx<'a>>>(self, field_idx: I) -> SchemaRefMut<'pointer> {
-        self.try_into_field(field_idx).unwrap()
+    /// Get the field pointed to by the given path.
+    pub fn field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(
+        &mut self,
+        path: I,
+    ) -> Option<SchemaRefMut> {
+        self.access_mut()
+            .field_path(path)
+            .map(|x| x.into_schema_ref_mut())
+    }
+
+    /// Get the field pointed to by the given path.
+    pub fn into_field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(
+        self,
+        path: I,
+    ) -> Option<Self> {
+        self.into_access_mut()
+            .field_path(path)
+            .map(|x| x.into_schema_ref_mut())
     }
 
     /// Get the reference to a field.
-    pub fn try_into_field<'a, I: Into<FieldIdx<'a>>>(
+    pub fn into_field<'a, I: Into<FieldIdx<'a>>>(
         self,
         field_idx: I,
     ) -> Result<SchemaRefMut<'pointer>, Self> {

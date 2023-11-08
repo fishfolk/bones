@@ -90,7 +90,7 @@ impl<'a> AtomicSchemaRef<'a> {
     /// implement [`Deref`][std::ops::Deref] because deref must return a reference and we actually
     /// need to return a [`SchemaRef`] with a shortened lifetime, binding it to this
     /// [`AtomicSchemaRef`] borrow.
-    pub fn as_ref(&self) -> SchemaRef<'_> {
+    pub fn schema_ref(&self) -> SchemaRef<'_> {
         self.schema_ref
     }
 
@@ -110,14 +110,22 @@ impl<'a> AtomicSchemaRef<'a> {
 }
 
 /// An atomic borrow of a [`SchemaRefMut`].
-#[derive(Deref, DerefMut)]
 pub struct AtomicSchemaRefMut<'a> {
-    #[deref]
     schema_ref: SchemaRefMut<'a>,
     borrow: AtomicBorrowMut<'a>,
 }
 
 impl<'a> AtomicSchemaRefMut<'a> {
+    /// Get a [`SchemaRefMut`] that points to the inner value.
+    ///
+    /// > **Note:** Ideally this method would be unnecessary, but it is impossible to properly
+    /// implement [`DerefMut`][std::ops::Deref] because deref must return a reference and we actually
+    /// need to return a [`SchemaRefMut`] with a shortened lifetime, binding it to this
+    /// [`AtomicSchemaRefMut`] borrow.
+    pub fn schema_ref_mut(&mut self) -> SchemaRefMut<'_> {
+        self.schema_ref.reborrow()
+    }
+
     /// # Safety
     /// You must know that T represents the data in the [`SchemaRefMut`].
     pub unsafe fn deref_mut<T: 'static>(self) -> RefMut<'a, T> {
@@ -127,7 +135,7 @@ impl<'a> AtomicSchemaRefMut<'a> {
     /// Convert into typed [`RefMut`]. This panics if the schema doesn't match.
     #[track_caller]
     pub fn typed<T: HasSchema>(self) -> RefMut<'a, T> {
-        assert_eq!(T::schema(), self.schema(), "Schema mismatch");
+        assert_eq!(T::schema(), self.schema_ref.schema(), "Schema mismatch");
         // SOUND: we've checked for matching schema.
         unsafe { self.deref_mut() }
     }
@@ -400,29 +408,5 @@ mod test {
         resources.insert(B(2));
         assert_eq!(resources.get::<B>().unwrap().0, 2);
         assert_eq!(resources.get::<A>().unwrap().0, "world");
-    }
-
-    #[test]
-    fn untyped_resources_no_rewrite() {
-        let mut store = UntypedResources::default();
-
-        // Create two datas with different types.
-        let data1 = SchemaBox::new(0usize);
-        let data1_schema = data1.schema();
-        let mut data2 = SchemaBox::new(String::from("bad_data"));
-
-        {
-            // Try to "cheat" and overwrite the the data1 resource with data of a different type.
-            store.insert(data1);
-            let data1_cell = store.get_cell(data1_schema.id()).unwrap();
-            let mut data1_borrow = data1_cell.borrow_mut();
-            // This can't actually write to data1, it just changes the reference we have.
-            *data1_borrow = data2.as_mut();
-        }
-
-        // Validate that data1 is unchanged
-        let data1_cell = store.get_cell(data1_schema.id()).unwrap();
-        let data1_borrow = data1_cell.borrow();
-        assert_eq!(data1_borrow.as_ref().cast::<usize>(), &0);
     }
 }

@@ -19,29 +19,17 @@ pub fn metatable(ctx: Context) -> Table {
     let get_callback = ctx.state.registry.stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-            let world = stack.pop_front();
-            let Value::UserData(world) = world else {
-                return Err(
-                    anyhow::format_err!("Type error on `self` of resources metatable.").into(),
-                );
-            };
-            let world = world.downcast_static::<WorldRef>()?;
+            pop_world!(stack, world);
+            pop_user_data!(stack, EcsRef, ecsref);
 
-            let ecsref = stack.pop_front();
-            let Value::UserData(ecsref) = ecsref else {
-                return Err(
-                    anyhow::format_err!("Type error on `self` of resources metatable.").into(),
-                );
-            };
-            let ecsref = ecsref.downcast_static::<EcsRef>()?;
             let b = ecsref.data.borrow();
-            let Some(b) = b.access() else {
+            let Some(b) = b.schema_ref() else {
                 return Err(anyhow::format_err!("Unable to get value").into());
             };
             let Some(b) = b.field_path(FieldPath(ecsref.path)) else {
                 return Err(anyhow::format_err!("Unable to get value").into());
             };
-            let handle = b.into_schema_ref().try_cast::<UntypedHandle>()?;
+            let handle = b.try_cast::<UntypedHandle>()?;
 
             let assetref = world.with(|world| EcsRef {
                 data: EcsRefData::Asset(AssetRef {
@@ -65,16 +53,9 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__index",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                let this = stack.pop_front();
-                let key = stack.pop_front();
-                let Value::UserData(world) = this else {
-                    return Err(anyhow::format_err!(
-                        "Type error on `self` of resources metatable."
-                    )
-                    .into());
-                };
-                let world = world.downcast_static::<WorldRef>()?;
+                pop_world!(stack, world);
 
+                let key = stack.pop_front();
                 if let Value::String(key) = key {
                     #[allow(clippy::single_match)]
                     match key.as_bytes() {

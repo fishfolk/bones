@@ -15,6 +15,37 @@ pub mod resources;
 pub mod schema;
 pub mod world;
 
+#[macro_use]
+mod macros {
+    macro_rules! pop_world {
+        ($stack:ident, $world:ident) => {
+            let world = $stack.pop_front();
+            let Value::UserData(world) = world else {
+                return Err(anyhow::format_err!(
+                    "Expected world argument. You may need to call this function \
+                    with the lua method syntax."
+                )
+                .into());
+            };
+            let $world = world.downcast_static::<WorldRef>()?;
+        };
+    }
+    macro_rules! pop_user_data {
+        ($stack:ident, $ty:ty, $data:ident) => {
+            let world = $stack.pop_front();
+            let Value::UserData(world) = world else {
+                return Err(anyhow::format_err!(concat!(
+                    "Argument type error, expected: ",
+                    stringify!($ty)
+                ))
+                .into());
+            };
+            let $data = world.downcast_static::<$ty>()?;
+        };
+    }
+}
+pub(crate) use {pop_user_data, pop_world};
+
 /// Registers lua binding typedatas for bones_framework types.
 pub fn register_lua_typedata() {
     Entities::schema()

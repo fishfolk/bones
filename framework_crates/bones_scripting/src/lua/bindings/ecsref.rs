@@ -8,17 +8,15 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__tostring",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                let this = stack.pop_front();
-                let Value::UserData(this) = this else {
-                    return Err(anyhow::format_err!("Invalid type").into());
-                };
-                let this = this.downcast_static::<EcsRef>()?;
+                pop_user_data!(stack, EcsRef, this);
+
                 let b = this.data.borrow();
-                if let Some(value) = b.access() {
+                if let Some(value) = b.schema_ref() {
                     if let Some(value) = value.field_path(FieldPath(this.path)) {
+                        let access = value.access();
                         stack.push_front(Value::String(piccolo::String::from_slice(
                             &ctx,
-                            format!("{value:?}"),
+                            format!("{access:?}"),
                         )));
                     }
                 }
@@ -31,20 +29,17 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__index",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                let this = stack.pop_front();
+                pop_user_data!(stack, EcsRef, this);
                 let key = stack.pop_front();
-                let Value::UserData(this) = this else {
-                    return Err(anyhow::format_err!(
-                        "Invalid type for `self` in schemabox metatable."
-                    )
-                    .into());
-                };
-                let this = this.downcast_static::<EcsRef>()?;
+
                 let b = this.data.borrow();
                 let newpath = ustr(&format!("{}.{key}", this.path));
 
-                if let Some(field) = b.access().and_then(|x| x.field_path(FieldPath(newpath))) {
-                    match field {
+                if let Some(field) = b
+                    .schema_ref()
+                    .and_then(|x| x.field_path(FieldPath(newpath)))
+                {
+                    match field.access() {
                         SchemaRefAccess::Primitive(p)
                             if !matches!(p, PrimitiveRef::Opaque { .. }) =>
                         {
@@ -94,18 +89,12 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__newindex",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                let this = stack.pop_front();
+                pop_user_data!(stack, EcsRef, this);
                 let key = stack.pop_front();
                 let newvalue = stack.pop_front();
-                let Value::UserData(this) = this else {
-                    return Err(anyhow::format_err!(
-                        "Invalid type for `self` in schemabox metatable."
-                    )
-                    .into());
-                };
-                let this = this.downcast_static::<EcsRef>()?;
+
                 let mut borrow = this.data.borrow_mut();
-                let Some(access) = borrow.access_mut() else {
+                let Some(mut schema_ref) = borrow.schema_ref_mut() else {
                     return Err(anyhow::format_err!("Value not found").into());
                 };
                 let newpath = ustr(&format!("{}.{key}", this.path));
@@ -119,7 +108,7 @@ pub fn metatable(ctx: Context) -> Table {
                     _ => return Err(anyhow::format_err!("Invalid index: {key}").into()),
                 };
 
-                match access {
+                match schema_ref.access_mut() {
                     SchemaRefMutAccess::Struct(s) => {
                         match s
                             .into_field(field_idx)

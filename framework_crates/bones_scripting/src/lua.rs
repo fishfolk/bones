@@ -302,7 +302,10 @@ impl EcsRef {
     pub fn metatable_fn(&self) -> fn(piccolo::Context) -> piccolo::Table {
         (|| {
             let data = self.data.borrow();
-            let field = data.access()?.field_path(FieldPath(self.path))?;
+            let field = data
+                .schema_ref()?
+                .access()
+                .field_path(FieldPath(self.path))?;
             let metatable_fn = field
                 .into_schema_ref()
                 .schema()
@@ -337,12 +340,12 @@ pub enum EcsRefBorrowKind<'a> {
 impl EcsRefBorrowKind<'_> {
     /// Will return none if the value does not exist, such as an unloaded asset or a component
     /// that is not set for a given entity.
-    pub fn access(&self) -> Option<SchemaRefAccess> {
+    pub fn schema_ref(&self) -> Option<SchemaRef> {
         match self {
-            EcsRefBorrowKind::Resource(r) => Some(r.as_ref().access()),
-            EcsRefBorrowKind::Component(c) => c.borrow.get_ref(c.entity).map(|x| x.access()),
-            EcsRefBorrowKind::Free(f) => Some(f.as_ref().access()),
-            EcsRefBorrowKind::Asset(a) => a.as_ref().map(|x| x.as_ref().access()),
+            EcsRefBorrowKind::Resource(r) => Some(r.schema_ref()),
+            EcsRefBorrowKind::Component(c) => c.borrow.get_ref(c.entity),
+            EcsRefBorrowKind::Free(f) => Some(f.as_ref()),
+            EcsRefBorrowKind::Asset(a) => a.as_ref().map(|x| x.as_ref()),
         }
     }
 }
@@ -365,14 +368,12 @@ pub enum EcsRefBorrowMutKind<'a> {
 }
 
 impl EcsRefBorrowMutKind<'_> {
-    pub fn access_mut(&mut self) -> Option<SchemaRefMutAccess> {
+    pub fn schema_ref_mut(&mut self) -> Option<SchemaRefMut> {
         match self {
-            EcsRefBorrowMutKind::Resource(r) => Some(r.access_mut()),
-            EcsRefBorrowMutKind::Component(c) => {
-                c.borrow.get_ref_mut(c.entity).map(|x| x.into_access_mut())
-            }
-            EcsRefBorrowMutKind::Free(f) => Some(f.as_mut().into_access_mut()),
-            EcsRefBorrowMutKind::Asset(a) => a.as_mut().map(|x| x.as_mut().into_access_mut()),
+            EcsRefBorrowMutKind::Resource(r) => Some(r.schema_ref_mut()),
+            EcsRefBorrowMutKind::Component(c) => c.borrow.get_ref_mut(c.entity),
+            EcsRefBorrowMutKind::Free(f) => Some(f.as_mut()),
+            EcsRefBorrowMutKind::Asset(a) => a.as_mut().map(|x| x.as_mut()),
         }
     }
 }

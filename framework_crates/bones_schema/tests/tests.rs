@@ -133,12 +133,12 @@ fn ptr_fields() {
     {
         let ptr = SchemaRef::new(&data);
 
-        let a = ptr.field("a");
-        let x = a.field("x").cast::<f32>();
-        let y = a.field("y").cast::<f32>();
-        let b = ptr.field("b");
-        let b0 = b.field(0).cast::<f32>();
-        let b1 = b.field(1).cast::<f32>();
+        let a = ptr.field("a").unwrap();
+        let x = a.field("x").unwrap().cast::<f32>();
+        let y = a.field("y").unwrap().cast::<f32>();
+        let b = ptr.field("b").unwrap();
+        let b0 = b.field(0).unwrap().cast::<f32>();
+        let b1 = b.field(1).unwrap().cast::<f32>();
 
         assert_eq!(*x, 1.0);
         assert_eq!(*y, 2.0);
@@ -149,22 +149,22 @@ fn ptr_fields() {
     {
         let mut ptr = SchemaRefMut::new(&mut data);
 
-        let mut a = ptr.field("a");
-        let mut x = a.field("x");
+        let mut a = ptr.field("a").unwrap();
+        let mut x = a.field("x").unwrap();
         let x = x.cast_mut::<f32>();
         assert_eq!(*x, 1.0);
         *x *= 3.0;
-        let mut y = a.field("y");
+        let mut y = a.field("y").unwrap();
         let y = y.cast_mut::<f32>();
         assert_eq!(*y, 2.0);
         *y *= 3.0;
 
-        let mut b = ptr.field("b");
-        let mut b0 = b.field(0);
+        let mut b = ptr.field("b").unwrap();
+        let mut b0 = b.field(0).unwrap();
         let b0 = b0.cast_mut::<f32>();
         assert_eq!(*b0, 3.0);
         *b0 *= 3.0;
-        let mut b1 = b.field(1);
+        let mut b1 = b.field(1).unwrap();
         let b1 = b1.cast_mut::<f32>();
         assert_eq!(*b1, 4.0);
         *b1 *= 3.0;

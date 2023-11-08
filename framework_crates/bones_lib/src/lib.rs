@@ -234,7 +234,7 @@ impl Game {
         // Update an existing resource of the same type.
         for r in &mut self.shared_resources {
             if r.schema() == T::schema() {
-                *r.borrow_mut().cast_mut() = resource;
+                *r.borrow_mut().schema_ref_mut().cast_mut() = resource;
                 return;
             }
         }
