@@ -1,2 +1,5 @@
 local entities = world.resources:get(s"Entities")
-info(entities:create())
+
+local entity = entities:create()
+
+entities:kill(entity)
