@@ -209,7 +209,7 @@ impl LuaEngine {
                         ctx,
                         ctx.state
                             .registry
-                            .fetch(&self.state.data.table(ctx, bindings::world_metatable)),
+                            .fetch(&self.state.data.table(ctx, bindings::world::metatable)),
                     );
                     env.set(ctx, "world", world)?;
 
@@ -286,6 +286,12 @@ impl LuaData {
     }
 }
 
+/// A type data that can be used to specify a custom metatable to use for the type when it is
+/// used in an [`EcsRef`] in the lua API.
+#[derive(HasSchema)]
+#[schema(no_clone, no_default)]
+struct SchemaLuaEcsRefMetatable(pub fn(piccolo::Context) -> piccolo::StaticTable);
+
 /// A reference to an ECS-compatible value.
 #[derive(Clone)]
 pub struct EcsRef {
@@ -293,6 +299,23 @@ pub struct EcsRef {
     pub data: EcsRefData,
     /// The path to the desired field.
     pub path: Ustr,
+}
+
+impl EcsRef {
+    /// Get the function that may be used to retrieve the metatable to use for this [`EcsRef`].
+    pub fn metatable_fn(&self) -> fn(piccolo::Context) -> piccolo::StaticTable {
+        (|| {
+            let data = self.data.borrow();
+            let field = data.access()?.field_path(FieldPath(self.path))?;
+            let metatable_fn = field
+                .into_schema_ref()
+                .schema()
+                .type_data
+                .get::<SchemaLuaEcsRefMetatable>()?;
+            Some(metatable_fn.0)
+        })()
+        .unwrap_or(bindings::ecsref::metatable)
+    }
 }
 
 /// The kind of value reference for [`EcsRef`].

@@ -1,3 +1,2 @@
-local info_handle = world.assets.root.info
-local info_data = world.assets:get(info_handle)
-info(info_data.name)
+local entities = world.resources:get(s"Entities")
+info(entities:create())

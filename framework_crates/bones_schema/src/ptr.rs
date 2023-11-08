@@ -248,10 +248,16 @@ impl std::fmt::Debug for SchemaRefAccess<'_> {
                 PrimitiveRef::F32(n) => f.write_fmt(format_args!("{n}")),
                 PrimitiveRef::F64(n) => f.write_fmt(format_args!("{n}")),
                 PrimitiveRef::String(s) => f.write_fmt(format_args!("{s:?}")),
-                PrimitiveRef::Opaque { size, align, .. } => f
-                    .debug_struct("Opaque")
-                    .field("size", &size)
-                    .field("align", &align)
+                PrimitiveRef::Opaque {
+                    size,
+                    align,
+                    schema_ref,
+                } => f
+                    .debug_tuple(&schema_ref.schema.name)
+                    .field(&Primitive::Opaque {
+                        size: *size,
+                        align: *align,
+                    })
                     .finish(),
             },
         }
