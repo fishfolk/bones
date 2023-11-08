@@ -55,6 +55,9 @@ impl SystemStages {
         for stage in &mut self.stages {
             stage.run(world);
         }
+
+        // Cleanup killed entities
+        world.maintain();
     }
 
     /// Create a [`SystemStages`] collection, initialized with a stage for each [`CoreStage`].
