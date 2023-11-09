@@ -1,4 +1,7 @@
-local entities = world.resources:get(s"Entities")
-local entity = entities:create()
-info(entity)
-entities:kill(entity)
+local Vec3 = s"Vec3"
+local Transform = s"Transform"
+
+local trans = Transform:create();
+trans.scale.x = 3
+info(trans.scale)
+
