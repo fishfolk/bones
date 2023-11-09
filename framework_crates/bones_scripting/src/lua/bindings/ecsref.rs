@@ -8,7 +8,7 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__tostring",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                pop_user_data!(stack, EcsRef, this);
+                let this: &EcsRef = stack.consume(ctx)?;
 
                 let b = this.data.borrow();
                 if let Some(value) = b.schema_ref() {
@@ -29,8 +29,7 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__index",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                pop_user_data!(stack, EcsRef, this);
-                let key = stack.pop_front();
+                let (this, key): (&EcsRef, lua::String) = stack.consume(ctx)?;
 
                 let b = this.data.borrow();
                 let newpath = ustr(&format!("{}.{key}", this.path));
@@ -89,9 +88,8 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__newindex",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                pop_user_data!(stack, EcsRef, this);
-                let key = stack.pop_front();
-                let newvalue = stack.pop_front();
+                let (this, key, newvalue): (&EcsRef, lua::Value, lua::Value) =
+                    stack.consume(ctx)?;
 
                 let mut borrow = this.data.borrow_mut();
                 let Some(mut schema_ref) = borrow.schema_ref_mut() else {

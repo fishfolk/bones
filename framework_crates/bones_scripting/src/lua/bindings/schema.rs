@@ -7,11 +7,7 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__tostring",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                let this = stack.pop_front();
-                let type_err = anyhow::format_err!("World metatable `self` is invalid.");
-                let Value::UserData(this) = this else {
-                    return Err(type_err.into());
-                };
+                let this: AnyUserData = stack.consume(ctx)?;
                 let this = this.downcast_static::<&Schema>()?;
                 let s = piccolo::String::from_slice(&ctx, &format!("Schema({})", this.full_name));
 
@@ -23,11 +19,7 @@ pub fn metatable(ctx: Context) -> Table {
     let create_fn = ctx.state.registry.stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-            let this = stack.pop_front();
-            let type_err = anyhow::format_err!("World metatable `self` is invalid.");
-            let Value::UserData(this) = this else {
-                return Err(type_err.into());
-            };
+            let this: AnyUserData = stack.consume(ctx)?;
             let this = this.downcast_static::<&Schema>()?;
 
             let ecsref = EcsRef {
@@ -47,31 +39,24 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__index",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                let this = stack.pop_front();
-                let key = stack.pop_front();
-                let type_err = anyhow::format_err!("World metatable `self` is invalid.");
-                let Value::UserData(this) = this else {
-                    return Err(type_err.into());
-                };
+                let (this, key): (AnyUserData, lua::String) = stack.consume(ctx)?;
                 let this = this.downcast_static::<&Schema>()?;
 
-                if let Value::String(key) = key {
-                    match key.as_bytes() {
-                        b"name" => {
-                            stack.push_front(Value::String(piccolo::String::from_static(
-                                &ctx,
-                                this.name.as_bytes(),
-                            )));
-                        }
-                        b"full_name" => {
-                            stack.push_front(Value::String(piccolo::String::from_static(
-                                &ctx,
-                                this.full_name.as_bytes(),
-                            )));
-                        }
-                        b"create" => stack.push_front(ctx.state.registry.fetch(&create_fn).into()),
-                        _ => (),
+                match key.as_bytes() {
+                    b"name" => {
+                        stack.push_front(Value::String(piccolo::String::from_static(
+                            &ctx,
+                            this.name.as_bytes(),
+                        )));
                     }
+                    b"full_name" => {
+                        stack.push_front(Value::String(piccolo::String::from_static(
+                            &ctx,
+                            this.full_name.as_bytes(),
+                        )));
+                    }
+                    b"create" => stack.push_front(ctx.state.registry.fetch(&create_fn).into()),
+                    _ => (),
                 }
 
                 Ok(CallbackReturn::Return)

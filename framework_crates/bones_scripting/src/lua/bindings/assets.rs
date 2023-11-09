@@ -19,8 +19,7 @@ pub fn metatable(ctx: Context) -> Table {
     let get_callback = ctx.state.registry.stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-            pop_world!(stack, world);
-            pop_user_data!(stack, EcsRef, ecsref);
+            let (world, ecsref): (&WorldRef, &EcsRef) = stack.consume(ctx)?;
 
             let b = ecsref.data.borrow();
             let Some(b) = b.schema_ref() else {
@@ -53,9 +52,8 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__index",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                pop_world!(stack, world);
+                let (world, key): (&WorldRef, lua::Value) = stack.consume(ctx)?;
 
-                let key = stack.pop_front();
                 if let Value::String(key) = key {
                     #[allow(clippy::single_match)]
                     match key.as_bytes() {

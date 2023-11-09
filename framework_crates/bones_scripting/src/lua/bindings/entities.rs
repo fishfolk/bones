@@ -21,13 +21,13 @@ pub fn entities_metatable(ctx: Context) -> Table {
     let create_callback = ctx.state.registry.stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-            pop_user_data!(stack, EcsRef, ecsref);
+            let this: &EcsRef = stack.consume(ctx)?;
 
-            let mut b = ecsref.data.borrow_mut();
+            let mut b = this.data.borrow_mut();
             let mut binding = b
                 .schema_ref_mut()
                 .unwrap()
-                .into_field_path(FieldPath(ecsref.path))
+                .into_field_path(FieldPath(this.path))
                 .unwrap();
             let entities = binding.cast_mut::<Entities>();
             let entity = entities.create();
@@ -46,17 +46,16 @@ pub fn entities_metatable(ctx: Context) -> Table {
     );
     let kill_callback = ctx.state.registry.stash(
         &ctx,
-        AnyCallback::from_fn(&ctx, move |_ctx, _fuel, stack| {
-            pop_user_data!(stack, EcsRef, ecsref);
-            let mut b = ecsref.data.borrow_mut();
+        AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+            let (this, entity_ecsref): (&EcsRef, &EcsRef) = stack.consume(ctx)?;
+            let mut b = this.data.borrow_mut();
             let mut binding = b
                 .schema_ref_mut()
                 .unwrap()
-                .into_field_path(FieldPath(ecsref.path))
+                .into_field_path(FieldPath(this.path))
                 .unwrap();
             let entities = binding.cast_mut::<Entities>();
 
-            pop_user_data!(stack, EcsRef, entity_ecsref);
             let b = entity_ecsref.data.borrow();
             let binding = b
                 .schema_ref()
@@ -74,20 +73,17 @@ pub fn entities_metatable(ctx: Context) -> Table {
             ctx,
             "__index",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
-                let _this = stack.pop_front();
-                let key = stack.pop_front();
+                let (_this, key): (lua::Value, lua::String) = stack.consume(ctx)?;
 
-                if let Value::String(key) = key {
-                    #[allow(clippy::single_match)]
-                    match key.as_bytes() {
-                        b"create" => {
-                            stack.push_front(ctx.state.registry.fetch(&create_callback).into());
-                        }
-                        b"kill" => {
-                            stack.push_front(ctx.state.registry.fetch(&kill_callback).into());
-                        }
-                        _ => (),
+                #[allow(clippy::single_match)]
+                match key.as_bytes() {
+                    b"create" => {
+                        stack.push_front(ctx.state.registry.fetch(&create_callback).into());
                     }
+                    b"kill" => {
+                        stack.push_front(ctx.state.registry.fetch(&kill_callback).into());
+                    }
+                    _ => (),
                 }
 
                 Ok(CallbackReturn::Return)

@@ -7,8 +7,8 @@ use bones_lib::ecs::utils::*;
 use parking_lot::Mutex;
 use piccolo::{
     registry::{Fetchable, Stashable},
-    AnyUserData, Closure, Context, Fuel, Lua, ProtoCompileError, StaticClosure, Table, Thread,
-    ThreadMode, Value,
+    AnyUserData, Closure, Context, FromValue, Fuel, Lua, ProtoCompileError, StaticClosure, Table,
+    Thread, ThreadMode, Value,
 };
 use send_wrapper::SendWrapper;
 use std::{any::Any, rc::Rc, sync::Arc};
@@ -39,6 +39,16 @@ pub fn lua_game_plugin(game: &mut Game) {
 // This type can be converted into lua userdata for accessing the world from lua.
 #[derive(Deref, DerefMut, Clone)]
 pub struct WorldRef(Frozen<Freeze![&'freeze World]>);
+impl Default for WorldRef {
+    fn default() -> Self {
+        Self(Frozen::new())
+    }
+}
+impl<'gc> FromValue<'gc> for &'gc WorldRef {
+    fn from_value(_ctx: Context<'gc>, value: Value<'gc>) -> Result<Self, piccolo::TypeError> {
+        value.as_static_user_data::<WorldRef>()
+    }
+}
 
 impl WorldRef {
     /// Convert this [`WorldRef`] into a Lua userdata.
@@ -64,7 +74,7 @@ pub struct LuaEngine {
     state: Arc<SendWrapper<EngineState>>,
 }
 
-/// Internal state for [`LuaEngine`]
+/// Internal state for [`LuaEngine`].
 struct EngineState {
     /// The Lua engine.
     lua: Mutex<Lua>,
@@ -75,7 +85,9 @@ struct EngineState {
     compiled_scripts: Mutex<HashMap<Cid, StaticClosure>>,
 }
 
+/// Extension trait for the [`Context`] that makes it easier to access our lua singletons.
 trait CtxExt {
+    /// Get a reference to the lua singletons.
     fn singletons(&self) -> &LuaSingletons;
 }
 impl CtxExt for piccolo::Context<'_> {
@@ -87,11 +99,78 @@ impl CtxExt for piccolo::Context<'_> {
     }
 }
 
+/// Extension trait on top of [`Value`] to add helper functions.
+trait ValueExt<'gc> {
+    /// Convert to a static user data type.
+    fn as_static_user_data<T: 'static>(&self) -> Result<&'gc T, piccolo::TypeError>;
+}
+impl<'gc> ValueExt<'gc> for Value<'gc> {
+    fn as_static_user_data<T: 'static>(&self) -> Result<&'gc T, piccolo::TypeError> {
+        if let Value::UserData(t) = self {
+            Ok(t.downcast_static().map_err(|_| piccolo::TypeError {
+                expected: std::any::type_name::<T>(),
+                found: "other user data",
+            })?)
+        } else {
+            Err(piccolo::TypeError {
+                expected: std::any::type_name::<T>(),
+                found: "other lua value",
+            })
+        }
+    }
+}
+
+/// Struct for accessing and initializing lua singletons.
+///
+/// This is stored in a lua global and accessed conveniently through our [`CtxExt`] trait
+/// so that we can easily initialize lua tables and callbacks throughout our lua bindings.
+pub struct LuaSingletons {
+    singletons: Rc<AtomicCell<HashMap<usize, Box<dyn Any>>>>,
+}
+impl Default for LuaSingletons {
+    fn default() -> Self {
+        Self {
+            singletons: Rc::new(AtomicCell::new(HashMap::default())),
+        }
+    }
+}
+impl LuaSingletons {
+    /// Fetch a lua singleton, initializing it if it has not yet been created.
+    ///
+    /// The singleton is defined by a function pointer that returns a stashable value.
+    fn get<
+        'gc,
+        S: Fetchable<'gc, Fetched = T> + 'static,
+        T: Stashable<'gc, Stashed = S> + Clone + Copy + 'gc,
+    >(
+        &self,
+        ctx: Context<'gc>,
+        singleton: fn(Context<'gc>) -> T,
+    ) -> T {
+        let map = self.singletons.borrow_mut();
+        let id = singleton as usize;
+        if let Some(entry) = map.get(&id) {
+            let stashed = entry.downcast_ref::<S>().expect(
+                "Encountered two functions with different return types and \
+                the same function pointer.",
+            );
+            ctx.state.registry.fetch(stashed)
+        } else {
+            drop(map); // Make sure we don't deadlock
+            let v = singleton(ctx);
+            let stashed = ctx.state.registry.stash(&ctx, v);
+            self.singletons.borrow_mut().insert(id, Box::new(stashed));
+            v
+        }
+    }
+}
+
 impl Default for EngineState {
     fn default() -> Self {
         // Initialize an empty lua engine and our lua data.
         let mut lua = Lua::core();
         lua.try_run(|ctx| {
+            // Insert our lua singletons.
             ctx.state.globals.set(
                 ctx,
                 "luasingletons",
@@ -241,47 +320,6 @@ impl LuaEngine {
     }
 }
 
-pub struct LuaSingletons {
-    singletons: Rc<AtomicCell<HashMap<usize, Box<dyn Any>>>>,
-}
-impl Default for LuaSingletons {
-    fn default() -> Self {
-        Self {
-            singletons: Rc::new(AtomicCell::new(HashMap::default())),
-        }
-    }
-}
-impl LuaSingletons {
-    /// Fetch a lua singleton, initializing it if it has not yet been created.
-    ///
-    /// The singleton is defined by a function pointer that returns a stashable value.
-    fn get<
-        'gc,
-        S: Fetchable<'gc, Fetched = T> + 'static,
-        T: Stashable<'gc, Stashed = S> + Clone + Copy + 'gc,
-    >(
-        &self,
-        ctx: Context<'gc>,
-        singleton: fn(Context<'gc>) -> T,
-    ) -> T {
-        let map = self.singletons.borrow_mut();
-        let id = singleton as usize;
-        if let Some(entry) = map.get(&id) {
-            let stashed = entry.downcast_ref::<S>().expect(
-                "Encountered two functions with different return types and \
-                the same function pointer.",
-            );
-            ctx.state.registry.fetch(stashed)
-        } else {
-            drop(map); // Make sure we don't deadlock
-            let v = singleton(ctx);
-            let stashed = ctx.state.registry.stash(&ctx, v);
-            self.singletons.borrow_mut().insert(id, Box::new(stashed));
-            v
-        }
-    }
-}
-
 /// A type data that can be used to specify a custom metatable to use for the type when it is
 /// used in an [`EcsRef`] in the lua API.
 #[derive(HasSchema)]
@@ -295,6 +333,21 @@ pub struct EcsRef {
     pub data: EcsRefData,
     /// The path to the desired field.
     pub path: Ustr,
+}
+impl Default for EcsRef {
+    fn default() -> Self {
+        #[derive(HasSchema, Clone, Default)]
+        struct Void;
+        Self {
+            data: EcsRefData::Free(Rc::new(AtomicCell::new(SchemaBox::new(Void)))),
+            path: default(),
+        }
+    }
+}
+impl<'gc> FromValue<'gc> for &'gc EcsRef {
+    fn from_value(_ctx: Context<'gc>, value: Value<'gc>) -> Result<Self, piccolo::TypeError> {
+        value.as_static_user_data::<EcsRef>()
+    }
 }
 
 impl EcsRef {
@@ -330,6 +383,7 @@ pub enum EcsRefData {
     Free(Rc<AtomicCell<SchemaBox>>),
 }
 
+/// A kind of borrow into an [`EcsRef`].
 pub enum EcsRefBorrowKind<'a> {
     Resource(AtomicSchemaRef<'a>),
     Component(ComponentBorrow<'a>),
@@ -338,6 +392,8 @@ pub enum EcsRefBorrowKind<'a> {
 }
 
 impl EcsRefBorrowKind<'_> {
+    /// Get the borrow as a [`SchemaRef`].
+    ///
     /// Will return none if the value does not exist, such as an unloaded asset or a component
     /// that is not set for a given entity.
     pub fn schema_ref(&self) -> Option<SchemaRef> {
@@ -350,16 +406,19 @@ impl EcsRefBorrowKind<'_> {
     }
 }
 
+/// A component borrow into an [`EcsRef`].
 pub struct ComponentBorrow<'a> {
     pub borrow: Ref<'a, UntypedComponentStore>,
     pub entity: Entity,
 }
 
+/// A mutable component borrow into an [`EcsRef`].
 pub struct ComponentBorrowMut<'a> {
     pub borrow: RefMut<'a, UntypedComponentStore>,
     pub entity: Entity,
 }
 
+/// A kind of mutable borrow of an [`EcsRef`].
 pub enum EcsRefBorrowMutKind<'a> {
     Resource(AtomicSchemaRefMut<'a>),
     Component(ComponentBorrowMut<'a>),
@@ -368,6 +427,10 @@ pub enum EcsRefBorrowMutKind<'a> {
 }
 
 impl EcsRefBorrowMutKind<'_> {
+    /// Get the borrow as a [`SchemaRefMut`].
+    ///
+    /// Will return none if the value does not exist, such as an unloaded asset or a component
+    /// that is not set for a given entity.
     pub fn schema_ref_mut(&mut self) -> Option<SchemaRefMut> {
         match self {
             EcsRefBorrowMutKind::Resource(r) => Some(r.schema_ref_mut()),
@@ -379,6 +442,7 @@ impl EcsRefBorrowMutKind<'_> {
 }
 
 impl EcsRefData {
+    /// Immutably borrow the data.
     pub fn borrow(&self) -> EcsRefBorrowKind {
         match self {
             EcsRefData::Resource(resource) => {
@@ -403,7 +467,7 @@ impl EcsRefData {
         }
     }
 
-    /// Mutably borrow the ref.
+    /// Mutably borrow the data.
     pub fn borrow_mut(&self) -> EcsRefBorrowMutKind {
         match self {
             EcsRefData::Resource(resource) => {
@@ -429,7 +493,7 @@ impl EcsRefData {
     }
 }
 
-/// A resource ref.
+/// A reference to component in an [`EcsRef`].
 #[derive(Clone)]
 pub struct ComponentRef {
     /// The component store.
@@ -438,7 +502,7 @@ pub struct ComponentRef {
     pub entity: Entity,
 }
 
-/// An asset ref.
+/// A reference to an asset in an [`EcsRef`]
 #[derive(Clone)]
 pub struct AssetRef {
     /// The asset server handle.
