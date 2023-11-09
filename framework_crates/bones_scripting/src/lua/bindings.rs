@@ -9,11 +9,13 @@ use super::*;
 
 pub mod assets;
 pub mod components;
-pub mod ecsref;
 pub mod entities;
 pub mod resources;
 pub mod schema;
 pub mod world;
+
+pub mod ecsref;
+pub use ecsref::*;
 
 /// Registers lua binding typedatas for bones_framework types.
 pub fn register_lua_typedata() {
