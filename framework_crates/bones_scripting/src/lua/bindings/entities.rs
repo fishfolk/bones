@@ -23,13 +23,9 @@ pub fn entities_metatable(ctx: Context) -> Table {
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
             let this: &EcsRef = stack.consume(ctx)?;
 
-            let mut b = this.data.borrow_mut();
-            let mut binding = b
-                .schema_ref_mut()
-                .unwrap()
-                .into_field_path(FieldPath(this.path))
-                .unwrap();
-            let entities = binding.cast_mut::<Entities>();
+            let mut b = this.borrow_mut();
+            let entities = b.schema_ref_mut()?.cast_into_mut::<Entities>();
+
             let entity = entities.create();
             let newecsref = EcsRef {
                 data: EcsRefData::Free(Rc::new(AtomicCell::new(SchemaBox::new(entity)))),
@@ -48,21 +44,11 @@ pub fn entities_metatable(ctx: Context) -> Table {
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
             let (this, entity_ecsref): (&EcsRef, &EcsRef) = stack.consume(ctx)?;
-            let mut b = this.data.borrow_mut();
-            let mut binding = b
-                .schema_ref_mut()
-                .unwrap()
-                .into_field_path(FieldPath(this.path))
-                .unwrap();
-            let entities = binding.cast_mut::<Entities>();
+            let mut b = this.borrow_mut();
+            let entities = b.schema_ref_mut()?.cast_into_mut::<Entities>();
 
-            let b = entity_ecsref.data.borrow();
-            let binding = b
-                .schema_ref()
-                .unwrap()
-                .field_path(FieldPath(entity_ecsref.path))
-                .unwrap();
-            let entity = binding.cast::<Entity>();
+            let b = entity_ecsref.borrow();
+            let entity = b.schema_ref()?.cast::<Entity>();
             entities.kill(*entity);
 
             Ok(CallbackReturn::Return)

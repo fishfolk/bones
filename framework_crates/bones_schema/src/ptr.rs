@@ -161,6 +161,21 @@ impl<'pointer> SchemaRef<'pointer> {
         }
         Some(current_field)
     }
+
+    /// Clone this schema ref into a new box.
+    pub fn clone_into_box(&self) -> SchemaBox {
+        let Some(clone_fn) = self.schema.clone_fn else {
+            panic!(
+                "The schema for type `{}` does not allow cloning it.",
+                self.schema.full_name
+            );
+        };
+        unsafe {
+            let b = SchemaBox::uninitialized(self.schema);
+            (clone_fn)(self.ptr.as_ptr(), b.ptr.as_ptr());
+            b
+        }
+    }
 }
 
 struct SchemaRefValueDebug<'a>(SchemaRef<'a>);

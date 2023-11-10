@@ -21,14 +21,8 @@ pub fn metatable(ctx: Context) -> Table {
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
             let (world, ecsref): (&WorldRef, &EcsRef) = stack.consume(ctx)?;
 
-            let b = ecsref.data.borrow();
-            let Some(b) = b.schema_ref() else {
-                return Err(anyhow::format_err!("Unable to get value").into());
-            };
-            let Some(b) = b.field_path(FieldPath(ecsref.path)) else {
-                return Err(anyhow::format_err!("Unable to get value").into());
-            };
-            let handle = b.try_cast::<UntypedHandle>()?;
+            let b = ecsref.borrow();
+            let handle = b.schema_ref()?.try_cast::<UntypedHandle>()?;
 
             let assetref = world.with(|world| EcsRef {
                 data: EcsRefData::Asset(AssetRef {

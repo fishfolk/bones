@@ -31,22 +31,54 @@ impl<'gc> FromValue<'gc> for &'gc EcsRef {
 }
 
 impl EcsRef {
-    /// Get the function that may be used to retrieve the metatable to use for this [`EcsRef`].
-    pub fn metatable_fn(&self) -> fn(piccolo::Context) -> piccolo::Table {
-        (|| {
-            let data = self.data.borrow();
-            let field = data
-                .schema_ref()?
-                .access()
-                .field_path(FieldPath(self.path))?;
-            let metatable_fn = field
-                .into_schema_ref()
-                .schema()
-                .type_data
-                .get::<SchemaLuaEcsRefMetatable>()?;
-            Some(metatable_fn.0)
-        })()
-        .unwrap_or(bindings::ecsref::metatable)
+    /// Borrow the value pointed to by the [`EcsRef`]
+    pub fn borrow(&self) -> EcsRefBorrow {
+        EcsRefBorrow {
+            borrow: self.data.borrow(),
+            path: self.path,
+        }
+    }
+
+    /// Mutably borrow the value pointed to by the [`EcsRef`]
+    pub fn borrow_mut(&self) -> EcsRefBorrowMut {
+        EcsRefBorrowMut {
+            borrow: self.data.borrow_mut(),
+            path: self.path,
+        }
+    }
+}
+
+/// A borrow of an [`EcsRef`].
+pub struct EcsRefBorrow<'a> {
+    borrow: EcsRefBorrowKind<'a>,
+    path: Ustr,
+}
+
+impl EcsRefBorrow<'_> {
+    /// Get the [`SchemaRef`].
+    pub fn schema_ref(&self) -> Result<SchemaRef, EcsRefBorrowError> {
+        let b = self.borrow.schema_ref()?;
+        let b = b
+            .field_path(FieldPath(self.path))
+            .ok_or(EcsRefBorrowError::FieldNotFound(self.path))?;
+        Ok(b)
+    }
+}
+
+/// A mutable borrow of an [`EcsRef`].
+pub struct EcsRefBorrowMut<'a> {
+    borrow: EcsRefBorrowMutKind<'a>,
+    path: Ustr,
+}
+
+impl EcsRefBorrowMut<'_> {
+    /// Get the [`SchemaRef`].
+    pub fn schema_ref_mut(&mut self) -> Result<SchemaRefMut, EcsRefBorrowError> {
+        let b = self.borrow.schema_ref_mut()?;
+        let b = b
+            .into_field_path(FieldPath(self.path))
+            .ok_or(EcsRefBorrowError::FieldNotFound(self.path))?;
+        Ok(b)
     }
 }
 
@@ -71,17 +103,54 @@ pub enum EcsRefBorrowKind<'a> {
     Asset(Option<MappedRef<'a, Cid, LoadedAsset, SchemaBox>>),
 }
 
+/// An error that occurs when borrowing an [`EcsRef`].
+#[derive(Debug)]
+pub enum EcsRefBorrowError {
+    MissingComponent {
+        entity: Entity,
+        component_name: &'static str,
+    },
+    AssetNotLoaded,
+    FieldNotFound(Ustr),
+}
+impl std::error::Error for EcsRefBorrowError {}
+impl std::fmt::Display for EcsRefBorrowError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EcsRefBorrowError::MissingComponent {
+                entity,
+                component_name,
+            } => write!(
+                f,
+                "Entity {entity:?} does not have component `{component_name}`"
+            ),
+            EcsRefBorrowError::AssetNotLoaded => write!(f, "Asset not loaded"),
+            EcsRefBorrowError::FieldNotFound(field) => write!(f, "Field not found: {field}"),
+        }
+    }
+}
+
 impl EcsRefBorrowKind<'_> {
     /// Get the borrow as a [`SchemaRef`].
     ///
     /// Will return none if the value does not exist, such as an unloaded asset or a component
     /// that is not set for a given entity.
-    pub fn schema_ref(&self) -> Option<SchemaRef> {
+    pub fn schema_ref(&self) -> Result<SchemaRef, EcsRefBorrowError> {
         match self {
-            EcsRefBorrowKind::Resource(r) => Some(r.schema_ref()),
-            EcsRefBorrowKind::Component(c) => c.borrow.get_ref(c.entity),
-            EcsRefBorrowKind::Free(f) => Some(f.as_ref()),
-            EcsRefBorrowKind::Asset(a) => a.as_ref().map(|x| x.as_ref()),
+            EcsRefBorrowKind::Resource(r) => Ok(r.schema_ref()),
+            EcsRefBorrowKind::Component(c) => {
+                c.borrow
+                    .get_ref(c.entity)
+                    .ok_or(EcsRefBorrowError::MissingComponent {
+                        entity: c.entity,
+                        component_name: &c.borrow.schema().full_name,
+                    })
+            }
+            EcsRefBorrowKind::Free(f) => Ok(f.as_ref()),
+            EcsRefBorrowKind::Asset(a) => a
+                .as_ref()
+                .map(|x| x.as_ref())
+                .ok_or(EcsRefBorrowError::AssetNotLoaded),
         }
     }
 }
@@ -111,12 +180,22 @@ impl EcsRefBorrowMutKind<'_> {
     ///
     /// Will return none if the value does not exist, such as an unloaded asset or a component
     /// that is not set for a given entity.
-    pub fn schema_ref_mut(&mut self) -> Option<SchemaRefMut> {
+    pub fn schema_ref_mut(&mut self) -> Result<SchemaRefMut, EcsRefBorrowError> {
         match self {
-            EcsRefBorrowMutKind::Resource(r) => Some(r.schema_ref_mut()),
-            EcsRefBorrowMutKind::Component(c) => c.borrow.get_ref_mut(c.entity),
-            EcsRefBorrowMutKind::Free(f) => Some(f.as_mut()),
-            EcsRefBorrowMutKind::Asset(a) => a.as_mut().map(|x| x.as_mut()),
+            EcsRefBorrowMutKind::Resource(r) => Ok(r.schema_ref_mut()),
+            EcsRefBorrowMutKind::Component(c) => {
+                c.borrow
+                    .get_ref_mut(c.entity)
+                    .ok_or(EcsRefBorrowError::MissingComponent {
+                        entity: c.entity,
+                        component_name: &c.borrow.schema().full_name,
+                    })
+            }
+            EcsRefBorrowMutKind::Free(f) => Ok(f.as_mut()),
+            EcsRefBorrowMutKind::Asset(a) => a
+                .as_mut()
+                .map(|x| x.as_mut())
+                .ok_or(EcsRefBorrowError::AssetNotLoaded),
         }
     }
 }
@@ -201,15 +280,13 @@ pub fn metatable(ctx: Context) -> Table {
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
                 let this: &EcsRef = stack.consume(ctx)?;
 
-                let b = this.data.borrow();
-                if let Some(value) = b.schema_ref() {
-                    if let Some(value) = value.field_path(FieldPath(this.path)) {
-                        let access = value.access();
-                        stack.push_front(Value::String(piccolo::String::from_slice(
-                            &ctx,
-                            format!("{access:?}"),
-                        )));
-                    }
+                let b = this.borrow();
+                if let Ok(value) = b.schema_ref() {
+                    let access = value.access();
+                    stack.push_front(Value::String(piccolo::String::from_slice(
+                        &ctx,
+                        format!("{access:?}"),
+                    )));
                 }
                 Ok(CallbackReturn::Return)
             }),
@@ -222,14 +299,11 @@ pub fn metatable(ctx: Context) -> Table {
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
                 let (this, key): (&EcsRef, lua::String) = stack.consume(ctx)?;
 
-                let b = this.data.borrow();
-                let newpath = ustr(&format!("{}.{key}", this.path));
-                let field = b
-                    .schema_ref()
-                    .and_then(|x| x.field_path(FieldPath(newpath)))
-                    .ok_or_else(|| anyhow::format_err!("Invalid field {newpath}"))?;
+                let mut newref = this.clone();
+                newref.path = ustr(&format!("{}.{key}", this.path));
+                let b = this.borrow();
 
-                match field.access() {
+                match b.schema_ref()?.access() {
                     SchemaRefAccess::Primitive(p) if !matches!(p, PrimitiveRef::Opaque { .. }) => {
                         match p {
                             PrimitiveRef::Bool(b) => stack.push_front(Value::Boolean(*b)),
@@ -251,8 +325,6 @@ pub fn metatable(ctx: Context) -> Table {
                         }
                     }
                     _ => {
-                        let mut newref = this.clone();
-                        newref.path = newpath;
                         let metatable = ctx.singletons().get(ctx, newref.metatable_fn());
                         let data = AnyUserData::new_static(&ctx, newref);
                         data.set_metatable(&ctx, Some(metatable));
@@ -272,21 +344,14 @@ pub fn metatable(ctx: Context) -> Table {
                 let (this, key, newvalue): (&EcsRef, lua::Value, lua::Value) =
                     stack.consume(ctx)?;
 
-                let mut b = this.data.borrow_mut();
-                let newpath = ustr(&format!("{}.{key}", this.path));
-                let mut field = b
-                    .schema_ref_mut()
-                    .and_then(|x| x.into_field_path(FieldPath(newpath)))
-                    .ok_or_else(|| anyhow::format_err!("Invalid field {newpath}"))?;
+                let mut newref = this.clone();
+                newref.path = ustr(&format!("{}.{key}", this.path));
+                let mut b = newref.borrow_mut();
 
-                match field.access_mut() {
-                    SchemaRefMutAccess::Struct(_) => {
-                        let newecsref = EcsRef {
-                            data: this.data.clone(),
-                            path: newpath,
-                        };
-                        let metatable = ctx.singletons().get(ctx, newecsref.metatable_fn());
-                        let newecsref = AnyUserData::new_static(&ctx, newecsref);
+                match b.schema_ref_mut()?.access_mut() {
+                    SchemaRefMutAccess::Struct(s) => {
+                        let metatable = ctx.singletons().get(ctx, s.0.metatable_fn());
+                        let newecsref = AnyUserData::new_static(&ctx, newref.clone());
                         newecsref.set_metatable(&ctx, Some(metatable));
                         stack.push_front(newecsref.into());
                     }

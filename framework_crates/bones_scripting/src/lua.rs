@@ -88,6 +88,10 @@ struct EngineState {
     compiled_scripts: Mutex<HashMap<Cid, StaticClosure>>,
 }
 
+// TODO: Don't Use Function Pointers to Index Lua Singletons.
+// Unfortunately, function pointers with different signatures may be unified by
+// LLVM when activating, for intance, LTO, and that can cause unexpected behavior
+// when using them as indexes into a HashMap for singletons.
 /// Struct for accessing and initializing lua singletons.
 ///
 /// This is stored in a lua global and accessed conveniently through our [`CtxExt`] trait

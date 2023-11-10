@@ -1,4 +1,7 @@
-use super::*;
+use super::{
+    bindings::{EcsRef, SchemaLuaEcsRefMetatable},
+    *,
+};
 
 /// Extension trait for the [`Context`] that makes it easier to access our lua singletons.
 pub trait CtxExt {
@@ -11,6 +14,39 @@ impl CtxExt for piccolo::Context<'_> {
             unreachable!();
         };
         data.downcast_static::<LuaSingletons>().unwrap()
+    }
+}
+
+/// Helper trait to get a singleton fn pointer for the metatable for a type.
+pub trait MetatableFn {
+    fn metatable_fn(&self) -> fn(piccolo::Context) -> piccolo::Table;
+}
+impl MetatableFn for SchemaRef<'_> {
+    fn metatable_fn(&self) -> fn(piccolo::Context) -> piccolo::Table {
+        self.schema()
+            .type_data
+            .get::<SchemaLuaEcsRefMetatable>()
+            .map(|x| x.0)
+            .unwrap_or(bindings::ecsref::metatable)
+    }
+}
+impl MetatableFn for SchemaRefMut<'_> {
+    fn metatable_fn(&self) -> fn(piccolo::Context) -> piccolo::Table {
+        self.schema()
+            .type_data
+            .get::<SchemaLuaEcsRefMetatable>()
+            .map(|x| x.0)
+            .unwrap_or(bindings::ecsref::metatable)
+    }
+}
+impl MetatableFn for EcsRef {
+    /// Get the function that may be used to retrieve the metatable to use for this [`EcsRef`].
+    fn metatable_fn(&self) -> fn(piccolo::Context) -> piccolo::Table {
+        (|| {
+            let b = self.borrow();
+            Some(b.schema_ref().ok()?.metatable_fn())
+        })()
+        .unwrap_or(bindings::ecsref::metatable)
     }
 }
 

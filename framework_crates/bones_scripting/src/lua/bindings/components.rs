@@ -18,9 +18,75 @@ pub fn metatable(ctx: Context) -> Table {
         .set(ctx, "__newindex", ctx.singletons().get(ctx, no_newindex))
         .unwrap();
 
-    let get_callback = ctx.state.registry.stash(&ctx, lua::Value::Nil);
-    let insert_callback = ctx.state.registry.stash(&ctx, lua::Value::Nil);
-    let remove_callback = ctx.state.registry.stash(&ctx, lua::Value::Nil);
+    let get_callback = ctx.state.registry.stash(
+        &ctx,
+        AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
+            let (world, entity_ecsref, schema): (&WorldRef, &EcsRef, AnyUserData) =
+                stack.consume(ctx)?;
+
+            let b = entity_ecsref.borrow();
+            let entity = *b.schema_ref()?.try_cast::<Entity>()?;
+
+            let schema = *schema.downcast_static::<&Schema>()?;
+
+            let store = world.with(|world| {
+                let store = world.components.get_cell_by_schema_id(schema.id())?;
+                Ok::<_, anyhow::Error>(store)
+            })?;
+
+            let ecsref = EcsRef {
+                data: EcsRefData::Component(ComponentRef { store, entity }),
+                path: default(),
+            };
+            let metatable = ctx.singletons().get(ctx, ecsref.metatable_fn());
+            let ecsref = AnyUserData::new_static(&ctx, ecsref);
+            ecsref.set_metatable(&ctx, Some(metatable));
+            stack.push_front(ecsref.into());
+
+            Ok(CallbackReturn::Return)
+        }),
+    );
+    let insert_callback = ctx.state.registry.stash(
+        &ctx,
+        AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
+            let (world, entity_ecsref, value_ecsref): (&WorldRef, &EcsRef, &EcsRef) =
+                stack.consume(ctx)?;
+
+            let b = entity_ecsref.borrow();
+            let entity = *b.schema_ref()?.try_cast::<Entity>()?;
+
+            let b = value_ecsref.borrow();
+            let value = b.schema_ref()?;
+
+            world.with(|world| {
+                let mut store = world.components.get_mut_by_schema_id(value.schema().id())?;
+                store.insert_box(entity, value.clone_into_box());
+                Ok::<_, anyhow::Error>(())
+            })?;
+
+            Ok(CallbackReturn::Return)
+        }),
+    );
+    let remove_callback = ctx.state.registry.stash(
+        &ctx,
+        AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
+            let (world, entity_ecsref, schema): (&WorldRef, &EcsRef, AnyUserData) =
+                stack.consume(ctx)?;
+
+            let b = entity_ecsref.borrow();
+            let entity = *b.schema_ref()?.try_cast::<Entity>()?;
+
+            let schema = *schema.downcast_static::<&Schema>()?;
+
+            world.with(|world| {
+                let mut store = world.components.get_mut_by_schema_id(schema.id())?;
+                store.remove_box(entity);
+                Ok::<_, anyhow::Error>(())
+            })?;
+
+            Ok(CallbackReturn::Return)
+        }),
+    );
 
     metatable
         .set(
@@ -33,13 +99,13 @@ pub fn metatable(ctx: Context) -> Table {
                     #[allow(clippy::single_match)]
                     match key.as_bytes() {
                         b"get" => {
-                            stack.push_front(ctx.state.registry.fetch(&get_callback));
+                            stack.push_front(ctx.state.registry.fetch(&get_callback).into());
                         }
                         b"insert" => {
-                            stack.push_front(ctx.state.registry.fetch(&insert_callback));
+                            stack.push_front(ctx.state.registry.fetch(&insert_callback).into());
                         }
                         b"remove" => {
-                            stack.push_front(ctx.state.registry.fetch(&remove_callback));
+                            stack.push_front(ctx.state.registry.fetch(&remove_callback).into());
                         }
                         _ => (),
                     }

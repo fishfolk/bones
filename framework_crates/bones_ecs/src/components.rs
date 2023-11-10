@@ -110,6 +110,22 @@ impl ComponentStores {
     }
 
     /// Get the untyped component storage by the component's [`SchemaId`].
+    pub fn get_by_schema_id(
+        &self,
+        id: SchemaId,
+    ) -> Result<Ref<UntypedComponentStore>, NotInitialized> {
+        Ok(self.components.get(&id).ok_or(NotInitialized)?.borrow())
+    }
+
+    /// Get the untyped component storage by the component's [`SchemaId`].
+    pub fn get_mut_by_schema_id(
+        &self,
+        id: SchemaId,
+    ) -> Result<RefMut<UntypedComponentStore>, NotInitialized> {
+        Ok(self.components.get(&id).ok_or(NotInitialized)?.borrow_mut())
+    }
+
+    /// Get the untyped component storage by the component's [`SchemaId`].
     pub fn get_cell_by_schema_id(
         &self,
         id: SchemaId,
