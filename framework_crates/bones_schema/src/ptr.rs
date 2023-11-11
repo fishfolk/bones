@@ -549,7 +549,7 @@ impl<'a> EnumRefAccess<'a> {
 }
 
 /// Helper for accessing the inner data of a schema ref at runtime.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum PrimitiveRef<'a> {
     /// A [`bool`]
     Bool(&'a bool),
@@ -862,6 +862,23 @@ impl<'pointer> SchemaRefMut<'pointer> {
             .field(field_idx)
             .map(|x| x.into_schema_ref_mut())
             .map_err(|access| access.into_schema_ref_mut())
+    }
+
+    /// Clone `other` and write it's data to `self`. Panics if this schema doesn't support cloning.
+    pub fn write(&mut self, other: SchemaRef) -> Result<(), SchemaMismatchError> {
+        if self.schema == other.schema {
+            let clone_fn = self.schema.clone_fn.unwrap_or_else(|| {
+                panic!(
+                    "Schema does not provide clone fn: {}",
+                    self.schema.full_name
+                )
+            });
+            // SOUND: we've verified the clone fn matches the schema of both values.
+            unsafe { clone_fn(other.as_ptr(), self.as_ptr()) }
+            Ok(())
+        } else {
+            Err(SchemaMismatchError)
+        }
     }
 }
 

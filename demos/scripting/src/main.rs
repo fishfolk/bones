@@ -5,8 +5,10 @@ use bones_framework::prelude::*;
 #[type_data(metadata_asset("game"))]
 #[repr(C)]
 struct GameMeta {
+    startup: Handle<LuaScript>,
     update: Handle<LuaScript>,
     version: u32,
+    sprite: Handle<Image>,
     info: Handle<GameInfoMeta>,
 }
 
@@ -49,6 +51,8 @@ fn main() {
     let default_session = game.sessions.create("default");
     default_session
         .install_plugin(DefaultSessionPlugin)
+        .add_startup_system(startup)
+        .add_startup_system(startup_lua)
         .add_system_to_stage(Update, update_script);
     default_session.world.insert_resource(DemoData {
         name: "default name".into(),
@@ -68,6 +72,18 @@ fn main() {
         "bones.demo_scripting".into(),
     );
     renderer.app().run();
+}
+
+fn startup(
+    mut entities: ResMut<Entities>,
+    mut transforms: CompMut<Transform>,
+    mut cameras: CompMut<Camera>,
+) {
+    spawn_default_camera(&mut entities, &mut transforms, &mut cameras);
+}
+
+fn startup_lua(world: &World, lua_engine: Res<LuaEngine>, meta: Root<GameMeta>) {
+    lua_engine.run_script_system(world, meta.startup);
 }
 
 fn update_script(world: &World, lua_engine: Res<LuaEngine>, meta: Root<GameMeta>) {

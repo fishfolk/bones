@@ -35,6 +35,9 @@ pub fn no_newindex(ctx: Context) -> AnyCallback {
 pub fn env(ctx: Context) -> Table {
     let env = Table::new(&ctx);
 
+    env.set(ctx, "math", ctx.state.globals.get(ctx, "math"))
+        .unwrap();
+
     let schema_fn = AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
         let singletons = ctx.singletons();
         let schema_metatable = singletons.get(ctx, schema::metatable);

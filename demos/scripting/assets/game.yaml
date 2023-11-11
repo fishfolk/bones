@@ -1,3 +1,5 @@
 update: ./update.lua
+startup: ./startup.lua
 version: 1
 info: ./info.yaml
+sprite: ./image.png

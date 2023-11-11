@@ -1,17 +1,27 @@
-local Vec3 = s"Vec3"
 local Transform = s"Transform"
-local entities = world.resources:get(s"Entities")
+local Entity = s"Entity"
+local Time = s"Time"
+local Entities = s"Entities"
+
 local components = world.components
+local entities = world.resources:get(Entities)
 
-local entity = entities:create();
-local t = Transform:create()
+local time = world.resources:get(Time)
 
-t.scale.y = 7
-components:insert(entity, t)
+local ent = Entity:create()
+ent[0] = 0
+ent[1] = 0
 
-local comp = components:get(entity, Transform);
+local t = components:get(ent, Transform)
+t.translation.x = math.sin(time.elapsed_seconds * 2) * 100
+t.translation.y = math.sin(time.elapsed_seconds * 1.8) * 200
 
-components:remove(entity, Transform);
+-- t.scale.y = 7
+-- components:insert(entity, t)
 
-info(components:get(entity, Transform));
-entities:kill(entity)
+-- local comp = components:get(entity, Transform);
+
+-- components:remove(entity, Transform);
+
+-- info(components:get(entity, Transform));
+-- entities:kill(entity)

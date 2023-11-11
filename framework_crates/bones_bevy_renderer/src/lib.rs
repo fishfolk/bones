@@ -968,7 +968,10 @@ fn extract_bones_sprites(
         if let Ok(sprites) = world.components.get::<bones::Sprite>() {
             let mut z_offset = 0.0;
             for (_, (sprite, transform)) in entities.iter_with((&sprites, &transforms)) {
-                let sprite_image = bones_assets.get(sprite.image);
+                let Some(sprite_image) = bones_assets.try_get(sprite.image) else {
+                    warn!("Sprite not loaded: {:?}", sprite.image);
+                    continue;
+                };
                 let image_id = if let bones::Image::External(id) = &*sprite_image {
                     *id
                 } else {

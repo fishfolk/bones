@@ -301,7 +301,7 @@ pub fn metatable(ctx: Context) -> Table {
 
                 let mut newref = this.clone();
                 newref.path = ustr(&format!("{}.{key}", this.path));
-                let b = this.borrow();
+                let b = newref.borrow();
 
                 match b.schema_ref()?.access() {
                     SchemaRefAccess::Primitive(p) if !matches!(p, PrimitiveRef::Opaque { .. }) => {
@@ -326,7 +326,7 @@ pub fn metatable(ctx: Context) -> Table {
                     }
                     _ => {
                         let metatable = ctx.singletons().get(ctx, newref.metatable_fn());
-                        let data = AnyUserData::new_static(&ctx, newref);
+                        let data = AnyUserData::new_static(&ctx, newref.clone());
                         data.set_metatable(&ctx, Some(metatable));
                         stack.push_front(data.into());
                     }
@@ -344,21 +344,20 @@ pub fn metatable(ctx: Context) -> Table {
                 let (this, key, newvalue): (&EcsRef, lua::Value, lua::Value) =
                     stack.consume(ctx)?;
 
-                let mut newref = this.clone();
-                newref.path = ustr(&format!("{}.{key}", this.path));
-                let mut b = newref.borrow_mut();
+                let mut this = this.clone();
+                this.path = ustr(&format!("{}.{key}", this.path));
+                let mut b = this.borrow_mut();
+                let mut this_ref = b.schema_ref_mut()?;
 
-                match b.schema_ref_mut()?.access_mut() {
-                    SchemaRefMutAccess::Struct(s) => {
-                        let metatable = ctx.singletons().get(ctx, s.0.metatable_fn());
-                        let newecsref = AnyUserData::new_static(&ctx, newref.clone());
-                        newecsref.set_metatable(&ctx, Some(metatable));
-                        stack.push_front(newecsref.into());
-                    }
-                    SchemaRefMutAccess::Vec(_)
+                match this_ref.access_mut() {
+                    SchemaRefMutAccess::Struct(_)
+                    | SchemaRefMutAccess::Vec(_)
                     | SchemaRefMutAccess::Enum(_)
                     | SchemaRefMutAccess::Map(_) => {
-                        todo!("Implement vec, enum, and map assigment")
+                        let newvalue = newvalue.as_static_user_data::<EcsRef>()?;
+                        let newvalue_b = newvalue.borrow();
+                        let newvalue_ref = newvalue_b.schema_ref()?;
+                        this_ref.write(newvalue_ref)?;
                     }
                     SchemaRefMutAccess::Primitive(p) => match (p, newvalue) {
                         (PrimitiveRefMut::Bool(b), Value::Boolean(newb)) => *b = newb,
