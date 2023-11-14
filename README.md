@@ -1,5 +1,7 @@
 # Bones
 
+<img src="https://raw.githubusercontent.com/fishfolk/bones_branding/main/sources/logo.svg" align="right" width="300px" />
+
 [![Documentation](https://img.shields.io/badge/documentation-fishfolk.org-green.svg?labelColor=1e1c24&color=f3ee7a)](https://fishfolk.org/bones/overview/introduction/)
 [![Crates.io](https://img.shields.io/crates/v/bones_lib?labelColor=1e1c24)](https://crates.io/crates/bones_lib)
 [![docs.rs](https://img.shields.io/docsrs/bones_framework?label=API%20Docs&labelColor=1e1c24)](https://docs.rs/bones_framework)
