@@ -6,7 +6,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__tostring",
-            AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
+            AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
                 stack.push_front(
                     piccolo::String::from_static(&ctx, "Components { insert, remove, get }").into(),
                 );
@@ -20,7 +20,7 @@ pub fn metatable(ctx: Context) -> Table {
 
     let get_callback = ctx.state.registry.stash(
         &ctx,
-        AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
+        AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
             let (world, entity_ecsref, schema): (&WorldRef, &EcsRef, AnyUserData) =
                 stack.consume(ctx)?;
 
@@ -48,7 +48,7 @@ pub fn metatable(ctx: Context) -> Table {
     );
     let insert_callback = ctx.state.registry.stash(
         &ctx,
-        AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
+        AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
             let (world, entity_ecsref, value_ecsref): (&WorldRef, &EcsRef, &EcsRef) =
                 stack.consume(ctx)?;
 
@@ -69,7 +69,7 @@ pub fn metatable(ctx: Context) -> Table {
     );
     let remove_callback = ctx.state.registry.stash(
         &ctx,
-        AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
+        AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
             let (world, entity_ecsref, schema): (&WorldRef, &EcsRef, AnyUserData) =
                 stack.consume(ctx)?;
 
@@ -92,7 +92,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__index",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
                 let (_world, key): (&WorldRef, lua::Value) = stack.consume(ctx)?;
 
                 if let Value::String(key) = key {

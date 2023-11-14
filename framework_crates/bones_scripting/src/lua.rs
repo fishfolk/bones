@@ -7,8 +7,8 @@ use bones_lib::ecs::utils::*;
 use parking_lot::Mutex;
 use piccolo::{
     registry::{Fetchable, Stashable},
-    AnyUserData, Closure, Context, FromValue, Fuel, Lua, ProtoCompileError, StaticClosure, Table,
-    Thread, ThreadMode, Value,
+    AnyUserData, Closure, Context, Executor, FromValue, Fuel, Lua, ProtoCompileError,
+    StashedClosure, Table, Value,
 };
 use send_wrapper::SendWrapper;
 use std::{any::Any, rc::Rc, sync::Arc};
@@ -85,7 +85,7 @@ struct EngineState {
     /// metatable, etc.
     data: LuaSingletons,
     /// Cache of the content IDs of loaded scripts, and their compiled lua closures.
-    compiled_scripts: Mutex<HashMap<Cid, StaticClosure>>,
+    compiled_scripts: Mutex<HashMap<Cid, StashedClosure>>,
 }
 
 // TODO: Don't Use Function Pointers to Index Lua Singletons.
@@ -216,10 +216,7 @@ impl LuaEngine {
                 // Wrap world reference so that it can be converted to lua userdata.
                 let world = WorldRef(world);
 
-                let result = lua.try_run(|ctx| {
-                    // Create a thread
-                    let thread = Thread::new(&ctx);
-
+                let executor = lua.try_run(|ctx| {
                     // Fetch the env table
                     let env = self.state.data.get(ctx, bindings::env);
 
@@ -258,33 +255,14 @@ impl LuaEngine {
                     let world = world
                         .into_userdata(ctx, self.state.data.get(ctx, bindings::world::metatable));
                     env.set(ctx, "world", world)?;
+                    ctx.state.globals.set(ctx, "world", world)?;
 
-                    // Start the thread
-                    thread.start(ctx, closure.into(), ())?;
-
-                    // Run the thread to completion
-                    let mut fuel = Fuel::with_fuel(i32::MAX);
-                    loop {
-                        // If the thread is ready
-                        if matches!(thread.mode(), ThreadMode::Normal) {
-                            // Step it
-                            thread.step(ctx, &mut fuel)?;
-                        } else {
-                            break;
-                        }
-
-                        // Handle fuel interruptions
-                        if fuel.is_interrupted() {
-                            break;
-                        }
-                    }
-
-                    // Take the thread result and print any errors
-                    thread.take_return::<()>(ctx)??;
-
-                    Ok(())
+                    let ex = Executor::start(ctx, closure.into(), ());
+                    let ex = ctx.state.registry.stash(&ctx, ex);
+                    Ok(ex)
                 });
-                if let Err(e) = result {
+
+                if let Err(e) = executor.and_then(|ex| lua.execute::<()>(&ex)) {
                     tracing::error!("{e}");
                 }
             });

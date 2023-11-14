@@ -38,7 +38,7 @@ pub fn env(ctx: Context) -> Table {
     env.set(ctx, "math", ctx.state.globals.get(ctx, "math"))
         .unwrap();
 
-    let schema_fn = AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+    let schema_fn = AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
         let singletons = ctx.singletons();
         let schema_metatable = singletons.get(ctx, schema::metatable);
 
@@ -71,65 +71,61 @@ pub fn env(ctx: Context) -> Table {
 
     macro_rules! add_log_fn {
         ($level:ident) => {
-            env.set(
-                ctx,
-                stringify!($level),
-                AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
-                    #[derive(Debug, Copy, Clone, Eq, PartialEq, Collect)]
-                    #[collect(require_static)]
-                    enum Mode {
-                        Init,
-                        First,
-                    }
+            let $level = AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
+                #[derive(Debug, Copy, Clone, Eq, PartialEq, Collect)]
+                #[collect(require_static)]
+                enum Mode {
+                    Init,
+                    First,
+                }
 
-                    #[derive(Collect)]
-                    #[collect(no_drop)]
-                    struct PrintSeq<'gc> {
-                        mode: Mode,
-                        values: Vec<Value<'gc>>,
-                    }
+                #[derive(Collect)]
+                #[collect(no_drop)]
+                struct PrintSeq<'gc> {
+                    mode: Mode,
+                    values: Vec<Value<'gc>>,
+                }
 
-                    impl<'gc> Sequence<'gc> for PrintSeq<'gc> {
-                        fn poll(
-                            &mut self,
-                            ctx: Context<'gc>,
-                            _fuel: &mut Fuel,
-                            stack: &mut Stack<'gc>,
-                        ) -> Result<SequencePoll<'gc>, Error<'gc>> {
-                            if self.mode == Mode::Init {
-                                self.mode = Mode::First;
-                            } else {
-                                self.values.push(stack.get(0));
-                            }
-                            stack.clear();
+                impl<'gc> Sequence<'gc> for PrintSeq<'gc> {
+                    fn poll<'a>(
+                        &mut self,
+                        ctx: Context<'gc>,
+                        _fuel: &mut Fuel,
+                        mut stack: Stack<'gc, 'a>,
+                    ) -> Result<SequencePoll<'gc>, Error<'gc>> {
+                        if self.mode == Mode::Init {
+                            self.mode = Mode::First;
+                        } else {
+                            self.values.push(stack.get(0));
+                        }
+                        stack.clear();
 
-                            while let Some(value) = self.values.pop() {
-                                match meta_ops::tostring(ctx, value)? {
-                                    MetaResult::Value(v) => tracing::$level!("{v}"),
-                                    MetaResult::Call(call) => {
-                                        stack.extend(call.args);
-                                        return Ok(SequencePoll::Call {
-                                            function: call.function,
-                                            is_tail: false,
-                                        });
-                                    }
+                        while let Some(value) = self.values.pop() {
+                            match meta_ops::tostring(ctx, value)? {
+                                MetaResult::Value(v) => tracing::$level!("{v}"),
+                                MetaResult::Call(call) => {
+                                    stack.extend(call.args);
+                                    return Ok(SequencePoll::Call {
+                                        function: call.function,
+                                        is_tail: false,
+                                    });
                                 }
                             }
-
-                            Ok(SequencePoll::Return)
                         }
-                    }
 
-                    Ok(CallbackReturn::Sequence(AnySequence::new(
-                        &ctx,
-                        PrintSeq {
-                            mode: Mode::Init,
-                            values: stack.drain(..).rev().collect(),
-                        },
-                    )))
-                }),
-            )
-            .unwrap();
+                        Ok(SequencePoll::Return)
+                    }
+                }
+
+                Ok(CallbackReturn::Sequence(AnySequence::new(
+                    &ctx,
+                    PrintSeq {
+                        mode: Mode::Init,
+                        values: stack.drain(..).rev().collect(),
+                    },
+                )))
+            });
+            env.set(ctx, stringify!($level), $level).unwrap();
         };
     }
 
@@ -139,6 +135,7 @@ pub fn env(ctx: Context) -> Table {
     add_log_fn!(info);
     add_log_fn!(warn);
     add_log_fn!(error);
+    env.set(ctx, "print", info).unwrap();
 
     // Prevent creating new items in the global scope, by overrideing the __newindex metamethod
     // on the _ENV metatable.

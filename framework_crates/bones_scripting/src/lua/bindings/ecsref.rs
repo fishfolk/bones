@@ -92,6 +92,7 @@ pub enum EcsRefData {
     /// An asset ref.
     Asset(AssetRef),
     /// A free-standing ref, not stored in the ECS.
+    // TODO: use a `Gc` pointer instead of an Rc maybe.
     Free(Rc<AtomicCell<SchemaBox>>),
 }
 
@@ -277,7 +278,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__tostring",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
                 let this: &EcsRef = stack.consume(ctx)?;
 
                 let b = this.borrow();
@@ -296,7 +297,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__index",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
                 let (this, key): (&EcsRef, lua::String) = stack.consume(ctx)?;
 
                 let mut newref = this.clone();
@@ -340,7 +341,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__newindex",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
                 let (this, key, newvalue): (&EcsRef, lua::Value, lua::Value) =
                     stack.consume(ctx)?;
 

@@ -6,7 +6,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__tostring",
-            AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
+            AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
                 stack.push_front(
                     piccolo::String::from_static(&ctx, "World { resources, components, assets }")
                         .into(),
@@ -23,7 +23,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__index",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
                 let (world, key): (&WorldRef, lua::String) = stack.consume(ctx)?;
 
                 let singletons = ctx.singletons();

@@ -9,7 +9,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__tostring",
-            AnyCallback::from_fn(&ctx, |ctx, _fuel, stack| {
+            AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
                 stack.push_front(piccolo::String::from_static(&ctx, "Assets { root, get }").into());
                 Ok(CallbackReturn::Return)
             }),
@@ -18,7 +18,7 @@ pub fn metatable(ctx: Context) -> Table {
 
     let get_callback = ctx.state.registry.stash(
         &ctx,
-        AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+        AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
             let (world, ecsref): (&WorldRef, &EcsRef) = stack.consume(ctx)?;
 
             let b = ecsref.borrow();
@@ -45,7 +45,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__index",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, stack| {
+            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
                 let (world, key): (&WorldRef, lua::Value) = stack.consume(ctx)?;
 
                 if let Value::String(key) = key {
