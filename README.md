@@ -1,4 +1,8 @@
-# Bones
+<div align="center">
+<img src="https://raw.githubusercontent.com/fishfolk/bones_branding/main/renders/logo-rect.svg" align="center" width="250px" />
+<h1>Bones</h1>
+
+An easy-to-use game engine for making real games.
 
 [![Documentation](https://img.shields.io/badge/documentation-fishfolk.org-green.svg?labelColor=1e1c24&color=f3ee7a)](https://fishfolk.org/bones/overview/introduction/)
 [![Crates.io](https://img.shields.io/crates/v/bones_lib?labelColor=1e1c24)](https://crates.io/crates/bones_lib)
@@ -7,9 +11,13 @@
 [![License](https://img.shields.io/badge/License-MIT%20or%20Apache%202-green.svg?label=license&labelColor=1e1c24&color=34925e)](./LICENSE)
 [![Discord](https://img.shields.io/badge/chat-on%20discord-green.svg?logo=discord&logoColor=fff&labelColor=1e1c24&color=8d5b3f)][Discord]
 
-A work-in-progress, simple, and easy-to-use game engine that can be rendered with [Bevy].
+<hr />
 
-Used in the [Jumpy] game, and will possibly be used in other FishFolk games in the future.
+</div>
+
+Bones is a work-in-progress game engine that gives you everything you need to make real games. The bones framework can be rendered with [Bevy], but is fundamentally engine agnostic and comes with it's own ECS, asset server, and user experience. Bones is officially focused on 2D games, but can be used for 3D games too if you are willing to create custom rendering integrations.
+
+Bones is used in the [Jumpy] game, and will possibly be used in other FishFolk games in the future.
 
 Check out [Fishfolk.org] for more documentation and tutorials.
 
