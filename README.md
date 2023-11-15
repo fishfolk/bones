@@ -15,7 +15,7 @@ An easy-to-use game engine for making real games.
 
 </div>
 
-Bones is a work-in-progress game engine that gives you everything you need to make real games. The bones framework can be rendered with [Bevy], but is fundamentally engine agnostic and comes with it's own ECS, asset server, and user experience. Bones is officially focused on 2D games, but can be used for 3D games too if you are willing to create custom rendering integrations.
+Bones is a work-in-progress game engine for helping your make real games. This means that we are building real games with it, and everything that we can make game-independent is being put back into bones. The bones framework can be rendered with [Bevy], but is fundamentally engine agnostic and comes with it's own ECS, asset server, and user experience. Bones is officially focused on 2D games, but can be used for 3D games too if you are willing to create custom rendering integrations.
 
 Bones is used in the [Jumpy] game, and will possibly be used in other FishFolk games in the future.
 
