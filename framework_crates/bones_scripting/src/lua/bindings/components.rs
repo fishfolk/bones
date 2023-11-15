@@ -37,11 +37,9 @@ pub fn metatable(ctx: Context) -> Table {
             let ecsref = EcsRef {
                 data: EcsRefData::Component(ComponentRef { store, entity }),
                 path: default(),
-            };
-            let metatable = ctx.singletons().get(ctx, ecsref.metatable_fn());
-            let ecsref = AnyUserData::new_static(&ctx, ecsref);
-            ecsref.set_metatable(&ctx, Some(metatable));
-            stack.push_front(ecsref.into());
+            }
+            .into_value(ctx);
+            stack.push_front(ecsref);
 
             Ok(CallbackReturn::Return)
         }),

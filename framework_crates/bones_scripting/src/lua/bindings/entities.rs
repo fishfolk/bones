@@ -33,12 +33,9 @@ pub fn entities_metatable(ctx: Context) -> Table {
             let newecsref = EcsRef {
                 data: EcsRefData::Free(Rc::new(AtomicCell::new(SchemaBox::new(entity)))),
                 path: default(),
-            };
-            let metatable = ctx.singletons().get(ctx, newecsref.metatable_fn());
-            let newecsref = AnyUserData::new_static(&ctx, newecsref);
-            newecsref.set_metatable(&ctx, Some(metatable));
-
-            stack.push_front(newecsref.into());
+            }
+            .into_value(ctx);
+            stack.push_front(newecsref);
 
             Ok(CallbackReturn::Return)
         }),
@@ -107,11 +104,9 @@ pub fn entities_metatable(ctx: Context) -> Table {
                     let ecsref = EcsRef {
                         data: EcsRefData::Free(Rc::new(AtomicCell::new(SchemaBox::new(entity)))),
                         path: default(),
-                    };
-                    let metatable = ctx.singletons().get(ctx, ecsref.metatable_fn());
-                    let ecsref = AnyUserData::new_static(&ctx, ecsref);
-                    ecsref.set_metatable(&ctx, Some(metatable));
-                    stack.push_back(ecsref.into());
+                    }
+                    .into_value(ctx);
+                    stack.push_back(ecsref);
 
                     world.with(|world| {
                         for schema in &state.schemas {
@@ -119,11 +114,9 @@ pub fn entities_metatable(ctx: Context) -> Table {
                             let ecsref = EcsRef {
                                 data: EcsRefData::Component(ComponentRef { store, entity }),
                                 path: default(),
-                            };
-                            let metatable = ctx.singletons().get(ctx, ecsref.metatable_fn());
-                            let ecsref = AnyUserData::new_static(&ctx, ecsref);
-                            ecsref.set_metatable(&ctx, Some(metatable));
-                            stack.push_back(ecsref.into());
+                            }
+                            .into_value(ctx);
+                            stack.push_back(ecsref);
                         }
 
                         Ok::<_, anyhow::Error>(())

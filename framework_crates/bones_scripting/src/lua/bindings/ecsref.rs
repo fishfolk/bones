@@ -46,6 +46,14 @@ impl EcsRef {
             path: self.path,
         }
     }
+
+    /// Convert into a lua value.
+    pub fn into_value(self, ctx: Context) -> Value {
+        let metatable = ctx.singletons().get(ctx, self.metatable_fn());
+        let ecsref = AnyUserData::new_static(&ctx, self);
+        ecsref.set_metatable(&ctx, Some(metatable));
+        ecsref.into()
+    }
 }
 
 /// A borrow of an [`EcsRef`].
@@ -326,10 +334,7 @@ pub fn metatable(ctx: Context) -> Table {
                         }
                     }
                     _ => {
-                        let metatable = ctx.singletons().get(ctx, newref.metatable_fn());
-                        let data = AnyUserData::new_static(&ctx, newref.clone());
-                        data.set_metatable(&ctx, Some(metatable));
-                        stack.push_front(data.into());
+                        stack.push_front(newref.clone().into_value(ctx));
                     }
                 }
 

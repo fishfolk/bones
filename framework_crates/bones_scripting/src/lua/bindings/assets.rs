@@ -24,18 +24,16 @@ pub fn metatable(ctx: Context) -> Table {
             let b = ecsref.borrow();
             let handle = b.schema_ref()?.try_cast::<UntypedHandle>()?;
 
-            let assetref = world.with(|world| EcsRef {
-                data: EcsRefData::Asset(AssetRef {
-                    server: (*world.resources.get::<AssetServer>().unwrap()).clone(),
-                    handle: *handle,
-                }),
-                path: default(),
-            });
-            let metatable = ctx.singletons().get(ctx, assetref.metatable_fn());
-            let assetref = AnyUserData::new_static(&ctx, assetref);
-            assetref.set_metatable(&ctx, Some(metatable));
-
-            stack.push_front(assetref.into());
+            let assetref = world
+                .with(|world| EcsRef {
+                    data: EcsRefData::Asset(AssetRef {
+                        server: (*world.resources.get::<AssetServer>().unwrap()).clone(),
+                        handle: *handle,
+                    }),
+                    path: default(),
+                })
+                .into_value(ctx);
+            stack.push_front(assetref);
 
             Ok(CallbackReturn::Return)
         }),
@@ -61,11 +59,9 @@ pub fn metatable(ctx: Context) -> Table {
                                         handle: root,
                                     }),
                                     path: default(),
-                                };
-                                let metatable = ctx.singletons().get(ctx, assetref.metatable_fn());
-                                let assetref = AnyUserData::new_static(&ctx, assetref);
-                                assetref.set_metatable(&ctx, Some(metatable));
-                                stack.push_front(assetref.into());
+                                }
+                                .into_value(ctx);
+                                stack.push_front(assetref);
                             });
                         }
                         b"get" => {

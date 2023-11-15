@@ -32,11 +32,9 @@ pub fn metatable(ctx: Context) -> Table {
                     let ecsref = EcsRef {
                         data: EcsRefData::Resource(cell),
                         path: default(),
-                    };
-                    let metatable = ctx.singletons().get(ctx, ecsref.metatable_fn());
-                    let data = AnyUserData::new_static(&ctx, ecsref);
-                    data.set_metatable(&ctx, Some(metatable));
-                    stack.push_front(data.into());
+                    }
+                    .into_value(ctx);
+                    stack.push_front(ecsref);
                 }
             });
 
