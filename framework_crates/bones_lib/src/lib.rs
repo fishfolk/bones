@@ -28,7 +28,7 @@ use crate::prelude::*;
 pub struct Session {
     /// The ECS world for the core.
     pub world: World,
-    /// The system
+    /// The system stages.
     #[deref]
     pub stages: SystemStages,
     /// Whether or not this session should have it's systems run.

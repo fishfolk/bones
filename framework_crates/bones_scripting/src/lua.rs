@@ -25,7 +25,7 @@ pub use ext::*;
 
 pub mod bindings;
 
-/// Install the scripting plugin.
+/// Install the lua scripting plugin.
 pub fn lua_game_plugin(game: &mut Game) {
     // Register asset type.
     LuaScript::register_schema();
@@ -35,6 +35,90 @@ pub fn lua_game_plugin(game: &mut Game) {
 
     // Initialize the lua engine resource.
     game.init_shared_resource::<LuaEngine>();
+}
+
+/// A [`SessionPlugin] that will run the provided lua plugins
+pub struct LuaPluginLoaderSessionPlugin(pub Vec<Handle<LuaPlugin>>);
+
+/// Resource containing the lua plugins that have been installed in this session.
+#[derive(HasSchema, Deref, DerefMut, Default, Clone)]
+pub struct LuaPlugins(Arc<Vec<Handle<LuaPlugin>>>);
+
+impl SessionPlugin for LuaPluginLoaderSessionPlugin {
+    fn install(self, session: &mut Session) {
+        session.world.insert_resource(LuaPlugins(Arc::new(self.0)));
+
+        for lua_stage in [
+            CoreStage::First,
+            CoreStage::PreUpdate,
+            CoreStage::Update,
+            CoreStage::PostUpdate,
+            CoreStage::Last,
+        ] {
+            session.stages.add_system_to_stage(
+                lua_stage,
+                move |engine: Res<LuaEngine>,
+                      asset_server: Res<AssetServer>,
+                      lua_plugins: Res<LuaPlugins>,
+                      world: &World| {
+                    engine.exec(|lua| {
+                        Frozen::<Freeze![&'freeze World]>::in_scope(world, |world| {
+                            lua.run(|ctx| {
+                                let env = ctx.singletons().get(ctx, bindings::env);
+                                let worldref = WorldRef(world).into_userdata(ctx);
+                                env.set(ctx, "world", worldref).unwrap();
+                                ctx.state.globals.set(ctx, "world", worldref).unwrap();
+                            });
+
+                            for plugin_handle in lua_plugins.iter() {
+                                let Some(plugin) = asset_server.try_get(*plugin_handle) else {
+                                    return;
+                                };
+
+                                // Load the plugin if necessary
+                                if !plugin.has_loaded() {
+                                    if let Err(e) = plugin.load(engine.executor.clone(), lua) {
+                                        tracing::error!("Error loading lua plugin: {e}");
+                                    }
+                                }
+
+                                let mut systems = plugin.systems.borrow_mut();
+                                let systems = systems.as_loaded_mut();
+
+                                for (has_run, closure) in &mut systems.startup {
+                                    if !*has_run {
+                                        let executor = lua.run(|ctx| {
+                                            let closure = ctx.state.registry.fetch(closure);
+                                            let ex = Executor::start(ctx, closure.into(), ());
+                                            ctx.state.registry.stash(&ctx, ex)
+                                        });
+                                        if let Err(e) = lua.execute::<()>(&executor) {
+                                            tracing::error!("Error running lua plugin system: {e}");
+                                        }
+
+                                        *has_run = true;
+                                    }
+                                }
+
+                                for (stage, closure) in &systems.core_stages {
+                                    if stage == &lua_stage {
+                                        let executor = lua.run(|ctx| {
+                                            let closure = ctx.state.registry.fetch(closure);
+                                            let ex = Executor::start(ctx, closure.into(), ());
+                                            ctx.state.registry.stash(&ctx, ex)
+                                        });
+                                        if let Err(e) = lua.execute::<()>(&executor) {
+                                            tracing::error!("Error running lua plugin system: {e}");
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                    });
+                },
+            );
+        }
+    }
 }
 
 /// A frozen reference to the ECS [`World`].
@@ -55,13 +139,12 @@ impl<'gc> FromValue<'gc> for &'gc WorldRef {
 
 impl WorldRef {
     /// Convert this [`WorldRef`] into a Lua userdata.
-    pub fn into_userdata<'gc>(
-        self,
-        ctx: Context<'gc>,
-        world_metatable: Table<'gc>,
-    ) -> AnyUserData<'gc> {
+    pub fn into_userdata<'gc>(self, ctx: Context<'gc>) -> AnyUserData<'gc> {
         let data = AnyUserData::new_static(&ctx, self);
-        data.set_metatable(&ctx, Some(world_metatable));
+        data.set_metatable(
+            &ctx,
+            Some(ctx.singletons().get(ctx, bindings::world::metatable)),
+        );
         data
     }
 }
@@ -252,8 +335,7 @@ impl LuaEngine {
                     })?;
 
                     // Insert the world ref into the global scope
-                    let world = world
-                        .into_userdata(ctx, self.state.data.get(ctx, bindings::world::metatable));
+                    let world = world.into_userdata(ctx);
                     env.set(ctx, "world", world)?;
                     ctx.state.globals.set(ctx, "world", world)?;
 

@@ -4,6 +4,13 @@ use std::collections::VecDeque;
 
 use crate::prelude::*;
 
+/// Resource that is automatically added to the world while a system stage is being run
+/// that specifies the unique ID of the stage that being run.
+///
+/// If the stage is `Ulid(0)`, the default ID, then that means the startup stage is being run.
+#[derive(Deref, DerefMut, Clone, Copy, HasSchema, Default)]
+pub struct CurrentSystemStage(pub Ulid);
+
 /// An ordered collection of [`SystemStage`]s.
 pub struct SystemStages {
     /// The stages in the collection, in the order that they will be run.
@@ -44,20 +51,36 @@ impl SystemStages {
     /// > **Note:** You must call [`initialize_systems()`][Self::initialize_systems] once before
     /// > calling `run()` one or more times.
     pub fn run(&mut self, world: &mut World) {
+        // If we haven't run our startup systems yet
         if !self.has_started {
+            // Set the current stage resource
+            world.insert_resource(CurrentSystemStage(Ulid(0)));
+
+            // For each startup system
             for system in &mut self.startup_systems {
+                // Initialize and run the system
                 system.initialize(world);
                 system.run(world, ());
             }
+
+            // Don't run startup systems again
             self.has_started = true;
         }
 
+        // Run each stage
         for stage in &mut self.stages {
+            // Set the current stage resource
+            world.insert_resource(CurrentSystemStage(stage.id()));
+
+            // Run the stage
             stage.run(world);
         }
 
         // Cleanup killed entities
         world.maintain();
+
+        // Remove the current system stage resource
+        world.resources.remove_cell::<CurrentSystemStage>();
     }
 
     /// Create a [`SystemStages`] collection, initialized with a stage for each [`CoreStage`].
@@ -235,7 +258,7 @@ pub trait StageLabel {
 }
 
 /// A [`StageLabel`] for the 5 core stages.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum CoreStage {
     /// The first stage
     First,

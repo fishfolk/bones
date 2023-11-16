@@ -294,6 +294,12 @@ impl Resources {
         })
     }
 
+    /// Remove a resource from the store.
+    pub fn remove_cell<T: HasSchema>(&mut self) -> Option<AtomicResource<T>> {
+        let previous = self.untyped.remove(T::schema().id());
+        previous.map(|x| AtomicResource::from_untyped(x))
+    }
+
     /// Borrow the underlying [`UntypedResources`] store.
     pub fn untyped(&self) -> &UntypedResources {
         &self.untyped

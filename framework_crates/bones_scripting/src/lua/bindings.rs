@@ -68,6 +68,24 @@ pub fn env(ctx: Context) -> Table {
     });
     env.set(ctx, "schema", schema_fn).unwrap();
     env.set(ctx, "s", schema_fn).unwrap(); // Alias for schema
+    let world = AnyUserData::new_static(&ctx, WorldRef::default());
+    world.set_metatable(&ctx, Some(ctx.singletons().get(ctx, world::metatable)));
+    env.set(ctx, "world", world).unwrap();
+
+    // Set the `CoreStage` enum global
+    let core_stage_table = Table::new(&ctx);
+    for (name, stage) in [
+        ("First", CoreStage::First),
+        ("PreUpdate", CoreStage::PreUpdate),
+        ("Update", CoreStage::Update),
+        ("PostUpdate", CoreStage::PostUpdate),
+        ("Last", CoreStage::Last),
+    ] {
+        core_stage_table
+            .set(ctx, name, AnyUserData::new_static(&ctx, stage))
+            .unwrap();
+    }
+    env.set(ctx, "CoreStage", core_stage_table).unwrap();
 
     macro_rules! add_log_fn {
         ($level:ident) => {

@@ -5,8 +5,7 @@ use bones_framework::prelude::*;
 #[type_data(metadata_asset("game"))]
 #[repr(C)]
 struct GameMeta {
-    startup: Handle<LuaScript>,
-    update: Handle<LuaScript>,
+    plugins: SVec<Handle<LuaPlugin>>,
     version: u32,
     sprite: Handle<Image>,
     info: Handle<GameInfoMeta>,
@@ -48,22 +47,9 @@ fn main() {
     GameMeta::register_schema();
     DemoData::register_schema();
 
-    let default_session = game.sessions.create("default");
-    default_session
-        .install_plugin(DefaultSessionPlugin)
-        .add_startup_system(startup)
-        .add_startup_system(startup_lua)
-        .add_system_to_stage(Update, update_script);
-    default_session.world.insert_resource(DemoData {
-        name: "default name".into(),
-        age: 10.0,
-        favorite_things: ["candy".into(), "rain".into()].into_iter().collect(),
-        attributes: [("coolness".into(), 50.0), ("friendliness".into(), 10.57)]
-            .into_iter()
-            .collect(),
-        best_friend: Some("Jane".into()).into(),
-        state: DemoState::Thinking(20.),
-    });
+    game.sessions
+        .create("launch")
+        .add_startup_system(launch_game_session);
 
     let mut renderer = BonesBevyRenderer::new(game);
     renderer.app_namespace = (
@@ -74,18 +60,38 @@ fn main() {
     renderer.app().run();
 }
 
-fn startup(
+fn launch_game_session(
+    meta: Root<GameMeta>,
+    mut sessions: ResMut<Sessions>,
+    mut session_ops: ResMut<SessionOptions>,
+) {
+    session_ops.delete = true;
+    let game_session = sessions.create("game");
+    game_session
+        .install_plugin(DefaultSessionPlugin)
+        // Install the plugin that will load our lua plugins and run them in the game session
+        .install_plugin(LuaPluginLoaderSessionPlugin(
+            // Tell it to install the lua plugins specified in our game meta
+            meta.plugins.iter().copied().collect(),
+        ))
+        .add_startup_system(game_startup);
+
+    game_session.world.insert_resource(DemoData {
+        name: "default name".into(),
+        age: 10.0,
+        favorite_things: ["candy".into(), "rain".into()].into_iter().collect(),
+        attributes: [("coolness".into(), 50.0), ("friendliness".into(), 10.57)]
+            .into_iter()
+            .collect(),
+        best_friend: Some("Jane".into()).into(),
+        state: DemoState::Thinking(20.),
+    });
+}
+
+fn game_startup(
     mut entities: ResMut<Entities>,
     mut transforms: CompMut<Transform>,
     mut cameras: CompMut<Camera>,
 ) {
     spawn_default_camera(&mut entities, &mut transforms, &mut cameras);
-}
-
-fn startup_lua(world: &World, lua_engine: Res<LuaEngine>, meta: Root<GameMeta>) {
-    lua_engine.run_script_system(world, meta.startup);
-}
-
-fn update_script(world: &World, lua_engine: Res<LuaEngine>, meta: Root<GameMeta>) {
-    lua_engine.run_script_system(world, meta.update);
 }

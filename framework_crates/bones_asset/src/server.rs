@@ -235,10 +235,8 @@ impl AssetServer {
             }
         }
 
-        if self.load_progress.is_finished() {
-            for handle in std::mem::take(&mut pending_asset_changes) {
-                handle_change(self, handle)
-            }
+        for handle in pending_asset_changes {
+            handle_change(self, handle)
         }
     }
 

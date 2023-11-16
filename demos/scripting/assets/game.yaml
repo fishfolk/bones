@@ -1,5 +1,5 @@
-update: ./update.lua
-startup: ./startup.lua
+plugins:
+  - plugin1.plugin.lua
 version: 1
 info: ./info.yaml
 sprite: ./image.png
