@@ -5,19 +5,19 @@ local Time = s"Time"
 local Entities = s"Entities"
 
 local function startup()
-  local meta = world.assets.root
-  local entities = world.resources:get(Entities)
+  local meta = assets.root
+  local entities = resources:get(Entities)
 
   local ent = entities:create()
-  world.components:insert(ent, Transform:create())
+  components:insert(ent, Transform:create())
   local sprite = Sprite:create()
   sprite.image = meta.sprite
-  world.components:insert(ent, sprite)
+  components:insert(ent, sprite)
 end
 
 local function update()
-  local entities = world.resources:get(Entities)
-  local time = world.resources:get(Time)
+  local entities = resources:get(Entities)
+  local time = resources:get(Time)
 
   for ent, t, s in entities:iter_with(Transform, Sprite) do
     t.translation.x = math.sin(time.elapsed_seconds * 2) * 100

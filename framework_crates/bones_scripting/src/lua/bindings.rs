@@ -68,9 +68,8 @@ pub fn env(ctx: Context) -> Table {
     });
     env.set(ctx, "schema", schema_fn).unwrap();
     env.set(ctx, "s", schema_fn).unwrap(); // Alias for schema
-    let world = AnyUserData::new_static(&ctx, WorldRef::default());
-    world.set_metatable(&ctx, Some(ctx.singletons().get(ctx, world::metatable)));
-    env.set(ctx, "world", world).unwrap();
+
+    WorldRef::default().add_to_env(ctx, env);
 
     // Set the `CoreStage` enum global
     let core_stage_table = Table::new(&ctx);

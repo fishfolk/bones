@@ -65,9 +65,8 @@ impl SessionPlugin for LuaPluginLoaderSessionPlugin {
                         Frozen::<Freeze![&'freeze World]>::in_scope(world, |world| {
                             lua.run(|ctx| {
                                 let env = ctx.singletons().get(ctx, bindings::env);
-                                let worldref = WorldRef(world).into_userdata(ctx);
-                                env.set(ctx, "world", worldref).unwrap();
-                                ctx.state.globals.set(ctx, "world", worldref).unwrap();
+                                let worldref = WorldRef(world);
+                                worldref.add_to_env(ctx, env);
                             });
 
                             for plugin_handle in lua_plugins.iter() {
@@ -139,13 +138,31 @@ impl<'gc> FromValue<'gc> for &'gc WorldRef {
 
 impl WorldRef {
     /// Convert this [`WorldRef`] into a Lua userdata.
-    pub fn into_userdata<'gc>(self, ctx: Context<'gc>) -> AnyUserData<'gc> {
+    pub fn into_userdata(self, ctx: Context<'_>) -> AnyUserData<'_> {
         let data = AnyUserData::new_static(&ctx, self);
         data.set_metatable(
             &ctx,
             Some(ctx.singletons().get(ctx, bindings::world::metatable)),
         );
         data
+    }
+
+    /// Add this world
+    fn add_to_env<'gc>(&self, ctx: Context<'gc>, env: Table<'gc>) {
+        ctx.state
+            .globals
+            .set(ctx, "world", self.clone().into_userdata(ctx))
+            .unwrap();
+        for (name, metatable) in [
+            ("world", bindings::world::metatable as fn(Context) -> Table),
+            ("components", bindings::components::metatable),
+            ("resources", bindings::resources::metatable),
+            ("assets", bindings::assets::metatable),
+        ] {
+            let data = AnyUserData::new_static(&ctx, self.clone());
+            data.set_metatable(&ctx, Some(ctx.singletons().get(ctx, metatable)));
+            env.set(ctx, name, data).unwrap();
+        }
     }
 }
 
@@ -297,14 +314,14 @@ impl LuaEngine {
         self.exec(|lua| {
             Frozen::<Freeze![&'freeze World]>::in_scope(world, |world| {
                 // Wrap world reference so that it can be converted to lua userdata.
-                let world = WorldRef(world);
+                let worldref = WorldRef(world);
 
                 let executor = lua.try_run(|ctx| {
                     // Fetch the env table
                     let env = self.state.data.get(ctx, bindings::env);
 
                     // Compile the script
-                    let closure = world.with(|world| {
+                    let closure = worldref.with(|world| {
                         let asset_server = world.resource::<AssetServer>();
                         let cid = *asset_server
                             .store
@@ -335,9 +352,7 @@ impl LuaEngine {
                     })?;
 
                     // Insert the world ref into the global scope
-                    let world = world.into_userdata(ctx);
-                    env.set(ctx, "world", world)?;
-                    ctx.state.globals.set(ctx, "world", world)?;
+                    worldref.add_to_env(ctx, env);
 
                     let ex = Executor::start(ctx, closure.into(), ());
                     let ex = ctx.state.registry.stash(&ctx, ex);
