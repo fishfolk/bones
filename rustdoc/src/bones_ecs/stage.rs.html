@@ -317,11 +317,44 @@
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Implementation of stage abstraction for running collections of systems over a [`World`].
 
 </span><span class="kw">use </span>std::collections::VecDeque;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+
+<span class="doccomment">/// Resource that is automatically added to the world while a system stage is being run
+/// that specifies the unique ID of the stage that being run.
+///
+/// If the stage is `Ulid(0)`, the default ID, then that means the startup stage is being run.
+</span><span class="attr">#[derive(Deref, DerefMut, Clone, Copy, HasSchema, Default)]
+</span><span class="kw">pub struct </span>CurrentSystemStage(<span class="kw">pub </span>Ulid);
 
 <span class="doccomment">/// An ordered collection of [`SystemStage`]s.
 </span><span class="kw">pub struct </span>SystemStages {
@@ -363,17 +396,36 @@
     /// &gt; **Note:** You must call [`initialize_systems()`][Self::initialize_systems] once before
     /// &gt; calling `run()` one or more times.
     </span><span class="kw">pub fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
-        <span class="kw">if </span>!<span class="self">self</span>.has_started {
-            <span class="kw">for </span>system <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.startup_systems {
-                system.initialize(world);
+        <span class="comment">// If we haven&#39;t run our startup systems yet
+        </span><span class="kw">if </span>!<span class="self">self</span>.has_started {
+            <span class="comment">// Set the current stage resource
+            </span>world.insert_resource(CurrentSystemStage(Ulid(<span class="number">0</span>)));
+
+            <span class="comment">// For each startup system
+            </span><span class="kw">for </span>system <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.startup_systems {
+                <span class="comment">// Initialize and run the system
+                </span>system.initialize(world);
                 system.run(world, ());
             }
-            <span class="self">self</span>.has_started = <span class="bool-val">true</span>;
+
+            <span class="comment">// Don&#39;t run startup systems again
+            </span><span class="self">self</span>.has_started = <span class="bool-val">true</span>;
         }
 
-        <span class="kw">for </span>stage <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.stages {
-            stage.run(world);
+        <span class="comment">// Run each stage
+        </span><span class="kw">for </span>stage <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.stages {
+            <span class="comment">// Set the current stage resource
+            </span>world.insert_resource(CurrentSystemStage(stage.id()));
+
+            <span class="comment">// Run the stage
+            </span>stage.run(world);
         }
+
+        <span class="comment">// Cleanup killed entities
+        </span>world.maintain();
+
+        <span class="comment">// Remove the current system stage resource
+        </span>world.resources.remove_cell::&lt;CurrentSystemStage&gt;();
     }
 
     <span class="doccomment">/// Create a [`SystemStages`] collection, initialized with a stage for each [`CoreStage`].
@@ -551,7 +603,7 @@
 }
 
 <span class="doccomment">/// A [`StageLabel`] for the 5 core stages.
-</span><span class="attr">#[derive(Copy, Clone, Debug)]
+</span><span class="attr">#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 </span><span class="kw">pub enum </span>CoreStage {
     <span class="doccomment">/// The first stage
     </span>First,

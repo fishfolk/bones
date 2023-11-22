@@ -305,6 +305,10 @@
 <a href="#305" id="305">305</a>
 <a href="#306" id="306">306</a>
 <a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Time functionality for the Bones framework.
 //!
 //! This is a slimmed down version of [`bevy_time`].
@@ -320,10 +324,14 @@
 <span class="doccomment">/// A clock that tracks how much it has advanced (and how much real time has elapsed) since
 /// its previous update and since its creation.
 </span><span class="attr">#[derive(Clone, Copy, Debug, HasSchema)]
+#[repr(C)]
 </span><span class="kw">pub struct </span>Time {
-    startup: Instant,
-    last_update: <span class="prelude-ty">Option</span>&lt;Instant&gt;,
-    first_update: <span class="prelude-ty">Option</span>&lt;Instant&gt;,
+    <span class="attr">#[schema(opaque)]
+    </span>startup: Instant,
+    <span class="attr">#[schema(opaque)]
+    </span>last_update: <span class="prelude-ty">Option</span>&lt;Instant&gt;,
+    <span class="attr">#[schema(opaque)]
+    </span>first_update: <span class="prelude-ty">Option</span>&lt;Instant&gt;,
 
     <span class="comment">// pausing
     </span>paused: bool,

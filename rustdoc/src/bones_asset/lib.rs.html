@@ -214,7 +214,7 @@
 
 <span class="kw">fn </span>maybe_loader(
     ctx: <span class="kw-2">&amp;mut </span>MetaAssetLoadCtx,
-    ptr: SchemaRefMut&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>&gt;,
+    ptr: SchemaRefMut&lt;<span class="lifetime">&#39;_</span>&gt;,
     deserialzer: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>erased_serde::Deserializer,
 ) -&gt; anyhow::Result&lt;()&gt; {
     deserialzer.deserialize_option(MaybeVisitor { ctx, ptr })<span class="question-mark">?</span>;
@@ -224,7 +224,7 @@
 
 <span class="kw">struct </span>MaybeVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>&gt; {
     ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>MetaAssetLoadCtx&lt;<span class="lifetime">&#39;srv</span>&gt;,
-    ptr: SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;,
+    ptr: SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;de</span>&gt; serde::de::Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>MaybeVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>&gt; {
@@ -254,7 +254,7 @@
         <span class="comment">// Write the enum discriminant for the `Set` variant
         // SOUND: we know the discriminant due to the `#[repr(C, u8)]` annotation.
         </span><span class="kw">unsafe </span>{
-            <span class="self">self</span>.ptr.as_ptr().write(<span class="number">1</span>);
+            <span class="self">self</span>.ptr.as_ptr().cast::&lt;u8&gt;().write(<span class="number">1</span>);
         }
 
         <span class="comment">// Get the pointer to the enum value

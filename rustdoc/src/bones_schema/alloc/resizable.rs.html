@@ -323,31 +323,11 @@
 <a href="#323" id="323">323</a>
 <a href="#324" id="324">324</a>
 <a href="#325" id="325">325</a>
-<a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
-<a href="#329" id="329">329</a>
-<a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     alloc::{<span class="self">self</span>, handle_alloc_error, Layout, LayoutError},
+    ffi::c_void,
     ptr::NonNull,
 };
-
-<span class="kw">use </span>bones_utils::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">super</span>::layout::<span class="kw-2">*</span>;
 
@@ -361,7 +341,7 @@
 </span><span class="kw">pub struct </span>ResizableAlloc {
     <span class="doccomment">/// The pointer to the allocation. May be dangling for a capacity of zero or for a zero-sized
     /// layout.
-    </span>ptr: NonNull&lt;u8&gt;,
+    </span>ptr: NonNull&lt;c_void&gt;,
     <span class="doccomment">/// The layout of the items stored
     </span>layout: Layout,
     <span class="doccomment">/// The layout of the items stored, with it&#39;s size padded to its alignment.
@@ -449,7 +429,7 @@
                 </span><span class="kw">let </span>old_alloc_layout = <span class="self">self</span>.layout.repeat(old_capacity)<span class="question-mark">?</span>.<span class="number">0</span>;
 
                 <span class="comment">// Deallocate the old memory
-                </span><span class="kw">unsafe </span>{ alloc::dealloc(<span class="self">self</span>.ptr.as_ptr(), old_alloc_layout) }
+                </span><span class="kw">unsafe </span>{ alloc::dealloc(<span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>u8, old_alloc_layout) }
             }
 
             <span class="comment">// Update our pointer to be dangling.
@@ -462,14 +442,18 @@
                 <span class="kw">let </span>old_alloc_layout = <span class="self">self</span>.layout.repeat(old_capacity).unwrap().<span class="number">0</span>;
                 <span class="kw">let </span>new_alloc_layout = <span class="self">self</span>.layout.repeat(new_capacity).unwrap().<span class="number">0</span>;
                 <span class="self">self</span>.ptr = NonNull::new(<span class="kw">unsafe </span>{
-                    alloc::realloc(<span class="self">self</span>.ptr.as_ptr(), old_alloc_layout, new_alloc_layout.size())
+                    alloc::realloc(
+                        <span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>u8,
+                        old_alloc_layout,
+                        new_alloc_layout.size(),
+                    ) <span class="kw">as </span><span class="kw-2">*mut </span>c_void
                 })
                 .unwrap_or_else(|| handle_alloc_error(new_alloc_layout));
 
             <span class="comment">// If we need to allocate new memory
             </span>} <span class="kw">else </span>{
                 <span class="kw">let </span>alloc_layout = <span class="self">self</span>.layout.repeat(new_capacity).unwrap().<span class="number">0</span>;
-                <span class="self">self</span>.ptr = NonNull::new(<span class="kw">unsafe </span>{ alloc::alloc(alloc_layout) })
+                <span class="self">self</span>.ptr = NonNull::new(<span class="kw">unsafe </span>{ alloc::alloc(alloc_layout) } <span class="kw">as </span><span class="kw-2">*mut </span>c_void)
                     .unwrap_or_else(|| handle_alloc_error(alloc_layout));
             }
         }
@@ -489,16 +473,9 @@
         <span class="self">self</span>.cap
     }
 
-    <span class="doccomment">/// Get a mutable pointer to the allocation
-    </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>ptr_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; PtrMut&lt;<span class="lifetime">&#39;_</span>&gt; {
-        <span class="kw">unsafe </span>{ PtrMut::new(<span class="self">self</span>.ptr) }
-    }
-
-    <span class="doccomment">/// Get a read-only pointer to the allocation
-    </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>ptr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ptr&lt;<span class="lifetime">&#39;_</span>&gt; {
-        <span class="kw">unsafe </span>{ Ptr::new(<span class="self">self</span>.ptr) }
+    <span class="doccomment">/// Get a raw pointer to the allocation.
+    </span><span class="kw">pub fn </span>as_ptr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">*mut </span>c_void {
+        <span class="self">self</span>.ptr.as_ptr()
     }
 
     <span class="doccomment">/// Iterate over the allocation.
@@ -518,32 +495,16 @@
     }
 
     <span class="doccomment">/// Get a pointer to the item with the given index without performing any bounds checks.
-    ///
     /// # Safety
-    ///
-    /// This does no checks that the index is within bounds.
+    /// This does no checks that the index is within bounds or that the returne dpointer is unaliased.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub unsafe fn </span>unchecked_idx_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, idx: usize) -&gt; PtrMut&lt;<span class="lifetime">&#39;_</span>&gt; {
-        PtrMut::new(NonNull::new_unchecked(
-            <span class="self">self</span>.ptr.as_ptr().add(<span class="self">self</span>.padded.size() * idx),
-        ))
-    }
-
-    <span class="doccomment">/// Get a pointer to the item with the given index without performing any bounds checks.
-    ///
-    /// # Safety
-    ///
-    /// This does no checks that the index is within bounds.
-    </span><span class="attr">#[inline]
-    </span><span class="kw">pub unsafe fn </span>unchecked_idx(<span class="kw-2">&amp;</span><span class="self">self</span>, idx: usize) -&gt; Ptr&lt;<span class="lifetime">&#39;_</span>&gt; {
-        Ptr::new(NonNull::new_unchecked(
-            <span class="self">self</span>.ptr.as_ptr().add(<span class="self">self</span>.padded.size() * idx),
-        ))
+    </span><span class="kw">pub unsafe fn </span>unchecked_idx(<span class="kw-2">&amp;</span><span class="self">self</span>, idx: usize) -&gt; <span class="kw-2">*mut </span>c_void {
+        <span class="self">self</span>.ptr.as_ptr().add(<span class="self">self</span>.padded.size() * idx)
     }
 
     <span class="doccomment">/// Helper to create a dangling pointer that is properly aligned for our layout.
     </span><span class="attr">#[inline]
-    </span><span class="kw">fn </span>dangling(layout: <span class="kw-2">&amp;</span>Layout) -&gt; NonNull&lt;u8&gt; {
+    </span><span class="kw">fn </span>dangling(layout: <span class="kw-2">&amp;</span>Layout) -&gt; NonNull&lt;c_void&gt; {
         <span class="comment">// SOUND: the layout ensures a non-zero alignment.
         </span><span class="kw">unsafe </span>{ NonNull::new_unchecked(sptr::invalid_mut(layout.align())) }
     }
@@ -552,7 +513,12 @@
 <span class="kw">impl </span>Drop <span class="kw">for </span>ResizableAlloc {
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">if </span><span class="self">self</span>.cap &gt; <span class="number">0 </span>&amp;&amp; <span class="self">self</span>.layout.size() &gt; <span class="number">0 </span>{
-            <span class="kw">unsafe </span>{ alloc::dealloc(<span class="self">self</span>.ptr.as_ptr(), <span class="self">self</span>.layout.repeat(<span class="self">self</span>.cap).unwrap().<span class="number">0</span>) }
+            <span class="kw">unsafe </span>{
+                alloc::dealloc(
+                    <span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>u8,
+                    <span class="self">self</span>.layout.repeat(<span class="self">self</span>.cap).unwrap().<span class="number">0</span>,
+                )
+            }
         }
     }
 }
@@ -563,7 +529,7 @@
     idx: usize,
 }
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>ResizableAllocIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = Ptr&lt;<span class="lifetime">&#39;a</span>&gt;;
+    <span class="kw">type </span>Item = <span class="kw-2">*const </span>c_void;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">if </span><span class="self">self</span>.idx &lt; <span class="self">self</span>.alloc.cap {
@@ -583,13 +549,13 @@
     idx: usize,
 }
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>ResizableAllocIterMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = PtrMut&lt;<span class="lifetime">&#39;a</span>&gt;;
+    <span class="kw">type </span>Item = <span class="kw-2">*mut </span>c_void;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">if </span><span class="self">self</span>.idx &lt; <span class="self">self</span>.alloc.cap {
             <span class="comment">// SOUND: we&#39;ve checked that it is within bounds, and we know that the pointer will be
             // valid for the new lifetime.
-            </span><span class="kw">let </span>r = <span class="kw">unsafe </span>{ <span class="self">self</span>.alloc.unchecked_idx_mut(<span class="self">self</span>.idx).transmute_lifetime() };
+            </span><span class="kw">let </span>r = <span class="kw">unsafe </span>{ <span class="self">self</span>.alloc.unchecked_idx(<span class="self">self</span>.idx) };
             <span class="self">self</span>.idx += <span class="number">1</span>;
             <span class="prelude-val">Some</span>(r)
         } <span class="kw">else </span>{
@@ -643,17 +609,13 @@
         <span class="comment">// We write some data.
         </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">3 </span>{
             <span class="kw">unsafe </span>{
-                a.ptr_mut()
-                    .as_ptr()
-                    .cast::&lt;Ty&gt;()
-                    .add(i)
-                    .write((i <span class="kw">as _</span>, i <span class="kw">as _</span>));
+                a.as_ptr().cast::&lt;Ty&gt;().add(i).write((i <span class="kw">as _</span>, i <span class="kw">as _</span>));
             }
         }
         <span class="kw">unsafe </span>{
-            <span class="macro">assert_eq!</span>((<span class="number">0</span>, <span class="number">0</span>), (a.ptr_mut().as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).read());
-            <span class="macro">assert_eq!</span>((<span class="number">1</span>, <span class="number">1</span>), (a.ptr_mut().as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).add(<span class="number">1</span>).read());
-            <span class="macro">assert_eq!</span>((<span class="number">2</span>, <span class="number">2</span>), (a.ptr_mut().as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).add(<span class="number">2</span>).read());
+            <span class="macro">assert_eq!</span>((<span class="number">0</span>, <span class="number">0</span>), (a.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).read());
+            <span class="macro">assert_eq!</span>((<span class="number">1</span>, <span class="number">1</span>), (a.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).add(<span class="number">1</span>).read());
+            <span class="macro">assert_eq!</span>((<span class="number">2</span>, <span class="number">2</span>), (a.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).add(<span class="number">2</span>).read());
         }
 
         <span class="comment">// We can grow the allocation by resizing
@@ -661,21 +623,21 @@
 
         <span class="comment">// And write to the new data
         </span><span class="kw">unsafe </span>{
-            a.ptr_mut().as_ptr().cast::&lt;Ty&gt;().add(<span class="number">3</span>).write((<span class="number">3</span>, <span class="number">3</span>));
+            a.as_ptr().cast::&lt;Ty&gt;().add(<span class="number">3</span>).write((<span class="number">3</span>, <span class="number">3</span>));
 
             <span class="comment">// The previous values will be there
-            </span><span class="macro">assert_eq!</span>((<span class="number">0</span>, <span class="number">0</span>), (a.ptr_mut().as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).read());
-            <span class="macro">assert_eq!</span>((<span class="number">1</span>, <span class="number">1</span>), (a.ptr_mut().as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).add(<span class="number">1</span>).read());
-            <span class="macro">assert_eq!</span>((<span class="number">2</span>, <span class="number">2</span>), (a.ptr_mut().as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).add(<span class="number">2</span>).read());
+            </span><span class="macro">assert_eq!</span>((<span class="number">0</span>, <span class="number">0</span>), (a.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).read());
+            <span class="macro">assert_eq!</span>((<span class="number">1</span>, <span class="number">1</span>), (a.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).add(<span class="number">1</span>).read());
+            <span class="macro">assert_eq!</span>((<span class="number">2</span>, <span class="number">2</span>), (a.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).add(<span class="number">2</span>).read());
             <span class="comment">// As well as the new one
-            </span><span class="macro">assert_eq!</span>((<span class="number">3</span>, <span class="number">3</span>), (a.ptr_mut().as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).add(<span class="number">3</span>).read());
+            </span><span class="macro">assert_eq!</span>((<span class="number">3</span>, <span class="number">3</span>), (a.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).add(<span class="number">3</span>).read());
         }
 
         <span class="comment">// We can shrink the allocation, too, which will delete the items at the end without dropping them, keeping the
         // items at the beginning.
         </span>a.resize(<span class="number">1</span>).unwrap();
         <span class="kw">unsafe </span>{
-            <span class="macro">assert_eq!</span>((<span class="number">0</span>, <span class="number">0</span>), (a.ptr_mut().as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).read());
+            <span class="macro">assert_eq!</span>((<span class="number">0</span>, <span class="number">0</span>), (a.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).read());
         }
 
         <span class="comment">// And we can delete all the items by resizing to zero ( again, this doesn&#39;t drop item, just
@@ -683,7 +645,7 @@
         </span>a.resize(<span class="number">0</span>).unwrap();
 
         <span class="comment">// Now the pointer will be dangling, but aligned to our layout
-        </span><span class="macro">assert_eq!</span>(a.ptr_mut().as_ptr() <span class="kw">as </span>usize, layout.align());
+        </span><span class="macro">assert_eq!</span>(a.as_ptr() <span class="kw">as </span>usize, layout.align());
     }
 }
 </code></pre></div></section></main></body></html>

@@ -146,27 +146,10 @@
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
 <a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! ECS component storage.
 
-</span><span class="kw">use </span>std::sync::Arc;
+</span><span class="kw">use </span>once_map::OnceMap;
+<span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
@@ -178,7 +161,10 @@
 <span class="kw">pub use </span>typed::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>untyped::<span class="kw-2">*</span>;
 
-<span class="kw">type </span>AtomicComponentStore&lt;T&gt; = Arc&lt;AtomicCell&lt;ComponentStore&lt;T&gt;&gt;&gt;;
+<span class="doccomment">/// An atomic component store.
+</span><span class="kw">pub type </span>AtomicComponentStore&lt;T&gt; = Arc&lt;AtomicCell&lt;ComponentStore&lt;T&gt;&gt;&gt;;
+<span class="doccomment">/// An untyped atomic component store.
+</span><span class="kw">pub type </span>UntypedAtomicComponentStore = Arc&lt;AtomicCell&lt;UntypedComponentStore&gt;&gt;;
 
 <span class="doccomment">/// A collection of [`ComponentStore&lt;T&gt;`].
 ///
@@ -186,19 +172,8 @@
 /// initialized for that world.
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>ComponentStores {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) components: HashMap&lt;SchemaId, Arc&lt;AtomicCell&lt;UntypedComponentStore&gt;&gt;&gt;,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) components: OnceMap&lt;SchemaId, UntypedAtomicComponentStore&gt;,
 }
-
-<span class="doccomment">/// An error returned when trying to access an uninitialized component.
-</span><span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>NotInitialized;
-
-<span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>NotInitialized {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;Component not initialized&quot;</span>)
-    }
-}
-<span class="kw">impl </span>std::error::Error <span class="kw">for </span>NotInitialized {}
 
 <span class="comment">// SOUND: all of the functions for ComponentStores requires that the types stored implement Sync +
 // Send.
@@ -210,6 +185,7 @@
         <span class="self">Self </span>{
             components: <span class="self">self
                 </span>.components
+                .read_only_view()
                 .iter()
                 <span class="comment">// Be sure to clone the inner data of the components, so we don&#39;t just end up with
                 // new `Arc`s pointing to the same data.
@@ -220,64 +196,52 @@
 }
 
 <span class="kw">impl </span>ComponentStores {
-    <span class="doccomment">/// Initialize component storage for type `T`.
-    </span><span class="kw">pub fn </span>init&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">let </span>schema = T::schema();
-        <span class="self">self</span>.components
-            .entry(schema.id())
-            .or_insert_with(|| Arc::new(AtomicCell::new(UntypedComponentStore::for_type::&lt;T&gt;())));
-    }
-
     <span class="doccomment">/// Get the components of a certain type
-    </span><span class="kw">pub fn </span>get_cell&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;AtomicComponentStore&lt;T&gt;, NotInitialized&gt; {
-        <span class="kw">let </span>untyped = <span class="self">self</span>.get_cell_by_schema_id(T::schema().id())<span class="question-mark">?</span>;
+    </span><span class="kw">pub fn </span>get_cell&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicComponentStore&lt;T&gt; {
+        <span class="kw">let </span>untyped = <span class="self">self</span>.get_cell_by_schema(T::schema());
 
         <span class="comment">// Safe: We know the schema matches, and `ComponentStore&lt;T&gt;` is repr(transparent) over
         // `UntypedComponentStore`.
         </span><span class="kw">unsafe </span>{
-            <span class="prelude-val">Ok</span>(std::mem::transmute::&lt;
+            std::mem::transmute::&lt;
                 Arc&lt;AtomicCell&lt;UntypedComponentStore&gt;&gt;,
                 Arc&lt;AtomicCell&lt;ComponentStore&lt;T&gt;&gt;&gt;,
-            &gt;(untyped))
+            &gt;(untyped)
         }
     }
 
     <span class="doccomment">/// Borrow a component store.
     /// # Errors
     /// Errors if the component store has not been initialized yet.
-    </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Ref&lt;ComponentStore&lt;T&gt;&gt;, NotInitialized&gt; {
-        <span class="kw">let </span>id = T::schema().id();
-        <span class="kw">let </span>atomicref = <span class="self">self</span>.components.get(<span class="kw-2">&amp;</span>id).ok_or(NotInitialized)<span class="question-mark">?</span>.borrow();
+    </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>AtomicCell&lt;ComponentStore&lt;T&gt;&gt; {
+        <span class="kw">let </span>schema = T::schema();
+        <span class="kw">let </span>atomiccell = <span class="self">self</span>.get_by_schema(schema);
 
         <span class="comment">// SOUND: ComponentStore&lt;T&gt; is repr(transparent) over UntypedComponent store.
-        </span><span class="kw">let </span>atomicref = Ref::map(atomicref, |x| <span class="kw">unsafe </span>{
-            std::mem::transmute::&lt;<span class="kw-2">&amp;</span>UntypedComponentStore, <span class="kw-2">&amp;</span>ComponentStore&lt;T&gt;&gt;(x)
-        });
-
-        <span class="prelude-val">Ok</span>(atomicref)
-    }
-
-    <span class="doccomment">/// Borrow a component store.
-    /// # Errors
-    /// Errors if the component store has not been initialized yet.
-    </span><span class="kw">pub fn </span>get_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;RefMut&lt;ComponentStore&lt;T&gt;&gt;, NotInitialized&gt; {
-        <span class="kw">let </span>id = T::schema().id();
-        <span class="kw">let </span>atomicref = <span class="self">self</span>.components.get(<span class="kw-2">&amp;</span>id).ok_or(NotInitialized)<span class="question-mark">?</span>.borrow_mut();
-
-        <span class="comment">// SOUND: ComponentStore&lt;T&gt; is repr(transparent) over UntypedComponent store.
-        </span><span class="kw">let </span>atomicref = RefMut::map(atomicref, |x| <span class="kw">unsafe </span>{
-            std::mem::transmute::&lt;<span class="kw-2">&amp;mut </span>UntypedComponentStore, <span class="kw-2">&amp;mut </span>ComponentStore&lt;T&gt;&gt;(x)
-        });
-
-        <span class="prelude-val">Ok</span>(atomicref)
+        </span><span class="kw">unsafe </span>{
+            std::mem::transmute::&lt;<span class="kw-2">&amp;</span>AtomicCell&lt;UntypedComponentStore&gt;, <span class="kw-2">&amp;</span>AtomicCell&lt;ComponentStore&lt;T&gt;&gt;&gt;(
+                atomiccell,
+            )
+        }
     }
 
     <span class="doccomment">/// Get the untyped component storage by the component&#39;s [`SchemaId`].
-    </span><span class="kw">pub fn </span>get_cell_by_schema_id(
+    </span><span class="kw">pub fn </span>get_by_schema(<span class="kw-2">&amp;</span><span class="self">self</span>, schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="kw-2">&amp;</span>AtomicCell&lt;UntypedComponentStore&gt; {
+        <span class="self">self</span>.components.insert(schema.id(), |<span class="kw">_</span>| {
+            Arc::new(AtomicCell::new(UntypedComponentStore::new(schema)))
+        })
+    }
+
+    <span class="doccomment">/// Get the untyped component storage by the component&#39;s [`SchemaId`].
+    </span><span class="kw">pub fn </span>get_cell_by_schema(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        id: SchemaId,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;AtomicCell&lt;UntypedComponentStore&gt;&gt;, NotInitialized&gt; {
-        <span class="self">self</span>.components.get(<span class="kw-2">&amp;</span>id).cloned().ok_or(NotInitialized)
+        schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
+    ) -&gt; Arc&lt;AtomicCell&lt;UntypedComponentStore&gt;&gt; {
+        <span class="self">self</span>.components.map_insert(
+            schema.id(),
+            |<span class="kw">_</span>| Arc::new(AtomicCell::new(UntypedComponentStore::new(schema))),
+            |_key, value| value.clone(),
+        )
     }
 }
 

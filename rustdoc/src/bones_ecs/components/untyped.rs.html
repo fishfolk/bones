@@ -595,13 +595,11 @@
 <a href="#595" id="595">595</a>
 <a href="#596" id="596">596</a>
 <a href="#597" id="597">597</a>
-<a href="#598" id="598">598</a>
-<a href="#599" id="599">599</a>
-<a href="#600" id="600">600</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>bones_schema::alloc::ResizableAlloc;
 <span class="kw">use </span>std::{
+    ffi::c_void,
     mem::MaybeUninit,
     ptr::{<span class="self">self</span>},
     rc::Rc,
@@ -623,7 +621,7 @@
 <span class="kw">impl </span>Clone <span class="kw">for </span>UntypedComponentStore {
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>size = <span class="self">self</span>.schema.layout().size();
-        <span class="kw">let </span><span class="kw-2">mut </span>new_storage = <span class="self">self</span>.storage.clone();
+        <span class="kw">let </span>new_storage = <span class="self">self</span>.storage.clone();
 
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="self">self</span>.max_id {
             <span class="kw">if </span><span class="self">self</span>.bitset.bit_test(i) {
@@ -633,12 +631,14 @@
                 // - And our previous pointer is a valid pointer to component data
                 // - And our new pointer is a writable pointer with the same layout
                 </span><span class="kw">unsafe </span>{
-                    <span class="kw">let </span>prev_ptr = <span class="self">self</span>.storage.ptr().byte_add(i * size);
-                    <span class="kw">let </span>new_ptr = new_storage.ptr_mut().byte_add(i * size);
-                    (<span class="self">self</span>.schema.clone_fn.expect(<span class="string">&quot;Cannot clone component&quot;</span>))(
-                        prev_ptr.as_ptr(),
-                        new_ptr.as_ptr(),
-                    );
+                    <span class="kw">let </span>prev_ptr = <span class="self">self</span>.storage.as_ptr().add(i * size);
+                    <span class="kw">let </span>new_ptr = new_storage.as_ptr().add(i * size);
+                    (<span class="self">self
+                        </span>.schema
+                        .clone_fn
+                        .as_ref()
+                        .expect(<span class="string">&quot;Cannot clone component&quot;</span>)
+                        .get())(prev_ptr, new_ptr);
                 }
             }
         }
@@ -654,7 +654,7 @@
 
 <span class="kw">impl </span>Drop <span class="kw">for </span>UntypedComponentStore {
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(drop_fn) = <span class="self">self</span>.schema.drop_fn {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(drop_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.schema.drop_fn {
             <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="self">self</span>.storage.capacity() {
                 <span class="kw">if </span><span class="self">self</span>.bitset.bit_test(i) {
                     <span class="comment">// SAFE: constructing an UntypedComponent store is unsafe, and the user affirms
@@ -662,8 +662,8 @@
                     //
                     // And our pointer is valid.
                     </span><span class="kw">unsafe </span>{
-                        <span class="kw">let </span>ptr = <span class="self">self</span>.storage.unchecked_idx_mut(i);
-                        drop_fn(ptr.as_ptr());
+                        <span class="kw">let </span>ptr = <span class="self">self</span>.storage.unchecked_idx(i);
+                        drop_fn.get()(ptr);
                     }
                 }
             }
@@ -676,12 +676,7 @@
     ///
     /// In Rust, you will usually not use [`UntypedComponentStore`] and will use the statically
     /// typed [`ComponentStore&lt;T&gt;`] instead.
-    ///
-    /// # Safety
-    ///
-    /// The `clone_fn` and `drop_fn`, if specified, must not do anything unsound, when given valid
-    /// pointers to clone or drop.
-    </span><span class="kw">pub unsafe fn </span>new(schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new(schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             bitset: create_bitset(),
             storage: ResizableAlloc::new(schema.layout()),
@@ -720,12 +715,12 @@
     </span><span class="kw">pub fn </span>try_insert_box(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         entity: Entity,
-        <span class="kw-2">mut </span>data: SchemaBox,
+        data: SchemaBox,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SchemaBox&gt;, SchemaMismatchError&gt; {
         <span class="kw">if </span><span class="self">self</span>.schema != data.schema() {
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         } <span class="kw">else </span>{
-            <span class="kw">let </span>ptr = data.as_mut().as_ptr();
+            <span class="kw">let </span>ptr = data.as_ptr();
             <span class="comment">// SOUND: we validated schema matches
             </span><span class="kw">let </span>already_had_component = <span class="kw">unsafe </span>{ <span class="self">self</span>.insert_raw(entity, ptr) };
             <span class="kw">if </span>already_had_component {
@@ -759,7 +754,7 @@
         <span class="kw">if </span><span class="self">self</span>.schema != T::schema() {
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         } <span class="kw">else </span>{
-            <span class="kw">let </span>ptr = <span class="kw-2">&amp;mut </span>data <span class="kw">as </span><span class="kw-2">*mut </span>T <span class="kw">as </span><span class="kw-2">*mut </span>u8;
+            <span class="kw">let </span>ptr = <span class="kw-2">&amp;mut </span>data <span class="kw">as </span><span class="kw-2">*mut </span>T <span class="kw">as </span><span class="kw-2">*mut </span>c_void;
             <span class="comment">// SOUND: we validated schema matches
             </span><span class="kw">let </span>already_had_component = <span class="kw">unsafe </span>{ <span class="self">self</span>.insert_raw(entity, ptr) };
             <span class="kw">if </span>already_had_component {
@@ -780,16 +775,16 @@
     /// # Safety
     /// - The data must be a pointer to memory with the same schema.
     /// - If `false` is returned you must ensure the `data` pointer is not used after pushing.
-    </span><span class="kw">pub unsafe fn </span>insert_raw(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity, data: <span class="kw-2">*mut </span>u8) -&gt; bool {
+    </span><span class="kw">pub unsafe fn </span>insert_raw(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity, data: <span class="kw-2">*mut </span>c_void) -&gt; bool {
         <span class="kw">let </span>index = entity.index() <span class="kw">as </span>usize;
         <span class="kw">let </span>size = <span class="self">self</span>.schema.layout().size();
 
         <span class="comment">// If the component already exists on the entity
         </span><span class="kw">if </span><span class="self">self</span>.bitset.bit_test(entity.index() <span class="kw">as </span>usize) {
-            <span class="kw">let </span>ptr = <span class="self">self</span>.storage.unchecked_idx_mut(index);
+            <span class="kw">let </span>ptr = <span class="self">self</span>.storage.unchecked_idx(index);
 
             <span class="comment">// Swap the data with the data already there
-            </span>ptr::swap_nonoverlapping(ptr.as_ptr(), data, size);
+            </span>ptr::swap_nonoverlapping(ptr, data, size);
 
             <span class="comment">// There was already a component of this type
             </span><span class="bool-val">true
@@ -807,8 +802,7 @@
 
             <span class="comment">// Copy the data from the data pointer into our storage
             </span><span class="self">self</span>.storage
-                .unchecked_idx_mut(index)
-                .as_ptr()
+                .unchecked_idx(index)
                 .copy_from_nonoverlapping(data, size);
 
             <span class="comment">// There was not already a component of this type
@@ -864,7 +858,7 @@
             <span class="comment">// SOUND: we ensure that there is allocated storge for entities that have their bit set.
             </span><span class="kw">let </span>ptr = <span class="kw">unsafe </span>{ <span class="self">self</span>.storage.unchecked_idx(idx) };
             <span class="comment">// SOUND: we know that the pointer has our schema.
-            </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ SchemaRef::from_ptr_schema(ptr.as_ptr(), <span class="self">self</span>.schema) })
+            </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ SchemaRef::from_ptr_schema(ptr, <span class="self">self</span>.schema) })
         } <span class="kw">else </span>{
             <span class="prelude-val">None
         </span>}
@@ -893,18 +887,18 @@
 
     <span class="doccomment">/// Get a [`SchemaRefMut`] to the component for the given [`Entity`]
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>get_ref_mut&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;&gt; {
+    </span><span class="kw">pub fn </span>get_ref_mut&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;&gt; {
         <span class="kw">let </span>idx = entity.index() <span class="kw">as </span>usize;
         <span class="self">self</span>.get_idx_mut(idx)
     }
 
-    <span class="kw">fn </span>get_idx_mut&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, idx: usize) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;&gt; {
+    <span class="kw">fn </span>get_idx_mut&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, idx: usize) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;&gt; {
         <span class="kw">if </span><span class="self">self</span>.bitset.bit_test(idx) {
             <span class="comment">// SOUND: we ensure that there is allocated storage for entities that have their bit
             // set.
-            </span><span class="kw">let </span>ptr = <span class="kw">unsafe </span>{ <span class="self">self</span>.storage.unchecked_idx_mut(idx) };
+            </span><span class="kw">let </span>ptr = <span class="kw">unsafe </span>{ <span class="self">self</span>.storage.unchecked_idx(idx) };
             <span class="comment">// SOUND: we know that the pointer has our schema.
-            </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ SchemaRefMut::from_ptr_schema(ptr.as_ptr(), <span class="self">self</span>.schema) })
+            </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ SchemaRefMut::from_ptr_schema(ptr, <span class="self">self</span>.schema) })
         } <span class="kw">else </span>{
             <span class="prelude-val">None
         </span>}
@@ -950,7 +944,7 @@
             <span class="kw">let </span>refs = std::array::from_fn(|i| {
                 <span class="kw">let </span>r = refs[i].take();
                 <span class="comment">// SOUND: we&#39;ve validated the schema matches.
-                </span>r.map(|r| <span class="kw">unsafe </span>{ r.deref_mut() })
+                </span>r.map(|r| <span class="kw">unsafe </span>{ r.cast_into_mut_unchecked() })
             });
 
             <span class="prelude-val">Ok</span>(refs)
@@ -990,8 +984,8 @@
                 // The new lifetime is sound because we validate that all of these borrows don&#39;t
                 // overlap and their lifetimes are that of the &amp;mut self borrow.
                 </span><span class="kw">unsafe </span>{
-                    <span class="kw">let </span>ptr = <span class="self">self</span>.storage.unchecked_idx_mut(index);
-                    <span class="prelude-val">Some</span>(SchemaRefMut::from_ptr_schema(ptr.as_ptr(), <span class="self">self</span>.schema))
+                    <span class="kw">let </span>ptr = <span class="self">self</span>.storage.unchecked_idx(index);
+                    <span class="prelude-val">Some</span>(SchemaRefMut::from_ptr_schema(ptr, <span class="self">self</span>.schema))
                 }
             } <span class="kw">else </span>{
                 <span class="prelude-val">None
@@ -1020,7 +1014,7 @@
         } <span class="kw">else if </span><span class="self">self</span>.bitset.contains(entity) {
             <span class="kw">let </span><span class="kw-2">mut </span>data = MaybeUninit::&lt;T&gt;::uninit();
             <span class="comment">// SOUND: the data doesn&#39;t overlap the storage.
-            </span><span class="kw">unsafe </span>{ <span class="self">self</span>.remove_raw(entity, <span class="prelude-val">Some</span>(data.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>u8)) };
+            </span><span class="kw">unsafe </span>{ <span class="self">self</span>.remove_raw(entity, <span class="prelude-val">Some</span>(data.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>c_void)) };
 
             <span class="comment">// SOUND: we&#39;ve initialized the data.
             </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ data.assume_init() }))
@@ -1035,9 +1029,9 @@
     </span><span class="kw">pub fn </span>remove_box(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaBox&gt; {
         <span class="kw">if </span><span class="self">self</span>.bitset.contains(entity) {
             <span class="comment">// SOUND: we will immediately initialize the schema box with data matching the schema.
-            </span><span class="kw">let </span><span class="kw-2">mut </span>b = <span class="kw">unsafe </span>{ SchemaBox::uninitialized(<span class="self">self</span>.schema) };
+            </span><span class="kw">let </span>b = <span class="kw">unsafe </span>{ SchemaBox::uninitialized(<span class="self">self</span>.schema) };
             <span class="comment">// SOUND: the box data doesn&#39;t overlap the storage.
-            </span><span class="kw">unsafe </span>{ <span class="self">self</span>.remove_raw(entity, <span class="prelude-val">Some</span>(b.as_mut().as_ptr())) };
+            </span><span class="kw">unsafe </span>{ <span class="self">self</span>.remove_raw(entity, <span class="prelude-val">Some</span>(b.as_ptr())) };
             <span class="prelude-val">Some</span>(b)
         } <span class="kw">else </span>{
             <span class="comment">// SOUND: we don&#39;t use the out pointer.
@@ -1053,23 +1047,23 @@
     /// # Safety
     ///
     /// If set, the `out` pointer, must not overlap the internal component storage.
-    </span><span class="kw">pub unsafe fn </span>remove_raw(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity, out: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">*mut </span>u8&gt;) -&gt; bool {
+    </span><span class="kw">pub unsafe fn </span>remove_raw(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity, out: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">*mut </span>c_void&gt;) -&gt; bool {
         <span class="kw">let </span>index = entity.index() <span class="kw">as </span>usize;
         <span class="kw">let </span>size = <span class="self">self</span>.schema.layout().size();
 
         <span class="kw">if </span><span class="self">self</span>.bitset.bit_test(index) {
             <span class="self">self</span>.bitset.bit_reset(index);
 
-            <span class="kw">let </span>ptr = <span class="self">self</span>.storage.unchecked_idx_mut(index).as_ptr();
+            <span class="kw">let </span>ptr = <span class="self">self</span>.storage.unchecked_idx(index);
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(out) = out {
                 <span class="comment">// SAFE: user asserts `out` is non-overlapping
                 </span>out.copy_from_nonoverlapping(ptr, size);
-            } <span class="kw">else if let </span><span class="prelude-val">Some</span>(drop_fn) = <span class="self">self</span>.schema.drop_fn {
+            } <span class="kw">else if let </span><span class="prelude-val">Some</span>(drop_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.schema.drop_fn {
                 <span class="comment">// SAFE: construcing `UntypedComponentStore` asserts the soundess of the drop_fn
                 //
                 // And ptr is a valid pointer to the component type.
-                </span>drop_fn(ptr);
+                </span>drop_fn.get()(ptr);
             }
 
             <span class="comment">// Found previous component
@@ -1178,7 +1172,7 @@
     idx: usize,
 }
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>UntypedComponentStoreIterMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;;
+    <span class="kw">type </span>Item = SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;;
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">loop </span>{
             <span class="kw">if </span><span class="self">self</span>.idx &lt; <span class="self">self</span>.store.max_id {

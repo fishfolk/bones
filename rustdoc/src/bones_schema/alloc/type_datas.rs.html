@@ -100,6 +100,11 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>append_only_vec::AppendOnlyVec;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -109,6 +114,11 @@
 ///
 /// This structure doesn&#39;t require a mutable reference to insert records
 </span><span class="attr">#[derive(Debug)]
+</span><span class="comment">// TODO: Evaluate the possibility of using a `OnceMap` instead of an `AppendOnlyVec` for `TypeDatas`.
+// The only reason we would use a `OnceMap` would be to improve the lookup performance and avoid
+// having to iterate over the entire vec each time we need to find a type data with a particular
+// schema. Since there are not usually a large number of type datas for any single type, this
+// probably isn&#39;t a concern, but maybe we should do some benchmarking.
 </span><span class="kw">pub struct </span>TypeDatas(AppendOnlyVec&lt;SchemaBox&gt;);
 <span class="kw">impl </span>Default <span class="kw">for </span>TypeDatas {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{

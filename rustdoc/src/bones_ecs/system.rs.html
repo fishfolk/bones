@@ -574,10 +574,6 @@
 <a href="#574" id="574">574</a>
 <a href="#575" id="575">575</a>
 <a href="#576" id="576">576</a>
-<a href="#577" id="577">577</a>
-<a href="#578" id="578">578</a>
-<a href="#579" id="579">579</a>
-<a href="#580" id="580">580</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Implements the system API for the ECS.
 
 </span><span class="kw">use </span>std::sync::Arc;
@@ -883,12 +879,10 @@
     <span class="kw">type </span>State = Arc&lt;AtomicCell&lt;ComponentStore&lt;T&gt;&gt;&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = Comp&lt;<span class="lifetime">&#39;p</span>, T&gt;;
 
-    <span class="kw">fn </span>initialize(world: <span class="kw-2">&amp;mut </span>World) {
-        world.components.init::&lt;T&gt;();
-    }
+    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
 
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
-        world.components.get_cell::&lt;T&gt;().unwrap()
+        world.components.get_cell::&lt;T&gt;()
     }
 
     <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
@@ -900,12 +894,10 @@
     <span class="kw">type </span>State = Arc&lt;AtomicCell&lt;ComponentStore&lt;T&gt;&gt;&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = CompMut&lt;<span class="lifetime">&#39;p</span>, T&gt;;
 
-    <span class="kw">fn </span>initialize(world: <span class="kw-2">&amp;mut </span>World) {
-        world.components.init::&lt;T&gt;();
-    }
+    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
 
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
-        world.components.get_cell::&lt;T&gt;().unwrap()
+        world.components.get_cell::&lt;T&gt;()
     }
 
     <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {

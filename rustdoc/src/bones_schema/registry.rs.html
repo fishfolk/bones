@@ -288,7 +288,7 @@
         </span><span class="kw">let </span>SchemaLayoutInfo {
             layout,
             field_offsets,
-        } = schema_data.compute_layout_info();
+        } = schema_data.kind.compute_layout_info();
 
         <span class="comment">// Leak the field offsets to get static references
         </span><span class="kw">let </span>field_offsets: Box&lt;<span class="kw">_</span>&gt; = field_offsets

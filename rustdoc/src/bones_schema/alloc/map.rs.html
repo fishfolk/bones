@@ -718,6 +718,20 @@
 <a href="#718" id="718">718</a>
 <a href="#719" id="719">719</a>
 <a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     any::{type_name, TypeId},
     fmt::Debug,
@@ -880,7 +894,7 @@
             <span class="comment">// SOUND: we&#39;ve veriried that they key schema matches the map&#39;s
             </span><span class="kw">let </span>value = <span class="kw">unsafe </span>{ <span class="self">self</span>.get_ref_unchecked(SchemaRef::new(key)) }
                 <span class="comment">// SOUND: we&#39;ve verified that the value schema maches the map&#39;s
-                </span>.map(|x| <span class="kw">unsafe </span>{ x.deref() });
+                </span>.map(|x| <span class="kw">unsafe </span>{ x.cast_into_unchecked() });
 
             <span class="prelude-val">Ok</span>(value)
         }
@@ -910,15 +924,15 @@
     <span class="doccomment">/// # Safety
     /// The key&#39;s schema must match this map&#39;s key schema.
     </span><span class="kw">pub unsafe fn </span>get_ref_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&gt; {
-        <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="self">self</span>.key_schema.hash_fn <span class="kw">else </span>{
+        <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.hash_fn <span class="kw">else </span>{
             <span class="macro">panic!</span>(<span class="string">&quot;Key schema doesn&#39;t implement hash&quot;</span>);
         };
-        <span class="kw">let </span><span class="prelude-val">Some</span>(eq_fn) = <span class="self">self</span>.key_schema.eq_fn <span class="kw">else </span>{
+        <span class="kw">let </span><span class="prelude-val">Some</span>(eq_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.eq_fn <span class="kw">else </span>{
             <span class="macro">panic!</span>(<span class="string">&quot;Key schema doesn&#39;t implement eq&quot;</span>);
         };
         <span class="kw">let </span>key_ptr = key.as_ptr();
         <span class="comment">// SOUND: caller asserts the key schema matches
-        </span><span class="kw">let </span>raw_hash = <span class="kw">unsafe </span>{ (hash_fn)(key_ptr) };
+        </span><span class="kw">let </span>raw_hash = <span class="kw">unsafe </span>{ (hash_fn.get())(key_ptr) };
         <span class="kw">let </span>hash = {
             <span class="kw">let </span><span class="kw-2">mut </span>hasher = <span class="self">self</span>.map.hasher().build_hasher();
             hasher.write_u64(raw_hash);
@@ -929,7 +943,7 @@
             .from_hash(hash, |key| {
                 <span class="kw">let </span>other_ptr = key.as_ref().as_ptr();
                 <span class="comment">// SOUND: caller asserts the key schema matches.
-                </span><span class="kw">unsafe </span>{ (eq_fn)(key_ptr, other_ptr) }
+                </span><span class="kw">unsafe </span>{ (eq_fn.get())(key_ptr, other_ptr) }
             })
             .map(|x| x.<span class="number">1</span>.as_ref())
     }
@@ -961,15 +975,15 @@
     <span class="doccomment">/// # Safety
     /// The key&#39;s schema must match this map&#39;s key schema.
     </span><span class="kw">pub unsafe fn </span>get_ref_unchecked_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&gt; {
-        <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="self">self</span>.key_schema.hash_fn <span class="kw">else </span>{
+        <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.hash_fn <span class="kw">else </span>{
             <span class="macro">panic!</span>(<span class="string">&quot;Key schema doesn&#39;t implement hash&quot;</span>);
         };
-        <span class="kw">let </span><span class="prelude-val">Some</span>(eq_fn) = <span class="self">self</span>.key_schema.eq_fn <span class="kw">else </span>{
+        <span class="kw">let </span><span class="prelude-val">Some</span>(eq_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.eq_fn <span class="kw">else </span>{
             <span class="macro">panic!</span>(<span class="string">&quot;Key schema doesn&#39;t implement eq&quot;</span>);
         };
         <span class="kw">let </span>key_ptr = key.as_ptr();
         <span class="comment">// SOUND: caller asserts the key schema matches
-        </span><span class="kw">let </span>raw_hash = <span class="kw">unsafe </span>{ (hash_fn)(key_ptr) };
+        </span><span class="kw">let </span>raw_hash = <span class="kw">unsafe </span>{ (hash_fn.get())(key_ptr) };
         <span class="kw">let </span>hash = {
             <span class="kw">let </span><span class="kw-2">mut </span>hasher = <span class="self">self</span>.map.hasher().build_hasher();
             hasher.write_u64(raw_hash);
@@ -978,7 +992,7 @@
         <span class="kw">let </span>entry = <span class="self">self</span>.map.raw_entry_mut().from_hash(hash, |key| {
             <span class="kw">let </span>other_ptr = key.as_ref().as_ptr();
             <span class="comment">// SOUND: caller asserts the key schema matches.
-            </span><span class="kw">unsafe </span>{ (eq_fn)(key_ptr, other_ptr) }
+            </span><span class="kw">unsafe </span>{ (eq_fn.get())(key_ptr, other_ptr) }
         });
         <span class="kw">match </span>entry {
             hash_map::RawEntryMut::Occupied(entry) =&gt; <span class="prelude-val">Some</span>(entry.into_mut()),
@@ -1010,7 +1024,7 @@
             <span class="comment">// SOUND: we&#39;ve checked that the key schema matches.
             </span><span class="kw">let </span>value = <span class="kw">unsafe </span>{ <span class="self">self</span>.get_ref_unchecked_mut(SchemaRef::new(key)) }
                 <span class="comment">// SOUND: we&#39;ve checked that the value schema matches.
-                </span>.map(|x| <span class="kw">unsafe </span>{ x.deref_mut() });
+                </span>.map(|x| <span class="kw">unsafe </span>{ x.cast_into_mut_unchecked() });
             <span class="prelude-val">Ok</span>(value)
         }
     }
@@ -1069,15 +1083,15 @@
     <span class="doccomment">/// # Safety
     /// The key schema must match the map&#39;s.
     </span><span class="kw">pub unsafe fn </span>remove_unchecked(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaBox&gt; {
-        <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="self">self</span>.key_schema.hash_fn <span class="kw">else </span>{
+        <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.hash_fn <span class="kw">else </span>{
             <span class="macro">panic!</span>(<span class="string">&quot;Key schema doesn&#39;t implement hash&quot;</span>);
         };
-        <span class="kw">let </span><span class="prelude-val">Some</span>(eq_fn) = <span class="self">self</span>.key_schema.eq_fn <span class="kw">else </span>{
+        <span class="kw">let </span><span class="prelude-val">Some</span>(eq_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.eq_fn <span class="kw">else </span>{
             <span class="macro">panic!</span>(<span class="string">&quot;Key schema doesn&#39;t implement eq&quot;</span>);
         };
         <span class="kw">let </span>key_ptr = key.as_ptr();
         <span class="comment">// SOUND: caller asserts the key schema matches
-        </span><span class="kw">let </span>hash = <span class="kw">unsafe </span>{ (hash_fn)(key_ptr) };
+        </span><span class="kw">let </span>hash = <span class="kw">unsafe </span>{ (hash_fn.get())(key_ptr) };
         <span class="kw">let </span>hash = {
             <span class="kw">let </span><span class="kw-2">mut </span>hasher = <span class="self">self</span>.map.hasher().build_hasher();
             hasher.write_u64(hash);
@@ -1086,7 +1100,7 @@
         <span class="kw">let </span>entry = <span class="self">self</span>.map.raw_entry_mut().from_hash(hash, |key| {
             <span class="kw">let </span>other_ptr = key.as_ref().as_ptr();
             <span class="comment">// SOUND: caller asserts the key schema matches
-            </span><span class="kw">unsafe </span>{ (eq_fn)(key_ptr, other_ptr) }
+            </span><span class="kw">unsafe </span>{ (eq_fn.get())(key_ptr, other_ptr) }
         });
         <span class="kw">match </span>entry {
             hash_map::RawEntryMut::Occupied(entry) =&gt; <span class="prelude-val">Some</span>(entry.remove()),
@@ -1148,7 +1162,7 @@
 &gt;;
 <span class="kw">type </span>SchemaMapIterMut&lt;<span class="lifetime">&#39;iter</span>&gt; = std::iter::Map&lt;
     hash_map::IterMut&lt;<span class="lifetime">&#39;iter</span>, SchemaBox, SchemaBox&gt;,
-    <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>((<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaBox)) -&gt; (SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;, SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;),
+    <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>((<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaBox)) -&gt; (SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;, SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;),
 &gt;;
 <span class="kw">impl </span>SchemaMap {
     <span class="doccomment">/// Iterate over entries in the map.
@@ -1167,7 +1181,7 @@
     </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaMapIterMut {
         <span class="kw">fn </span>map_fn&lt;<span class="lifetime">&#39;a</span>&gt;(
             (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaBox),
-        ) -&gt; (SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;, SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;) {
+        ) -&gt; (SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;, SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;) {
             (key.as_ref(), value.as_mut())
         }
         <span class="self">self</span>.map.iter_mut().map(map_fn)
@@ -1207,7 +1221,7 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     ) -&gt; std::iter::Map&lt;
         hash_map::ValuesMut&lt;SchemaBox, SchemaBox&gt;,
-        <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaBox) -&gt; SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;,
+        <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaBox) -&gt; SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;,
     &gt; {
         <span class="kw">fn </span>map_fn(key: <span class="kw-2">&amp;mut </span>SchemaBox) -&gt; SchemaRefMut {
             key.as_mut()
@@ -1223,7 +1237,7 @@
     }
 }
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaMap {
-    <span class="kw">type </span>Item = (SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;, SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;);
+    <span class="kw">type </span>Item = (SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;, SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;);
     <span class="kw">type </span>IntoIter = SchemaMapIterMut&lt;<span class="lifetime">&#39;a</span>&gt;;
     <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
         <span class="self">self</span>.iter_mut()
@@ -1283,11 +1297,15 @@
                     value: V::schema(),
                 },
                 type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="self">Self</span>&gt;()),
-                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone),
-                drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop),
-                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default),
-                hash_fn: <span class="prelude-val">Some</span>(SchemaVec::raw_hash),
-                eq_fn: <span class="prelude-val">Some</span>(SchemaVec::raw_eq),
+                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
+                drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop_cb()),
+                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default_cb()),
+                hash_fn: <span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{
+                    Unsafe::new(Box::leak(Box::new(|a| SchemaVec::raw_hash(a))))
+                }),
+                eq_fn: <span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{
+                    Unsafe::new(Box::leak(Box::new(|a, b| SchemaVec::raw_eq(a, b))))
+                }),
                 type_data: Default::default(),
             });
 
@@ -1322,7 +1340,7 @@
         </span><span class="kw">unsafe </span>{
             <span class="self">self</span>.map
                 .get_ref_unchecked(SchemaRef::new(key))
-                .map(|x| x.deref())
+                .map(|x| x.cast_into_unchecked())
         }
     }
 
@@ -1332,7 +1350,7 @@
         </span><span class="kw">unsafe </span>{
             <span class="self">self</span>.map
                 .get_ref_unchecked_mut(SchemaRef::new(key))
-                .map(|x| x.deref_mut())
+                .map(|x| x.cast_into_mut_unchecked())
         }
     }
 
@@ -1366,7 +1384,12 @@
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SMapIter&lt;K, V&gt; {
         <span class="kw">fn </span>map_fn&lt;<span class="lifetime">&#39;a</span>, K, V&gt;((key, value): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox)) -&gt; (<span class="kw-2">&amp;</span>K, <span class="kw-2">&amp;</span>V) {
             <span class="comment">// SOUND: SMap ensures K and V schemas always match.
-            </span><span class="kw">unsafe </span>{ (key.as_ref().deref(), value.as_ref().deref()) }
+            </span><span class="kw">unsafe </span>{
+                (
+                    key.as_ref().cast_into_unchecked(),
+                    value.as_ref().cast_into_unchecked(),
+                )
+            }
         }
         <span class="self">self</span>.map.map.iter().map(map_fn)
     }
@@ -1378,7 +1401,12 @@
             (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaBox),
         ) -&gt; (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V) {
             <span class="comment">// SOUND: SMap ensures K and V schemas always match.
-            </span><span class="kw">unsafe </span>{ (key.as_ref().deref(), value.as_mut().deref_mut()) }
+            </span><span class="kw">unsafe </span>{
+                (
+                    key.as_ref().cast_into_unchecked(),
+                    value.as_mut().cast_into_mut_unchecked(),
+                )
+            }
         }
         <span class="self">self</span>.map.map.iter_mut().map(map_fn)
     }
@@ -1391,7 +1419,7 @@
     {
         <span class="kw">fn </span>map_fn&lt;K&gt;(key: <span class="kw-2">&amp;</span>SchemaBox) -&gt; <span class="kw-2">&amp;</span>K {
             <span class="comment">// SOUND: SMap ensures key schema always match
-            </span><span class="kw">unsafe </span>{ key.as_ref().deref() }
+            </span><span class="kw">unsafe </span>{ key.as_ref().cast_into_unchecked() }
         }
         <span class="self">self</span>.map.map.keys().map(map_fn)
     }
@@ -1404,7 +1432,7 @@
     {
         <span class="kw">fn </span>map_fn&lt;V&gt;(value: <span class="kw-2">&amp;</span>SchemaBox) -&gt; <span class="kw-2">&amp;</span>V {
             <span class="comment">// SOUND: SMap ensures value schema always matches.
-            </span><span class="kw">unsafe </span>{ value.as_ref().deref() }
+            </span><span class="kw">unsafe </span>{ value.as_ref().cast_into_unchecked() }
         }
         <span class="self">self</span>.map.map.values().map(map_fn)
     }
@@ -1419,7 +1447,7 @@
     &gt; {
         <span class="kw">fn </span>map_fn&lt;V&gt;(value: <span class="kw-2">&amp;mut </span>SchemaBox) -&gt; <span class="kw-2">&amp;mut </span>V {
             <span class="comment">// SOUND: SMap ensures value schema always matches
-            </span><span class="kw">unsafe </span>{ value.as_mut().deref_mut() }
+            </span><span class="kw">unsafe </span>{ value.as_mut().cast_into_mut_unchecked() }
         }
         <span class="self">self</span>.map.map.values_mut().map(map_fn)
     }

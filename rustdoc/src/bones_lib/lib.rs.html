@@ -579,8 +579,8 @@
 <span class="doccomment">/// Bones lib prelude
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use crate</span>::{
-        ecs::prelude::<span class="kw-2">*</span>, instant::Instant, time::<span class="kw-2">*</span>, Game, Session, SessionOptions, SessionPlugin,
-        SessionRunner, Sessions,
+        ecs::prelude::<span class="kw-2">*</span>, instant::Instant, time::<span class="kw-2">*</span>, Game, GamePlugin, Session, SessionOptions,
+        SessionPlugin, SessionRunner, Sessions,
     };
 }
 
@@ -596,7 +596,7 @@
 </span><span class="kw">pub struct </span>Session {
     <span class="doccomment">/// The ECS world for the core.
     </span><span class="kw">pub </span>world: World,
-    <span class="doccomment">/// The system
+    <span class="doccomment">/// The system stages.
     </span><span class="attr">#[deref]
     </span><span class="kw">pub </span>stages: SystemStages,
     <span class="doccomment">/// Whether or not this session should have it&#39;s systems run.
@@ -802,7 +802,7 @@
         <span class="comment">// Update an existing resource of the same type.
         </span><span class="kw">for </span>r <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.shared_resources {
             <span class="kw">if </span>r.schema() == T::schema() {
-                <span class="kw-2">*</span>r.borrow_mut().cast_mut() = resource;
+                <span class="kw-2">*</span>r.borrow_mut().schema_ref_mut().cast_mut() = resource;
                 <span class="kw">return</span>;
             }
         }

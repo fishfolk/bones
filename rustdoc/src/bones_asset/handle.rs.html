@@ -325,11 +325,11 @@
                         schema: u128::schema(),
                     }],
                 }),
-                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone),
+                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
                 drop_fn: <span class="prelude-val">None</span>,
-                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default),
-                eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq),
-                hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash),
+                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default_cb()),
+                eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq_cb()),
+                hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash_cb()),
                 type_data: {
                     <span class="kw">let </span>td = bones_schema::alloc::TypeDatas::default();
                     td.insert(SchemaAssetHandle {
@@ -374,11 +374,11 @@
                         schema: u128::schema(),
                     }],
                 }),
-                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone),
+                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
                 drop_fn: <span class="prelude-val">None</span>,
-                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default),
-                eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq),
-                hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash),
+                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default_cb()),
+                eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq_cb()),
+                hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash_cb()),
                 type_data: {
                     <span class="kw">let </span>td = bones_schema::alloc::TypeDatas::default();
                     td.insert(SchemaAssetHandle { schema: <span class="prelude-val">None </span>}).unwrap();

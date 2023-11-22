@@ -445,7 +445,7 @@
         <span class="kw">let </span>root = asset_server.root::&lt;T&gt;();
         <span class="kw">let </span>root = root.as_schema_ref();
         <span class="kw">let </span>handle = root
-            .get_field(<span class="kw-2">*</span>field_idx)
+            .field(<span class="kw-2">*</span>field_idx)
             .expect(ERR)
             .cast::&lt;Handle&lt;LocalizationAsset&gt;&gt;();
         <span class="kw">let </span>asset = asset_server.get(<span class="kw-2">*</span>handle);

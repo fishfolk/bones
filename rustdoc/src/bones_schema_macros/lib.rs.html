@@ -417,7 +417,6 @@
 <a href="#417" id="417">417</a>
 <a href="#418" id="418">418</a>
 <a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>proc_macro2::{Punct, Spacing, TokenStream <span class="kw">as </span>TokenStream2, TokenTree <span class="kw">as </span>TokenTree2};
 <span class="kw">use </span>quote::{format_ident, quote, quote_spanned, spanned::Spanned};
@@ -558,12 +557,12 @@
     </span><span class="kw">let </span>clone_fn = <span class="kw">if </span>no_clone {
         <span class="macro">quote!</span>(<span class="prelude-val">None</span>)
     } <span class="kw">else </span>{
-        <span class="macro">quote!</span>(<span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawClone&gt;::raw_clone))
+        <span class="macro">quote!</span>(<span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawClone&gt;::raw_clone_cb()))
     };
     <span class="kw">let </span>default_fn = <span class="kw">if </span>no_default {
         <span class="macro">quote!</span>(<span class="prelude-val">None</span>)
     } <span class="kw">else </span>{
-        <span class="macro">quote!</span>(<span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawDefault&gt;::raw_default))
+        <span class="macro">quote!</span>(<span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawDefault&gt;::raw_default_cb()))
     };
 
     <span class="comment">// Get the schema kind
@@ -626,7 +625,7 @@
                                             default_fn: #default_fn,
                                             eq_fn: <span class="prelude-val">None</span>,
                                             hash_fn: <span class="prelude-val">None</span>,
-                                            drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawDrop&gt;::raw_drop),
+                                            drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawDrop&gt;::raw_drop_cb()),
                                         })
                                     },
                                 }
@@ -672,8 +671,7 @@
 
                 <span class="kw">for </span>v <span class="kw">in </span>e.variants.items() {
                     <span class="kw">let </span>name = v.name.to_string();
-                    <span class="kw">let </span>variant_schema_name =
-                        <span class="macro">format!</span>(<span class="string">&quot;{}::{}::EnumVariantSchemaData&quot;</span>, e.name, name);
+                    <span class="kw">let </span>variant_schema_name = <span class="macro">format!</span>(<span class="string">&quot;{}::{}&quot;</span>, e.name, name);
                     <span class="kw">let </span>fields = parse_struct_fields(<span class="kw-2">&amp;</span>v.contents);
                     variants.push(<span class="macro">quote! </span>{
                         #schema_mod::VariantInfo {
@@ -730,7 +728,7 @@
             clone_fn: #clone_fn,
             eq_fn: <span class="prelude-val">None</span>,
             hash_fn: <span class="prelude-val">None</span>,
-            drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawDrop&gt;::raw_drop),
+            drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>#schema_mod::raw_fns::RawDrop&gt;::raw_drop_cb()),
         })
     };
 

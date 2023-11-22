@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["AtomicResource","AtomicSchemaRef","AtomicSchemaRefMut","NoClone","Resources","UntypedAtomicResource","UntypedResources"]};
+window.SIDEBAR_ITEMS = {"struct":["AtomicResource","AtomicSchemaRef","AtomicSchemaRefMut","Resources","UntypedAtomicResource","UntypedResources"]};

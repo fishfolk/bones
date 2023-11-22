@@ -1285,6 +1285,83 @@
 <a href="#1285" id="1285">1285</a>
 <a href="#1286" id="1286">1286</a>
 <a href="#1287" id="1287">1287</a>
+<a href="#1288" id="1288">1288</a>
+<a href="#1289" id="1289">1289</a>
+<a href="#1290" id="1290">1290</a>
+<a href="#1291" id="1291">1291</a>
+<a href="#1292" id="1292">1292</a>
+<a href="#1293" id="1293">1293</a>
+<a href="#1294" id="1294">1294</a>
+<a href="#1295" id="1295">1295</a>
+<a href="#1296" id="1296">1296</a>
+<a href="#1297" id="1297">1297</a>
+<a href="#1298" id="1298">1298</a>
+<a href="#1299" id="1299">1299</a>
+<a href="#1300" id="1300">1300</a>
+<a href="#1301" id="1301">1301</a>
+<a href="#1302" id="1302">1302</a>
+<a href="#1303" id="1303">1303</a>
+<a href="#1304" id="1304">1304</a>
+<a href="#1305" id="1305">1305</a>
+<a href="#1306" id="1306">1306</a>
+<a href="#1307" id="1307">1307</a>
+<a href="#1308" id="1308">1308</a>
+<a href="#1309" id="1309">1309</a>
+<a href="#1310" id="1310">1310</a>
+<a href="#1311" id="1311">1311</a>
+<a href="#1312" id="1312">1312</a>
+<a href="#1313" id="1313">1313</a>
+<a href="#1314" id="1314">1314</a>
+<a href="#1315" id="1315">1315</a>
+<a href="#1316" id="1316">1316</a>
+<a href="#1317" id="1317">1317</a>
+<a href="#1318" id="1318">1318</a>
+<a href="#1319" id="1319">1319</a>
+<a href="#1320" id="1320">1320</a>
+<a href="#1321" id="1321">1321</a>
+<a href="#1322" id="1322">1322</a>
+<a href="#1323" id="1323">1323</a>
+<a href="#1324" id="1324">1324</a>
+<a href="#1325" id="1325">1325</a>
+<a href="#1326" id="1326">1326</a>
+<a href="#1327" id="1327">1327</a>
+<a href="#1328" id="1328">1328</a>
+<a href="#1329" id="1329">1329</a>
+<a href="#1330" id="1330">1330</a>
+<a href="#1331" id="1331">1331</a>
+<a href="#1332" id="1332">1332</a>
+<a href="#1333" id="1333">1333</a>
+<a href="#1334" id="1334">1334</a>
+<a href="#1335" id="1335">1335</a>
+<a href="#1336" id="1336">1336</a>
+<a href="#1337" id="1337">1337</a>
+<a href="#1338" id="1338">1338</a>
+<a href="#1339" id="1339">1339</a>
+<a href="#1340" id="1340">1340</a>
+<a href="#1341" id="1341">1341</a>
+<a href="#1342" id="1342">1342</a>
+<a href="#1343" id="1343">1343</a>
+<a href="#1344" id="1344">1344</a>
+<a href="#1345" id="1345">1345</a>
+<a href="#1346" id="1346">1346</a>
+<a href="#1347" id="1347">1347</a>
+<a href="#1348" id="1348">1348</a>
+<a href="#1349" id="1349">1349</a>
+<a href="#1350" id="1350">1350</a>
+<a href="#1351" id="1351">1351</a>
+<a href="#1352" id="1352">1352</a>
+<a href="#1353" id="1353">1353</a>
+<a href="#1354" id="1354">1354</a>
+<a href="#1355" id="1355">1355</a>
+<a href="#1356" id="1356">1356</a>
+<a href="#1357" id="1357">1357</a>
+<a href="#1358" id="1358">1358</a>
+<a href="#1359" id="1359">1359</a>
+<a href="#1360" id="1360">1360</a>
+<a href="#1361" id="1361">1361</a>
+<a href="#1362" id="1362">1362</a>
+<a href="#1363" id="1363">1363</a>
+<a href="#1364" id="1364">1364</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -1312,6 +1389,8 @@
     <span class="kw-2">*</span>,
 };
 
+<span class="kw">mod </span>schema_loader;
+
 <span class="doccomment">/// Struct responsible for loading assets into it&#39;s contained [`AssetStore`], using an [`AssetIo`]
 /// implementation.
 </span><span class="attr">#[derive(HasSchema, Deref, DerefMut, Clone)]
@@ -1321,8 +1400,6 @@
     </span><span class="kw">pub </span>inner: Arc&lt;AssetServerInner&gt;,
     <span class="doccomment">/// The [`AssetIo`] implementation used to load assets.
     </span><span class="kw">pub </span>io: Arc&lt;<span class="kw">dyn </span>AssetIo&gt;,
-    <span class="doccomment">/// List of assets that have been changed and that we are waiting to re-load.
-    </span><span class="kw">pub </span>pending_asset_changes: Vec&lt;UntypedHandle&gt;,
 }
 
 <span class="doccomment">/// The inner state of the asset server.
@@ -1354,7 +1431,6 @@
         <span class="self">Self </span>{
             inner: default(),
             io: Arc::new(DummyIo::new([])),
-            pending_asset_changes: default(),
         }
     }
 }
@@ -1377,6 +1453,9 @@
 </span><span class="kw">pub struct </span>CorePackfileMeta {
     <span class="doccomment">/// The path to the root asset for the pack.
     </span><span class="kw">pub </span>root: PathBuf,
+    <span class="doccomment">/// The paths to schema definitions to be loaded from this pack.
+    </span><span class="attr">#[serde(default)]
+    </span><span class="kw">pub </span>schemas: Vec&lt;PathBuf&gt;,
 }
 
 <span class="doccomment">/// YAML format for asset packs&#39; `pack.yaml` file.
@@ -1390,6 +1469,9 @@
     </span><span class="kw">pub </span>version: Version,
     <span class="doccomment">/// The required game version to be compatible with this asset pack.
     </span><span class="kw">pub </span>game_version: VersionReq,
+    <span class="doccomment">/// The paths to schema definitions to be loaded from this pack.
+    </span><span class="attr">#[serde(default)]
+    </span><span class="kw">pub </span>schemas: Vec&lt;PathBuf&gt;,
 }
 
 <span class="doccomment">/// The [`AssetPackId`] of the core pack.
@@ -1447,7 +1529,6 @@
                 ..default()
             }),
             io: Arc::new(io),
-            pending_asset_changes: default(),
         }
     }
 
@@ -1504,11 +1585,12 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         <span class="kw-2">mut </span>handle_change: F,
     ) {
+        <span class="kw">let </span><span class="kw-2">mut </span>pending_asset_changes = Vec::new();
         <span class="kw">while let </span><span class="prelude-val">Ok</span>(changed) = <span class="self">self</span>.asset_change_recv.try_recv() {
             <span class="kw">match </span>changed {
                 ChangedAsset::Loc(loc) =&gt; {
                     <span class="kw">let </span>handle = <span class="self">self</span>.load_asset_forced(loc.as_ref());
-                    <span class="self">self</span>.pending_asset_changes.push(handle);
+                    pending_asset_changes.push(handle);
                 }
                 ChangedAsset::Handle(handle) =&gt; {
                     <span class="kw">let </span>entry = <span class="self">self
@@ -1520,15 +1602,13 @@
                     <span class="kw">let </span>loc = entry.key().to_owned();
                     drop(entry);
                     <span class="self">self</span>.load_asset_forced(loc.as_ref());
-                    <span class="self">self</span>.pending_asset_changes.push(handle);
+                    pending_asset_changes.push(handle);
                 }
             }
         }
 
-        <span class="kw">if </span><span class="self">self</span>.load_progress.is_finished() {
-            <span class="kw">for </span>handle <span class="kw">in </span>std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.pending_asset_changes) {
-                handle_change(<span class="self">self</span>, handle)
-            }
+        <span class="kw">for </span>handle <span class="kw">in </span>pending_asset_changes {
+            handle_change(<span class="self">self</span>, handle)
         }
     }
 
@@ -1593,6 +1673,7 @@
             .load_file((Path::new(<span class="string">&quot;pack.yaml&quot;</span>), pack).into())
             .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>meta: PackfileMeta = serde_yaml::from_slice(<span class="kw-2">&amp;</span>packfile_contents)<span class="question-mark">?</span>;
+        <span class="macro">tracing::debug!</span>(<span class="question-mark">?</span>pack, <span class="question-mark">?</span>meta, <span class="string">&quot;Loaded asset pack meta.&quot;</span>);
 
         <span class="comment">// If the game version doesn&#39;t match, then don&#39;t continue loading this pack.
         </span><span class="kw">if </span>!meta.game_version.matches(<span class="kw-2">&amp;</span><span class="self">self</span>.game_version) {
@@ -1615,6 +1696,9 @@
             );
         }
 
+        <span class="comment">// Load the schemas
+        </span><span class="kw">let </span>schemas = <span class="self">self</span>.load_pack_schemas(pack, <span class="kw-2">&amp;</span>meta.schemas).<span class="kw">await</span><span class="question-mark">?</span>;
+
         <span class="comment">// Load the asset and produce a handle
         </span><span class="kw">let </span>root_loc = AssetLocRef {
             path: <span class="kw-2">&amp;</span>meta.root,
@@ -1628,13 +1712,7 @@
             id: meta.id,
             version: meta.version,
             game_version: meta.game_version,
-            <span class="comment">// TODO: Load &amp; import schemas that are defined in asset packs.
-            // This is medium-sized effort. The idea is that asset packs shoudl be able to
-            // create YAML files that describe a `SchemaData`. This schema data should get
-            // registered with a file extension name, just like a Rust metadata asset does
-            // so that that schema can be used to load assets.
-            </span>schemas: default(),
-            import_schemas: default(),
+            schemas,
             root: root_handle,
         })
     }
@@ -1651,6 +1729,7 @@
             .<span class="kw">await
             </span>.context(<span class="string">&quot;Could not load pack file&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>meta: CorePackfileMeta = serde_yaml::from_slice(<span class="kw-2">&amp;</span>packfile_contents)<span class="question-mark">?</span>;
+        <span class="macro">tracing::debug!</span>(<span class="question-mark">?</span>meta, <span class="string">&quot;Loaded core pack meta.&quot;</span>);
 
         <span class="comment">// Load the asset and produce a handle
         </span><span class="kw">let </span>root_loc = AssetLocRef {
@@ -1658,6 +1737,9 @@
             pack: <span class="prelude-val">None</span>,
         };
         <span class="kw">let </span>handle = <span class="self">self</span>.load_asset(root_loc);
+
+        <span class="comment">// Load the schemas
+        </span><span class="kw">let </span>schemas = <span class="self">self</span>.load_pack_schemas(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>meta.schemas).<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="comment">// Return the loaded asset pack.
         </span><span class="prelude-val">Ok</span>(AssetPack {
@@ -1674,8 +1756,7 @@
                 }]
                 .to_vec(),
             },
-            schemas: default(),
-            import_schemas: default(),
+            schemas,
             root: handle,
         })
     }
@@ -2006,13 +2087,16 @@
     }
 
     <span class="doccomment">/// Borrow a [`LoadedAsset`] associated to the given handle.
-    </span><span class="kw">pub fn </span>get_untyped(<span class="kw-2">&amp;</span><span class="self">self</span>, handle: UntypedHandle) -&gt; <span class="prelude-ty">Option</span>&lt;MapRef&lt;Cid, LoadedAsset&gt;&gt; {
+    </span><span class="kw">pub fn </span>get_asset_untyped(<span class="kw-2">&amp;</span><span class="self">self</span>, handle: UntypedHandle) -&gt; <span class="prelude-ty">Option</span>&lt;MapRef&lt;Cid, LoadedAsset&gt;&gt; {
         <span class="kw">let </span>cid = <span class="self">self</span>.store.asset_ids.get(<span class="kw-2">&amp;</span>handle)<span class="question-mark">?</span>;
         <span class="self">self</span>.store.assets.get(<span class="kw-2">&amp;</span>cid)
     }
 
     <span class="doccomment">/// Borrow a [`LoadedAsset`] associated to the given handle.
-    </span><span class="kw">pub fn </span>get_untyped_mut(<span class="kw-2">&amp;</span><span class="self">self</span>, handle: UntypedHandle) -&gt; <span class="prelude-ty">Option</span>&lt;MapRefMut&lt;Cid, LoadedAsset&gt;&gt; {
+    </span><span class="kw">pub fn </span>get_asset_untyped_mut(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        handle: UntypedHandle,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;MapRefMut&lt;Cid, LoadedAsset&gt;&gt; {
         <span class="kw">let </span>cid = <span class="self">self</span>.store.asset_ids.get(<span class="kw-2">&amp;</span>handle)<span class="question-mark">?</span>;
         <span class="self">self</span>.store.assets.get_mut(<span class="kw-2">&amp;</span>cid)
     }
@@ -2032,6 +2116,11 @@
         <span class="self">self</span>.get(<span class="self">self</span>.core().root.typed())
     }
 
+    <span class="doccomment">/// Get the core asset pack&#39;s root asset as a type-erased [`SchemaBox`].
+    </span><span class="kw">pub fn </span>untyped_root(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MappedMapRef&lt;Cid, LoadedAsset, SchemaBox&gt; {
+        <span class="self">self</span>.get_untyped(<span class="self">self</span>.core().root)
+    }
+
     <span class="doccomment">/// Read the loaded asset packs.
     </span><span class="kw">pub fn </span>packs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DashMap&lt;AssetPackSpec, AssetPack&gt; {
         <span class="kw-2">&amp;</span><span class="self">self</span>.store.packs
@@ -2049,7 +2138,29 @@
     }
 
     <span class="doccomment">/// Borrow a loaded asset.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the asset is not loaded.
     </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>get_untyped(<span class="kw-2">&amp;</span><span class="self">self</span>, handle: UntypedHandle) -&gt; MappedMapRef&lt;Cid, LoadedAsset, SchemaBox&gt; {
+        <span class="self">self</span>.try_get_untyped(handle).unwrap()
+    }
+
+    <span class="doccomment">/// Borrow a loaded asset.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the asset is not loaded.
+    </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>get_untyped_mut(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        handle: UntypedHandle,
+    ) -&gt; MappedMapRefMut&lt;Cid, LoadedAsset, SchemaBox&gt; {
+        <span class="self">self</span>.try_get_untyped_mut(handle).unwrap()
+    }
+
+    <span class="doccomment">/// Borrow a loaded asset.
     </span><span class="kw">pub fn </span>try_get&lt;T: HasSchema&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         handle: Handle&lt;T&gt;,
@@ -2067,6 +2178,29 @@
                 asset.cast_ref()
             }
         }))
+    }
+
+    <span class="doccomment">/// Borrow a loaded asset.
+    </span><span class="kw">pub fn </span>try_get_untyped(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        handle: UntypedHandle,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;MappedMapRef&lt;Cid, LoadedAsset, SchemaBox&gt;&gt; {
+        <span class="kw">let </span>cid = <span class="self">self</span>.store.asset_ids.get(<span class="kw-2">&amp;</span>handle)<span class="question-mark">?</span>;
+        <span class="prelude-val">Some</span>(MapRef::map(<span class="self">self</span>.store.assets.get(<span class="kw-2">&amp;</span>cid).unwrap(), |x| {
+            <span class="kw-2">&amp;</span>x.data
+        }))
+    }
+
+    <span class="doccomment">/// Borrow a loaded asset.
+    </span><span class="kw">pub fn </span>try_get_untyped_mut(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        handle: UntypedHandle,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;MappedMapRefMut&lt;Cid, LoadedAsset, SchemaBox&gt;&gt; {
+        <span class="kw">let </span>cid = <span class="self">self</span>.store.asset_ids.get_mut(<span class="kw-2">&amp;</span>handle)<span class="question-mark">?</span>;
+        <span class="prelude-val">Some</span>(MapRefMut::map(
+            <span class="self">self</span>.store.assets.get_mut(<span class="kw-2">&amp;</span>cid).unwrap(),
+            |x| <span class="kw-2">&amp;mut </span>x.data,
+        ))
     }
 
     <span class="doccomment">/// Mutably borrow a loaded asset.
@@ -2097,6 +2231,30 @@
                 asset.cast_mut()
             }
         })
+    }
+
+    <span class="doccomment">/// Load the schemas for an asset pack.
+    </span><span class="kw">async fn </span>load_pack_schemas(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        pack: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
+        schema_paths: <span class="kw-2">&amp;</span>[PathBuf],
+    ) -&gt; anyhow::Result&lt;Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt;&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>schemas = Vec::with_capacity(schema_paths.len());
+        <span class="kw">for </span>schema_path <span class="kw">in </span>schema_paths {
+            <span class="kw">let </span>contents = <span class="self">self
+                </span>.io
+                .load_file(AssetLocRef {
+                    path: schema_path,
+                    pack,
+                })
+                .<span class="kw">await</span><span class="question-mark">?</span>;
+
+            <span class="kw">let </span>pack_schema: schema_loader::PackSchema = serde_yaml::from_slice(<span class="kw-2">&amp;</span>contents)<span class="question-mark">?</span>;
+            <span class="kw">let </span>schema = pack_schema.<span class="number">0</span>;
+            <span class="macro">tracing::debug!</span>(<span class="question-mark">?</span>pack, <span class="question-mark">?</span>schema.name, <span class="string">&quot;Loaded schema from pack.&quot;</span>);
+            schemas.push(schema);
+        }
+        <span class="prelude-val">Ok</span>(schemas)
     }
 }
 
@@ -2155,14 +2313,14 @@
     }
 
     <span class="doccomment">/// The load context for a [`SchemaRefMut`].
-    </span><span class="kw">pub struct </span>SchemaPtrLoadCtx&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
+    </span><span class="kw">pub struct </span>SchemaPtrLoadCtx&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>&gt; {
         <span class="doccomment">/// The metadata asset load context.
         </span><span class="kw">pub </span>ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>MetaAssetLoadCtx&lt;<span class="lifetime">&#39;srv</span>&gt;,
         <span class="doccomment">/// The pointer to load.
-        </span><span class="kw">pub </span>ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt;,
+        </span><span class="kw">pub </span>ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>&gt;,
     }
 
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>, <span class="lifetime">&#39;de</span>&gt; DeserializeSeed&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>SchemaPtrLoadCtx&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
+    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;de</span>&gt; DeserializeSeed&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>SchemaPtrLoadCtx&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>&gt; {
         <span class="kw">type </span>Value = ();
 
         <span class="kw">fn </span>deserialize&lt;D&gt;(<span class="kw-2">mut </span><span class="self">self</span>, deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, D::Error&gt;
@@ -2234,15 +2392,11 @@
                     ptr: <span class="self">self</span>.ptr,
                     ctx: <span class="self">self</span>.ctx,
                 })<span class="question-mark">?</span>,
-                SchemaKind::Box(<span class="kw">_</span>) =&gt; {
-                    <span class="comment">// SOUND: schema asserts pointer is a SchemaBox.
-                    </span><span class="kw">let </span>b = <span class="kw">unsafe </span>{ <span class="self">self</span>.ptr.deref_mut::&lt;SchemaBox&gt;() };
-                    SchemaPtrLoadCtx {
-                        ctx: <span class="self">self</span>.ctx,
-                        ptr: b.as_mut(),
-                    }
-                    .deserialize(deserializer)<span class="question-mark">?
-                </span>}
+                SchemaKind::Box(<span class="kw">_</span>) =&gt; SchemaPtrLoadCtx {
+                    ctx: <span class="self">self</span>.ctx,
+                    ptr: <span class="self">self</span>.ptr.into_box().unwrap(),
+                }
+                .deserialize(deserializer)<span class="question-mark">?</span>,
                 SchemaKind::Primitive(p) =&gt; {
                     <span class="kw">match </span>p {
                         Primitive::Bool =&gt; <span class="kw-2">*</span><span class="self">self</span>.ptr.cast_mut() = bool::deserialize(deserializer)<span class="question-mark">?</span>,
@@ -2275,12 +2429,12 @@
         }
     }
 
-    <span class="kw">struct </span>StructVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
+    <span class="kw">struct </span>StructVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>&gt; {
         ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>MetaAssetLoadCtx&lt;<span class="lifetime">&#39;srv</span>&gt;,
-        ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt;,
+        ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>&gt;,
     }
 
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>StructVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
+    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>StructVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>&gt; {
         <span class="kw">type </span>Value = ();
 
         <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
@@ -2302,11 +2456,11 @@
             <span class="kw">let </span>field_count = <span class="self">self</span>.ptr.schema().kind.as_struct().unwrap().fields.len();
 
             <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..field_count {
-                <span class="kw">let </span>field = <span class="self">self</span>.ptr.get_field(i).unwrap();
+                <span class="kw">let </span>field = <span class="self">self</span>.ptr.access_mut().field(i).unwrap();
                 <span class="kw">if </span>seq
                     .next_element_seed(SchemaPtrLoadCtx {
                         ctx: <span class="self">self</span>.ctx,
-                        ptr: field,
+                        ptr: field.into_schema_ref_mut(),
                     })<span class="question-mark">?
                     </span>.is_none()
                 {
@@ -2322,11 +2476,11 @@
             </span>A: serde::de::MapAccess&lt;<span class="lifetime">&#39;de</span>&gt;,
         {
             <span class="kw">while let </span><span class="prelude-val">Some</span>(key) = map.next_key::&lt;String&gt;()<span class="question-mark">? </span>{
-                <span class="kw">match </span><span class="self">self</span>.ptr.get_field(<span class="kw-2">&amp;</span>key) {
+                <span class="kw">match </span><span class="self">self</span>.ptr.access_mut().field(<span class="kw-2">&amp;</span>key) {
                     <span class="prelude-val">Ok</span>(field) =&gt; {
                         map.next_value_seed(SchemaPtrLoadCtx {
                             ctx: <span class="self">self</span>.ctx,
-                            ptr: field,
+                            ptr: field.into_schema_ref_mut(),
                         })<span class="question-mark">?</span>;
                     }
                     <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
@@ -2356,12 +2510,12 @@
         }
     }
 
-    <span class="kw">struct </span>VecVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
+    <span class="kw">struct </span>VecVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>&gt; {
         ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>MetaAssetLoadCtx&lt;<span class="lifetime">&#39;srv</span>&gt;,
-        ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt;,
+        ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>&gt;,
     }
 
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>VecVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
+    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>VecVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>&gt; {
         <span class="kw">type </span>Value = ();
 
         <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
@@ -2399,12 +2553,12 @@
         }
     }
 
-    <span class="kw">struct </span>MapVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
+    <span class="kw">struct </span>MapVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>&gt; {
         ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>MetaAssetLoadCtx&lt;<span class="lifetime">&#39;srv</span>&gt;,
-        ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt;,
+        ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>&gt;,
     }
 
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>MapVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
+    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>MapVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>&gt; {
         <span class="kw">type </span>Value = ();
 
         <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
@@ -2446,12 +2600,12 @@
         }
     }
 
-    <span class="kw">struct </span>EnumVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
+    <span class="kw">struct </span>EnumVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>&gt; {
         ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>MetaAssetLoadCtx&lt;<span class="lifetime">&#39;srv</span>&gt;,
-        ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt;,
+        ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>&gt;,
     }
 
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>EnumVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
+    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>EnumVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;srv</span>, <span class="lifetime">&#39;ptr</span>&gt; {
         <span class="kw">type </span>Value = ();
 
         <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
@@ -2514,12 +2668,12 @@
         }
     }
 
-    <span class="kw">struct </span>EnumPtrLoadCtx&lt;<span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
-        ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt;,
+    <span class="kw">struct </span>EnumPtrLoadCtx&lt;<span class="lifetime">&#39;ptr</span>&gt; {
+        ptr: SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>&gt;,
     }
 
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>, <span class="lifetime">&#39;de</span>&gt; DeserializeSeed&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>EnumPtrLoadCtx&lt;<span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt; {
-        <span class="kw">type </span>Value = SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;prnt</span>&gt;;
+    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;ptr</span>, <span class="lifetime">&#39;de</span>&gt; DeserializeSeed&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>EnumPtrLoadCtx&lt;<span class="lifetime">&#39;ptr</span>&gt; {
+        <span class="kw">type </span>Value = SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>&gt;;
 
         <span class="kw">fn </span>deserialize&lt;D&gt;(<span class="self">self</span>, deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, D::Error&gt;
         <span class="kw">where
@@ -2548,7 +2702,7 @@
             <span class="comment">// Write the enum variant
             // SOUND: the schema asserts that the write to the enum discriminant is valid
             </span><span class="kw">match </span>enum_info.tag_type {
-                EnumTagType::U8 =&gt; <span class="kw">unsafe </span>{ <span class="self">self</span>.ptr.as_ptr().write(var_idx <span class="kw">as </span>u8) },
+                EnumTagType::U8 =&gt; <span class="kw">unsafe </span>{ <span class="self">self</span>.ptr.as_ptr().cast::&lt;u8&gt;().write(var_idx <span class="kw">as </span>u8) },
                 EnumTagType::U16 =&gt; <span class="kw">unsafe </span>{
                     <span class="self">self</span>.ptr.as_ptr().cast::&lt;u16&gt;().write(var_idx <span class="kw">as </span>u16)
                 },

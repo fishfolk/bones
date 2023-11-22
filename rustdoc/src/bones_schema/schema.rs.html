@@ -506,9 +506,32 @@
 <a href="#506" id="506">506</a>
 <a href="#507" id="507">507</a>
 <a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! [`Schema`], [`HasSchema`], [`SchemaData`], and related types.
 
-</span><span class="kw">use </span>std::{alloc::Layout, any::TypeId, borrow::Cow};
+</span><span class="kw">use </span>std::{alloc::Layout, any::TypeId, borrow::Cow, ffi::c_void};
+
+<span class="kw">use </span>bones_utils::Ustr;
 
 <span class="kw">use crate</span>::{alloc::TypeDatas, prelude::<span class="kw-2">*</span>};
 
@@ -621,7 +644,7 @@
         </span><span class="self">self </span>== other
         <span class="comment">// If the schemas don&#39;t have any opaque fields, and are equal to each-other, then they
         // have the same representation.
-        </span>|| (!<span class="self">self</span>.has_opaque() &amp;&amp; !other.has_opaque() &amp;&amp; {
+        </span>|| (!<span class="self">self</span>.kind.has_opaque() &amp;&amp; !other.kind.has_opaque() &amp;&amp; {
             <span class="kw">match </span>(<span class="kw-2">&amp;</span><span class="self">self</span>.kind, <span class="kw-2">&amp;</span>other.kind) {
                 (SchemaKind::Struct(s1), SchemaKind::Struct(s2)) =&gt; {
                     s1.fields.len() == s2.fields.len() &amp;&amp;
@@ -638,26 +661,23 @@
 }
 
 <span class="doccomment">/// Schema information describing the memory layout of a type.
-</span><span class="attr">#[derive(Debug, Clone)]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Deserialize))]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(rename_all = <span class="string">&quot;snake_case&quot;</span>))]
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>SchemaData {
     <span class="doccomment">/// The short name of the type.
     ///
     /// **Note:** Currently bones isn&#39;t very standardized as far as name generation for Rust or
     /// other language type names, and this is mostly for diagnostics. This may change in the future
     /// but for now there are no guarantees.
-    </span><span class="kw">pub </span>name: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;,
+    </span><span class="kw">pub </span>name: Ustr,
     <span class="doccomment">/// The full name of the type, including any module specifiers.
     ///
     /// **Note:** Currently bones isn&#39;t very standardized as far as name generation for Rust or
     /// other language type names, and this is mostly for diagnostics. This may change in the future
     /// but for now there are no guarantees.
-    </span><span class="kw">pub </span>full_name: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;,
+    </span><span class="kw">pub </span>full_name: Ustr,
     <span class="doccomment">/// The kind of schema.
     </span><span class="kw">pub </span>kind: SchemaKind,
-    <span class="attr">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(skip))]
-    </span><span class="doccomment">/// Container for storing [`Schema`] type datas.
+    <span class="doccomment">/// Container for storing [`Schema`] type datas.
     ///
     /// &quot;Type data&quot; is extra data that is stored in a type&#39;s [`Schema`] that may be used for any number
     /// of different purposes.
@@ -692,31 +712,58 @@
     // as type datas, we may want to remove these fields in favor of the type data.
     </span><span class="doccomment">/// The Rust [`TypeId`] that this [`Schema`] was created from, if it was created from a Rust
     /// type.
-    </span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(skip))]
     </span><span class="kw">pub </span>type_id: <span class="prelude-ty">Option</span>&lt;TypeId&gt;,
     <span class="doccomment">/// The function pointer that may be used to clone data with this schema.
-    </span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(skip))]
-    </span><span class="kw">pub </span>clone_fn: <span class="prelude-ty">Option</span>&lt;<span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn</span>(src: <span class="kw-2">*const </span>u8, dst: <span class="kw-2">*mut </span>u8)&gt;,
+    </span><span class="kw">pub </span>clone_fn:
+        <span class="prelude-ty">Option</span>&lt;Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void, <span class="kw-2">*mut </span>c_void) + Sync + Send + <span class="lifetime">&#39;static</span>)&gt;&gt;,
     <span class="doccomment">/// The function pointer that may be used to drop data with this schema.
-    </span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(skip))]
-    </span><span class="kw">pub </span>drop_fn: <span class="prelude-ty">Option</span>&lt;<span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn</span>(ptr: <span class="kw-2">*mut </span>u8)&gt;,
+    </span><span class="kw">pub </span>drop_fn: <span class="prelude-ty">Option</span>&lt;Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*mut </span>c_void) + Sync + Send + <span class="lifetime">&#39;static</span>)&gt;&gt;,
     <span class="doccomment">/// The function pointer that may be used to write a default value to a pointer.
-    </span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(skip))]
-    </span><span class="kw">pub </span>default_fn: <span class="prelude-ty">Option</span>&lt;<span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn</span>(ptr: <span class="kw-2">*mut </span>u8)&gt;,
+    </span><span class="kw">pub </span>default_fn: <span class="prelude-ty">Option</span>&lt;Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*mut </span>c_void) + Sync + Send + <span class="lifetime">&#39;static</span>)&gt;&gt;,
     <span class="doccomment">/// The function pointer that may be used to hash the value.
-    </span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(skip))]
-    </span><span class="kw">pub </span>hash_fn: <span class="prelude-ty">Option</span>&lt;<span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn</span>(ptr: <span class="kw-2">*const </span>u8) -&gt; u64&gt;,
+    </span><span class="kw">pub </span>hash_fn: <span class="prelude-ty">Option</span>&lt;Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void) -&gt; u64 + Sync + Send + <span class="lifetime">&#39;static</span>)&gt;&gt;,
     <span class="doccomment">/// The function pointer that may be used to compare two values for equality. Note that this is
     /// total equality, not partial equality.
-    </span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(skip))]
-    </span><span class="kw">pub </span>eq_fn: <span class="prelude-ty">Option</span>&lt;<span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn</span>(a: <span class="kw-2">*const </span>u8, b: <span class="kw-2">*const </span>u8) -&gt; bool&gt;,
+    </span><span class="kw">pub </span>eq_fn: <span class="prelude-ty">Option</span>&lt;
+        Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void, <span class="kw-2">*const </span>c_void) -&gt; bool + Sync + Send + <span class="lifetime">&#39;static</span>)&gt;,
+    &gt;,
+}
+
+<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>SchemaData {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">&quot;SchemaData&quot;</span>)
+            .field(<span class="string">&quot;name&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name)
+            .field(<span class="string">&quot;full_name&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.full_name)
+            .field(<span class="string">&quot;kind&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.kind)
+            .field(<span class="string">&quot;type_data&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.type_data)
+            .field(<span class="string">&quot;type_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.type_id)
+            .finish_non_exhaustive()
+    }
+}
+
+<span class="doccomment">/// A wrapper struct that marks it unsafe to both create and access the inner value.
+</span><span class="attr">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>Unsafe&lt;T&gt;(T);
+
+<span class="kw">impl</span>&lt;T&gt; Unsafe&lt;T&gt; {
+    <span class="doccomment">/// Create a new [`Unsafe`] contianing the `value`.
+    /// # Safety
+    /// The safety invariants are dependent on the inner type.
+    </span><span class="kw">pub unsafe fn </span>new(value: T) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(value)
+    }
+
+    <span class="doccomment">/// Unsafely get the inner value.
+    /// # Safety
+    /// The safety invariants are dependent on the inner type.
+    </span><span class="kw">pub unsafe fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>T {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
 }
 
 <span class="doccomment">/// A schema describes the data layout of a type, to enable dynamic access to the type&#39;s data
 /// through a pointer.
 </span><span class="attr">#[derive(Debug, Clone)]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Deserialize))]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(rename_all = <span class="string">&quot;snake_case&quot;</span>))]
 </span><span class="kw">pub enum </span>SchemaKind {
     <span class="doccomment">/// The type represents a struct.
     </span>Struct(StructSchemaInfo),
@@ -797,7 +844,6 @@
 
 <span class="doccomment">/// Schema data for an enum.
 </span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Deserialize))]
 </span><span class="kw">pub struct </span>EnumSchemaInfo {
     <span class="doccomment">/// The layout of the enum tag.
     </span><span class="kw">pub </span>tag_type: EnumTagType,
@@ -807,8 +853,6 @@
 
 <span class="doccomment">/// A type for an enum tag for [`EnumSchemaInfo`].
 </span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Deserialize))]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(rename_all = <span class="string">&quot;snake_case&quot;</span>))]
 </span><span class="kw">pub enum </span>EnumTagType {
     <span class="doccomment">/// A [`u8`].
     </span>U8,
@@ -831,8 +875,6 @@
 
 <span class="doccomment">/// Information about an enum variant for [`EnumSchemaInfo`].
 </span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Deserialize))]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(rename_all = <span class="string">&quot;snake_case&quot;</span>))]
 </span><span class="kw">pub struct </span>VariantInfo {
     <span class="doccomment">/// The name of the enum variant.
     </span><span class="kw">pub </span>name: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;,
@@ -844,7 +886,7 @@
 </span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>StructFieldInfo {
     <span class="doccomment">/// The name of the field. Will be [`None`] if this is a field of a tuple struct.
-    </span><span class="kw">pub </span>name: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;&gt;,
+    </span><span class="kw">pub </span>name: <span class="prelude-ty">Option</span>&lt;Ustr&gt;,
     <span class="doccomment">/// The schema of the field.
     </span><span class="kw">pub </span>schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
     <span class="comment">// TODO: Investigate adding attribute info to `StructFieldInfo`.
@@ -856,8 +898,6 @@
 
 <span class="doccomment">/// A type of primitive.
 </span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Deserialize))]
-#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(rename_all = <span class="string">&quot;snake_case&quot;</span>))]
 </span><span class="kw">pub enum </span>Primitive {
     <span class="doccomment">/// A boolean.
     </span>Bool,
@@ -905,7 +945,7 @@
     </span><span class="kw">fn </span>from_type() -&gt; <span class="self">Self</span>;
 }
 
-<span class="kw">impl </span>SchemaData {
+<span class="kw">impl </span>SchemaKind {
     <span class="doccomment">/// Calculate the layout of the type represented by the schema.
     ///
     /// Usually you don&#39;t need to call this and should use the static, cached layout and field
@@ -926,10 +966,10 @@
             </span>}
         };
 
-        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.kind {
+        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self </span>{
             SchemaKind::Struct(s) =&gt; {
                 <span class="kw">for </span>field <span class="kw">in </span><span class="kw-2">&amp;</span>s.fields {
-                    <span class="kw">let </span>field_layout_info = field.schema.compute_layout_info();
+                    <span class="kw">let </span>field_layout_info = field.schema.kind.compute_layout_info();
                     offset = extend_layout(<span class="kw-2">&amp;mut </span>layout, field_layout_info.layout);
                     field_offsets.push((field.name.as_deref(), offset));
                 }
@@ -963,7 +1003,9 @@
                     }
                 }
                 <span class="kw">let </span>offset = extend_layout(<span class="kw-2">&amp;mut </span>layout, enum_value_layout);
-                field_offsets.push((<span class="prelude-val">None</span>, offset));
+                <span class="comment">// Enums have a single field offset that is the offset of the value part of the enum
+                // comming after the discriminant.
+                </span>field_offsets.push((<span class="prelude-val">None</span>, offset));
             }
             SchemaKind::Primitive(p) =&gt; {
                 extend_layout(
@@ -1002,13 +1044,13 @@
 
     <span class="doccomment">/// Recursively checks whether or not the schema contains any [`Opaque`][Primitive::Opaque] primitives.
     </span><span class="kw">pub fn </span>has_opaque(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.kind {
-            SchemaKind::Struct(s) =&gt; s.fields.iter().any(|field| field.schema.has_opaque()),
-            SchemaKind::Vec(v) =&gt; v.has_opaque(),
-            SchemaKind::Box(b) =&gt; b.schema().has_opaque(),
-            SchemaKind::Enum(e) =&gt; e.variants.iter().any(|var| var.schema.has_opaque()),
+        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self </span>{
+            SchemaKind::Struct(s) =&gt; s.fields.iter().any(|field| field.schema.kind.has_opaque()),
+            SchemaKind::Vec(v) =&gt; v.kind.has_opaque(),
+            SchemaKind::Box(b) =&gt; b.schema().kind.has_opaque(),
+            SchemaKind::Enum(e) =&gt; e.variants.iter().any(|var| var.schema.kind.has_opaque()),
             SchemaKind::Map { key, value } =&gt; {
-                key.schema().has_opaque() || value.schema().has_opaque()
+                key.schema().kind.has_opaque() || value.schema().kind.has_opaque()
             }
             SchemaKind::Primitive(p) =&gt; <span class="macro">matches!</span>(p, Primitive::Opaque { .. }),
         }

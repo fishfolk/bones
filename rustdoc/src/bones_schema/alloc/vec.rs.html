@@ -794,8 +794,11 @@
 <a href="#794" id="794">794</a>
 <a href="#795" id="795">795</a>
 <a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     any::{type_name, TypeId},
+    ffi::c_void,
     fmt::Debug,
     iter::Iterator,
     marker::PhantomData,
@@ -857,7 +860,7 @@
     /// # Safety
     /// - The item must be a pointer to data with the same schema.
     /// - You must ensure the `item` pointer is not used after pusing.
-    </span><span class="kw">unsafe fn </span>push_raw(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: <span class="kw-2">*mut </span>u8) {
+    </span><span class="kw">unsafe fn </span>push_raw(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: <span class="kw-2">*mut </span>c_void) {
         <span class="comment">// Make room for more elements if necessary
         </span><span class="kw">if </span><span class="self">self</span>.len == <span class="self">self</span>.buffer.capacity() {
             <span class="self">self</span>.grow();
@@ -866,8 +869,7 @@
         <span class="comment">// Copy the item into the vec
         </span><span class="kw">unsafe </span>{
             <span class="self">self</span>.buffer
-                .unchecked_idx_mut(<span class="self">self</span>.len)
-                .as_ptr()
+                .unchecked_idx(<span class="self">self</span>.len)
                 .copy_from_nonoverlapping(item, <span class="self">self</span>.buffer.layout().size());
         }
 
@@ -886,7 +888,7 @@
         }
 
         <span class="kw">unsafe </span>{
-            <span class="self">self</span>.push_raw(<span class="kw-2">&amp;mut </span>item <span class="kw">as </span><span class="kw-2">*mut </span>T <span class="kw">as </span><span class="kw-2">*mut </span>u8);
+            <span class="self">self</span>.push_raw(<span class="kw-2">&amp;mut </span>item <span class="kw">as </span><span class="kw-2">*mut </span>T <span class="kw">as </span><span class="kw-2">*mut </span>c_void);
             std::mem::forget(item);
         }
 
@@ -952,7 +954,7 @@
             <span class="kw">let </span>ret = <span class="kw">unsafe </span>{ <span class="self">self</span>.raw_pop() }.map(|ptr| {
                 <span class="kw">let </span><span class="kw-2">mut </span>data = MaybeUninit::&lt;T&gt;::uninit();
                 <span class="kw">unsafe </span>{
-                    (data.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>u8)
+                    (data.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>c_void)
                         .copy_from_nonoverlapping(ptr, <span class="self">self</span>.buffer.layout().size());
                     data.assume_init()
                 }
@@ -964,7 +966,7 @@
     <span class="doccomment">/// # Safety
     /// The pointer may only be used immediately after calling raw_pop to read the data out of the
     /// popped item. Any further mutations to the vector may make the pointer invalid.
-    </span><span class="kw">unsafe fn </span>raw_pop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">*mut </span>u8&gt; {
+    </span><span class="kw">unsafe fn </span>raw_pop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">*mut </span>c_void&gt; {
         <span class="kw">if </span><span class="self">self</span>.len == <span class="number">0 </span>{
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
@@ -972,7 +974,7 @@
             </span><span class="self">self</span>.len -= <span class="number">1</span>;
 
             <span class="comment">// Return the pointer to the item that is being popped off.
-            </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.buffer.unchecked_idx_mut(<span class="self">self</span>.len).as_ptr() })
+            </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.buffer.unchecked_idx(<span class="self">self</span>.len) })
         }
     }
 
@@ -1007,8 +1009,7 @@
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
             <span class="kw">let </span>ptr = <span class="kw">unsafe </span>{ <span class="self">self</span>.buffer.unchecked_idx(idx) };
-
-            <span class="kw">unsafe </span>{ <span class="prelude-val">Some</span>(SchemaRef::from_ptr_schema(ptr.as_ptr(), <span class="self">self</span>.schema)) }
+            <span class="kw">unsafe </span>{ <span class="prelude-val">Some</span>(SchemaRef::from_ptr_schema(ptr, <span class="self">self</span>.schema)) }
         }
     }
 
@@ -1036,13 +1037,12 @@
     }
 
     <span class="doccomment">/// Get an item with the given index.
-    </span><span class="kw">pub fn </span>get_ref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, idx: usize) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>&gt;&gt; {
+    </span><span class="kw">pub fn </span>get_ref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, idx: usize) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">&#39;_</span>&gt;&gt; {
         <span class="kw">if </span>idx &gt;= <span class="self">self</span>.len {
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
             <span class="kw">let </span>ptr = <span class="kw">unsafe </span>{ <span class="self">self</span>.buffer.unchecked_idx(idx) };
-
-            <span class="kw">unsafe </span>{ <span class="prelude-val">Some</span>(SchemaRefMut::from_ptr_schema(ptr.as_ptr(), <span class="self">self</span>.schema)) }
+            <span class="kw">unsafe </span>{ <span class="prelude-val">Some</span>(SchemaRefMut::from_ptr_schema(ptr, <span class="self">self</span>.schema)) }
         }
     }
 
@@ -1108,12 +1108,12 @@
     </span><span class="attr">#[track_caller]
     </span><span class="kw">pub fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="kw">use </span>std::hash::{Hash, Hasher};
-        <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="self">self</span>.schema.hash_fn <span class="kw">else </span>{
+        <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.schema.hash_fn <span class="kw">else </span>{
             <span class="macro">panic!</span>(<span class="string">&quot;Schema doesn&#39;t specify a hash_fn&quot;</span>);
         };
         <span class="kw">let </span><span class="kw-2">mut </span>hasher = FxHasher::default();
         <span class="kw">for </span>item_ptr <span class="kw">in </span><span class="self">self</span>.buffer.iter() {
-            <span class="kw">let </span>item_hash = <span class="kw">unsafe </span>{ (hash_fn)(item_ptr.as_ptr()) };
+            <span class="kw">let </span>item_hash = <span class="kw">unsafe </span>{ (hash_fn.get())(item_ptr) };
             item_hash.hash(<span class="kw-2">&amp;mut </span>hasher);
         }
         hasher.finish()
@@ -1122,7 +1122,7 @@
     <span class="doccomment">/// Raw version of the [`hash()`][Self::hash] function. Not meant for normal use.
     /// # Safety
     /// Pointer must be a valid pointer to a [`SchemaVec`].
-    </span><span class="kw">pub unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_hash(ptr: <span class="kw-2">*const </span>u8) -&gt; u64 {
+    </span><span class="kw">pub unsafe fn </span>raw_hash(ptr: <span class="kw-2">*const </span>c_void) -&gt; u64 {
         <span class="kw">let </span>this = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(ptr <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>) };
         this.hash()
     }
@@ -1130,7 +1130,7 @@
     <span class="doccomment">/// Raw version of the [`eq()`][PartialEq::eq] function. Not meant for normal use.
     /// # Safety
     /// Pointers must be valid pointers to [`SchemaVec`]s.
-    </span><span class="kw">pub unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_eq(a: <span class="kw-2">*const </span>u8, b: <span class="kw-2">*const </span>u8) -&gt; bool {
+    </span><span class="kw">pub unsafe fn </span>raw_eq(a: <span class="kw-2">*const </span>c_void, b: <span class="kw-2">*const </span>c_void) -&gt; bool {
         <span class="kw">let </span>a = <span class="kw-2">&amp;*</span>(a <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>);
         <span class="kw">let </span>b = <span class="kw-2">&amp;*</span>(b <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>);
         a.eq(b)
@@ -1155,7 +1155,7 @@
     }
 }
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaVec {
-    <span class="kw">type </span>Item = SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;;
+    <span class="kw">type </span>Item = SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;;
     <span class="kw">type </span>IntoIter = SchemaVecIterMut&lt;<span class="lifetime">&#39;a</span>&gt;;
     <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
         <span class="self">self</span>.iter_mut()
@@ -1185,7 +1185,7 @@
     idx: usize,
 }
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>SchemaVecIterMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;;
+    <span class="kw">type </span>Item = SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>item = <span class="self">self
@@ -1208,15 +1208,15 @@
         <span class="kw">if </span><span class="self">self</span>.schema != other.schema {
             <span class="macro">panic!</span>(<span class="string">&quot;Cannot compare two `SchemaVec`s with different schemas.&quot;</span>);
         }
-        <span class="kw">let </span><span class="prelude-val">Some</span>(eq_fn) = <span class="self">self</span>.schema.eq_fn <span class="kw">else </span>{
+        <span class="kw">let </span><span class="prelude-val">Some</span>(eq_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.schema.eq_fn <span class="kw">else </span>{
             <span class="macro">panic!</span>(<span class="string">&quot;Schema doesn&#39;t have an eq_fn&quot;</span>);
         };
 
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="self">self</span>.len {
             <span class="kw">unsafe </span>{
-                <span class="kw">let </span>a = <span class="self">self</span>.buffer.unchecked_idx(i).as_ptr();
-                <span class="kw">let </span>b = <span class="self">self</span>.buffer.unchecked_idx(i).as_ptr();
-                <span class="kw">if </span>!(eq_fn)(a, b) {
+                <span class="kw">let </span>a = <span class="self">self</span>.buffer.unchecked_idx(i);
+                <span class="kw">let </span>b = <span class="self">self</span>.buffer.unchecked_idx(i);
+                <span class="kw">if </span>!(eq_fn.get())(a, b) {
                     <span class="kw">return </span><span class="bool-val">false</span>;
                 }
             }
@@ -1227,7 +1227,7 @@
 
 <span class="kw">impl </span>Clone <span class="kw">for </span>SchemaVec {
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="prelude-val">Some</span>(clone_fn) = <span class="self">self</span>.schema.clone_fn <span class="kw">else </span>{
+        <span class="kw">let </span><span class="prelude-val">Some</span>(clone_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.schema.clone_fn <span class="kw">else </span>{
             <span class="macro">panic!</span>(<span class="string">&quot;This type cannot be cloned&quot;</span>);
         };
         <span class="kw">let </span><span class="kw-2">mut </span>buffer_clone = ResizableAlloc::new(<span class="self">self</span>.schema.layout());
@@ -1238,8 +1238,8 @@
             <span class="comment">// SOUND: we&#39;ve check that the index is within bounds, and the schema asserts the
             // validity of the clone function.
             </span><span class="kw">unsafe </span>{
-                <span class="kw">let </span>item = <span class="self">self</span>.buffer.unchecked_idx(i).as_ptr() <span class="kw">as </span><span class="kw-2">*const </span>u8;
-                (clone_fn)(item, buffer_clone.unchecked_idx_mut(i).as_ptr());
+                <span class="kw">let </span>item = <span class="self">self</span>.buffer.unchecked_idx(i);
+                (clone_fn.get())(item, buffer_clone.unchecked_idx(i));
             }
         }
 
@@ -1295,7 +1295,7 @@
     </span><span class="kw">pub fn </span>push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>item: T) {
         <span class="comment">// SOUND: We know that the schema matches, and we forget the item after pushing.
         </span><span class="kw">unsafe </span>{
-            <span class="self">self</span>.vec.push_raw(<span class="kw-2">&amp;mut </span>item <span class="kw">as </span><span class="kw-2">*mut </span>T <span class="kw">as </span><span class="kw-2">*mut </span>u8);
+            <span class="self">self</span>.vec.push_raw(<span class="kw-2">&amp;mut </span>item <span class="kw">as </span><span class="kw-2">*mut </span>T <span class="kw">as </span><span class="kw-2">*mut </span>c_void);
         }
         std::mem::forget(item);
     }
@@ -1315,13 +1315,17 @@
     <span class="doccomment">/// Get an item from the vec.
     </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, idx: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; {
         <span class="comment">// SOUND: We know that the pointer is to a type T
-        </span><span class="self">self</span>.vec.get_ref(idx).map(|x| <span class="kw">unsafe </span>{ x.deref() })
+        </span><span class="self">self</span>.vec
+            .get_ref(idx)
+            .map(|x| <span class="kw">unsafe </span>{ x.cast_into_unchecked() })
     }
 
     <span class="doccomment">/// Get an item from the vec.
     </span><span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, idx: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt; {
         <span class="comment">// SOUND: We know that the pointer is to a type T
-        </span><span class="self">self</span>.vec.get_ref_mut(idx).map(|x| <span class="kw">unsafe </span>{ x.deref_mut() })
+        </span><span class="self">self</span>.vec
+            .get_ref_mut(idx)
+            .map(|x| <span class="kw">unsafe </span>{ x.cast_into_mut_unchecked() })
     }
 
     <span class="doccomment">/// Iterate over references to the items in the vec.
@@ -1393,18 +1397,14 @@
     <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
         <span class="comment">// SOUND: we know that the schema matches T, and the internal buffer of a SchemaVec stores
         // the types contiguously in memory.
-        </span><span class="kw">unsafe </span>{
-            std::slice::from_raw_parts(<span class="self">self</span>.vec.buffer.ptr().as_ptr() <span class="kw">as </span><span class="kw-2">*const </span>T, <span class="self">self</span>.len())
-        }
+        </span><span class="kw">unsafe </span>{ std::slice::from_raw_parts(<span class="self">self</span>.vec.buffer.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span>T, <span class="self">self</span>.len()) }
     }
 }
 <span class="kw">impl</span>&lt;T: HasSchema&gt; std::ops::DerefMut <span class="kw">for </span>SVec&lt;T&gt; {
     <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Target {
         <span class="comment">// SOUND: we know that the schema matches T, and the internal buffer of a SchemaVec stores
         // the types contiguously in memory.
-        </span><span class="kw">unsafe </span>{
-            std::slice::from_raw_parts_mut(<span class="self">self</span>.vec.buffer.ptr().as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>T, <span class="self">self</span>.len())
-        }
+        </span><span class="kw">unsafe </span>{ std::slice::from_raw_parts_mut(<span class="self">self</span>.vec.buffer.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>T, <span class="self">self</span>.len()) }
     }
 }
 
@@ -1423,11 +1423,15 @@
                 full_name: <span class="macro">format!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
                 kind: SchemaKind::Vec(T::schema()),
                 type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="self">Self</span>&gt;()),
-                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone),
-                drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop),
-                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default),
-                hash_fn: <span class="prelude-val">Some</span>(SchemaVec::raw_hash),
-                eq_fn: <span class="prelude-val">Some</span>(SchemaVec::raw_eq),
+                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
+                drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop_cb()),
+                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default_cb()),
+                hash_fn: <span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{
+                    Unsafe::new(Box::leak(Box::new(|a| SchemaVec::raw_hash(a))))
+                }),
+                eq_fn: <span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{
+                    Unsafe::new(Box::leak(Box::new(|a, b| SchemaVec::raw_eq(a, b))))
+                }),
                 type_data: Default::default(),
             });
 

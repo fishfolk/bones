@@ -86,6 +86,15 @@
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
 <a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The bones framework for game development.
 //!
 </span><span class="attr">#![cfg_attr(feature = <span class="string">&quot;document-features&quot;</span>, doc = <span class="string">&quot;## Features&quot;</span>)]
@@ -116,6 +125,9 @@
     <span class="kw">pub use </span>bones_lib::prelude::<span class="kw-2">*</span>;
     <span class="kw">pub use </span>glam::<span class="kw-2">*</span>;
 
+    <span class="attr">#[cfg(feature = <span class="string">&quot;scripting&quot;</span>)]
+    </span><span class="kw">pub use </span>bones_scripting::prelude::<span class="kw-2">*</span>;
+
     <span class="attr">#[cfg(feature = <span class="string">&quot;localization&quot;</span>)]
     </span><span class="kw">pub use </span><span class="kw">crate</span>::localization::<span class="kw-2">*</span>;
 }
@@ -126,6 +138,9 @@
 <span class="kw">pub mod </span>render;
 <span class="kw">pub mod </span>storage;
 <span class="kw">pub mod </span>time;
+
+<span class="attr">#[cfg(feature = <span class="string">&quot;scripting&quot;</span>)]
+</span><span class="kw">pub use </span>bones_scripting <span class="kw">as </span>scripting;
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;localization&quot;</span>)]
 </span><span class="kw">pub mod </span>localization;
@@ -145,6 +160,9 @@
 <span class="kw">impl </span>lib::GamePlugin <span class="kw">for </span>DefaultGamePlugin {
     <span class="kw">fn </span>install(<span class="self">self</span>, game: <span class="kw-2">&amp;mut </span>lib::Game) {
         game.install_plugin(render::audio::game_plugin);
+
+        <span class="attr">#[cfg(feature = <span class="string">&quot;scripting&quot;</span>)]
+        </span>game.install_plugin(bones_scripting::ScriptingGamePlugin::default());
     }
 }
 

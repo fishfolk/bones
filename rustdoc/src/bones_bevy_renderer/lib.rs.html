@@ -1228,6 +1228,66 @@
 <a href="#1228" id="1228">1228</a>
 <a href="#1229" id="1229">1229</a>
 <a href="#1230" id="1230">1230</a>
+<a href="#1231" id="1231">1231</a>
+<a href="#1232" id="1232">1232</a>
+<a href="#1233" id="1233">1233</a>
+<a href="#1234" id="1234">1234</a>
+<a href="#1235" id="1235">1235</a>
+<a href="#1236" id="1236">1236</a>
+<a href="#1237" id="1237">1237</a>
+<a href="#1238" id="1238">1238</a>
+<a href="#1239" id="1239">1239</a>
+<a href="#1240" id="1240">1240</a>
+<a href="#1241" id="1241">1241</a>
+<a href="#1242" id="1242">1242</a>
+<a href="#1243" id="1243">1243</a>
+<a href="#1244" id="1244">1244</a>
+<a href="#1245" id="1245">1245</a>
+<a href="#1246" id="1246">1246</a>
+<a href="#1247" id="1247">1247</a>
+<a href="#1248" id="1248">1248</a>
+<a href="#1249" id="1249">1249</a>
+<a href="#1250" id="1250">1250</a>
+<a href="#1251" id="1251">1251</a>
+<a href="#1252" id="1252">1252</a>
+<a href="#1253" id="1253">1253</a>
+<a href="#1254" id="1254">1254</a>
+<a href="#1255" id="1255">1255</a>
+<a href="#1256" id="1256">1256</a>
+<a href="#1257" id="1257">1257</a>
+<a href="#1258" id="1258">1258</a>
+<a href="#1259" id="1259">1259</a>
+<a href="#1260" id="1260">1260</a>
+<a href="#1261" id="1261">1261</a>
+<a href="#1262" id="1262">1262</a>
+<a href="#1263" id="1263">1263</a>
+<a href="#1264" id="1264">1264</a>
+<a href="#1265" id="1265">1265</a>
+<a href="#1266" id="1266">1266</a>
+<a href="#1267" id="1267">1267</a>
+<a href="#1268" id="1268">1268</a>
+<a href="#1269" id="1269">1269</a>
+<a href="#1270" id="1270">1270</a>
+<a href="#1271" id="1271">1271</a>
+<a href="#1272" id="1272">1272</a>
+<a href="#1273" id="1273">1273</a>
+<a href="#1274" id="1274">1274</a>
+<a href="#1275" id="1275">1275</a>
+<a href="#1276" id="1276">1276</a>
+<a href="#1277" id="1277">1277</a>
+<a href="#1278" id="1278">1278</a>
+<a href="#1279" id="1279">1279</a>
+<a href="#1280" id="1280">1280</a>
+<a href="#1281" id="1281">1281</a>
+<a href="#1282" id="1282">1282</a>
+<a href="#1283" id="1283">1283</a>
+<a href="#1284" id="1284">1284</a>
+<a href="#1285" id="1285">1285</a>
+<a href="#1286" id="1286">1286</a>
+<a href="#1287" id="1287">1287</a>
+<a href="#1288" id="1288">1288</a>
+<a href="#1289" id="1289">1289</a>
+<a href="#1290" id="1290">1290</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -1256,7 +1316,7 @@
 <span class="kw">use </span>glam::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>bevy_prototype_lyon::prelude <span class="kw">as </span>lyon;
-<span class="kw">use </span>bones_framework::prelude::{<span class="self">self </span><span class="kw">as </span>bones, SchemaBox, SCHEMA_REGISTRY};
+<span class="kw">use </span>bones_framework::prelude::{<span class="self">self </span><span class="kw">as </span>bones, BitSet, SchemaBox, SCHEMA_REGISTRY};
 <span class="kw">use </span>prelude::convert::{IntoBevy, IntoBones};
 <span class="kw">use </span>serde::{de::Visitor, Deserialize, Serialize};
 
@@ -2033,7 +2093,7 @@
         asset_server.handle_asset_changes(|asset_server, handle| {
             <span class="kw">let </span><span class="kw-2">mut </span>bones_egui_textures =
                 game.shared_resource_mut::&lt;bones::EguiTextures&gt;().unwrap();
-            <span class="kw">let </span><span class="kw-2">mut </span>asset = asset_server.get_untyped_mut(handle).unwrap();
+            <span class="kw">let </span><span class="kw-2">mut </span>asset = asset_server.get_asset_untyped_mut(handle).unwrap();
 
             <span class="comment">// TODO: hot reload changed fonts.
 
@@ -2140,15 +2200,25 @@
         <span class="kw">let </span>world = <span class="kw-2">&amp;</span>session.world;
 
         <span class="comment">// Skip worlds without cameras and transforms
-        </span><span class="kw">if </span>!(world.components.get_cell::&lt;bones::Transform&gt;().is_ok()
-            &amp;&amp; world.components.get_cell::&lt;bones::Camera&gt;().is_ok())
+        </span><span class="kw">if </span>!(world
+            .components
+            .get::&lt;bones::Transform&gt;()
+            .borrow()
+            .bitset()
+            .bit_any()
+            &amp;&amp; world
+                .components
+                .get::&lt;bones::Camera&gt;()
+                .borrow()
+                .bitset()
+                .bit_any())
         {
             <span class="kw">continue</span>;
         }
 
         <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
-        <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;().unwrap();
-        <span class="kw">let </span>cameras = world.components.get::&lt;bones::Camera&gt;().unwrap();
+        <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;().borrow();
+        <span class="kw">let </span>cameras = world.components.get::&lt;bones::Camera&gt;().borrow();
 
         <span class="comment">// Sync cameras
         </span><span class="kw">for </span>(_ent, (transform, camera)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>transforms, <span class="kw-2">&amp;</span>cameras)) {
@@ -2183,87 +2253,107 @@
         <span class="kw">let </span>world = <span class="kw-2">&amp;</span>session.world;
 
         <span class="comment">// Skip worlds without cameras and transforms
-        </span><span class="kw">if </span>!(world.components.get_cell::&lt;bones::Transform&gt;().is_ok()
-            &amp;&amp; world.components.get_cell::&lt;bones::Camera&gt;().is_ok()
-            &amp;&amp; (world.components.get_cell::&lt;bones::Sprite&gt;().is_ok()
-                || world.components.get_cell::&lt;bones::AtlasSprite&gt;().is_ok()))
+        </span><span class="kw">if </span>!(world
+            .components
+            .get::&lt;bones::Transform&gt;()
+            .borrow()
+            .bitset()
+            .bit_any()
+            &amp;&amp; world
+                .components
+                .get::&lt;bones::Camera&gt;()
+                .borrow()
+                .bitset()
+                .bit_any()
+            &amp;&amp; (world
+                .components
+                .get::&lt;bones::Sprite&gt;()
+                .borrow()
+                .bitset()
+                .bit_any()
+                || world
+                    .components
+                    .get::&lt;bones::AtlasSprite&gt;()
+                    .borrow()
+                    .bitset()
+                    .bit_any()))
         {
             <span class="kw">continue</span>;
         }
 
         <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
-        <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;().unwrap();
+        <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;().borrow();
+        <span class="kw">let </span>sprites = world.components.get::&lt;bones::Sprite&gt;().borrow();
+        <span class="kw">let </span>atlas_sprites = world.components.get::&lt;bones::AtlasSprite&gt;().borrow();
 
         <span class="comment">// Extract normal sprites
-        </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(sprites) = world.components.get::&lt;bones::Sprite&gt;() {
-            <span class="kw">let </span><span class="kw-2">mut </span>z_offset = <span class="number">0.0</span>;
-            <span class="kw">for </span>(<span class="kw">_</span>, (sprite, transform)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>sprites, <span class="kw-2">&amp;</span>transforms)) {
-                <span class="kw">let </span>sprite_image = bones_assets.get(sprite.image);
-                <span class="kw">let </span>image_id = <span class="kw">if let </span>bones::Image::External(id) = <span class="kw-2">&amp;*</span>sprite_image {
-                    <span class="kw-2">*</span>id
-                } <span class="kw">else </span>{
-                    <span class="macro">panic!</span>(
-                        <span class="string">&quot;Images added at runtime not supported yet, \
+        </span><span class="kw">let </span><span class="kw-2">mut </span>z_offset = <span class="number">0.0</span>;
+        <span class="kw">for </span>(<span class="kw">_</span>, (sprite, transform)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>sprites, <span class="kw-2">&amp;</span>transforms)) {
+            <span class="kw">let </span><span class="prelude-val">Some</span>(sprite_image) = bones_assets.try_get(sprite.image) <span class="kw">else </span>{
+                <span class="macro">warn!</span>(<span class="string">&quot;Sprite not loaded: {:?}&quot;</span>, sprite.image);
+                <span class="kw">continue</span>;
+            };
+            <span class="kw">let </span>image_id = <span class="kw">if let </span>bones::Image::External(id) = <span class="kw-2">&amp;*</span>sprite_image {
+                <span class="kw-2">*</span>id
+            } <span class="kw">else </span>{
+                <span class="macro">panic!</span>(
+                    <span class="string">&quot;Images added at runtime not supported yet, \
                 please open an issue.&quot;
-                    </span>);
-                };
-                extracted_sprites.sprites.push(ExtractedSprite {
-                    entity: bones_renderable_entity.<span class="number">0</span>,
-                    transform: {
-                        <span class="kw">let </span><span class="kw-2">mut </span>t: Transform = transform.into_bevy();
-                        <span class="comment">// Add tiny z offset to enforce a consistent z-sort
-                        </span>t.translation.z += z_offset;
-                        z_offset += <span class="number">0.00001</span>;
-                        t.into()
-                    },
-                    color: sprite.color.into_bevy(),
-                    rect: <span class="prelude-val">None</span>,
-                    custom_size: <span class="prelude-val">None</span>,
-                    image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
-                    flip_x: sprite.flip_x,
-                    flip_y: sprite.flip_y,
-                    anchor: Anchor::Center.as_vec(),
-                })
-            }
+                </span>);
+            };
+            extracted_sprites.sprites.push(ExtractedSprite {
+                entity: bones_renderable_entity.<span class="number">0</span>,
+                transform: {
+                    <span class="kw">let </span><span class="kw-2">mut </span>t: Transform = transform.into_bevy();
+                    <span class="comment">// Add tiny z offset to enforce a consistent z-sort
+                    </span>t.translation.z += z_offset;
+                    z_offset += <span class="number">0.00001</span>;
+                    t.into()
+                },
+                color: sprite.color.into_bevy(),
+                rect: <span class="prelude-val">None</span>,
+                custom_size: <span class="prelude-val">None</span>,
+                image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
+                flip_x: sprite.flip_x,
+                flip_y: sprite.flip_y,
+                anchor: Anchor::Center.as_vec(),
+            })
         }
 
         <span class="comment">// Extract atlas sprites
-        </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(atlas_sprites) = world.components.get::&lt;bones::AtlasSprite&gt;() {
-            <span class="kw">for </span>(<span class="kw">_</span>, (atlas_sprite, transform)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>atlas_sprites, <span class="kw-2">&amp;</span>transforms))
-            {
-                <span class="kw">let </span>atlas = bones_assets.get(atlas_sprite.atlas);
-                <span class="kw">let </span>atlas_image = bones_assets.get(atlas.image);
-                <span class="kw">let </span>image_id = <span class="kw">if let </span>bones::Image::External(id) = <span class="kw-2">&amp;*</span>atlas_image {
-                    <span class="kw-2">*</span>id
-                } <span class="kw">else </span>{
-                    <span class="macro">panic!</span>(
-                        <span class="string">&quot;Images added at runtime not supported yet, \
+        </span><span class="kw">for </span>(<span class="kw">_</span>, (atlas_sprite, transform)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>atlas_sprites, <span class="kw-2">&amp;</span>transforms)) {
+            <span class="kw">let </span>atlas = bones_assets.get(atlas_sprite.atlas);
+            <span class="kw">let </span>atlas_image = bones_assets.get(atlas.image);
+            <span class="kw">let </span>image_id = <span class="kw">if let </span>bones::Image::External(id) = <span class="kw-2">&amp;*</span>atlas_image {
+                <span class="kw-2">*</span>id
+            } <span class="kw">else </span>{
+                <span class="macro">panic!</span>(
+                    <span class="string">&quot;Images added at runtime not supported yet, \
                         please open an issue.&quot;
-                    </span>);
-                };
-                <span class="kw">let </span>index = atlas_sprite.index;
-                <span class="kw">let </span>y = index / atlas.columns;
-                <span class="kw">let </span>x = index - (y * atlas.columns);
-                <span class="kw">let </span>cell = Vec2::new(x <span class="kw">as </span>f32, y <span class="kw">as </span>f32);
-                <span class="kw">let </span>current_padding = atlas.padding
-                    * Vec2::new(<span class="kw">if </span>x &gt; <span class="number">0 </span>{ <span class="number">1.0 </span>} <span class="kw">else </span>{ <span class="number">0.0 </span>}, <span class="kw">if </span>y &gt; <span class="number">0 </span>{ <span class="number">1.0 </span>} <span class="kw">else </span>{ <span class="number">0.0 </span>});
-                <span class="kw">let </span>min = (atlas.tile_size + current_padding) * cell + atlas.offset;
-                <span class="kw">let </span>rect = Rect {
-                    min,
-                    max: min + atlas.tile_size,
-                };
-                extracted_sprites.sprites.push(ExtractedSprite {
-                    entity: bones_renderable_entity.<span class="number">0</span>,
-                    transform: transform.into_bevy().into(),
-                    color: atlas_sprite.color.into_bevy(),
-                    rect: <span class="prelude-val">Some</span>(rect),
-                    custom_size: <span class="prelude-val">None</span>,
-                    image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
-                    flip_x: atlas_sprite.flip_x,
-                    flip_y: atlas_sprite.flip_y,
-                    anchor: Anchor::Center.as_vec(),
-                })
-            }
+                </span>);
+            };
+            <span class="kw">let </span>index = atlas_sprite.index;
+            <span class="kw">let </span>y = index / atlas.columns;
+            <span class="kw">let </span>x = index - (y * atlas.columns);
+            <span class="kw">let </span>cell = Vec2::new(x <span class="kw">as </span>f32, y <span class="kw">as </span>f32);
+            <span class="kw">let </span>current_padding = atlas.padding
+                * Vec2::new(<span class="kw">if </span>x &gt; <span class="number">0 </span>{ <span class="number">1.0 </span>} <span class="kw">else </span>{ <span class="number">0.0 </span>}, <span class="kw">if </span>y &gt; <span class="number">0 </span>{ <span class="number">1.0 </span>} <span class="kw">else </span>{ <span class="number">0.0 </span>});
+            <span class="kw">let </span>min = (atlas.tile_size + current_padding) * cell + atlas.offset;
+            <span class="kw">let </span>rect = Rect {
+                min,
+                max: min + atlas.tile_size,
+            };
+            extracted_sprites.sprites.push(ExtractedSprite {
+                entity: bones_renderable_entity.<span class="number">0</span>,
+                transform: transform.into_bevy().into(),
+                color: atlas_sprite.color.into_bevy(),
+                rect: <span class="prelude-val">Some</span>(rect),
+                custom_size: <span class="prelude-val">None</span>,
+                image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
+                flip_x: atlas_sprite.flip_x,
+                flip_y: atlas_sprite.flip_y,
+                anchor: Anchor::Center.as_vec(),
+            })
         }
     }
 }
@@ -2288,17 +2378,32 @@
         <span class="kw">let </span>world = <span class="kw-2">&amp;</span>session.world;
 
         <span class="comment">// Skip worlds without cameras renderable tile layers
-        </span><span class="kw">if </span>!(world.components.get_cell::&lt;bones::Transform&gt;().is_ok()
-            &amp;&amp; world.components.get_cell::&lt;bones::Camera&gt;().is_ok()
-            &amp;&amp; world.components.get_cell::&lt;bones::TileLayer&gt;().is_ok())
+        </span><span class="kw">if </span>!(world
+            .components
+            .get::&lt;bones::Transform&gt;()
+            .borrow()
+            .bitset()
+            .bit_any()
+            &amp;&amp; world
+                .components
+                .get::&lt;bones::Camera&gt;()
+                .borrow()
+                .bitset()
+                .bit_any()
+            &amp;&amp; world
+                .components
+                .get::&lt;bones::TileLayer&gt;()
+                .borrow()
+                .bitset()
+                .bit_any())
         {
             <span class="kw">continue</span>;
         }
 
         <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
-        <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;().unwrap();
-        <span class="kw">let </span>tile_layers = world.components.get::&lt;bones::TileLayer&gt;().unwrap();
-        <span class="kw">let </span>tiles = world.components.get::&lt;bones::Tile&gt;().unwrap();
+        <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;().borrow();
+        <span class="kw">let </span>tile_layers = world.components.get::&lt;bones::TileLayer&gt;().borrow();
+        <span class="kw">let </span>tiles = world.components.get::&lt;bones::Tile&gt;().borrow();
 
         <span class="comment">// Extract tiles as sprites
         </span><span class="kw">for </span>(<span class="kw">_</span>, (tile_layer, transform)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>tile_layers, <span class="kw-2">&amp;</span>transforms)) {
@@ -2436,16 +2541,31 @@
         <span class="kw">let </span>world = <span class="kw-2">&amp;</span>session.world;
 
         <span class="comment">// Skip worlds without cameras renderable tile layers
-        </span><span class="kw">if </span>!(world.components.get_cell::&lt;bones::Transform&gt;().is_ok()
-            &amp;&amp; world.components.get_cell::&lt;bones::Camera&gt;().is_ok()
-            &amp;&amp; world.components.get_cell::&lt;bones::Path2d&gt;().is_ok())
+        </span><span class="kw">if </span>!(world
+            .components
+            .get::&lt;bones::Transform&gt;()
+            .borrow()
+            .bitset()
+            .bit_any()
+            &amp;&amp; world
+                .components
+                .get::&lt;bones::Camera&gt;()
+                .borrow()
+                .bitset()
+                .bit_any()
+            &amp;&amp; world
+                .components
+                .get::&lt;bones::Path2d&gt;()
+                .borrow()
+                .bitset()
+                .bit_any())
         {
             <span class="kw">continue</span>;
         }
 
         <span class="kw">let </span>entities = world.resource::&lt;bones::Entities&gt;();
-        <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;().unwrap();
-        <span class="kw">let </span>path2ds = world.components.get::&lt;bones::Path2d&gt;().unwrap();
+        <span class="kw">let </span>transforms = world.components.get::&lt;bones::Transform&gt;().borrow();
+        <span class="kw">let </span>path2ds = world.components.get::&lt;bones::Path2d&gt;().borrow();
 
         <span class="comment">// Extract tiles as sprites
         </span><span class="kw">for </span>(<span class="kw">_</span>, (path2d, transform)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>path2ds, <span class="kw-2">&amp;</span>transforms)) {

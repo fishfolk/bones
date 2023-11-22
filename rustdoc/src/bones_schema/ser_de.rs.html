@@ -611,95 +611,6 @@
 <a href="#611" id="611">611</a>
 <a href="#612" id="612">612</a>
 <a href="#613" id="613">613</a>
-<a href="#614" id="614">614</a>
-<a href="#615" id="615">615</a>
-<a href="#616" id="616">616</a>
-<a href="#617" id="617">617</a>
-<a href="#618" id="618">618</a>
-<a href="#619" id="619">619</a>
-<a href="#620" id="620">620</a>
-<a href="#621" id="621">621</a>
-<a href="#622" id="622">622</a>
-<a href="#623" id="623">623</a>
-<a href="#624" id="624">624</a>
-<a href="#625" id="625">625</a>
-<a href="#626" id="626">626</a>
-<a href="#627" id="627">627</a>
-<a href="#628" id="628">628</a>
-<a href="#629" id="629">629</a>
-<a href="#630" id="630">630</a>
-<a href="#631" id="631">631</a>
-<a href="#632" id="632">632</a>
-<a href="#633" id="633">633</a>
-<a href="#634" id="634">634</a>
-<a href="#635" id="635">635</a>
-<a href="#636" id="636">636</a>
-<a href="#637" id="637">637</a>
-<a href="#638" id="638">638</a>
-<a href="#639" id="639">639</a>
-<a href="#640" id="640">640</a>
-<a href="#641" id="641">641</a>
-<a href="#642" id="642">642</a>
-<a href="#643" id="643">643</a>
-<a href="#644" id="644">644</a>
-<a href="#645" id="645">645</a>
-<a href="#646" id="646">646</a>
-<a href="#647" id="647">647</a>
-<a href="#648" id="648">648</a>
-<a href="#649" id="649">649</a>
-<a href="#650" id="650">650</a>
-<a href="#651" id="651">651</a>
-<a href="#652" id="652">652</a>
-<a href="#653" id="653">653</a>
-<a href="#654" id="654">654</a>
-<a href="#655" id="655">655</a>
-<a href="#656" id="656">656</a>
-<a href="#657" id="657">657</a>
-<a href="#658" id="658">658</a>
-<a href="#659" id="659">659</a>
-<a href="#660" id="660">660</a>
-<a href="#661" id="661">661</a>
-<a href="#662" id="662">662</a>
-<a href="#663" id="663">663</a>
-<a href="#664" id="664">664</a>
-<a href="#665" id="665">665</a>
-<a href="#666" id="666">666</a>
-<a href="#667" id="667">667</a>
-<a href="#668" id="668">668</a>
-<a href="#669" id="669">669</a>
-<a href="#670" id="670">670</a>
-<a href="#671" id="671">671</a>
-<a href="#672" id="672">672</a>
-<a href="#673" id="673">673</a>
-<a href="#674" id="674">674</a>
-<a href="#675" id="675">675</a>
-<a href="#676" id="676">676</a>
-<a href="#677" id="677">677</a>
-<a href="#678" id="678">678</a>
-<a href="#679" id="679">679</a>
-<a href="#680" id="680">680</a>
-<a href="#681" id="681">681</a>
-<a href="#682" id="682">682</a>
-<a href="#683" id="683">683</a>
-<a href="#684" id="684">684</a>
-<a href="#685" id="685">685</a>
-<a href="#686" id="686">686</a>
-<a href="#687" id="687">687</a>
-<a href="#688" id="688">688</a>
-<a href="#689" id="689">689</a>
-<a href="#690" id="690">690</a>
-<a href="#691" id="691">691</a>
-<a href="#692" id="692">692</a>
-<a href="#693" id="693">693</a>
-<a href="#694" id="694">694</a>
-<a href="#695" id="695">695</a>
-<a href="#696" id="696">696</a>
-<a href="#697" id="697">697</a>
-<a href="#698" id="698">698</a>
-<a href="#699" id="699">699</a>
-<a href="#700" id="700">700</a>
-<a href="#701" id="701">701</a>
-<a href="#702" id="702">702</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::any::type_name;
 
 <span class="kw">use </span>erased_serde::Deserializer;
@@ -736,134 +647,104 @@
                 <span class="kw">return </span>serializer.serialize_str(u);
             }
 
-            <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.schema().kind {
-                SchemaKind::Struct(s) =&gt; {
-                    <span class="kw">if </span>s.fields.len() == <span class="number">1 </span>&amp;&amp; s.fields[<span class="number">0</span>].name.is_none() {
-                        <span class="comment">// Serialize just the inner field
-                        // SOUND: it is safe to cast a struct with one field to it&#39;s inner type.
-                        </span>SchemaSerializer(<span class="kw">unsafe </span>{
-                            SchemaRef::from_ptr_schema(<span class="self">self</span>.<span class="number">0</span>.as_ptr(), s.fields[<span class="number">0</span>].schema)
-                        })
-                        .serialize(serializer)
+            <span class="kw">return match </span><span class="self">self</span>.<span class="number">0</span>.access() {
+                SchemaRefAccess::Struct(s) =&gt; {
+                    <span class="kw">if </span>s.fields().count() == <span class="number">1 </span>&amp;&amp; s.fields().nth(<span class="number">0</span>).unwrap().name.is_none() {
+                        SchemaSerializer(s.fields().nth(<span class="number">0</span>).unwrap().value).serialize(serializer)
                     } <span class="kw">else </span>{
-                        <span class="kw">let </span>named = s.fields.first().map(|x| x.name.is_some()).unwrap_or(<span class="bool-val">false</span>);
+                        <span class="kw">let </span>named = s.fields().nth(<span class="number">0</span>).map(|x| x.name.is_some()).unwrap_or(<span class="bool-val">false</span>);
 
                         <span class="kw">if </span>named {
                             <span class="kw">let </span><span class="kw-2">mut </span>ser_struct = serializer
-                                .serialize_struct(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.schema().name, s.fields.len())<span class="question-mark">?</span>;
-                            <span class="kw">for </span>(i, field) <span class="kw">in </span>s.fields.iter().enumerate() {
+                                .serialize_struct(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.schema().name, s.fields().count())<span class="question-mark">?</span>;
+                            <span class="kw">for </span>field <span class="kw">in </span>s.fields() {
                                 ser_struct.serialize_field(
                                     field.name.as_ref().unwrap(),
-                                    <span class="kw-2">&amp;</span>SchemaSerializer(<span class="self">self</span>.<span class="number">0</span>.field(i)),
+                                    <span class="kw-2">&amp;</span>SchemaSerializer(field.value),
                                 )<span class="question-mark">?</span>;
                             }
                             ser_struct.end()
                         } <span class="kw">else </span>{
-                            <span class="kw">let </span><span class="kw-2">mut </span>seq = serializer.serialize_seq(<span class="prelude-val">Some</span>(s.fields.len()))<span class="question-mark">?</span>;
-                            <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..s.fields.len() {
-                                seq.serialize_element(<span class="kw-2">&amp;</span>SchemaSerializer(<span class="self">self</span>.<span class="number">0</span>.field(i)))<span class="question-mark">?</span>;
+                            <span class="kw">let </span><span class="kw-2">mut </span>seq = serializer.serialize_seq(<span class="prelude-val">Some</span>(s.fields().count()))<span class="question-mark">?</span>;
+                            <span class="kw">for </span>field <span class="kw">in </span>s.fields() {
+                                seq.serialize_element(<span class="kw-2">&amp;</span>SchemaSerializer(field.value))<span class="question-mark">?</span>;
                             }
                             seq.end()
                         }
                     }
                 }
-                SchemaKind::Vec(<span class="kw">_</span>) =&gt; {
-                    <span class="comment">// SOUND: schema asserts this is a schema vec.
-                    </span><span class="kw">let </span>v = <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.deref::&lt;SchemaVec&gt;() };
+                SchemaRefAccess::Vec(v) =&gt; {
                     <span class="kw">let </span><span class="kw-2">mut </span>seq = serializer.serialize_seq(<span class="prelude-val">Some</span>(v.len()))<span class="question-mark">?</span>;
-                    <span class="kw">for </span>item <span class="kw">in </span>v {
+                    <span class="kw">for </span>item <span class="kw">in </span>v.iter() {
                         seq.serialize_element(<span class="kw-2">&amp;</span>SchemaSerializer(item))<span class="question-mark">?</span>;
                     }
                     seq.end()
                 }
-                SchemaKind::Enum(e) =&gt; {
-                    <span class="kw">let </span>variant_idx = <span class="kw">match </span>e.tag_type {
-                        EnumTagType::U8 =&gt; <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u8&gt;().read() <span class="kw">as </span>u32 },
-                        EnumTagType::U16 =&gt; <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u16&gt;().read() <span class="kw">as </span>u32 },
-                        EnumTagType::U32 =&gt; <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u32&gt;().read() },
-                    };
+                SchemaRefAccess::Map(m) =&gt; {
+                    <span class="kw">let </span><span class="kw-2">mut </span>map = serializer.serialize_map(<span class="prelude-val">Some</span>(m.len()))<span class="question-mark">?</span>;
+                    <span class="kw">for </span>(key, value) <span class="kw">in </span>m.iter() {
+                        map.serialize_entry(<span class="kw-2">&amp;</span>SchemaSerializer(key), <span class="kw-2">&amp;</span>SchemaSerializer(value))<span class="question-mark">?</span>;
+                    }
+                    map.end()
+                }
+                SchemaRefAccess::Enum(e) =&gt; {
+                    <span class="kw">let </span>variant_idx = e.variant_idx();
+                    <span class="kw">let </span>variant_info = e.variant_info();
+                    <span class="kw">let </span>access = e.value();
+                    <span class="kw">let </span>field_count = access.fields().count();
 
-                    <span class="kw">let </span>variant_info = <span class="kw-2">&amp;</span>e.variants[variant_idx <span class="kw">as </span>usize];
-                    <span class="kw">let </span>struct_info = variant_info.schema.kind.as_struct().unwrap();
-
-                    <span class="kw">if </span>struct_info.fields.is_empty() {
+                    <span class="kw">if </span>field_count == <span class="number">0 </span>{
                         serializer.serialize_unit_variant(
                             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.schema().name,
                             variant_idx,
                             <span class="kw-2">&amp;</span>variant_info.name,
                         )
+                    } <span class="kw">else if </span>field_count == <span class="number">1 </span>&amp;&amp; access.fields().nth(<span class="number">0</span>).unwrap().name.is_none() {
+                        serializer.serialize_newtype_variant(
+                            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.schema().name,
+                            variant_idx,
+                            <span class="kw-2">&amp;</span>variant_info.name,
+                            <span class="kw-2">&amp;</span>SchemaSerializer(access.as_schema_ref()),
+                        )
                     } <span class="kw">else </span>{
-                        <span class="kw">let </span>value_offset = <span class="self">self</span>.<span class="number">0</span>.schema().field_offsets()[<span class="number">0</span>].<span class="number">1</span>;
-                        <span class="comment">// SOUND: we are returning a reference to the enum variants value
-                        // offset by the size of it&#39;s discriminant, which is valid.
-                        </span><span class="kw">let </span>value_ref = <span class="kw">unsafe </span>{
-                            SchemaRef::from_ptr_schema(
-                                <span class="self">self</span>.<span class="number">0</span>.as_ptr().add(value_offset),
-                                variant_info.schema,
-                            )
-                        };
+                        <span class="kw">let </span><span class="kw-2">mut </span>ser_struct = serializer.serialize_struct_variant(
+                            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.schema().name,
+                            variant_idx,
+                            <span class="kw-2">&amp;</span>variant_info.name,
+                            field_count,
+                        )<span class="question-mark">?</span>;
 
-                        <span class="kw">if </span>struct_info.fields.len() == <span class="number">1 </span>&amp;&amp; struct_info.fields[<span class="number">0</span>].name.is_none() {
-                            serializer.serialize_newtype_variant(
-                                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.schema().name,
-                                variant_idx,
-                                <span class="kw-2">&amp;</span>variant_info.name,
-                                <span class="kw-2">&amp;</span>SchemaSerializer(value_ref),
-                            )
-                        } <span class="kw">else </span>{
-                            <span class="kw">let </span><span class="kw-2">mut </span>ser_struct = serializer.serialize_struct_variant(
-                                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.schema().name,
-                                variant_idx,
-                                <span class="kw-2">&amp;</span>variant_info.name,
-                                struct_info.fields.len(),
+                        <span class="kw">for </span>field <span class="kw">in </span>access.fields() {
+                            ser_struct.serialize_field(
+                                field.name.as_ref().unwrap(),
+                                <span class="kw-2">&amp;</span>SchemaSerializer(field.value),
                             )<span class="question-mark">?</span>;
-
-                            <span class="kw">for </span>(i, field) <span class="kw">in </span>struct_info.fields.iter().enumerate() {
-                                ser_struct.serialize_field(
-                                    field.name.as_ref().unwrap(),
-                                    <span class="kw-2">&amp;</span>SchemaSerializer(value_ref.field(i)),
-                                )<span class="question-mark">?</span>;
-                            }
-
-                            ser_struct.end()
                         }
+
+                        ser_struct.end()
                     }
                 }
-                SchemaKind::Map { .. } =&gt; {
-                    <span class="comment">// SOUND: schema asserts this is a schema vec.
-                    </span><span class="kw">let </span>m = <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.deref::&lt;SchemaMap&gt;() };
-                    <span class="kw">let </span><span class="kw-2">mut </span>map = serializer.serialize_map(<span class="prelude-val">Some</span>(m.len()))<span class="question-mark">?</span>;
-                    <span class="kw">for </span>(key, value) <span class="kw">in </span>m {
-                        map.serialize_entry(<span class="kw-2">&amp;</span>SchemaSerializer(key), <span class="kw-2">&amp;</span>SchemaSerializer(value))<span class="question-mark">?</span>;
-                    }
-                    map.end()
-                }
-                SchemaKind::Box(<span class="kw">_</span>) =&gt; {
-                    <span class="comment">// SOUND: schema asserts this is a schema box.
-                    </span><span class="kw">let </span>b = <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.deref::&lt;SchemaBox&gt;() };
-                    SchemaSerializer(b.as_ref()).serialize(serializer)
-                }
-                SchemaKind::Primitive(p) =&gt; <span class="kw">match </span>p {
-                    Primitive::Bool =&gt; serializer.serialize_bool(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.cast::&lt;bool&gt;()),
-                    Primitive::U8 =&gt; serializer.serialize_u8(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.cast::&lt;u8&gt;()),
-                    Primitive::U16 =&gt; serializer.serialize_u16(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.cast::&lt;u16&gt;()),
-                    Primitive::U32 =&gt; serializer.serialize_u32(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.cast::&lt;u32&gt;()),
-                    Primitive::U64 =&gt; serializer.serialize_u64(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.cast::&lt;u64&gt;()),
-                    Primitive::U128 =&gt; serializer.serialize_u128(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.cast::&lt;u128&gt;()),
-                    Primitive::I8 =&gt; serializer.serialize_i8(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.cast::&lt;i8&gt;()),
-                    Primitive::I16 =&gt; serializer.serialize_i16(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.cast::&lt;i16&gt;()),
-                    Primitive::I32 =&gt; serializer.serialize_i32(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.cast::&lt;i32&gt;()),
-                    Primitive::I64 =&gt; serializer.serialize_i64(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.cast::&lt;i64&gt;()),
-                    Primitive::I128 =&gt; serializer.serialize_i128(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.cast::&lt;i128&gt;()),
-                    Primitive::F32 =&gt; serializer.serialize_f32(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.cast::&lt;f32&gt;()),
-                    Primitive::F64 =&gt; serializer.serialize_f64(<span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.cast::&lt;f64&gt;()),
-                    Primitive::String =&gt; serializer.serialize_str(<span class="self">self</span>.<span class="number">0</span>.cast::&lt;String&gt;()),
-                    Primitive::Opaque { .. } =&gt; {
+                SchemaRefAccess::Primitive(p) =&gt; <span class="kw">match </span>p {
+                    PrimitiveRef::Bool(b) =&gt; serializer.serialize_bool(<span class="kw-2">*</span>b),
+                    PrimitiveRef::U8(n) =&gt; serializer.serialize_u8(<span class="kw-2">*</span>n),
+                    PrimitiveRef::U16(n) =&gt; serializer.serialize_u16(<span class="kw-2">*</span>n),
+                    PrimitiveRef::U32(n) =&gt; serializer.serialize_u32(<span class="kw-2">*</span>n),
+                    PrimitiveRef::U64(n) =&gt; serializer.serialize_u64(<span class="kw-2">*</span>n),
+                    PrimitiveRef::U128(n) =&gt; serializer.serialize_u128(<span class="kw-2">*</span>n),
+                    PrimitiveRef::I8(n) =&gt; serializer.serialize_i8(<span class="kw-2">*</span>n),
+                    PrimitiveRef::I16(n) =&gt; serializer.serialize_i16(<span class="kw-2">*</span>n),
+                    PrimitiveRef::I32(n) =&gt; serializer.serialize_i32(<span class="kw-2">*</span>n),
+                    PrimitiveRef::I64(n) =&gt; serializer.serialize_i64(<span class="kw-2">*</span>n),
+                    PrimitiveRef::I128(n) =&gt; serializer.serialize_i128(<span class="kw-2">*</span>n),
+                    PrimitiveRef::F32(n) =&gt; serializer.serialize_f32(<span class="kw-2">*</span>n),
+                    PrimitiveRef::F64(n) =&gt; serializer.serialize_f64(<span class="kw-2">*</span>n),
+                    PrimitiveRef::String(n) =&gt; serializer.serialize_str(n),
+                    PrimitiveRef::Opaque { .. } =&gt; {
                         <span class="kw">use </span>serde::ser::Error;
                         <span class="prelude-val">Err</span>(S::Error::custom(<span class="string">&quot;Cannot serialize opaque types&quot;</span>))
                     }
                 },
-            }
+            };
         }
     }
 
@@ -890,7 +771,7 @@
         }
     }
 
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;de</span>&gt; DeserializeSeed&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt; {
+    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;de</span>&gt; DeserializeSeed&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt; {
         <span class="kw">type </span>Value = ();
 
         <span class="kw">fn </span>deserialize&lt;D&gt;(<span class="kw-2">mut </span><span class="self">self</span>, deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, D::Error&gt;
@@ -917,12 +798,7 @@
                 SchemaKind::Vec(<span class="kw">_</span>) =&gt; deserializer.deserialize_seq(VecVisitor(<span class="self">self</span>))<span class="question-mark">?</span>,
                 SchemaKind::Map { .. } =&gt; deserializer.deserialize_map(MapVisitor(<span class="self">self</span>))<span class="question-mark">?</span>,
                 SchemaKind::Enum(<span class="kw">_</span>) =&gt; deserializer.deserialize_any(EnumVisitor(<span class="self">self</span>))<span class="question-mark">?</span>,
-                SchemaKind::Box(<span class="kw">_</span>) =&gt; {
-                    <span class="comment">// SOUND: schema asserts this is a `SchemaBox`
-                    </span><span class="kw">let </span>b = <span class="kw">unsafe </span>{ <span class="self">self</span>.deref_mut::&lt;SchemaBox&gt;() };
-
-                    b.as_mut().deserialize(deserializer)<span class="question-mark">?
-                </span>}
+                SchemaKind::Box(<span class="kw">_</span>) =&gt; <span class="self">self</span>.into_box().unwrap().deserialize(deserializer)<span class="question-mark">?</span>,
                 SchemaKind::Primitive(p) =&gt; {
                     <span class="kw">match </span>p {
                         Primitive::Bool =&gt; <span class="kw-2">*</span><span class="self">self</span>.cast_mut() = bool::deserialize(deserializer)<span class="question-mark">?</span>,
@@ -953,8 +829,8 @@
         }
     }
 
-    <span class="kw">struct </span>StructVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt;(SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt;);
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>StructVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt; {
+    <span class="kw">struct </span>StructVisitor&lt;<span class="lifetime">&#39;a</span>&gt;(SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;);
+    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>StructVisitor&lt;<span class="lifetime">&#39;a</span>&gt; {
         <span class="kw">type </span>Value = ();
         <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
             <span class="macro">write!</span>(
@@ -971,7 +847,7 @@
             <span class="kw">let </span>field_count = <span class="self">self</span>.<span class="number">0</span>.schema().kind.as_struct().unwrap().fields.len();
 
             <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..field_count {
-                <span class="kw">let </span>field = <span class="self">self</span>.<span class="number">0</span>.get_field(i).unwrap();
+                <span class="kw">let </span>field = <span class="self">self</span>.<span class="number">0</span>.access_mut().field(i).unwrap().into_schema_ref_mut();
                 <span class="kw">if </span>seq.next_element_seed(field)<span class="question-mark">?</span>.is_none() {
                     <span class="kw">break</span>;
                 }
@@ -985,7 +861,12 @@
             </span>A: serde::de::MapAccess&lt;<span class="lifetime">&#39;de</span>&gt;,
         {
             <span class="kw">while let </span><span class="prelude-val">Some</span>(key) = map.next_key::&lt;String&gt;()<span class="question-mark">? </span>{
-                <span class="kw">match </span><span class="self">self</span>.<span class="number">0</span>.get_field(<span class="kw-2">&amp;</span>key) {
+                <span class="kw">match </span><span class="self">self
+                    </span>.<span class="number">0
+                    </span>.access_mut()
+                    .field(<span class="kw-2">&amp;</span>key)
+                    .map(|x| x.into_schema_ref_mut())
+                {
                     <span class="prelude-val">Ok</span>(field) =&gt; {
                         map.next_value_seed(field)<span class="question-mark">?</span>;
                     }
@@ -1016,8 +897,8 @@
         }
     }
 
-    <span class="kw">struct </span>VecVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt;(SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt;);
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>VecVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt; {
+    <span class="kw">struct </span>VecVisitor&lt;<span class="lifetime">&#39;a</span>&gt;(SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;);
+    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>VecVisitor&lt;<span class="lifetime">&#39;a</span>&gt; {
         <span class="kw">type </span>Value = ();
         <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
             <span class="macro">write!</span>(
@@ -1046,8 +927,8 @@
             <span class="prelude-val">Ok</span>(())
         }
     }
-    <span class="kw">struct </span>MapVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt;(SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt;);
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>MapVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt; {
+    <span class="kw">struct </span>MapVisitor&lt;<span class="lifetime">&#39;a</span>&gt;(SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;);
+    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>MapVisitor&lt;<span class="lifetime">&#39;a</span>&gt; {
         <span class="kw">type </span>Value = ();
         <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
             <span class="macro">write!</span>(
@@ -1083,8 +964,8 @@
             <span class="prelude-val">Ok</span>(())
         }
     }
-    <span class="kw">struct </span>EnumVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt;(SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt;);
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>EnumVisitor&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt; {
+    <span class="kw">struct </span>EnumVisitor&lt;<span class="lifetime">&#39;a</span>&gt;(SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;);
+    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;de</span>&gt; Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>EnumVisitor&lt;<span class="lifetime">&#39;a</span>&gt; {
         <span class="kw">type </span>Value = ();
         <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
             <span class="macro">write!</span>(
@@ -1140,9 +1021,9 @@
         }
     }
 
-    <span class="kw">struct </span>EnumLoad&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt;(SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt;);
-    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;de</span>&gt; DeserializeSeed&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>EnumLoad&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt; {
-        <span class="kw">type </span>Value = SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt;;
+    <span class="kw">struct </span>EnumLoad&lt;<span class="lifetime">&#39;a</span>&gt;(SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;);
+    <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;de</span>&gt; DeserializeSeed&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>EnumLoad&lt;<span class="lifetime">&#39;a</span>&gt; {
+        <span class="kw">type </span>Value = SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;;
 
         <span class="kw">fn </span>deserialize&lt;D&gt;(<span class="self">self</span>, deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, D::Error&gt;
         <span class="kw">where
@@ -1171,7 +1052,7 @@
             <span class="comment">// Write the enum variant
             // SOUND: the schema asserts that the write to the enum discriminant is valid
             </span><span class="kw">match </span>enum_info.tag_type {
-                EnumTagType::U8 =&gt; <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.as_ptr().write(var_idx <span class="kw">as </span>u8) },
+                EnumTagType::U8 =&gt; <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u8&gt;().write(var_idx <span class="kw">as </span>u8) },
                 EnumTagType::U16 =&gt; <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u16&gt;().write(var_idx <span class="kw">as </span>u16) },
                 EnumTagType::U32 =&gt; <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.as_ptr().cast::&lt;u32&gt;().write(var_idx <span class="kw">as </span>u32) },
             }
@@ -1192,65 +1073,6 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
-    <span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
-    <span class="kw">where
-        </span>D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
-    {
-        <span class="kw">let </span>data = SchemaData::deserialize(deserializer)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(SCHEMA_REGISTRY.register(data))
-    }
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>StructSchemaInfo {
-    <span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
-    <span class="kw">where
-        </span>D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
-    {
-        deserializer.deserialize_any(StructSchemaVisitor)
-    }
-}
-
-<span class="kw">struct </span>StructSchemaVisitor;
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::de::Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>StructSchemaVisitor {
-    <span class="kw">type </span>Value = StructSchemaInfo;
-
-    <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
-        <span class="macro">write!</span>(formatter, <span class="string">&quot;a struct definition&quot;</span>)
-    }
-
-    <span class="kw">fn </span>visit_seq&lt;A&gt;(<span class="self">self</span>, <span class="kw-2">mut </span>seq: A) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, A::Error&gt;
-    <span class="kw">where
-        </span>A: serde::de::SeqAccess&lt;<span class="lifetime">&#39;de</span>&gt;,
-    {
-        <span class="kw">let </span><span class="kw-2">mut </span>struct_schema = StructSchemaInfo {
-            fields: Vec::with_capacity(seq.size_hint().unwrap_or(<span class="number">0</span>)),
-        };
-        <span class="kw">while let </span><span class="prelude-val">Some</span>(schema) = seq.next_element()<span class="question-mark">? </span>{
-            struct_schema
-                .fields
-                .push(StructFieldInfo { name: <span class="prelude-val">None</span>, schema });
-        }
-        <span class="prelude-val">Ok</span>(struct_schema)
-    }
-
-    <span class="kw">fn </span>visit_map&lt;A&gt;(<span class="self">self</span>, <span class="kw-2">mut </span>map: A) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, A::Error&gt;
-    <span class="kw">where
-        </span>A: serde::de::MapAccess&lt;<span class="lifetime">&#39;de</span>&gt;,
-    {
-        <span class="kw">let </span><span class="kw-2">mut </span>struct_schema = StructSchemaInfo {
-            fields: Vec::with_capacity(map.size_hint().unwrap_or(<span class="number">0</span>)),
-        };
-        <span class="kw">while let </span><span class="prelude-val">Some</span>((name, schema)) = map.next_entry()<span class="question-mark">? </span>{
-            struct_schema.fields.push(StructFieldInfo {
-                name: <span class="prelude-val">Some</span>(name),
-                schema,
-            });
-        }
-        <span class="prelude-val">Ok</span>(struct_schema)
-    }
-}
-
 <span class="doccomment">/// Derivable schema [`type_data`][SchemaData::type_data] for types that implement
 /// [`Deserialize`].
 ///
@@ -1259,7 +1081,7 @@
 </span><span class="kw">pub struct </span>SchemaDeserialize {
     <span class="doccomment">/// The function that may be used to deserialize the type.
     </span><span class="kw">pub </span>deserialize_fn: <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;de</span>&gt; <span class="kw">fn</span>(
-        SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;,
+        SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;,
         deserializer: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="kw">dyn </span>Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), erased_serde::Error&gt;,
 }
@@ -1294,7 +1116,7 @@
     /// `reference`.
     </span><span class="kw">pub fn </span>deserialize&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;de</span>, D&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        reference: SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;,
+        reference: SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;,
         deserializer: D,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), D::Error&gt;
     <span class="kw">where

@@ -100,12 +100,56 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Traits implementing raw function calls for cloning, dropping, and creating default values for
 //! Rust types.
 
-</span><span class="kw">use </span>std::hash::{Hash, Hasher};
+</span><span class="kw">use </span>std::{
+    ffi::c_void,
+    hash::{Hash, Hasher},
+};
 
 <span class="kw">use </span>bones_utils::fxhash::FxHasher;
+
+<span class="kw">use </span><span class="kw">crate</span>::Unsafe;
+
+<span class="attr">#[cfg(doc)]
+</span><span class="kw">use </span><span class="kw">crate</span>::SchemaData;
 
 <span class="doccomment">/// Trait implemented automatically for types that implement [`Clone`] and can be used to clone the
 /// type through raw pointers.
@@ -117,10 +161,16 @@
     /// The `dst` pointer must be aligned, writable, and have the same layout that this function is
     /// assocated to, and the `src` pointer must be readable and point to a valid instance of the
     /// type that this function is associated with.
-    </span><span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_clone(src: <span class="kw-2">*const </span>u8, dst: <span class="kw-2">*mut </span>u8);
+    </span><span class="kw">unsafe fn </span>raw_clone(src: <span class="kw-2">*const </span>c_void, dst: <span class="kw-2">*mut </span>c_void);
+
+    <span class="doccomment">/// Get a callback suitable for [`SchemaData`].
+    </span><span class="kw">fn </span>raw_clone_cb(
+    ) -&gt; Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void, <span class="kw-2">*mut </span>c_void) + Sync + Send + <span class="lifetime">&#39;static</span>)&gt; {
+        <span class="kw">unsafe </span>{ Unsafe::new(Box::leak(Box::new(|a, b| <span class="self">Self</span>::raw_clone(a, b)))) }
+    }
 }
 <span class="kw">impl</span>&lt;T: Clone&gt; RawClone <span class="kw">for </span>T {
-    <span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_clone(src: <span class="kw-2">*const </span>u8, dst: <span class="kw-2">*mut </span>u8) {
+    <span class="kw">unsafe fn </span>raw_clone(src: <span class="kw-2">*const </span>c_void, dst: <span class="kw-2">*mut </span>c_void) {
         <span class="kw">let </span>t = <span class="kw-2">&amp;*</span>(src <span class="kw">as </span><span class="kw-2">*const </span>T);
         <span class="kw">let </span>t = t.clone();
         (dst <span class="kw">as </span><span class="kw-2">*mut </span>T).write(t)
@@ -136,10 +186,15 @@
     ///
     /// The pointer must be aligned, writable, and have the same layout that this function is
     /// assocated to.
-    </span><span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_drop(ptr: <span class="kw-2">*mut </span>u8);
+    </span><span class="kw">unsafe fn </span>raw_drop(ptr: <span class="kw-2">*mut </span>c_void);
+
+    <span class="doccomment">/// Get a callback suitable for [`SchemaData`].
+    </span><span class="kw">fn </span>raw_drop_cb() -&gt; Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*mut </span>c_void) + Sync + Send + <span class="lifetime">&#39;static</span>)&gt; {
+        <span class="kw">unsafe </span>{ Unsafe::new(Box::leak(Box::new(|a| <span class="self">Self</span>::raw_drop(a)))) }
+    }
 }
 <span class="kw">impl</span>&lt;T&gt; RawDrop <span class="kw">for </span>T {
-    <span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_drop(ptr: <span class="kw-2">*mut </span>u8) {
+    <span class="kw">unsafe fn </span>raw_drop(ptr: <span class="kw-2">*mut </span>c_void) {
         <span class="kw">if </span>std::mem::needs_drop::&lt;T&gt;() {
             (ptr <span class="kw">as </span><span class="kw-2">*mut </span>T).drop_in_place()
         }
@@ -155,10 +210,15 @@
     ///
     /// The pointer must be aligned, readable, and be a pointer to the type that this Hash function
     /// was created for.
-    </span><span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_hash(ptr: <span class="kw-2">*const </span>u8) -&gt; u64;
+    </span><span class="kw">unsafe fn </span>raw_hash(ptr: <span class="kw-2">*const </span>c_void) -&gt; u64;
+
+    <span class="doccomment">/// Get a callback suitable for [`SchemaData`].
+    </span><span class="kw">fn </span>raw_hash_cb() -&gt; Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void) -&gt; u64 + Sync + Send + <span class="lifetime">&#39;static</span>)&gt; {
+        <span class="kw">unsafe </span>{ Unsafe::new(Box::leak(Box::new(|a| <span class="self">Self</span>::raw_hash(a)))) }
+    }
 }
 <span class="kw">impl</span>&lt;T: Hash&gt; RawHash <span class="kw">for </span>T {
-    <span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_hash(ptr: <span class="kw-2">*const </span>u8) -&gt; u64 {
+    <span class="kw">unsafe fn </span>raw_hash(ptr: <span class="kw-2">*const </span>c_void) -&gt; u64 {
         <span class="kw">let </span>this = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(ptr <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>) };
         <span class="kw">let </span><span class="kw-2">mut </span>hasher = FxHasher::default();
         this.hash(<span class="kw-2">&amp;mut </span>hasher);
@@ -175,10 +235,17 @@
     ///
     /// The pointer must be aligned, readable, and be a pointer to the type that this Hash function
     /// was created for.
-    </span><span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_eq(a: <span class="kw-2">*const </span>u8, b: <span class="kw-2">*const </span>u8) -&gt; bool;
+    </span><span class="kw">unsafe fn </span>raw_eq(a: <span class="kw-2">*const </span>c_void, b: <span class="kw-2">*const </span>c_void) -&gt; bool;
+
+    <span class="doccomment">/// Get a callback suitable for [`SchemaData`].
+    </span><span class="kw">fn </span>raw_eq_cb(
+    ) -&gt; Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void, <span class="kw-2">*const </span>c_void) -&gt; bool + Sync + Send + <span class="lifetime">&#39;static</span>)&gt;
+    {
+        <span class="kw">unsafe </span>{ Unsafe::new(Box::leak(Box::new(|a, b| <span class="self">Self</span>::raw_eq(a, b)))) }
+    }
 }
 <span class="kw">impl</span>&lt;T: Eq&gt; RawEq <span class="kw">for </span>T {
-    <span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_eq(a: <span class="kw-2">*const </span>u8, b: <span class="kw-2">*const </span>u8) -&gt; bool {
+    <span class="kw">unsafe fn </span>raw_eq(a: <span class="kw-2">*const </span>c_void, b: <span class="kw-2">*const </span>c_void) -&gt; bool {
         <span class="kw">let </span>a = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(a <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>) };
         <span class="kw">let </span>b = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(b <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>) };
         a.eq(b)
@@ -194,10 +261,15 @@
     ///
     /// The pointer must be aligned, writable, and have the same layout that this function is
     /// assocated to.
-    </span><span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_default(dst: <span class="kw-2">*mut </span>u8);
+    </span><span class="kw">unsafe fn </span>raw_default(dst: <span class="kw-2">*mut </span>c_void);
+
+    <span class="doccomment">/// Get a callback suitable for [`SchemaData`].
+    </span><span class="kw">fn </span>raw_default_cb() -&gt; Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*mut </span>c_void) + Sync + Send + <span class="lifetime">&#39;static</span>)&gt; {
+        <span class="kw">unsafe </span>{ Unsafe::new(Box::leak(Box::new(|a| <span class="self">Self</span>::raw_default(a)))) }
+    }
 }
 <span class="kw">impl</span>&lt;T: Default&gt; RawDefault <span class="kw">for </span>T {
-    <span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_default(dst: <span class="kw-2">*mut </span>u8) {
+    <span class="kw">unsafe fn </span>raw_default(dst: <span class="kw-2">*mut </span>c_void) {
         <span class="kw">let </span>d = T::default();
         (dst <span class="kw">as </span><span class="kw-2">*mut </span>T).write(d)
     }

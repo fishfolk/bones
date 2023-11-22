@@ -405,11 +405,23 @@
 <a href="#405" id="405">405</a>
 <a href="#406" id="406">406</a>
 <a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span><span class="kw">crate</span>::ser_de::SchemaDeserialize;
 <span class="kw">use </span>bones_utils::{fxhash::FxHasher, Ustr};
 <span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span>serde::{de::Error, Deserialize};
+
+<span class="kw">use </span>std::ffi::c_void;
 
 <span class="kw">use crate</span>::{alloc::TypeDatas, prelude::<span class="kw-2">*</span>, raw_fns::<span class="kw-2">*</span>};
 
@@ -426,11 +438,11 @@
                         full_name: <span class="macro">concat!</span>(<span class="string">&quot;std::&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$t</span>)).into(),
                         kind: SchemaKind::Primitive(Primitive::<span class="macro-nonterminal">$prim</span>),
                         type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="macro-nonterminal">$t</span>&gt;()),
-                        clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawClone&gt;::raw_clone),
-                        drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawDrop&gt;::raw_drop),
-                        default_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawDefault&gt;::raw_default),
-                        hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawHash&gt;::raw_hash),
-                        eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawEq&gt;::raw_eq),
+                        clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
+                        drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawDrop&gt;::raw_drop_cb()),
+                        default_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawDefault&gt;::raw_default_cb()),
+                        hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawHash&gt;::raw_hash_cb()),
+                        eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawEq&gt;::raw_eq_cb()),
                         type_data: Default::default(),
                     })
                 })
@@ -463,11 +475,11 @@
                         full_name: <span class="macro">concat!</span>(<span class="string">&quot;std::&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$t</span>)).into(),
                         kind: SchemaKind::Primitive(Primitive::<span class="macro-nonterminal">$prim</span>),
                         type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="macro-nonterminal">$t</span>&gt;()),
-                        clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawClone&gt;::raw_clone),
-                        drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawDrop&gt;::raw_drop),
-                        default_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawDefault&gt;::raw_default),
-                        hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>CustomRawFns&gt;::raw_hash),
-                        eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>CustomRawFns&gt;::raw_eq),
+                        clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
+                        drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawDrop&gt;::raw_drop_cb()),
+                        default_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawDefault&gt;::raw_default_cb()),
+                        hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>CustomRawFns&gt;::raw_hash_cb()),
+                        eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>CustomRawFns&gt;::raw_eq_cb()),
                         type_data: Default::default(),
                     })
                 })
@@ -494,11 +506,11 @@
                     p
                 }),
                 type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;usize&gt;()),
-                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone),
-                drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop),
-                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default),
-                hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash),
-                eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq),
+                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
+                drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop_cb()),
+                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default_cb()),
+                hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash_cb()),
+                eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq_cb()),
                 type_data: Default::default(),
             })
         })
@@ -519,11 +531,11 @@
                     p
                 }),
                 type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="self">Self</span>&gt;()),
-                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone),
-                drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop),
-                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default),
-                hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash),
-                eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq),
+                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
+                drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop_cb()),
+                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default_cb()),
+                hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash_cb()),
+                eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq_cb()),
                 type_data: Default::default(),
             })
         })
@@ -543,11 +555,11 @@
                     align: layout.align(),
                 }),
                 type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="self">Self</span>&gt;()),
-                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone),
-                drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop),
-                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default),
-                hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash),
-                eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq),
+                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
+                drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop_cb()),
+                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default_cb()),
+                hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash_cb()),
+                eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq_cb()),
                 type_data: {
                     <span class="kw">let </span>td = TypeDatas::default();
                     <span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
@@ -585,11 +597,11 @@
                     align: layout.align(),
                 }),
                 type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="self">Self</span>&gt;()),
-                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone),
-                drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop),
-                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default),
-                hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash),
-                eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq),
+                clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
+                drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop_cb()),
+                default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default_cb()),
+                hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash_cb()),
+                eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq_cb()),
                 type_data: {
                     <span class="kw">let </span>td = TypeDatas::default();
                     <span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
@@ -644,9 +656,9 @@
                         align: layout.align(),
                     }),
                     type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;usize&gt;()),
-                    clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone),
-                    drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop),
-                    default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default),
+                    clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
+                    drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop_cb()),
+                    default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default_cb()),
                     <span class="comment">// TODO: Get the schema `hash_fn` and `eq_fn` for the `Quat` type.
                     // Quats don&#39;t implement hash and eq by default because of floating point number
                     // issues, so we&#39;ll have to use a workaround like `CustomRawFns` below to create
@@ -684,11 +696,11 @@
                             type_id,
                             kind,
                             type_data: Default::default(),
-                            clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone),
-                            drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop),
-                            default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default),
-                            hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>CustomRawFns&gt;::raw_hash),
-                            eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>CustomRawFns&gt;::raw_eq),
+                            clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
+                            drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDrop&gt;::raw_drop_cb()),
+                            default_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawDefault&gt;::raw_default_cb()),
+                            hash_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>CustomRawFns&gt;::raw_hash_cb()),
+                            eq_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>CustomRawFns&gt;::raw_eq_cb()),
                         })
                     })
                 }
@@ -719,10 +731,10 @@
     </span><span class="macro">macro_rules! </span>custom_fns_impl_bvec {
         (<span class="macro-nonterminal">$ty</span>:ident) =&gt; {
             <span class="kw">impl </span>CustomRawFns <span class="kw">for </span>glam::<span class="macro-nonterminal">$ty </span>{
-                <span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_hash(ptr: <span class="kw-2">*const </span>u8) -&gt; u64 {
+                <span class="kw">unsafe fn </span>raw_hash(ptr: <span class="kw-2">*const </span>c_void) -&gt; u64 {
                     &lt;<span class="self">Self </span><span class="kw">as </span>RawHash&gt;::raw_hash(ptr)
                 }
-                <span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_eq(a: <span class="kw-2">*const </span>u8, b: <span class="kw-2">*const </span>u8) -&gt; bool {
+                <span class="kw">unsafe fn </span>raw_eq(a: <span class="kw-2">*const </span>c_void, b: <span class="kw-2">*const </span>c_void) -&gt; bool {
                     &lt;<span class="self">Self </span><span class="kw">as </span>RawEq&gt;::raw_eq(a, b)
                 }
             }
@@ -735,23 +747,23 @@
     <span class="macro">macro_rules! </span>custom_fns_impl_glam {
         (<span class="macro-nonterminal">$t</span>:ty, <span class="macro-nonterminal">$prim</span>:ident, $(<span class="macro-nonterminal">$field</span>:ident),+) =&gt; {
             <span class="kw">impl </span>CustomRawFns <span class="kw">for </span><span class="macro-nonterminal">$t </span>{
-                <span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_hash(ptr: <span class="kw-2">*const </span>u8) -&gt; u64 {
+                <span class="kw">unsafe fn </span>raw_hash(ptr: <span class="kw-2">*const </span>c_void) -&gt; u64 {
                     <span class="kw">let </span>this = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(ptr <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>) };
                     <span class="kw">let </span><span class="kw-2">mut </span>hasher = FxHasher::default();
                     $(
-                        hasher.write_u64(<span class="macro-nonterminal">$prim::raw_hash</span>(<span class="kw-2">&amp;</span>this.<span class="macro-nonterminal">$field </span><span class="kw">as </span><span class="kw-2">*const </span><span class="macro-nonterminal">$prim </span><span class="kw">as </span><span class="kw-2">*const </span>u8));
+                        hasher.write_u64(<span class="macro-nonterminal">$prim::raw_hash</span>(<span class="kw-2">&amp;</span>this.<span class="macro-nonterminal">$field </span><span class="kw">as </span><span class="kw-2">*const </span><span class="macro-nonterminal">$prim </span><span class="kw">as </span><span class="kw-2">*const </span>c_void));
                     )+
                     hasher.finish()
                 }
 
-                <span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_eq(a: <span class="kw-2">*const </span>u8, b: <span class="kw-2">*const </span>u8) -&gt; bool {
+                <span class="kw">unsafe fn </span>raw_eq(a: <span class="kw-2">*const </span>c_void, b: <span class="kw-2">*const </span>c_void) -&gt; bool {
                     <span class="kw">let </span>a = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(a <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>) };
                     <span class="kw">let </span>b = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(b <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>) };
 
                     $(
                         <span class="macro-nonterminal">$prim::raw_eq</span>(
-                            <span class="kw-2">&amp;</span>a.<span class="macro-nonterminal">$field </span><span class="kw">as </span><span class="kw-2">*const </span><span class="macro-nonterminal">$prim </span><span class="kw">as </span><span class="kw-2">*const </span>u8,
-                            <span class="kw-2">&amp;</span>b.<span class="macro-nonterminal">$field </span><span class="kw">as </span><span class="kw-2">*const </span><span class="macro-nonterminal">$prim </span><span class="kw">as </span><span class="kw-2">*const </span>u8,
+                            <span class="kw-2">&amp;</span>a.<span class="macro-nonterminal">$field </span><span class="kw">as </span><span class="kw-2">*const </span><span class="macro-nonterminal">$prim </span><span class="kw">as </span><span class="kw-2">*const </span>c_void,
+                            <span class="kw-2">&amp;</span>b.<span class="macro-nonterminal">$field </span><span class="kw">as </span><span class="kw-2">*const </span><span class="macro-nonterminal">$prim </span><span class="kw">as </span><span class="kw-2">*const </span>c_void,
                         )
                     )&amp;&amp;+
                 }
@@ -775,14 +787,22 @@
 
 <span class="doccomment">/// Trait for types that require specific implementations of eq and hash fns, for use in this module only.
 </span><span class="kw">trait </span>CustomRawFns {
-    <span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_hash(ptr: <span class="kw-2">*const </span>u8) -&gt; u64;
-    <span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_eq(a: <span class="kw-2">*const </span>u8, b: <span class="kw-2">*const </span>u8) -&gt; bool;
+    <span class="kw">unsafe fn </span>raw_hash(ptr: <span class="kw-2">*const </span>c_void) -&gt; u64;
+    <span class="kw">fn </span>raw_hash_cb() -&gt; Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void) -&gt; u64 + Sync + Send + <span class="lifetime">&#39;static</span>)&gt; {
+        <span class="kw">unsafe </span>{ Unsafe::new(Box::leak(Box::new(|a| <span class="self">Self</span>::raw_hash(a)))) }
+    }
+    <span class="kw">unsafe fn </span>raw_eq(a: <span class="kw-2">*const </span>c_void, b: <span class="kw-2">*const </span>c_void) -&gt; bool;
+    <span class="kw">fn </span>raw_eq_cb(
+    ) -&gt; Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void, <span class="kw-2">*const </span>c_void) -&gt; bool + Sync + Send + <span class="lifetime">&#39;static</span>)&gt;
+    {
+        <span class="kw">unsafe </span>{ Unsafe::new(Box::leak(Box::new(|a, b| <span class="self">Self</span>::raw_eq(a, b)))) }
+    }
 }
 
 <span class="macro">macro_rules! </span>custom_fns_impl_float {
     (<span class="macro-nonterminal">$ty</span>:ident) =&gt; {
         <span class="kw">impl </span>CustomRawFns <span class="kw">for </span><span class="macro-nonterminal">$ty </span>{
-            <span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_hash(ptr: <span class="kw-2">*const </span>u8) -&gt; u64 {
+            <span class="kw">unsafe fn </span>raw_hash(ptr: <span class="kw-2">*const </span>c_void) -&gt; u64 {
                 <span class="kw">let </span>this = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(ptr <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>) };
 
                 <span class="kw">let </span><span class="kw-2">mut </span>hasher = FxHasher::default();
@@ -798,7 +818,7 @@
                 hasher.finish()
             }
 
-            <span class="kw">unsafe extern </span><span class="string">&quot;C-unwind&quot; </span><span class="kw">fn </span>raw_eq(a: <span class="kw-2">*const </span>u8, b: <span class="kw-2">*const </span>u8) -&gt; bool {
+            <span class="kw">unsafe fn </span>raw_eq(a: <span class="kw-2">*const </span>c_void, b: <span class="kw-2">*const </span>c_void) -&gt; bool {
                 <span class="kw">let </span>a = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(a <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>) };
                 <span class="kw">let </span>b = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(b <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>) };
                 <span class="kw">if </span>a.is_nan() &amp;&amp; a.is_nan() {

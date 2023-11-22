@@ -101,12 +101,6 @@
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -118,7 +112,7 @@
 <span class="doccomment">/// Mutable iterator over components matching a given bitset
 </span><span class="kw">pub type </span>ComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>, T&gt; = std::iter::Map&lt;
     UntypedComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>&gt;,
-    <span class="kw">for</span>&lt;<span class="lifetime">&#39;b</span>&gt; <span class="kw">fn</span>(SchemaRefMut&lt;<span class="lifetime">&#39;b</span>, <span class="lifetime">&#39;b</span>&gt;) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span>T,
+    <span class="kw">for</span>&lt;<span class="lifetime">&#39;b</span>&gt; <span class="kw">fn</span>(SchemaRefMut&lt;<span class="lifetime">&#39;b</span>&gt;) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span>T,
 &gt;;
 
 <span class="doccomment">/// Iterates over components using a provided bitset. Each time the bitset has a 1 in index i, the
@@ -143,10 +137,7 @@
             <span class="comment">// SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
             </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{
                 SchemaRef::from_ptr_schema(
-                    <span class="self">self</span>.components
-                        .storage
-                        .unchecked_idx(<span class="self">self</span>.current_id)
-                        .as_ptr(),
+                    <span class="self">self</span>.components.storage.unchecked_idx(<span class="self">self</span>.current_id),
                     <span class="self">self</span>.components.schema,
                 )
             })
@@ -167,7 +158,7 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>UntypedComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;;
+    <span class="kw">type </span>Item = SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;;
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>max_id = <span class="self">self</span>.components.max_id;
         <span class="kw">while </span>!(<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id)
@@ -181,10 +172,7 @@
             // valid for the new lifetime.
             </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{
                 SchemaRefMut::from_ptr_schema(
-                    <span class="self">self</span>.components
-                        .storage
-                        .unchecked_idx_mut(<span class="self">self</span>.current_id)
-                        .as_ptr(),
+                    <span class="self">self</span>.components.storage.unchecked_idx(<span class="self">self</span>.current_id),
                     <span class="self">self</span>.components.schema,
                 )
             })

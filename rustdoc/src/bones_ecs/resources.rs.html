@@ -416,18 +416,6 @@
 <a href="#416" id="416">416</a>
 <a href="#417" id="417">417</a>
 <a href="#418" id="418">418</a>
-<a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a>
-<a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
-<a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
-<a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! World resource storage.
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
@@ -481,7 +469,7 @@
     </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicSchemaRef {
         <span class="kw">let </span>(reference, borrow) = Ref::into_split(<span class="self">self</span>.cell.borrow());
         <span class="comment">// SOUND: we keep the borrow along with the reference so that the pointer remains valid.
-        </span><span class="kw">let </span>schema_ref = NoClone(<span class="kw">unsafe </span>{ reference.as_ref() }.as_ref());
+        </span><span class="kw">let </span>schema_ref = <span class="kw">unsafe </span>{ reference.as_ref() }.as_ref();
         AtomicSchemaRef { schema_ref, borrow }
     }
 
@@ -507,59 +495,65 @@
     }
 }
 
-<span class="doccomment">/// Wrapper type that prevents cloning or copying the inner type.
-</span><span class="attr">#[derive(Deref, DerefMut)]
-</span><span class="kw">pub struct </span>NoClone&lt;T&gt;(T);
-
 <span class="doccomment">/// An atomic borrow of a [`SchemaRef`].
-</span><span class="attr">#[derive(Deref)]
 </span><span class="kw">pub struct </span>AtomicSchemaRef&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="doccomment">/// This is wrappwed in a [`NoClone`] because of the limitations of the deref trait.
-    /// We would prefer to have deref return a [`SchemaRef`] with an appropriate lifetime,
-    /// that indicates it borrows from the [`AtomicSchemaRef`], but since deref must return
-    /// a normal reference, instead we return a reference to the `SchemaRef` wrapped inside
-    /// a [`NoClone`] to prevent copying the [`SchemaRef`] out of dereference with a lifetime
-    /// that outlives the atomicborrow.
-    </span><span class="attr">#[deref]
-    </span>schema_ref: NoClone&lt;SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;&gt;,
+    schema_ref: SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;,
     borrow: AtomicBorrow&lt;<span class="lifetime">&#39;a</span>&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; AtomicSchemaRef&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="doccomment">/// Get a [`SchemaRef`] that points to the inner value.
+    ///
+    /// &gt; **Note:** Ideally this method would be unnecessary, but it is impossible to properly
+    /// implement [`Deref`][std::ops::Deref] because deref must return a reference and we actually
+    /// need to return a [`SchemaRef`] with a shortened lifetime, binding it to this
+    /// [`AtomicSchemaRef`] borrow.
+    </span><span class="kw">pub fn </span>schema_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">&#39;_</span>&gt; {
+        <span class="self">self</span>.schema_ref
+    }
+
     <span class="doccomment">/// # Safety
     /// You must know that T represents the data in the [`SchemaRef`].
     </span><span class="kw">pub unsafe fn </span>deref&lt;T: <span class="lifetime">&#39;static</span>&gt;(<span class="self">self</span>) -&gt; Ref&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-        Ref::with_borrow(<span class="self">self</span>.schema_ref.deref(), <span class="self">self</span>.borrow)
+        Ref::with_borrow(<span class="self">self</span>.schema_ref.cast_into_unchecked(), <span class="self">self</span>.borrow)
     }
 
     <span class="doccomment">/// Convert into typed [`Ref`]. This panics if the schema doesn&#39;t match.
     </span><span class="attr">#[track_caller]
     </span><span class="kw">pub fn </span>typed&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; Ref&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-        <span class="macro">assert_eq!</span>(T::schema(), <span class="self">self</span>.schema(), <span class="string">&quot;Schema mismatch&quot;</span>);
+        <span class="macro">assert_eq!</span>(T::schema(), <span class="self">self</span>.schema_ref.schema(), <span class="string">&quot;Schema mismatch&quot;</span>);
         <span class="comment">// SOUND: we&#39;ve checked for matching schema.
         </span><span class="kw">unsafe </span>{ <span class="self">self</span>.deref() }
     }
 }
 
 <span class="doccomment">/// An atomic borrow of a [`SchemaRefMut`].
-</span><span class="attr">#[derive(Deref, DerefMut)]
 </span><span class="kw">pub struct </span>AtomicSchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="attr">#[deref]
-    </span>schema_ref: SchemaRefMut&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>&gt;,
+    schema_ref: SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;,
     borrow: AtomicBorrowMut&lt;<span class="lifetime">&#39;a</span>&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; AtomicSchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="doccomment">/// Get a [`SchemaRefMut`] that points to the inner value.
+    ///
+    /// &gt; **Note:** Ideally this method would be unnecessary, but it is impossible to properly
+    /// implement [`DerefMut`][std::ops::Deref] because deref must return a reference and we actually
+    /// need to return a [`SchemaRefMut`] with a shortened lifetime, binding it to this
+    /// [`AtomicSchemaRefMut`] borrow.
+    </span><span class="kw">pub fn </span>schema_ref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">&#39;_</span>&gt; {
+        <span class="self">self</span>.schema_ref.reborrow()
+    }
+
     <span class="doccomment">/// # Safety
     /// You must know that T represents the data in the [`SchemaRefMut`].
     </span><span class="kw">pub unsafe fn </span>deref_mut&lt;T: <span class="lifetime">&#39;static</span>&gt;(<span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-        RefMut::with_borrow(<span class="self">self</span>.schema_ref.deref_mut(), <span class="self">self</span>.borrow)
+        RefMut::with_borrow(<span class="self">self</span>.schema_ref.cast_into_mut_unchecked(), <span class="self">self</span>.borrow)
     }
 
     <span class="doccomment">/// Convert into typed [`RefMut`]. This panics if the schema doesn&#39;t match.
     </span><span class="attr">#[track_caller]
     </span><span class="kw">pub fn </span>typed&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-        <span class="macro">assert_eq!</span>(T::schema(), <span class="self">self</span>.schema(), <span class="string">&quot;Schema mismatch&quot;</span>);
+        <span class="macro">assert_eq!</span>(T::schema(), <span class="self">self</span>.schema_ref.schema(), <span class="string">&quot;Schema mismatch&quot;</span>);
         <span class="comment">// SOUND: we&#39;ve checked for matching schema.
         </span><span class="kw">unsafe </span>{ <span class="self">self</span>.deref_mut() }
     }
@@ -718,6 +712,12 @@
         })
     }
 
+    <span class="doccomment">/// Remove a resource from the store.
+    </span><span class="kw">pub fn </span>remove_cell&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;T&gt;&gt; {
+        <span class="kw">let </span>previous = <span class="self">self</span>.untyped.remove(T::schema().id());
+        previous.map(|x| AtomicResource::from_untyped(x))
+    }
+
     <span class="doccomment">/// Borrow the underlying [`UntypedResources`] store.
     </span><span class="kw">pub fn </span>untyped(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>UntypedResources {
         <span class="kw-2">&amp;</span><span class="self">self</span>.untyped
@@ -832,30 +832,6 @@
         resources.insert(B(<span class="number">2</span>));
         <span class="macro">assert_eq!</span>(resources.get::&lt;B&gt;().unwrap().<span class="number">0</span>, <span class="number">2</span>);
         <span class="macro">assert_eq!</span>(resources.get::&lt;A&gt;().unwrap().<span class="number">0</span>, <span class="string">&quot;world&quot;</span>);
-    }
-
-    <span class="attr">#[test]
-    </span><span class="kw">fn </span>untyped_resources_no_rewrite() {
-        <span class="kw">let </span><span class="kw-2">mut </span>store = UntypedResources::default();
-
-        <span class="comment">// Create two datas with different types.
-        </span><span class="kw">let </span>data1 = SchemaBox::new(<span class="number">0usize</span>);
-        <span class="kw">let </span>data1_schema = data1.schema();
-        <span class="kw">let </span><span class="kw-2">mut </span>data2 = SchemaBox::new(String::from(<span class="string">&quot;bad_data&quot;</span>));
-
-        {
-            <span class="comment">// Try to &quot;cheat&quot; and overwrite the the data1 resource with data of a different type.
-            </span>store.insert(data1);
-            <span class="kw">let </span>data1_cell = store.get_cell(data1_schema.id()).unwrap();
-            <span class="kw">let </span><span class="kw-2">mut </span>data1_borrow = data1_cell.borrow_mut();
-            <span class="comment">// This can&#39;t actually write to data1, it just changes the reference we have.
-            </span><span class="kw-2">*</span>data1_borrow = data2.as_mut();
-        }
-
-        <span class="comment">// Validate that data1 is unchanged
-        </span><span class="kw">let </span>data1_cell = store.get_cell(data1_schema.id()).unwrap();
-        <span class="kw">let </span>data1_borrow = data1_cell.borrow();
-        <span class="macro">assert_eq!</span>(data1_borrow.cast::&lt;usize&gt;(), <span class="kw-2">&amp;</span><span class="number">0</span>);
     }
 }
 </code></pre></div></section></main></body></html>
