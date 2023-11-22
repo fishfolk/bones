@@ -90,6 +90,7 @@ pub struct CorePackfileMeta {
     /// The path to the root asset for the pack.
     pub root: PathBuf,
     /// The paths to schema definitions to be loaded from this pack.
+    #[serde(default)]
     pub schemas: Vec<PathBuf>,
 }
 
@@ -105,6 +106,7 @@ pub struct PackfileMeta {
     /// The required game version to be compatible with this asset pack.
     pub game_version: VersionReq,
     /// The paths to schema definitions to be loaded from this pack.
+    #[serde(default)]
     pub schemas: Vec<PathBuf>,
 }
 

@@ -10,6 +10,9 @@ use bones_utils::fxhash::FxHasher;
 
 use crate::Unsafe;
 
+#[cfg(doc)]
+use crate::SchemaData;
+
 /// Trait implemented automatically for types that implement [`Clone`] and can be used to clone the
 /// type through raw pointers.
 pub trait RawClone {

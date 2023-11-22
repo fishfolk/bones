@@ -17,10 +17,13 @@ bevy_tasks      = "0.11"
 bones_lib       = { version = "0.3", path = "../bones_lib" }
 bones_asset     = { version = "0.3", path = "../bones_asset" }
 piccolo         = { git = "https://github.com/kyren/piccolo.git" }
-gc-arena        = "0.4"
-gc-arena-derive = "0.4"
+gc-arena        = { git = "https://github.com/kyren/gc-arena.git" }
+gc-arena-derive = { git = "https://github.com/kyren/gc-arena.git" }
 send_wrapper    = "0.6.0"
 elsa            = "1.9"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4"
 
 [dev-dependencies]
 piccolo         = { git = "https://github.com/kyren/piccolo.git" }

@@ -57,7 +57,12 @@ impl Drop for LuaPlugin {
             // Systems, due to the `SendWrapper` for the lua `Closures` must be dropped on
             // the lua executor thread
             LuaPluginSystemsState::Loaded { systems, executor } => {
+                #[cfg(not(target_arch = "wasm32"))]
                 executor.spawn(async move { drop(systems) }).detach();
+                #[cfg(target_arch = "wasm32")]
+                wasm_bindgen_futures::spawn_local(async move { drop(systems) });
+                #[cfg(target_arch = "wasm32")]
+                let _ = executor;
             }
             LuaPluginSystemsState::Unloaded => (),
         }
