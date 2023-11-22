@@ -139,9 +139,7 @@ impl<'de> Deserialize<'de> for PackSchema {
                                 clone_fn.get()(src_field, dst_field);
                             }
                         } else {
-                            panic!(
-                                "Not all fields of `{full_name}` have a default implementation."
-                            );
+                            panic!("Not all fields of `{full_name}` have a clone implementation.");
                         }
                     }
                 }
@@ -162,10 +160,6 @@ impl<'de> Deserialize<'de> for PackSchema {
                                 let field_ptr = ptr.add(*offset);
                                 drop_fn.get()(field_ptr);
                             }
-                        } else {
-                            panic!(
-                                "Not all fields of `{full_name}` have a default implementation."
-                            );
                         }
                     }
                 }
