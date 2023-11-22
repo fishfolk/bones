@@ -303,12 +303,10 @@ impl<'a, T: HasSchema> SystemParam for Comp<'a, T> {
     type State = Arc<AtomicCell<ComponentStore<T>>>;
     type Param<'p> = Comp<'p, T>;
 
-    fn initialize(world: &mut World) {
-        world.components.init::<T>();
-    }
+    fn initialize(_world: &mut World) {}
 
     fn get_state(world: &World) -> Self::State {
-        world.components.get_cell::<T>().unwrap()
+        world.components.get_cell::<T>()
     }
 
     fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
@@ -320,12 +318,10 @@ impl<'a, T: HasSchema> SystemParam for CompMut<'a, T> {
     type State = Arc<AtomicCell<ComponentStore<T>>>;
     type Param<'p> = CompMut<'p, T>;
 
-    fn initialize(world: &mut World) {
-        world.components.init::<T>();
-    }
+    fn initialize(_world: &mut World) {}
 
     fn get_state(world: &World) -> Self::State {
-        world.components.get_cell::<T>().unwrap()
+        world.components.get_cell::<T>()
     }
 
     fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {

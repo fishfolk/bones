@@ -14,6 +14,8 @@ use bones_framework::prelude::*;
 // Allow asset to be loaded from "game.yaml" assets.
 #[type_data(metadata_asset("game"))]
 struct GameMeta {
+    /// A lua script that will be run every frame on the menu.
+    menu_script: Handle<LuaScript>,
     /// The image displayed on the menu.
     menu_image: Handle<Image>,
     /// The image for the sprite demo
@@ -79,6 +81,7 @@ struct TileMeta {
     idx: u32,
 }
 
+/// Struct containing data that will be persisted with the storage API.
 #[derive(HasSchema, Default, Clone)]
 #[repr(C)]
 struct PersistedTextData(String);
@@ -88,8 +91,16 @@ fn main() {
     PersistedTextData::register_schema();
 
     // Create a bones bevy renderer from our bones game
-    BonesBevyRenderer::new(create_game())
-        // Get a bevy app for running our game
+    let mut renderer = BonesBevyRenderer::new(create_game());
+    // Set the app namespace which will be used by the renderer to decide where to put
+    // persistent storage files.
+    renderer.app_namespace = (
+        "org".into(),
+        "fishfolk".into(),
+        "bones.demo_features".into(),
+    );
+    // Get a bevy app for running our game
+    renderer
         .app()
         // We can add our own bevy plugins now
         .add_plugins((FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin::default()))
@@ -119,13 +130,26 @@ pub fn create_game() -> Game {
     game
 }
 
+/// Resource containing data that we will access from our menu lua script.
+#[derive(HasSchema, Default, Clone)]
+#[repr(C)]
+struct MenuData {
+    /// The index of the frame that we are on.
+    pub frame: u32,
+}
+
 /// Menu plugin
 pub fn menu_plugin(session: &mut Session) {
     // Register our menu system
     session
         // Install the bones_framework default plugins for this session
         .install_plugin(DefaultSessionPlugin)
-        // And add our systems.
+        .world
+        // Initialize our menu data resource
+        .init_resource::<MenuData>();
+
+    // And add our systems.
+    session
         .add_system_to_stage(Update, menu_system)
         .add_startup_system(menu_startup);
 }
@@ -150,7 +174,11 @@ fn menu_system(
     // Get the localization field from our `GameMeta`
     localization: Localization<GameMeta>,
     world: &World,
+    lua_engine: Res<LuaEngine>,
 ) {
+    // Run our menu script.
+    lua_engine.run_script_system(world, meta.menu_script);
+
     // Render the menu.
     egui::CentralPanel::default()
         .frame(egui::Frame::none())

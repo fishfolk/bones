@@ -25,6 +25,8 @@ use bones_utils::{
     *,
 };
 
+mod schema_loader;
+
 /// Struct responsible for loading assets into it's contained [`AssetStore`], using an [`AssetIo`]
 /// implementation.
 #[derive(HasSchema, Deref, DerefMut, Clone)]
@@ -34,8 +36,6 @@ pub struct AssetServer {
     pub inner: Arc<AssetServerInner>,
     /// The [`AssetIo`] implementation used to load assets.
     pub io: Arc<dyn AssetIo>,
-    /// List of assets that have been changed and that we are waiting to re-load.
-    pub pending_asset_changes: Vec<UntypedHandle>,
 }
 
 /// The inner state of the asset server.
@@ -67,7 +67,6 @@ impl Default for AssetServer {
         Self {
             inner: default(),
             io: Arc::new(DummyIo::new([])),
-            pending_asset_changes: default(),
         }
     }
 }
@@ -90,6 +89,9 @@ impl Default for AssetServerInner {
 pub struct CorePackfileMeta {
     /// The path to the root asset for the pack.
     pub root: PathBuf,
+    /// The paths to schema definitions to be loaded from this pack.
+    #[serde(default)]
+    pub schemas: Vec<PathBuf>,
 }
 
 /// YAML format for asset packs' `pack.yaml` file.
@@ -103,6 +105,9 @@ pub struct PackfileMeta {
     pub version: Version,
     /// The required game version to be compatible with this asset pack.
     pub game_version: VersionReq,
+    /// The paths to schema definitions to be loaded from this pack.
+    #[serde(default)]
+    pub schemas: Vec<PathBuf>,
 }
 
 /// The [`AssetPackId`] of the core pack.
@@ -160,7 +165,6 @@ impl AssetServer {
                 ..default()
             }),
             io: Arc::new(io),
-            pending_asset_changes: default(),
         }
     }
 
@@ -217,11 +221,12 @@ impl AssetServer {
         &mut self,
         mut handle_change: F,
     ) {
+        let mut pending_asset_changes = Vec::new();
         while let Ok(changed) = self.asset_change_recv.try_recv() {
             match changed {
                 ChangedAsset::Loc(loc) => {
                     let handle = self.load_asset_forced(loc.as_ref());
-                    self.pending_asset_changes.push(handle);
+                    pending_asset_changes.push(handle);
                 }
                 ChangedAsset::Handle(handle) => {
                     let entry = self
@@ -233,15 +238,13 @@ impl AssetServer {
                     let loc = entry.key().to_owned();
                     drop(entry);
                     self.load_asset_forced(loc.as_ref());
-                    self.pending_asset_changes.push(handle);
+                    pending_asset_changes.push(handle);
                 }
             }
         }
 
-        if self.load_progress.is_finished() {
-            for handle in std::mem::take(&mut self.pending_asset_changes) {
-                handle_change(self, handle)
-            }
+        for handle in pending_asset_changes {
+            handle_change(self, handle)
         }
     }
 
@@ -306,6 +309,7 @@ impl AssetServer {
             .load_file((Path::new("pack.yaml"), pack).into())
             .await?;
         let meta: PackfileMeta = serde_yaml::from_slice(&packfile_contents)?;
+        tracing::debug!(?pack, ?meta, "Loaded asset pack meta.");
 
         // If the game version doesn't match, then don't continue loading this pack.
         if !meta.game_version.matches(&self.game_version) {
@@ -328,6 +332,9 @@ impl AssetServer {
             );
         }
 
+        // Load the schemas
+        let schemas = self.load_pack_schemas(pack, &meta.schemas).await?;
+
         // Load the asset and produce a handle
         let root_loc = AssetLocRef {
             path: &meta.root,
@@ -341,13 +348,7 @@ impl AssetServer {
             id: meta.id,
             version: meta.version,
             game_version: meta.game_version,
-            // TODO: Load & import schemas that are defined in asset packs.
-            // This is medium-sized effort. The idea is that asset packs shoudl be able to
-            // create YAML files that describe a `SchemaData`. This schema data should get
-            // registered with a file extension name, just like a Rust metadata asset does
-            // so that that schema can be used to load assets.
-            schemas: default(),
-            import_schemas: default(),
+            schemas,
             root: root_handle,
         })
     }
@@ -364,6 +365,7 @@ impl AssetServer {
             .await
             .context("Could not load pack file")?;
         let meta: CorePackfileMeta = serde_yaml::from_slice(&packfile_contents)?;
+        tracing::debug!(?meta, "Loaded core pack meta.");
 
         // Load the asset and produce a handle
         let root_loc = AssetLocRef {
@@ -371,6 +373,9 @@ impl AssetServer {
             pack: None,
         };
         let handle = self.load_asset(root_loc);
+
+        // Load the schemas
+        let schemas = self.load_pack_schemas(None, &meta.schemas).await?;
 
         // Return the loaded asset pack.
         Ok(AssetPack {
@@ -387,8 +392,7 @@ impl AssetServer {
                 }]
                 .to_vec(),
             },
-            schemas: default(),
-            import_schemas: default(),
+            schemas,
             root: handle,
         })
     }
@@ -719,13 +723,16 @@ impl AssetServer {
     }
 
     /// Borrow a [`LoadedAsset`] associated to the given handle.
-    pub fn get_untyped(&self, handle: UntypedHandle) -> Option<MapRef<Cid, LoadedAsset>> {
+    pub fn get_asset_untyped(&self, handle: UntypedHandle) -> Option<MapRef<Cid, LoadedAsset>> {
         let cid = self.store.asset_ids.get(&handle)?;
         self.store.assets.get(&cid)
     }
 
     /// Borrow a [`LoadedAsset`] associated to the given handle.
-    pub fn get_untyped_mut(&self, handle: UntypedHandle) -> Option<MapRefMut<Cid, LoadedAsset>> {
+    pub fn get_asset_untyped_mut(
+        &self,
+        handle: UntypedHandle,
+    ) -> Option<MapRefMut<Cid, LoadedAsset>> {
         let cid = self.store.asset_ids.get(&handle)?;
         self.store.assets.get_mut(&cid)
     }
@@ -745,6 +752,11 @@ impl AssetServer {
         self.get(self.core().root.typed())
     }
 
+    /// Get the core asset pack's root asset as a type-erased [`SchemaBox`].
+    pub fn untyped_root(&self) -> MappedMapRef<Cid, LoadedAsset, SchemaBox> {
+        self.get_untyped(self.core().root)
+    }
+
     /// Read the loaded asset packs.
     pub fn packs(&self) -> &DashMap<AssetPackSpec, AssetPack> {
         &self.store.packs
@@ -762,7 +774,29 @@ impl AssetServer {
     }
 
     /// Borrow a loaded asset.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the asset is not loaded.
     #[track_caller]
+    pub fn get_untyped(&self, handle: UntypedHandle) -> MappedMapRef<Cid, LoadedAsset, SchemaBox> {
+        self.try_get_untyped(handle).unwrap()
+    }
+
+    /// Borrow a loaded asset.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the asset is not loaded.
+    #[track_caller]
+    pub fn get_untyped_mut(
+        &self,
+        handle: UntypedHandle,
+    ) -> MappedMapRefMut<Cid, LoadedAsset, SchemaBox> {
+        self.try_get_untyped_mut(handle).unwrap()
+    }
+
+    /// Borrow a loaded asset.
     pub fn try_get<T: HasSchema>(
         &self,
         handle: Handle<T>,
@@ -780,6 +814,29 @@ impl AssetServer {
                 asset.cast_ref()
             }
         }))
+    }
+
+    /// Borrow a loaded asset.
+    pub fn try_get_untyped(
+        &self,
+        handle: UntypedHandle,
+    ) -> Option<MappedMapRef<Cid, LoadedAsset, SchemaBox>> {
+        let cid = self.store.asset_ids.get(&handle)?;
+        Some(MapRef::map(self.store.assets.get(&cid).unwrap(), |x| {
+            &x.data
+        }))
+    }
+
+    /// Borrow a loaded asset.
+    pub fn try_get_untyped_mut(
+        &self,
+        handle: UntypedHandle,
+    ) -> Option<MappedMapRefMut<Cid, LoadedAsset, SchemaBox>> {
+        let cid = self.store.asset_ids.get_mut(&handle)?;
+        Some(MapRefMut::map(
+            self.store.assets.get_mut(&cid).unwrap(),
+            |x| &mut x.data,
+        ))
     }
 
     /// Mutably borrow a loaded asset.
@@ -810,6 +867,30 @@ impl AssetServer {
                 asset.cast_mut()
             }
         })
+    }
+
+    /// Load the schemas for an asset pack.
+    async fn load_pack_schemas(
+        &self,
+        pack: Option<&str>,
+        schema_paths: &[PathBuf],
+    ) -> anyhow::Result<Vec<&'static Schema>> {
+        let mut schemas = Vec::with_capacity(schema_paths.len());
+        for schema_path in schema_paths {
+            let contents = self
+                .io
+                .load_file(AssetLocRef {
+                    path: schema_path,
+                    pack,
+                })
+                .await?;
+
+            let pack_schema: schema_loader::PackSchema = serde_yaml::from_slice(&contents)?;
+            let schema = pack_schema.0;
+            tracing::debug!(?pack, ?schema.name, "Loaded schema from pack.");
+            schemas.push(schema);
+        }
+        Ok(schemas)
     }
 }
 
@@ -868,14 +949,14 @@ mod metadata {
     }
 
     /// The load context for a [`SchemaRefMut`].
-    pub struct SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'prnt> {
+    pub struct SchemaPtrLoadCtx<'a, 'srv, 'ptr> {
         /// The metadata asset load context.
         pub ctx: &'a mut MetaAssetLoadCtx<'srv>,
         /// The pointer to load.
-        pub ptr: SchemaRefMut<'ptr, 'prnt>,
+        pub ptr: SchemaRefMut<'ptr>,
     }
 
-    impl<'a, 'srv, 'ptr, 'prnt, 'de> DeserializeSeed<'de> for SchemaPtrLoadCtx<'a, 'srv, 'ptr, 'prnt> {
+    impl<'a, 'srv, 'ptr, 'de> DeserializeSeed<'de> for SchemaPtrLoadCtx<'a, 'srv, 'ptr> {
         type Value = ();
 
         fn deserialize<D>(mut self, deserializer: D) -> Result<Self::Value, D::Error>
@@ -947,15 +1028,11 @@ mod metadata {
                     ptr: self.ptr,
                     ctx: self.ctx,
                 })?,
-                SchemaKind::Box(_) => {
-                    // SOUND: schema asserts pointer is a SchemaBox.
-                    let b = unsafe { self.ptr.deref_mut::<SchemaBox>() };
-                    SchemaPtrLoadCtx {
-                        ctx: self.ctx,
-                        ptr: b.as_mut(),
-                    }
-                    .deserialize(deserializer)?
+                SchemaKind::Box(_) => SchemaPtrLoadCtx {
+                    ctx: self.ctx,
+                    ptr: self.ptr.into_box().unwrap(),
                 }
+                .deserialize(deserializer)?,
                 SchemaKind::Primitive(p) => {
                     match p {
                         Primitive::Bool => *self.ptr.cast_mut() = bool::deserialize(deserializer)?,
@@ -988,12 +1065,12 @@ mod metadata {
         }
     }
 
-    struct StructVisitor<'a, 'srv, 'ptr, 'prnt> {
+    struct StructVisitor<'a, 'srv, 'ptr> {
         ctx: &'a mut MetaAssetLoadCtx<'srv>,
-        ptr: SchemaRefMut<'ptr, 'prnt>,
+        ptr: SchemaRefMut<'ptr>,
     }
 
-    impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for StructVisitor<'a, 'srv, 'ptr, 'prnt> {
+    impl<'a, 'srv, 'ptr, 'de> Visitor<'de> for StructVisitor<'a, 'srv, 'ptr> {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -1015,11 +1092,11 @@ mod metadata {
             let field_count = self.ptr.schema().kind.as_struct().unwrap().fields.len();
 
             for i in 0..field_count {
-                let field = self.ptr.get_field(i).unwrap();
+                let field = self.ptr.access_mut().field(i).unwrap();
                 if seq
                     .next_element_seed(SchemaPtrLoadCtx {
                         ctx: self.ctx,
-                        ptr: field,
+                        ptr: field.into_schema_ref_mut(),
                     })?
                     .is_none()
                 {
@@ -1035,11 +1112,11 @@ mod metadata {
             A: serde::de::MapAccess<'de>,
         {
             while let Some(key) = map.next_key::<String>()? {
-                match self.ptr.get_field(&key) {
+                match self.ptr.access_mut().field(&key) {
                     Ok(field) => {
                         map.next_value_seed(SchemaPtrLoadCtx {
                             ctx: self.ctx,
-                            ptr: field,
+                            ptr: field.into_schema_ref_mut(),
                         })?;
                     }
                     Err(_) => {
@@ -1069,12 +1146,12 @@ mod metadata {
         }
     }
 
-    struct VecVisitor<'a, 'srv, 'ptr, 'prnt> {
+    struct VecVisitor<'a, 'srv, 'ptr> {
         ctx: &'a mut MetaAssetLoadCtx<'srv>,
-        ptr: SchemaRefMut<'ptr, 'prnt>,
+        ptr: SchemaRefMut<'ptr>,
     }
 
-    impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for VecVisitor<'a, 'srv, 'ptr, 'prnt> {
+    impl<'a, 'srv, 'ptr, 'de> Visitor<'de> for VecVisitor<'a, 'srv, 'ptr> {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -1112,12 +1189,12 @@ mod metadata {
         }
     }
 
-    struct MapVisitor<'a, 'srv, 'ptr, 'prnt> {
+    struct MapVisitor<'a, 'srv, 'ptr> {
         ctx: &'a mut MetaAssetLoadCtx<'srv>,
-        ptr: SchemaRefMut<'ptr, 'prnt>,
+        ptr: SchemaRefMut<'ptr>,
     }
 
-    impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for MapVisitor<'a, 'srv, 'ptr, 'prnt> {
+    impl<'a, 'srv, 'ptr, 'de> Visitor<'de> for MapVisitor<'a, 'srv, 'ptr> {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -1159,12 +1236,12 @@ mod metadata {
         }
     }
 
-    struct EnumVisitor<'a, 'srv, 'ptr, 'prnt> {
+    struct EnumVisitor<'a, 'srv, 'ptr> {
         ctx: &'a mut MetaAssetLoadCtx<'srv>,
-        ptr: SchemaRefMut<'ptr, 'prnt>,
+        ptr: SchemaRefMut<'ptr>,
     }
 
-    impl<'a, 'srv, 'ptr, 'prnt, 'de> Visitor<'de> for EnumVisitor<'a, 'srv, 'ptr, 'prnt> {
+    impl<'a, 'srv, 'ptr, 'de> Visitor<'de> for EnumVisitor<'a, 'srv, 'ptr> {
         type Value = ();
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -1227,12 +1304,12 @@ mod metadata {
         }
     }
 
-    struct EnumPtrLoadCtx<'ptr, 'prnt> {
-        ptr: SchemaRefMut<'ptr, 'prnt>,
+    struct EnumPtrLoadCtx<'ptr> {
+        ptr: SchemaRefMut<'ptr>,
     }
 
-    impl<'ptr, 'prnt, 'de> DeserializeSeed<'de> for EnumPtrLoadCtx<'ptr, 'prnt> {
-        type Value = SchemaRefMut<'ptr, 'prnt>;
+    impl<'ptr, 'de> DeserializeSeed<'de> for EnumPtrLoadCtx<'ptr> {
+        type Value = SchemaRefMut<'ptr>;
 
         fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where
@@ -1261,7 +1338,7 @@ mod metadata {
             // Write the enum variant
             // SOUND: the schema asserts that the write to the enum discriminant is valid
             match enum_info.tag_type {
-                EnumTagType::U8 => unsafe { self.ptr.as_ptr().write(var_idx as u8) },
+                EnumTagType::U8 => unsafe { self.ptr.as_ptr().cast::<u8>().write(var_idx as u8) },
                 EnumTagType::U16 => unsafe {
                     self.ptr.as_ptr().cast::<u16>().write(var_idx as u16)
                 },

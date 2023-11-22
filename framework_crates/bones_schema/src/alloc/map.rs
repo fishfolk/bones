@@ -160,7 +160,7 @@ impl SchemaMap {
             // SOUND: we've veriried that they key schema matches the map's
             let value = unsafe { self.get_ref_unchecked(SchemaRef::new(key)) }
                 // SOUND: we've verified that the value schema maches the map's
-                .map(|x| unsafe { x.deref() });
+                .map(|x| unsafe { x.cast_into_unchecked() });
 
             Ok(value)
         }
@@ -190,15 +190,15 @@ impl SchemaMap {
     /// # Safety
     /// The key's schema must match this map's key schema.
     pub unsafe fn get_ref_unchecked(&self, key: SchemaRef) -> Option<SchemaRef> {
-        let Some(hash_fn) = self.key_schema.hash_fn else {
+        let Some(hash_fn) = &self.key_schema.hash_fn else {
             panic!("Key schema doesn't implement hash");
         };
-        let Some(eq_fn) = self.key_schema.eq_fn else {
+        let Some(eq_fn) = &self.key_schema.eq_fn else {
             panic!("Key schema doesn't implement eq");
         };
         let key_ptr = key.as_ptr();
         // SOUND: caller asserts the key schema matches
-        let raw_hash = unsafe { (hash_fn)(key_ptr) };
+        let raw_hash = unsafe { (hash_fn.get())(key_ptr) };
         let hash = {
             let mut hasher = self.map.hasher().build_hasher();
             hasher.write_u64(raw_hash);
@@ -209,7 +209,7 @@ impl SchemaMap {
             .from_hash(hash, |key| {
                 let other_ptr = key.as_ref().as_ptr();
                 // SOUND: caller asserts the key schema matches.
-                unsafe { (eq_fn)(key_ptr, other_ptr) }
+                unsafe { (eq_fn.get())(key_ptr, other_ptr) }
             })
             .map(|x| x.1.as_ref())
     }
@@ -241,15 +241,15 @@ impl SchemaMap {
     /// # Safety
     /// The key's schema must match this map's key schema.
     pub unsafe fn get_ref_unchecked_mut(&mut self, key: SchemaRef) -> Option<SchemaRefMut> {
-        let Some(hash_fn) = self.key_schema.hash_fn else {
+        let Some(hash_fn) = &self.key_schema.hash_fn else {
             panic!("Key schema doesn't implement hash");
         };
-        let Some(eq_fn) = self.key_schema.eq_fn else {
+        let Some(eq_fn) = &self.key_schema.eq_fn else {
             panic!("Key schema doesn't implement eq");
         };
         let key_ptr = key.as_ptr();
         // SOUND: caller asserts the key schema matches
-        let raw_hash = unsafe { (hash_fn)(key_ptr) };
+        let raw_hash = unsafe { (hash_fn.get())(key_ptr) };
         let hash = {
             let mut hasher = self.map.hasher().build_hasher();
             hasher.write_u64(raw_hash);
@@ -258,7 +258,7 @@ impl SchemaMap {
         let entry = self.map.raw_entry_mut().from_hash(hash, |key| {
             let other_ptr = key.as_ref().as_ptr();
             // SOUND: caller asserts the key schema matches.
-            unsafe { (eq_fn)(key_ptr, other_ptr) }
+            unsafe { (eq_fn.get())(key_ptr, other_ptr) }
         });
         match entry {
             hash_map::RawEntryMut::Occupied(entry) => Some(entry.into_mut()),
@@ -290,7 +290,7 @@ impl SchemaMap {
             // SOUND: we've checked that the key schema matches.
             let value = unsafe { self.get_ref_unchecked_mut(SchemaRef::new(key)) }
                 // SOUND: we've checked that the value schema matches.
-                .map(|x| unsafe { x.deref_mut() });
+                .map(|x| unsafe { x.cast_into_mut_unchecked() });
             Ok(value)
         }
     }
@@ -349,15 +349,15 @@ impl SchemaMap {
     /// # Safety
     /// The key schema must match the map's.
     pub unsafe fn remove_unchecked(&mut self, key: SchemaRef) -> Option<SchemaBox> {
-        let Some(hash_fn) = self.key_schema.hash_fn else {
+        let Some(hash_fn) = &self.key_schema.hash_fn else {
             panic!("Key schema doesn't implement hash");
         };
-        let Some(eq_fn) = self.key_schema.eq_fn else {
+        let Some(eq_fn) = &self.key_schema.eq_fn else {
             panic!("Key schema doesn't implement eq");
         };
         let key_ptr = key.as_ptr();
         // SOUND: caller asserts the key schema matches
-        let hash = unsafe { (hash_fn)(key_ptr) };
+        let hash = unsafe { (hash_fn.get())(key_ptr) };
         let hash = {
             let mut hasher = self.map.hasher().build_hasher();
             hasher.write_u64(hash);
@@ -366,7 +366,7 @@ impl SchemaMap {
         let entry = self.map.raw_entry_mut().from_hash(hash, |key| {
             let other_ptr = key.as_ref().as_ptr();
             // SOUND: caller asserts the key schema matches
-            unsafe { (eq_fn)(key_ptr, other_ptr) }
+            unsafe { (eq_fn.get())(key_ptr, other_ptr) }
         });
         match entry {
             hash_map::RawEntryMut::Occupied(entry) => Some(entry.remove()),
@@ -428,7 +428,7 @@ type SchemaMapIter<'iter> = std::iter::Map<
 >;
 type SchemaMapIterMut<'iter> = std::iter::Map<
     hash_map::IterMut<'iter, SchemaBox, SchemaBox>,
-    for<'a> fn((&'a SchemaBox, &'a mut SchemaBox)) -> (SchemaRef<'a>, SchemaRefMut<'a, 'a>),
+    for<'a> fn((&'a SchemaBox, &'a mut SchemaBox)) -> (SchemaRef<'a>, SchemaRefMut<'a>),
 >;
 impl SchemaMap {
     /// Iterate over entries in the map.
@@ -447,7 +447,7 @@ impl SchemaMap {
     pub fn iter_mut(&mut self) -> SchemaMapIterMut {
         fn map_fn<'a>(
             (key, value): (&'a SchemaBox, &'a mut SchemaBox),
-        ) -> (SchemaRef<'a>, SchemaRefMut<'a, 'a>) {
+        ) -> (SchemaRef<'a>, SchemaRefMut<'a>) {
             (key.as_ref(), value.as_mut())
         }
         self.map.iter_mut().map(map_fn)
@@ -487,7 +487,7 @@ impl SchemaMap {
         &mut self,
     ) -> std::iter::Map<
         hash_map::ValuesMut<SchemaBox, SchemaBox>,
-        for<'a> fn(&'a mut SchemaBox) -> SchemaRefMut<'a, 'a>,
+        for<'a> fn(&'a mut SchemaBox) -> SchemaRefMut<'a>,
     > {
         fn map_fn(key: &mut SchemaBox) -> SchemaRefMut {
             key.as_mut()
@@ -503,7 +503,7 @@ impl<'a> IntoIterator for &'a SchemaMap {
     }
 }
 impl<'a> IntoIterator for &'a mut SchemaMap {
-    type Item = (SchemaRef<'a>, SchemaRefMut<'a, 'a>);
+    type Item = (SchemaRef<'a>, SchemaRefMut<'a>);
     type IntoIter = SchemaMapIterMut<'a>;
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
@@ -563,11 +563,15 @@ unsafe impl<K: HasSchema, V: HasSchema> HasSchema for SMap<K, V> {
                     value: V::schema(),
                 },
                 type_id: Some(TypeId::of::<Self>()),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
-                drop_fn: Some(<Self as RawDrop>::raw_drop),
-                default_fn: Some(<Self as RawDefault>::raw_default),
-                hash_fn: Some(SchemaVec::raw_hash),
-                eq_fn: Some(SchemaVec::raw_eq),
+                clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
+                drop_fn: Some(<Self as RawDrop>::raw_drop_cb()),
+                default_fn: Some(<Self as RawDefault>::raw_default_cb()),
+                hash_fn: Some(unsafe {
+                    Unsafe::new(Box::leak(Box::new(|a| SchemaVec::raw_hash(a))))
+                }),
+                eq_fn: Some(unsafe {
+                    Unsafe::new(Box::leak(Box::new(|a, b| SchemaVec::raw_eq(a, b))))
+                }),
                 type_data: Default::default(),
             });
 
@@ -602,7 +606,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
         unsafe {
             self.map
                 .get_ref_unchecked(SchemaRef::new(key))
-                .map(|x| x.deref())
+                .map(|x| x.cast_into_unchecked())
         }
     }
 
@@ -612,7 +616,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
         unsafe {
             self.map
                 .get_ref_unchecked_mut(SchemaRef::new(key))
-                .map(|x| x.deref_mut())
+                .map(|x| x.cast_into_mut_unchecked())
         }
     }
 
@@ -646,7 +650,12 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     pub fn iter(&self) -> SMapIter<K, V> {
         fn map_fn<'a, K, V>((key, value): (&'a SchemaBox, &'a SchemaBox)) -> (&K, &V) {
             // SOUND: SMap ensures K and V schemas always match.
-            unsafe { (key.as_ref().deref(), value.as_ref().deref()) }
+            unsafe {
+                (
+                    key.as_ref().cast_into_unchecked(),
+                    value.as_ref().cast_into_unchecked(),
+                )
+            }
         }
         self.map.map.iter().map(map_fn)
     }
@@ -658,7 +667,12 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
             (key, value): (&'a SchemaBox, &'a mut SchemaBox),
         ) -> (&'a K, &'a mut V) {
             // SOUND: SMap ensures K and V schemas always match.
-            unsafe { (key.as_ref().deref(), value.as_mut().deref_mut()) }
+            unsafe {
+                (
+                    key.as_ref().cast_into_unchecked(),
+                    value.as_mut().cast_into_mut_unchecked(),
+                )
+            }
         }
         self.map.map.iter_mut().map(map_fn)
     }
@@ -671,7 +685,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     {
         fn map_fn<K>(key: &SchemaBox) -> &K {
             // SOUND: SMap ensures key schema always match
-            unsafe { key.as_ref().deref() }
+            unsafe { key.as_ref().cast_into_unchecked() }
         }
         self.map.map.keys().map(map_fn)
     }
@@ -684,7 +698,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     {
         fn map_fn<V>(value: &SchemaBox) -> &V {
             // SOUND: SMap ensures value schema always matches.
-            unsafe { value.as_ref().deref() }
+            unsafe { value.as_ref().cast_into_unchecked() }
         }
         self.map.map.values().map(map_fn)
     }
@@ -699,7 +713,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     > {
         fn map_fn<V>(value: &mut SchemaBox) -> &mut V {
             // SOUND: SMap ensures value schema always matches
-            unsafe { value.as_mut().deref_mut() }
+            unsafe { value.as_mut().cast_into_mut_unchecked() }
         }
         self.map.map.values_mut().map(map_fn)
     }

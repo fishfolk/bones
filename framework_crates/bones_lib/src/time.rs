@@ -13,9 +13,13 @@ use instant::{Duration, Instant};
 /// A clock that tracks how much it has advanced (and how much real time has elapsed) since
 /// its previous update and since its creation.
 #[derive(Clone, Copy, Debug, HasSchema)]
+#[repr(C)]
 pub struct Time {
+    #[schema(opaque)]
     startup: Instant,
+    #[schema(opaque)]
     last_update: Option<Instant>,
+    #[schema(opaque)]
     first_update: Option<Instant>,
 
     // pausing

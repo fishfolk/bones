@@ -9,7 +9,7 @@ pub type ComponentBitsetIterator<'a, T> =
 /// Mutable iterator over components matching a given bitset
 pub type ComponentBitsetIteratorMut<'a, T> = std::iter::Map<
     UntypedComponentBitsetIteratorMut<'a>,
-    for<'b> fn(SchemaRefMut<'b, 'b>) -> &'b mut T,
+    for<'b> fn(SchemaRefMut<'b>) -> &'b mut T,
 >;
 
 /// Iterates over components using a provided bitset. Each time the bitset has a 1 in index i, the
@@ -34,10 +34,7 @@ impl<'a> Iterator for UntypedComponentBitsetIterator<'a> {
             // SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
             Some(unsafe {
                 SchemaRef::from_ptr_schema(
-                    self.components
-                        .storage
-                        .unchecked_idx(self.current_id)
-                        .as_ptr(),
+                    self.components.storage.unchecked_idx(self.current_id),
                     self.components.schema,
                 )
             })
@@ -58,7 +55,7 @@ pub struct UntypedComponentBitsetIteratorMut<'a> {
 }
 
 impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
-    type Item = SchemaRefMut<'a, 'a>;
+    type Item = SchemaRefMut<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         let max_id = self.components.max_id;
         while !(self.bitset.bit_test(self.current_id)
@@ -72,10 +69,7 @@ impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
             // valid for the new lifetime.
             Some(unsafe {
                 SchemaRefMut::from_ptr_schema(
-                    self.components
-                        .storage
-                        .unchecked_idx_mut(self.current_id)
-                        .as_ptr(),
+                    self.components.storage.unchecked_idx(self.current_id),
                     self.components.schema,
                 )
             })

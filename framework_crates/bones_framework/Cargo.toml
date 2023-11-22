@@ -11,7 +11,7 @@ categories.workspace    = true
 keywords.workspace      = true
 
 [features]
-default = ["image_png", "ui", "localization", "audio", "audio_ogg"]
+default = ["image_png", "ui", "localization", "audio", "audio_ogg", "scripting"]
 #! Cargo feature supported in `bones_framework`.
 
 ## Enable the `ui` module, powered by [`egui`].
@@ -21,6 +21,9 @@ localization = ["dep:fluent", "dep:fluent-langneg", "dep:intl-memoizer", "dep:un
 
 ## Enable the audio system.
 audio = ["dep:kira"]
+
+## Enable the scripting system.
+scripting = ["dep:bones_scripting"]
 
 #! ### Audio formats
 #! These features enable different audio formats
@@ -67,6 +70,7 @@ document-features = ["dep:document-features"]
 bones_lib    = { version = "0.3", path = "../bones_lib", features = ["glam"] }
 bones_asset  = { version = "0.3", path = "../bones_asset" }
 bones_schema = { version = "0.3", path = "../bones_schema", features = ["humantime"] }
+bones_scripting = { version = "0.3", path = "../bones_scripting", optional = true }
 
 # Other
 glam      = "0.24"

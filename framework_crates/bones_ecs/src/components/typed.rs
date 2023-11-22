@@ -88,7 +88,9 @@ impl<T: HasSchema> ComponentStore<T> {
 
         std::array::from_fn(move |i| {
             // SOUND: we know that the schema matches.
-            result[i].take().map(|x| unsafe { x.deref_mut() })
+            result[i]
+                .take()
+                .map(|x| unsafe { x.cast_into_mut_unchecked() })
         })
     }
 
@@ -105,7 +107,9 @@ impl<T: HasSchema> ComponentStore<T> {
     #[inline]
     pub fn iter(&self) -> impl Iterator<Item = &T> {
         // SOUND: we know the schema matches.
-        self.untyped.iter().map(|x| unsafe { x.deref() })
+        self.untyped
+            .iter()
+            .map(|x| unsafe { x.cast_into_unchecked() })
     }
 
     /// Iterates mutably over all components of this type.
@@ -113,7 +117,9 @@ impl<T: HasSchema> ComponentStore<T> {
     #[inline]
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
         // SOUND: we know the schema matches.
-        self.untyped.iter_mut().map(|x| unsafe { x.deref_mut() })
+        self.untyped
+            .iter_mut()
+            .map(|x| unsafe { x.cast_into_mut_unchecked() })
     }
 
     /// Iterates immutably over the components of this type where `bitset`
@@ -123,7 +129,7 @@ impl<T: HasSchema> ComponentStore<T> {
     pub fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> ComponentBitsetIterator<T> {
         // SOUND: we know the schema matches.
         fn map<T>(r: SchemaRef) -> &T {
-            unsafe { r.deref() }
+            unsafe { r.cast_into_unchecked() }
         }
         self.untyped.iter_with_bitset(bitset).map(map)
     }
@@ -134,8 +140,8 @@ impl<T: HasSchema> ComponentStore<T> {
     #[inline]
     pub fn iter_mut_with_bitset(&mut self, bitset: Rc<BitSetVec>) -> ComponentBitsetIteratorMut<T> {
         // SOUND: we know the schema matches.
-        fn map<'a, T>(r: SchemaRefMut<'a, 'a>) -> &'a mut T {
-            unsafe { r.deref_mut() }
+        fn map<T>(r: SchemaRefMut<'_>) -> &mut T {
+            unsafe { r.cast_into_mut_unchecked() }
         }
 
         self.untyped.iter_mut_with_bitset(bitset).map(map)

@@ -28,6 +28,9 @@ pub mod prelude {
     pub use bones_lib::prelude::*;
     pub use glam::*;
 
+    #[cfg(feature = "scripting")]
+    pub use bones_scripting::prelude::*;
+
     #[cfg(feature = "localization")]
     pub use crate::localization::*;
 }
@@ -38,6 +41,9 @@ pub mod params;
 pub mod render;
 pub mod storage;
 pub mod time;
+
+#[cfg(feature = "scripting")]
+pub use bones_scripting as scripting;
 
 #[cfg(feature = "localization")]
 pub mod localization;
@@ -57,6 +63,9 @@ pub struct DefaultGamePlugin;
 impl lib::GamePlugin for DefaultGamePlugin {
     fn install(self, game: &mut lib::Game) {
         game.install_plugin(render::audio::game_plugin);
+
+        #[cfg(feature = "scripting")]
+        game.install_plugin(bones_scripting::ScriptingGamePlugin::default());
     }
 }
 

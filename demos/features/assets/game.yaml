@@ -1,3 +1,4 @@
+menu_script: ./menu.lua
 menu_image: ./menu-image.png
 sprite_demo: ./sprite/fractal.png
 atlas_demo: ./atlas/atlas-demo.yaml

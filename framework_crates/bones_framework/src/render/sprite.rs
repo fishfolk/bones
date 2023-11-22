@@ -2,6 +2,12 @@
 
 use crate::prelude::*;
 
+/// Sprite session plugin.
+pub fn sprite_plugin(session: &mut Session) {
+    Sprite::register_schema();
+    session.world.init_param::<Comp<Sprite>>();
+}
+
 /// Image component.
 #[derive(Clone, HasSchema, Debug)]
 #[schema(opaque, no_default)]
@@ -64,6 +70,7 @@ impl Atlas {
 
 /// A 2D sprite component
 #[derive(Clone, HasSchema, Debug, Default)]
+#[repr(C)]
 pub struct Sprite {
     /// The sprite's color tint
     pub color: Color,

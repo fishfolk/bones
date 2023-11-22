@@ -11,8 +11,8 @@ pub use bones_ecs as ecs;
 /// Bones lib prelude
 pub mod prelude {
     pub use crate::{
-        ecs::prelude::*, instant::Instant, time::*, Game, Session, SessionOptions, SessionPlugin,
-        SessionRunner, Sessions,
+        ecs::prelude::*, instant::Instant, time::*, Game, GamePlugin, Session, SessionOptions,
+        SessionPlugin, SessionRunner, Sessions,
     };
 }
 
@@ -28,7 +28,7 @@ use crate::prelude::*;
 pub struct Session {
     /// The ECS world for the core.
     pub world: World,
-    /// The system
+    /// The system stages.
     #[deref]
     pub stages: SystemStages,
     /// Whether or not this session should have it's systems run.
@@ -234,7 +234,7 @@ impl Game {
         // Update an existing resource of the same type.
         for r in &mut self.shared_resources {
             if r.schema() == T::schema() {
-                *r.borrow_mut().cast_mut() = resource;
+                *r.borrow_mut().schema_ref_mut().cast_mut() = resource;
                 return;
             }
         }

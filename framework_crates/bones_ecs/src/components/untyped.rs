@@ -2,6 +2,7 @@ use crate::prelude::*;
 
 use bones_schema::alloc::ResizableAlloc;
 use std::{
+    ffi::c_void,
     mem::MaybeUninit,
     ptr::{self},
     rc::Rc,
@@ -23,7 +24,7 @@ unsafe impl Send for UntypedComponentStore {}
 impl Clone for UntypedComponentStore {
     fn clone(&self) -> Self {
         let size = self.schema.layout().size();
-        let mut new_storage = self.storage.clone();
+        let new_storage = self.storage.clone();
 
         for i in 0..self.max_id {
             if self.bitset.bit_test(i) {
@@ -33,12 +34,14 @@ impl Clone for UntypedComponentStore {
                 // - And our previous pointer is a valid pointer to component data
                 // - And our new pointer is a writable pointer with the same layout
                 unsafe {
-                    let prev_ptr = self.storage.ptr().byte_add(i * size);
-                    let new_ptr = new_storage.ptr_mut().byte_add(i * size);
-                    (self.schema.clone_fn.expect("Cannot clone component"))(
-                        prev_ptr.as_ptr(),
-                        new_ptr.as_ptr(),
-                    );
+                    let prev_ptr = self.storage.as_ptr().add(i * size);
+                    let new_ptr = new_storage.as_ptr().add(i * size);
+                    (self
+                        .schema
+                        .clone_fn
+                        .as_ref()
+                        .expect("Cannot clone component")
+                        .get())(prev_ptr, new_ptr);
                 }
             }
         }
@@ -54,7 +57,7 @@ impl Clone for UntypedComponentStore {
 
 impl Drop for UntypedComponentStore {
     fn drop(&mut self) {
-        if let Some(drop_fn) = self.schema.drop_fn {
+        if let Some(drop_fn) = &self.schema.drop_fn {
             for i in 0..self.storage.capacity() {
                 if self.bitset.bit_test(i) {
                     // SAFE: constructing an UntypedComponent store is unsafe, and the user affirms
@@ -62,8 +65,8 @@ impl Drop for UntypedComponentStore {
                     //
                     // And our pointer is valid.
                     unsafe {
-                        let ptr = self.storage.unchecked_idx_mut(i);
-                        drop_fn(ptr.as_ptr());
+                        let ptr = self.storage.unchecked_idx(i);
+                        drop_fn.get()(ptr);
                     }
                 }
             }
@@ -76,12 +79,7 @@ impl UntypedComponentStore {
     ///
     /// In Rust, you will usually not use [`UntypedComponentStore`] and will use the statically
     /// typed [`ComponentStore<T>`] instead.
-    ///
-    /// # Safety
-    ///
-    /// The `clone_fn` and `drop_fn`, if specified, must not do anything unsound, when given valid
-    /// pointers to clone or drop.
-    pub unsafe fn new(schema: &'static Schema) -> Self {
+    pub fn new(schema: &'static Schema) -> Self {
         Self {
             bitset: create_bitset(),
             storage: ResizableAlloc::new(schema.layout()),
@@ -120,12 +118,12 @@ impl UntypedComponentStore {
     pub fn try_insert_box(
         &mut self,
         entity: Entity,
-        mut data: SchemaBox,
+        data: SchemaBox,
     ) -> Result<Option<SchemaBox>, SchemaMismatchError> {
         if self.schema != data.schema() {
             Err(SchemaMismatchError)
         } else {
-            let ptr = data.as_mut().as_ptr();
+            let ptr = data.as_ptr();
             // SOUND: we validated schema matches
             let already_had_component = unsafe { self.insert_raw(entity, ptr) };
             if already_had_component {
@@ -159,7 +157,7 @@ impl UntypedComponentStore {
         if self.schema != T::schema() {
             Err(SchemaMismatchError)
         } else {
-            let ptr = &mut data as *mut T as *mut u8;
+            let ptr = &mut data as *mut T as *mut c_void;
             // SOUND: we validated schema matches
             let already_had_component = unsafe { self.insert_raw(entity, ptr) };
             if already_had_component {
@@ -180,16 +178,16 @@ impl UntypedComponentStore {
     /// # Safety
     /// - The data must be a pointer to memory with the same schema.
     /// - If `false` is returned you must ensure the `data` pointer is not used after pushing.
-    pub unsafe fn insert_raw(&mut self, entity: Entity, data: *mut u8) -> bool {
+    pub unsafe fn insert_raw(&mut self, entity: Entity, data: *mut c_void) -> bool {
         let index = entity.index() as usize;
         let size = self.schema.layout().size();
 
         // If the component already exists on the entity
         if self.bitset.bit_test(entity.index() as usize) {
-            let ptr = self.storage.unchecked_idx_mut(index);
+            let ptr = self.storage.unchecked_idx(index);
 
             // Swap the data with the data already there
-            ptr::swap_nonoverlapping(ptr.as_ptr(), data, size);
+            ptr::swap_nonoverlapping(ptr, data, size);
 
             // There was already a component of this type
             true
@@ -207,8 +205,7 @@ impl UntypedComponentStore {
 
             // Copy the data from the data pointer into our storage
             self.storage
-                .unchecked_idx_mut(index)
-                .as_ptr()
+                .unchecked_idx(index)
                 .copy_from_nonoverlapping(data, size);
 
             // There was not already a component of this type
@@ -264,7 +261,7 @@ impl UntypedComponentStore {
             // SOUND: we ensure that there is allocated storge for entities that have their bit set.
             let ptr = unsafe { self.storage.unchecked_idx(idx) };
             // SOUND: we know that the pointer has our schema.
-            Some(unsafe { SchemaRef::from_ptr_schema(ptr.as_ptr(), self.schema) })
+            Some(unsafe { SchemaRef::from_ptr_schema(ptr, self.schema) })
         } else {
             None
         }
@@ -293,18 +290,18 @@ impl UntypedComponentStore {
 
     /// Get a [`SchemaRefMut`] to the component for the given [`Entity`]
     #[inline]
-    pub fn get_ref_mut<'a>(&mut self, entity: Entity) -> Option<SchemaRefMut<'a, 'a>> {
+    pub fn get_ref_mut<'a>(&mut self, entity: Entity) -> Option<SchemaRefMut<'a>> {
         let idx = entity.index() as usize;
         self.get_idx_mut(idx)
     }
 
-    fn get_idx_mut<'a>(&mut self, idx: usize) -> Option<SchemaRefMut<'a, 'a>> {
+    fn get_idx_mut<'a>(&mut self, idx: usize) -> Option<SchemaRefMut<'a>> {
         if self.bitset.bit_test(idx) {
             // SOUND: we ensure that there is allocated storage for entities that have their bit
             // set.
-            let ptr = unsafe { self.storage.unchecked_idx_mut(idx) };
+            let ptr = unsafe { self.storage.unchecked_idx(idx) };
             // SOUND: we know that the pointer has our schema.
-            Some(unsafe { SchemaRefMut::from_ptr_schema(ptr.as_ptr(), self.schema) })
+            Some(unsafe { SchemaRefMut::from_ptr_schema(ptr, self.schema) })
         } else {
             None
         }
@@ -350,7 +347,7 @@ impl UntypedComponentStore {
             let refs = std::array::from_fn(|i| {
                 let r = refs[i].take();
                 // SOUND: we've validated the schema matches.
-                r.map(|r| unsafe { r.deref_mut() })
+                r.map(|r| unsafe { r.cast_into_mut_unchecked() })
             });
 
             Ok(refs)
@@ -390,8 +387,8 @@ impl UntypedComponentStore {
                 // The new lifetime is sound because we validate that all of these borrows don't
                 // overlap and their lifetimes are that of the &mut self borrow.
                 unsafe {
-                    let ptr = self.storage.unchecked_idx_mut(index);
-                    Some(SchemaRefMut::from_ptr_schema(ptr.as_ptr(), self.schema))
+                    let ptr = self.storage.unchecked_idx(index);
+                    Some(SchemaRefMut::from_ptr_schema(ptr, self.schema))
                 }
             } else {
                 None
@@ -420,7 +417,7 @@ impl UntypedComponentStore {
         } else if self.bitset.contains(entity) {
             let mut data = MaybeUninit::<T>::uninit();
             // SOUND: the data doesn't overlap the storage.
-            unsafe { self.remove_raw(entity, Some(data.as_mut_ptr() as *mut u8)) };
+            unsafe { self.remove_raw(entity, Some(data.as_mut_ptr() as *mut c_void)) };
 
             // SOUND: we've initialized the data.
             Ok(Some(unsafe { data.assume_init() }))
@@ -435,9 +432,9 @@ impl UntypedComponentStore {
     pub fn remove_box(&mut self, entity: Entity) -> Option<SchemaBox> {
         if self.bitset.contains(entity) {
             // SOUND: we will immediately initialize the schema box with data matching the schema.
-            let mut b = unsafe { SchemaBox::uninitialized(self.schema) };
+            let b = unsafe { SchemaBox::uninitialized(self.schema) };
             // SOUND: the box data doesn't overlap the storage.
-            unsafe { self.remove_raw(entity, Some(b.as_mut().as_ptr())) };
+            unsafe { self.remove_raw(entity, Some(b.as_ptr())) };
             Some(b)
         } else {
             // SOUND: we don't use the out pointer.
@@ -453,23 +450,23 @@ impl UntypedComponentStore {
     /// # Safety
     ///
     /// If set, the `out` pointer, must not overlap the internal component storage.
-    pub unsafe fn remove_raw(&mut self, entity: Entity, out: Option<*mut u8>) -> bool {
+    pub unsafe fn remove_raw(&mut self, entity: Entity, out: Option<*mut c_void>) -> bool {
         let index = entity.index() as usize;
         let size = self.schema.layout().size();
 
         if self.bitset.bit_test(index) {
             self.bitset.bit_reset(index);
 
-            let ptr = self.storage.unchecked_idx_mut(index).as_ptr();
+            let ptr = self.storage.unchecked_idx(index);
 
             if let Some(out) = out {
                 // SAFE: user asserts `out` is non-overlapping
                 out.copy_from_nonoverlapping(ptr, size);
-            } else if let Some(drop_fn) = self.schema.drop_fn {
+            } else if let Some(drop_fn) = &self.schema.drop_fn {
                 // SAFE: construcing `UntypedComponentStore` asserts the soundess of the drop_fn
                 //
                 // And ptr is a valid pointer to the component type.
-                drop_fn(ptr);
+                drop_fn.get()(ptr);
             }
 
             // Found previous component
@@ -578,7 +575,7 @@ pub struct UntypedComponentStoreIterMut<'a> {
     idx: usize,
 }
 impl<'a> Iterator for UntypedComponentStoreIterMut<'a> {
-    type Item = SchemaRefMut<'a, 'a>;
+    type Item = SchemaRefMut<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if self.idx < self.store.max_id {

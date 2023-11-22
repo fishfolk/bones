@@ -4,6 +4,8 @@ use bones_utils::{fxhash::FxHasher, Ustr};
 #[cfg(feature = "serde")]
 use serde::{de::Error, Deserialize};
 
+use std::ffi::c_void;
+
 use crate::{alloc::TypeDatas, prelude::*, raw_fns::*};
 
 use std::{alloc::Layout, any::TypeId, hash::Hasher, sync::OnceLock, time::Duration};
@@ -19,11 +21,11 @@ macro_rules! impl_primitive {
                         full_name: concat!("std::", stringify!($t)).into(),
                         kind: SchemaKind::Primitive(Primitive::$prim),
                         type_id: Some(TypeId::of::<$t>()),
-                        clone_fn: Some(<$t as RawClone>::raw_clone),
-                        drop_fn: Some(<$t as RawDrop>::raw_drop),
-                        default_fn: Some(<$t as RawDefault>::raw_default),
-                        hash_fn: Some(<$t as RawHash>::raw_hash),
-                        eq_fn: Some(<$t as RawEq>::raw_eq),
+                        clone_fn: Some(<$t as RawClone>::raw_clone_cb()),
+                        drop_fn: Some(<$t as RawDrop>::raw_drop_cb()),
+                        default_fn: Some(<$t as RawDefault>::raw_default_cb()),
+                        hash_fn: Some(<$t as RawHash>::raw_hash_cb()),
+                        eq_fn: Some(<$t as RawEq>::raw_eq_cb()),
                         type_data: Default::default(),
                     })
                 })
@@ -56,11 +58,11 @@ macro_rules! schema_impl_float {
                         full_name: concat!("std::", stringify!($t)).into(),
                         kind: SchemaKind::Primitive(Primitive::$prim),
                         type_id: Some(TypeId::of::<$t>()),
-                        clone_fn: Some(<$t as RawClone>::raw_clone),
-                        drop_fn: Some(<$t as RawDrop>::raw_drop),
-                        default_fn: Some(<$t as RawDefault>::raw_default),
-                        hash_fn: Some(<$t as CustomRawFns>::raw_hash),
-                        eq_fn: Some(<$t as CustomRawFns>::raw_eq),
+                        clone_fn: Some(<$t as RawClone>::raw_clone_cb()),
+                        drop_fn: Some(<$t as RawDrop>::raw_drop_cb()),
+                        default_fn: Some(<$t as RawDefault>::raw_default_cb()),
+                        hash_fn: Some(<$t as CustomRawFns>::raw_hash_cb()),
+                        eq_fn: Some(<$t as CustomRawFns>::raw_eq_cb()),
                         type_data: Default::default(),
                     })
                 })
@@ -87,11 +89,11 @@ unsafe impl HasSchema for usize {
                     p
                 }),
                 type_id: Some(TypeId::of::<usize>()),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
-                drop_fn: Some(<Self as RawDrop>::raw_drop),
-                default_fn: Some(<Self as RawDefault>::raw_default),
-                hash_fn: Some(<Self as RawHash>::raw_hash),
-                eq_fn: Some(<Self as RawEq>::raw_eq),
+                clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
+                drop_fn: Some(<Self as RawDrop>::raw_drop_cb()),
+                default_fn: Some(<Self as RawDefault>::raw_default_cb()),
+                hash_fn: Some(<Self as RawHash>::raw_hash_cb()),
+                eq_fn: Some(<Self as RawEq>::raw_eq_cb()),
                 type_data: Default::default(),
             })
         })
@@ -112,11 +114,11 @@ unsafe impl HasSchema for isize {
                     p
                 }),
                 type_id: Some(TypeId::of::<Self>()),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
-                drop_fn: Some(<Self as RawDrop>::raw_drop),
-                default_fn: Some(<Self as RawDefault>::raw_default),
-                hash_fn: Some(<Self as RawHash>::raw_hash),
-                eq_fn: Some(<Self as RawEq>::raw_eq),
+                clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
+                drop_fn: Some(<Self as RawDrop>::raw_drop_cb()),
+                default_fn: Some(<Self as RawDefault>::raw_default_cb()),
+                hash_fn: Some(<Self as RawHash>::raw_hash_cb()),
+                eq_fn: Some(<Self as RawEq>::raw_eq_cb()),
                 type_data: Default::default(),
             })
         })
@@ -136,11 +138,11 @@ unsafe impl HasSchema for Ustr {
                     align: layout.align(),
                 }),
                 type_id: Some(TypeId::of::<Self>()),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
-                drop_fn: Some(<Self as RawDrop>::raw_drop),
-                default_fn: Some(<Self as RawDefault>::raw_default),
-                hash_fn: Some(<Self as RawHash>::raw_hash),
-                eq_fn: Some(<Self as RawEq>::raw_eq),
+                clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
+                drop_fn: Some(<Self as RawDrop>::raw_drop_cb()),
+                default_fn: Some(<Self as RawDefault>::raw_default_cb()),
+                hash_fn: Some(<Self as RawHash>::raw_hash_cb()),
+                eq_fn: Some(<Self as RawEq>::raw_eq_cb()),
                 type_data: {
                     let td = TypeDatas::default();
                     #[cfg(feature = "serde")]
@@ -178,11 +180,11 @@ unsafe impl HasSchema for Duration {
                     align: layout.align(),
                 }),
                 type_id: Some(TypeId::of::<Self>()),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
-                drop_fn: Some(<Self as RawDrop>::raw_drop),
-                default_fn: Some(<Self as RawDefault>::raw_default),
-                hash_fn: Some(<Self as RawHash>::raw_hash),
-                eq_fn: Some(<Self as RawEq>::raw_eq),
+                clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
+                drop_fn: Some(<Self as RawDrop>::raw_drop_cb()),
+                default_fn: Some(<Self as RawDefault>::raw_default_cb()),
+                hash_fn: Some(<Self as RawHash>::raw_hash_cb()),
+                eq_fn: Some(<Self as RawEq>::raw_eq_cb()),
                 type_data: {
                     let td = TypeDatas::default();
                     #[cfg(feature = "serde")]
@@ -237,9 +239,9 @@ mod impl_glam {
                         align: layout.align(),
                     }),
                     type_id: Some(TypeId::of::<usize>()),
-                    clone_fn: Some(<Self as RawClone>::raw_clone),
-                    drop_fn: Some(<Self as RawDrop>::raw_drop),
-                    default_fn: Some(<Self as RawDefault>::raw_default),
+                    clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
+                    drop_fn: Some(<Self as RawDrop>::raw_drop_cb()),
+                    default_fn: Some(<Self as RawDefault>::raw_default_cb()),
                     // TODO: Get the schema `hash_fn` and `eq_fn` for the `Quat` type.
                     // Quats don't implement hash and eq by default because of floating point number
                     // issues, so we'll have to use a workaround like `CustomRawFns` below to create
@@ -277,11 +279,11 @@ mod impl_glam {
                             type_id,
                             kind,
                             type_data: Default::default(),
-                            clone_fn: Some(<Self as RawClone>::raw_clone),
-                            drop_fn: Some(<Self as RawDrop>::raw_drop),
-                            default_fn: Some(<Self as RawDefault>::raw_default),
-                            hash_fn: Some(<Self as CustomRawFns>::raw_hash),
-                            eq_fn: Some(<Self as CustomRawFns>::raw_eq),
+                            clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
+                            drop_fn: Some(<Self as RawDrop>::raw_drop_cb()),
+                            default_fn: Some(<Self as RawDefault>::raw_default_cb()),
+                            hash_fn: Some(<Self as CustomRawFns>::raw_hash_cb()),
+                            eq_fn: Some(<Self as CustomRawFns>::raw_eq_cb()),
                         })
                     })
                 }
@@ -312,10 +314,10 @@ mod impl_glam {
     macro_rules! custom_fns_impl_bvec {
         ($ty:ident) => {
             impl CustomRawFns for glam::$ty {
-                unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64 {
+                unsafe fn raw_hash(ptr: *const c_void) -> u64 {
                     <Self as RawHash>::raw_hash(ptr)
                 }
-                unsafe extern "C-unwind" fn raw_eq(a: *const u8, b: *const u8) -> bool {
+                unsafe fn raw_eq(a: *const c_void, b: *const c_void) -> bool {
                     <Self as RawEq>::raw_eq(a, b)
                 }
             }
@@ -328,23 +330,23 @@ mod impl_glam {
     macro_rules! custom_fns_impl_glam {
         ($t:ty, $prim:ident, $($field:ident),+) => {
             impl CustomRawFns for $t {
-                unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64 {
+                unsafe fn raw_hash(ptr: *const c_void) -> u64 {
                     let this = unsafe { &*(ptr as *const Self) };
                     let mut hasher = FxHasher::default();
                     $(
-                        hasher.write_u64($prim::raw_hash(&this.$field as *const $prim as *const u8));
+                        hasher.write_u64($prim::raw_hash(&this.$field as *const $prim as *const c_void));
                     )+
                     hasher.finish()
                 }
 
-                unsafe extern "C-unwind" fn raw_eq(a: *const u8, b: *const u8) -> bool {
+                unsafe fn raw_eq(a: *const c_void, b: *const c_void) -> bool {
                     let a = unsafe { &*(a as *const Self) };
                     let b = unsafe { &*(b as *const Self) };
 
                     $(
                         $prim::raw_eq(
-                            &a.$field as *const $prim as *const u8,
-                            &b.$field as *const $prim as *const u8,
+                            &a.$field as *const $prim as *const c_void,
+                            &b.$field as *const $prim as *const c_void,
                         )
                     )&&+
                 }
@@ -368,14 +370,22 @@ mod impl_glam {
 
 /// Trait for types that require specific implementations of eq and hash fns, for use in this module only.
 trait CustomRawFns {
-    unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64;
-    unsafe extern "C-unwind" fn raw_eq(a: *const u8, b: *const u8) -> bool;
+    unsafe fn raw_hash(ptr: *const c_void) -> u64;
+    fn raw_hash_cb() -> Unsafe<&'static (dyn Fn(*const c_void) -> u64 + Sync + Send + 'static)> {
+        unsafe { Unsafe::new(Box::leak(Box::new(|a| Self::raw_hash(a)))) }
+    }
+    unsafe fn raw_eq(a: *const c_void, b: *const c_void) -> bool;
+    fn raw_eq_cb(
+    ) -> Unsafe<&'static (dyn Fn(*const c_void, *const c_void) -> bool + Sync + Send + 'static)>
+    {
+        unsafe { Unsafe::new(Box::leak(Box::new(|a, b| Self::raw_eq(a, b)))) }
+    }
 }
 
 macro_rules! custom_fns_impl_float {
     ($ty:ident) => {
         impl CustomRawFns for $ty {
-            unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64 {
+            unsafe fn raw_hash(ptr: *const c_void) -> u64 {
                 let this = unsafe { &*(ptr as *const Self) };
 
                 let mut hasher = FxHasher::default();
@@ -391,7 +401,7 @@ macro_rules! custom_fns_impl_float {
                 hasher.finish()
             }
 
-            unsafe extern "C-unwind" fn raw_eq(a: *const u8, b: *const u8) -> bool {
+            unsafe fn raw_eq(a: *const c_void, b: *const c_void) -> bool {
                 let a = unsafe { &*(a as *const Self) };
                 let b = unsafe { &*(b as *const Self) };
                 if a.is_nan() && a.is_nan() {

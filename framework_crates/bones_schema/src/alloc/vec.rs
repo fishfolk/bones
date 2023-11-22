@@ -1,5 +1,6 @@
 use std::{
     any::{type_name, TypeId},
+    ffi::c_void,
     fmt::Debug,
     iter::Iterator,
     marker::PhantomData,
@@ -61,7 +62,7 @@ impl SchemaVec {
     /// # Safety
     /// - The item must be a pointer to data with the same schema.
     /// - You must ensure the `item` pointer is not used after pusing.
-    unsafe fn push_raw(&mut self, item: *mut u8) {
+    unsafe fn push_raw(&mut self, item: *mut c_void) {
         // Make room for more elements if necessary
         if self.len == self.buffer.capacity() {
             self.grow();
@@ -70,8 +71,7 @@ impl SchemaVec {
         // Copy the item into the vec
         unsafe {
             self.buffer
-                .unchecked_idx_mut(self.len)
-                .as_ptr()
+                .unchecked_idx(self.len)
                 .copy_from_nonoverlapping(item, self.buffer.layout().size());
         }
 
@@ -90,7 +90,7 @@ impl SchemaVec {
         }
 
         unsafe {
-            self.push_raw(&mut item as *mut T as *mut u8);
+            self.push_raw(&mut item as *mut T as *mut c_void);
             std::mem::forget(item);
         }
 
@@ -156,7 +156,7 @@ impl SchemaVec {
             let ret = unsafe { self.raw_pop() }.map(|ptr| {
                 let mut data = MaybeUninit::<T>::uninit();
                 unsafe {
-                    (data.as_mut_ptr() as *mut u8)
+                    (data.as_mut_ptr() as *mut c_void)
                         .copy_from_nonoverlapping(ptr, self.buffer.layout().size());
                     data.assume_init()
                 }
@@ -168,7 +168,7 @@ impl SchemaVec {
     /// # Safety
     /// The pointer may only be used immediately after calling raw_pop to read the data out of the
     /// popped item. Any further mutations to the vector may make the pointer invalid.
-    unsafe fn raw_pop(&mut self) -> Option<*mut u8> {
+    unsafe fn raw_pop(&mut self) -> Option<*mut c_void> {
         if self.len == 0 {
             None
         } else {
@@ -176,7 +176,7 @@ impl SchemaVec {
             self.len -= 1;
 
             // Return the pointer to the item that is being popped off.
-            Some(unsafe { self.buffer.unchecked_idx_mut(self.len).as_ptr() })
+            Some(unsafe { self.buffer.unchecked_idx(self.len) })
         }
     }
 
@@ -211,8 +211,7 @@ impl SchemaVec {
             None
         } else {
             let ptr = unsafe { self.buffer.unchecked_idx(idx) };
-
-            unsafe { Some(SchemaRef::from_ptr_schema(ptr.as_ptr(), self.schema)) }
+            unsafe { Some(SchemaRef::from_ptr_schema(ptr, self.schema)) }
         }
     }
 
@@ -240,13 +239,12 @@ impl SchemaVec {
     }
 
     /// Get an item with the given index.
-    pub fn get_ref_mut(&mut self, idx: usize) -> Option<SchemaRefMut<'_, '_>> {
+    pub fn get_ref_mut(&mut self, idx: usize) -> Option<SchemaRefMut<'_>> {
         if idx >= self.len {
             None
         } else {
             let ptr = unsafe { self.buffer.unchecked_idx(idx) };
-
-            unsafe { Some(SchemaRefMut::from_ptr_schema(ptr.as_ptr(), self.schema)) }
+            unsafe { Some(SchemaRefMut::from_ptr_schema(ptr, self.schema)) }
         }
     }
 
@@ -312,12 +310,12 @@ impl SchemaVec {
     #[track_caller]
     pub fn hash(&self) -> u64 {
         use std::hash::{Hash, Hasher};
-        let Some(hash_fn) = self.schema.hash_fn else {
+        let Some(hash_fn) = &self.schema.hash_fn else {
             panic!("Schema doesn't specify a hash_fn");
         };
         let mut hasher = FxHasher::default();
         for item_ptr in self.buffer.iter() {
-            let item_hash = unsafe { (hash_fn)(item_ptr.as_ptr()) };
+            let item_hash = unsafe { (hash_fn.get())(item_ptr) };
             item_hash.hash(&mut hasher);
         }
         hasher.finish()
@@ -326,7 +324,7 @@ impl SchemaVec {
     /// Raw version of the [`hash()`][Self::hash] function. Not meant for normal use.
     /// # Safety
     /// Pointer must be a valid pointer to a [`SchemaVec`].
-    pub unsafe extern "C-unwind" fn raw_hash(ptr: *const u8) -> u64 {
+    pub unsafe fn raw_hash(ptr: *const c_void) -> u64 {
         let this = unsafe { &*(ptr as *const Self) };
         this.hash()
     }
@@ -334,7 +332,7 @@ impl SchemaVec {
     /// Raw version of the [`eq()`][PartialEq::eq] function. Not meant for normal use.
     /// # Safety
     /// Pointers must be valid pointers to [`SchemaVec`]s.
-    pub unsafe extern "C-unwind" fn raw_eq(a: *const u8, b: *const u8) -> bool {
+    pub unsafe fn raw_eq(a: *const c_void, b: *const c_void) -> bool {
         let a = &*(a as *const Self);
         let b = &*(b as *const Self);
         a.eq(b)
@@ -359,7 +357,7 @@ impl<'a> IntoIterator for &'a SchemaVec {
     }
 }
 impl<'a> IntoIterator for &'a mut SchemaVec {
-    type Item = SchemaRefMut<'a, 'a>;
+    type Item = SchemaRefMut<'a>;
     type IntoIter = SchemaVecIterMut<'a>;
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
@@ -389,7 +387,7 @@ pub struct SchemaVecIterMut<'a> {
     idx: usize,
 }
 impl<'a> Iterator for SchemaVecIterMut<'a> {
-    type Item = SchemaRefMut<'a, 'a>;
+    type Item = SchemaRefMut<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let item = self
@@ -412,15 +410,15 @@ impl PartialEq for SchemaVec {
         if self.schema != other.schema {
             panic!("Cannot compare two `SchemaVec`s with different schemas.");
         }
-        let Some(eq_fn) = self.schema.eq_fn else {
+        let Some(eq_fn) = &self.schema.eq_fn else {
             panic!("Schema doesn't have an eq_fn");
         };
 
         for i in 0..self.len {
             unsafe {
-                let a = self.buffer.unchecked_idx(i).as_ptr();
-                let b = self.buffer.unchecked_idx(i).as_ptr();
-                if !(eq_fn)(a, b) {
+                let a = self.buffer.unchecked_idx(i);
+                let b = self.buffer.unchecked_idx(i);
+                if !(eq_fn.get())(a, b) {
                     return false;
                 }
             }
@@ -431,7 +429,7 @@ impl PartialEq for SchemaVec {
 
 impl Clone for SchemaVec {
     fn clone(&self) -> Self {
-        let Some(clone_fn) = self.schema.clone_fn else {
+        let Some(clone_fn) = &self.schema.clone_fn else {
             panic!("This type cannot be cloned");
         };
         let mut buffer_clone = ResizableAlloc::new(self.schema.layout());
@@ -442,8 +440,8 @@ impl Clone for SchemaVec {
             // SOUND: we've check that the index is within bounds, and the schema asserts the
             // validity of the clone function.
             unsafe {
-                let item = self.buffer.unchecked_idx(i).as_ptr() as *const u8;
-                (clone_fn)(item, buffer_clone.unchecked_idx_mut(i).as_ptr());
+                let item = self.buffer.unchecked_idx(i);
+                (clone_fn.get())(item, buffer_clone.unchecked_idx(i));
             }
         }
 
@@ -499,7 +497,7 @@ impl<T: HasSchema> SVec<T> {
     pub fn push(&mut self, mut item: T) {
         // SOUND: We know that the schema matches, and we forget the item after pushing.
         unsafe {
-            self.vec.push_raw(&mut item as *mut T as *mut u8);
+            self.vec.push_raw(&mut item as *mut T as *mut c_void);
         }
         std::mem::forget(item);
     }
@@ -519,13 +517,17 @@ impl<T: HasSchema> SVec<T> {
     /// Get an item from the vec.
     pub fn get(&self, idx: usize) -> Option<&T> {
         // SOUND: We know that the pointer is to a type T
-        self.vec.get_ref(idx).map(|x| unsafe { x.deref() })
+        self.vec
+            .get_ref(idx)
+            .map(|x| unsafe { x.cast_into_unchecked() })
     }
 
     /// Get an item from the vec.
     pub fn get_mut(&mut self, idx: usize) -> Option<&mut T> {
         // SOUND: We know that the pointer is to a type T
-        self.vec.get_ref_mut(idx).map(|x| unsafe { x.deref_mut() })
+        self.vec
+            .get_ref_mut(idx)
+            .map(|x| unsafe { x.cast_into_mut_unchecked() })
     }
 
     /// Iterate over references to the items in the vec.
@@ -597,18 +599,14 @@ impl<T: HasSchema> std::ops::Deref for SVec<T> {
     fn deref(&self) -> &Self::Target {
         // SOUND: we know that the schema matches T, and the internal buffer of a SchemaVec stores
         // the types contiguously in memory.
-        unsafe {
-            std::slice::from_raw_parts(self.vec.buffer.ptr().as_ptr() as *const T, self.len())
-        }
+        unsafe { std::slice::from_raw_parts(self.vec.buffer.as_ptr() as *const T, self.len()) }
     }
 }
 impl<T: HasSchema> std::ops::DerefMut for SVec<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         // SOUND: we know that the schema matches T, and the internal buffer of a SchemaVec stores
         // the types contiguously in memory.
-        unsafe {
-            std::slice::from_raw_parts_mut(self.vec.buffer.ptr().as_ptr() as *mut T, self.len())
-        }
+        unsafe { std::slice::from_raw_parts_mut(self.vec.buffer.as_ptr() as *mut T, self.len()) }
     }
 }
 
@@ -627,11 +625,15 @@ unsafe impl<T: HasSchema> HasSchema for SVec<T> {
                 full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
                 kind: SchemaKind::Vec(T::schema()),
                 type_id: Some(TypeId::of::<Self>()),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
-                drop_fn: Some(<Self as RawDrop>::raw_drop),
-                default_fn: Some(<Self as RawDefault>::raw_default),
-                hash_fn: Some(SchemaVec::raw_hash),
-                eq_fn: Some(SchemaVec::raw_eq),
+                clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
+                drop_fn: Some(<Self as RawDrop>::raw_drop_cb()),
+                default_fn: Some(<Self as RawDefault>::raw_default_cb()),
+                hash_fn: Some(unsafe {
+                    Unsafe::new(Box::leak(Box::new(|a| SchemaVec::raw_hash(a))))
+                }),
+                eq_fn: Some(unsafe {
+                    Unsafe::new(Box::leak(Box::new(|a, b| SchemaVec::raw_eq(a, b))))
+                }),
                 type_data: Default::default(),
             });
 

@@ -1,0 +1,4 @@
+# A marker type for our demo sprite.
+name: DemoSprite
+full_name: demo_scripting::DemoSprite
+kind: !Struct

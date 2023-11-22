@@ -72,7 +72,7 @@ impl<T> From<Option<T>> for Maybe<T> {
 
 fn maybe_loader(
     ctx: &mut MetaAssetLoadCtx,
-    ptr: SchemaRefMut<'_, '_>,
+    ptr: SchemaRefMut<'_>,
     deserialzer: &mut dyn erased_serde::Deserializer,
 ) -> anyhow::Result<()> {
     deserialzer.deserialize_option(MaybeVisitor { ctx, ptr })?;
@@ -82,7 +82,7 @@ fn maybe_loader(
 
 struct MaybeVisitor<'a, 'srv> {
     ctx: &'a mut MetaAssetLoadCtx<'srv>,
-    ptr: SchemaRefMut<'a, 'a>,
+    ptr: SchemaRefMut<'a>,
 }
 
 impl<'a, 'srv, 'de> serde::de::Visitor<'de> for MaybeVisitor<'a, 'srv> {
@@ -112,7 +112,7 @@ impl<'a, 'srv, 'de> serde::de::Visitor<'de> for MaybeVisitor<'a, 'srv> {
         // Write the enum discriminant for the `Set` variant
         // SOUND: we know the discriminant due to the `#[repr(C, u8)]` annotation.
         unsafe {
-            self.ptr.as_ptr().write(1);
+            self.ptr.as_ptr().cast::<u8>().write(1);
         }
 
         // Get the pointer to the enum value

@@ -34,134 +34,104 @@ mod serializer_deserializer {
                 return serializer.serialize_str(u);
             }
 
-            match &self.0.schema().kind {
-                SchemaKind::Struct(s) => {
-                    if s.fields.len() == 1 && s.fields[0].name.is_none() {
-                        // Serialize just the inner field
-                        // SOUND: it is safe to cast a struct with one field to it's inner type.
-                        SchemaSerializer(unsafe {
-                            SchemaRef::from_ptr_schema(self.0.as_ptr(), s.fields[0].schema)
-                        })
-                        .serialize(serializer)
+            return match self.0.access() {
+                SchemaRefAccess::Struct(s) => {
+                    if s.fields().count() == 1 && s.fields().nth(0).unwrap().name.is_none() {
+                        SchemaSerializer(s.fields().nth(0).unwrap().value).serialize(serializer)
                     } else {
-                        let named = s.fields.first().map(|x| x.name.is_some()).unwrap_or(false);
+                        let named = s.fields().nth(0).map(|x| x.name.is_some()).unwrap_or(false);
 
                         if named {
                             let mut ser_struct = serializer
-                                .serialize_struct(&self.0.schema().name, s.fields.len())?;
-                            for (i, field) in s.fields.iter().enumerate() {
+                                .serialize_struct(&self.0.schema().name, s.fields().count())?;
+                            for field in s.fields() {
                                 ser_struct.serialize_field(
                                     field.name.as_ref().unwrap(),
-                                    &SchemaSerializer(self.0.field(i)),
+                                    &SchemaSerializer(field.value),
                                 )?;
                             }
                             ser_struct.end()
                         } else {
-                            let mut seq = serializer.serialize_seq(Some(s.fields.len()))?;
-                            for i in 0..s.fields.len() {
-                                seq.serialize_element(&SchemaSerializer(self.0.field(i)))?;
+                            let mut seq = serializer.serialize_seq(Some(s.fields().count()))?;
+                            for field in s.fields() {
+                                seq.serialize_element(&SchemaSerializer(field.value))?;
                             }
                             seq.end()
                         }
                     }
                 }
-                SchemaKind::Vec(_) => {
-                    // SOUND: schema asserts this is a schema vec.
-                    let v = unsafe { self.0.deref::<SchemaVec>() };
+                SchemaRefAccess::Vec(v) => {
                     let mut seq = serializer.serialize_seq(Some(v.len()))?;
-                    for item in v {
+                    for item in v.iter() {
                         seq.serialize_element(&SchemaSerializer(item))?;
                     }
                     seq.end()
                 }
-                SchemaKind::Enum(e) => {
-                    let variant_idx = match e.tag_type {
-                        EnumTagType::U8 => unsafe { self.0.as_ptr().cast::<u8>().read() as u32 },
-                        EnumTagType::U16 => unsafe { self.0.as_ptr().cast::<u16>().read() as u32 },
-                        EnumTagType::U32 => unsafe { self.0.as_ptr().cast::<u32>().read() },
-                    };
+                SchemaRefAccess::Map(m) => {
+                    let mut map = serializer.serialize_map(Some(m.len()))?;
+                    for (key, value) in m.iter() {
+                        map.serialize_entry(&SchemaSerializer(key), &SchemaSerializer(value))?;
+                    }
+                    map.end()
+                }
+                SchemaRefAccess::Enum(e) => {
+                    let variant_idx = e.variant_idx();
+                    let variant_info = e.variant_info();
+                    let access = e.value();
+                    let field_count = access.fields().count();
 
-                    let variant_info = &e.variants[variant_idx as usize];
-                    let struct_info = variant_info.schema.kind.as_struct().unwrap();
-
-                    if struct_info.fields.is_empty() {
+                    if field_count == 0 {
                         serializer.serialize_unit_variant(
                             &self.0.schema().name,
                             variant_idx,
                             &variant_info.name,
                         )
+                    } else if field_count == 1 && access.fields().nth(0).unwrap().name.is_none() {
+                        serializer.serialize_newtype_variant(
+                            &self.0.schema().name,
+                            variant_idx,
+                            &variant_info.name,
+                            &SchemaSerializer(access.as_schema_ref()),
+                        )
                     } else {
-                        let value_offset = self.0.schema().field_offsets()[0].1;
-                        // SOUND: we are returning a reference to the enum variants value
-                        // offset by the size of it's discriminant, which is valid.
-                        let value_ref = unsafe {
-                            SchemaRef::from_ptr_schema(
-                                self.0.as_ptr().add(value_offset),
-                                variant_info.schema,
-                            )
-                        };
+                        let mut ser_struct = serializer.serialize_struct_variant(
+                            &self.0.schema().name,
+                            variant_idx,
+                            &variant_info.name,
+                            field_count,
+                        )?;
 
-                        if struct_info.fields.len() == 1 && struct_info.fields[0].name.is_none() {
-                            serializer.serialize_newtype_variant(
-                                &self.0.schema().name,
-                                variant_idx,
-                                &variant_info.name,
-                                &SchemaSerializer(value_ref),
-                            )
-                        } else {
-                            let mut ser_struct = serializer.serialize_struct_variant(
-                                &self.0.schema().name,
-                                variant_idx,
-                                &variant_info.name,
-                                struct_info.fields.len(),
+                        for field in access.fields() {
+                            ser_struct.serialize_field(
+                                field.name.as_ref().unwrap(),
+                                &SchemaSerializer(field.value),
                             )?;
-
-                            for (i, field) in struct_info.fields.iter().enumerate() {
-                                ser_struct.serialize_field(
-                                    field.name.as_ref().unwrap(),
-                                    &SchemaSerializer(value_ref.field(i)),
-                                )?;
-                            }
-
-                            ser_struct.end()
                         }
+
+                        ser_struct.end()
                     }
                 }
-                SchemaKind::Map { .. } => {
-                    // SOUND: schema asserts this is a schema vec.
-                    let m = unsafe { self.0.deref::<SchemaMap>() };
-                    let mut map = serializer.serialize_map(Some(m.len()))?;
-                    for (key, value) in m {
-                        map.serialize_entry(&SchemaSerializer(key), &SchemaSerializer(value))?;
-                    }
-                    map.end()
-                }
-                SchemaKind::Box(_) => {
-                    // SOUND: schema asserts this is a schema box.
-                    let b = unsafe { self.0.deref::<SchemaBox>() };
-                    SchemaSerializer(b.as_ref()).serialize(serializer)
-                }
-                SchemaKind::Primitive(p) => match p {
-                    Primitive::Bool => serializer.serialize_bool(*self.0.cast::<bool>()),
-                    Primitive::U8 => serializer.serialize_u8(*self.0.cast::<u8>()),
-                    Primitive::U16 => serializer.serialize_u16(*self.0.cast::<u16>()),
-                    Primitive::U32 => serializer.serialize_u32(*self.0.cast::<u32>()),
-                    Primitive::U64 => serializer.serialize_u64(*self.0.cast::<u64>()),
-                    Primitive::U128 => serializer.serialize_u128(*self.0.cast::<u128>()),
-                    Primitive::I8 => serializer.serialize_i8(*self.0.cast::<i8>()),
-                    Primitive::I16 => serializer.serialize_i16(*self.0.cast::<i16>()),
-                    Primitive::I32 => serializer.serialize_i32(*self.0.cast::<i32>()),
-                    Primitive::I64 => serializer.serialize_i64(*self.0.cast::<i64>()),
-                    Primitive::I128 => serializer.serialize_i128(*self.0.cast::<i128>()),
-                    Primitive::F32 => serializer.serialize_f32(*self.0.cast::<f32>()),
-                    Primitive::F64 => serializer.serialize_f64(*self.0.cast::<f64>()),
-                    Primitive::String => serializer.serialize_str(self.0.cast::<String>()),
-                    Primitive::Opaque { .. } => {
+                SchemaRefAccess::Primitive(p) => match p {
+                    PrimitiveRef::Bool(b) => serializer.serialize_bool(*b),
+                    PrimitiveRef::U8(n) => serializer.serialize_u8(*n),
+                    PrimitiveRef::U16(n) => serializer.serialize_u16(*n),
+                    PrimitiveRef::U32(n) => serializer.serialize_u32(*n),
+                    PrimitiveRef::U64(n) => serializer.serialize_u64(*n),
+                    PrimitiveRef::U128(n) => serializer.serialize_u128(*n),
+                    PrimitiveRef::I8(n) => serializer.serialize_i8(*n),
+                    PrimitiveRef::I16(n) => serializer.serialize_i16(*n),
+                    PrimitiveRef::I32(n) => serializer.serialize_i32(*n),
+                    PrimitiveRef::I64(n) => serializer.serialize_i64(*n),
+                    PrimitiveRef::I128(n) => serializer.serialize_i128(*n),
+                    PrimitiveRef::F32(n) => serializer.serialize_f32(*n),
+                    PrimitiveRef::F64(n) => serializer.serialize_f64(*n),
+                    PrimitiveRef::String(n) => serializer.serialize_str(n),
+                    PrimitiveRef::Opaque { .. } => {
                         use serde::ser::Error;
                         Err(S::Error::custom("Cannot serialize opaque types"))
                     }
                 },
-            }
+            };
         }
     }
 
@@ -188,7 +158,7 @@ mod serializer_deserializer {
         }
     }
 
-    impl<'a, 'b, 'de> DeserializeSeed<'de> for SchemaRefMut<'a, 'b> {
+    impl<'a, 'de> DeserializeSeed<'de> for SchemaRefMut<'a> {
         type Value = ();
 
         fn deserialize<D>(mut self, deserializer: D) -> Result<Self::Value, D::Error>
@@ -215,12 +185,7 @@ mod serializer_deserializer {
                 SchemaKind::Vec(_) => deserializer.deserialize_seq(VecVisitor(self))?,
                 SchemaKind::Map { .. } => deserializer.deserialize_map(MapVisitor(self))?,
                 SchemaKind::Enum(_) => deserializer.deserialize_any(EnumVisitor(self))?,
-                SchemaKind::Box(_) => {
-                    // SOUND: schema asserts this is a `SchemaBox`
-                    let b = unsafe { self.deref_mut::<SchemaBox>() };
-
-                    b.as_mut().deserialize(deserializer)?
-                }
+                SchemaKind::Box(_) => self.into_box().unwrap().deserialize(deserializer)?,
                 SchemaKind::Primitive(p) => {
                     match p {
                         Primitive::Bool => *self.cast_mut() = bool::deserialize(deserializer)?,
@@ -251,8 +216,8 @@ mod serializer_deserializer {
         }
     }
 
-    struct StructVisitor<'a, 'b>(SchemaRefMut<'a, 'b>);
-    impl<'a, 'b, 'de> Visitor<'de> for StructVisitor<'a, 'b> {
+    struct StructVisitor<'a>(SchemaRefMut<'a>);
+    impl<'a, 'de> Visitor<'de> for StructVisitor<'a> {
         type Value = ();
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
             write!(
@@ -269,7 +234,7 @@ mod serializer_deserializer {
             let field_count = self.0.schema().kind.as_struct().unwrap().fields.len();
 
             for i in 0..field_count {
-                let field = self.0.get_field(i).unwrap();
+                let field = self.0.access_mut().field(i).unwrap().into_schema_ref_mut();
                 if seq.next_element_seed(field)?.is_none() {
                     break;
                 }
@@ -283,7 +248,12 @@ mod serializer_deserializer {
             A: serde::de::MapAccess<'de>,
         {
             while let Some(key) = map.next_key::<String>()? {
-                match self.0.get_field(&key) {
+                match self
+                    .0
+                    .access_mut()
+                    .field(&key)
+                    .map(|x| x.into_schema_ref_mut())
+                {
                     Ok(field) => {
                         map.next_value_seed(field)?;
                     }
@@ -314,8 +284,8 @@ mod serializer_deserializer {
         }
     }
 
-    struct VecVisitor<'a, 'b>(SchemaRefMut<'a, 'b>);
-    impl<'a, 'b, 'de> Visitor<'de> for VecVisitor<'a, 'b> {
+    struct VecVisitor<'a>(SchemaRefMut<'a>);
+    impl<'a, 'de> Visitor<'de> for VecVisitor<'a> {
         type Value = ();
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
             write!(
@@ -344,8 +314,8 @@ mod serializer_deserializer {
             Ok(())
         }
     }
-    struct MapVisitor<'a, 'b>(SchemaRefMut<'a, 'b>);
-    impl<'a, 'b, 'de> Visitor<'de> for MapVisitor<'a, 'b> {
+    struct MapVisitor<'a>(SchemaRefMut<'a>);
+    impl<'a, 'de> Visitor<'de> for MapVisitor<'a> {
         type Value = ();
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
             write!(
@@ -381,8 +351,8 @@ mod serializer_deserializer {
             Ok(())
         }
     }
-    struct EnumVisitor<'a, 'b>(SchemaRefMut<'a, 'b>);
-    impl<'a, 'b, 'de> Visitor<'de> for EnumVisitor<'a, 'b> {
+    struct EnumVisitor<'a>(SchemaRefMut<'a>);
+    impl<'a, 'de> Visitor<'de> for EnumVisitor<'a> {
         type Value = ();
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
             write!(
@@ -438,9 +408,9 @@ mod serializer_deserializer {
         }
     }
 
-    struct EnumLoad<'a, 'b>(SchemaRefMut<'a, 'b>);
-    impl<'a, 'b, 'de> DeserializeSeed<'de> for EnumLoad<'a, 'b> {
-        type Value = SchemaRefMut<'a, 'b>;
+    struct EnumLoad<'a>(SchemaRefMut<'a>);
+    impl<'a, 'de> DeserializeSeed<'de> for EnumLoad<'a> {
+        type Value = SchemaRefMut<'a>;
 
         fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where
@@ -469,7 +439,7 @@ mod serializer_deserializer {
             // Write the enum variant
             // SOUND: the schema asserts that the write to the enum discriminant is valid
             match enum_info.tag_type {
-                EnumTagType::U8 => unsafe { self.0.as_ptr().write(var_idx as u8) },
+                EnumTagType::U8 => unsafe { self.0.as_ptr().cast::<u8>().write(var_idx as u8) },
                 EnumTagType::U16 => unsafe { self.0.as_ptr().cast::<u16>().write(var_idx as u16) },
                 EnumTagType::U32 => unsafe { self.0.as_ptr().cast::<u32>().write(var_idx as u32) },
             }
@@ -490,65 +460,6 @@ mod serializer_deserializer {
     }
 }
 
-impl<'de> Deserialize<'de> for &'static Schema {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let data = SchemaData::deserialize(deserializer)?;
-        Ok(SCHEMA_REGISTRY.register(data))
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for StructSchemaInfo {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_any(StructSchemaVisitor)
-    }
-}
-
-struct StructSchemaVisitor;
-impl<'de> serde::de::Visitor<'de> for StructSchemaVisitor {
-    type Value = StructSchemaInfo;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(formatter, "a struct definition")
-    }
-
-    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-    where
-        A: serde::de::SeqAccess<'de>,
-    {
-        let mut struct_schema = StructSchemaInfo {
-            fields: Vec::with_capacity(seq.size_hint().unwrap_or(0)),
-        };
-        while let Some(schema) = seq.next_element()? {
-            struct_schema
-                .fields
-                .push(StructFieldInfo { name: None, schema });
-        }
-        Ok(struct_schema)
-    }
-
-    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-    where
-        A: serde::de::MapAccess<'de>,
-    {
-        let mut struct_schema = StructSchemaInfo {
-            fields: Vec::with_capacity(map.size_hint().unwrap_or(0)),
-        };
-        while let Some((name, schema)) = map.next_entry()? {
-            struct_schema.fields.push(StructFieldInfo {
-                name: Some(name),
-                schema,
-            });
-        }
-        Ok(struct_schema)
-    }
-}
-
 /// Derivable schema [`type_data`][SchemaData::type_data] for types that implement
 /// [`Deserialize`].
 ///
@@ -557,7 +468,7 @@ impl<'de> serde::de::Visitor<'de> for StructSchemaVisitor {
 pub struct SchemaDeserialize {
     /// The function that may be used to deserialize the type.
     pub deserialize_fn: for<'a, 'de> fn(
-        SchemaRefMut<'a, 'a>,
+        SchemaRefMut<'a>,
         deserializer: &'a mut dyn Deserializer<'de>,
     ) -> Result<(), erased_serde::Error>,
 }
@@ -592,7 +503,7 @@ impl SchemaDeserialize {
     /// `reference`.
     pub fn deserialize<'a, 'de, D>(
         &self,
-        reference: SchemaRefMut<'a, 'a>,
+        reference: SchemaRefMut<'a>,
         deserializer: D,
     ) -> Result<(), D::Error>
     where

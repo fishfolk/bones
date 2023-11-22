@@ -7,6 +7,11 @@ use crate::prelude::*;
 ///
 /// This structure doesn't require a mutable reference to insert records
 #[derive(Debug)]
+// TODO: Evaluate the possibility of using a `OnceMap` instead of an `AppendOnlyVec` for `TypeDatas`.
+// The only reason we would use a `OnceMap` would be to improve the lookup performance and avoid
+// having to iterate over the entire vec each time we need to find a type data with a particular
+// schema. Since there are not usually a large number of type datas for any single type, this
+// probably isn't a concern, but maybe we should do some benchmarking.
 pub struct TypeDatas(AppendOnlyVec<SchemaBox>);
 impl Default for TypeDatas {
     fn default() -> Self {
