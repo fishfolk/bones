@@ -71,7 +71,7 @@ impl<'pointer> SchemaRef<'pointer> {
     pub fn new<T: HasSchema>(v: &'pointer T) -> SchemaRef<'pointer> {
         let schema = T::schema();
         SchemaRef {
-            /// SOUND: The &T passed in cannot be null.
+            // SOUND: The &T passed in cannot be null.
             ptr: unsafe { NonNull::new_unchecked(v as *const T as *mut c_void) },
             schema,
             _phantom: PhantomData,
