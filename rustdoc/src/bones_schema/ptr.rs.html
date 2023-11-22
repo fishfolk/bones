@@ -1990,7 +1990,7 @@
     </span><span class="kw">pub fn </span>new&lt;T: HasSchema&gt;(v: <span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span>T) -&gt; SchemaRef&lt;<span class="lifetime">&#39;pointer</span>&gt; {
         <span class="kw">let </span>schema = T::schema();
         SchemaRef {
-            <span class="doccomment">/// SOUND: The &amp;T passed in cannot be null.
+            <span class="comment">// SOUND: The &amp;T passed in cannot be null.
             </span>ptr: <span class="kw">unsafe </span>{ NonNull::new_unchecked(v <span class="kw">as </span><span class="kw-2">*const </span>T <span class="kw">as </span><span class="kw-2">*mut </span>c_void) },
             schema,
             _phantom: PhantomData,
