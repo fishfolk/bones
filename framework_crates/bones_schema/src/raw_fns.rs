@@ -8,6 +8,8 @@ use std::{
 
 use bones_utils::fxhash::FxHasher;
 
+use crate::Unsafe;
+
 /// Trait implemented automatically for types that implement [`Clone`] and can be used to clone the
 /// type through raw pointers.
 pub trait RawClone {
@@ -18,10 +20,16 @@ pub trait RawClone {
     /// The `dst` pointer must be aligned, writable, and have the same layout that this function is
     /// assocated to, and the `src` pointer must be readable and point to a valid instance of the
     /// type that this function is associated with.
-    unsafe extern "C-unwind" fn raw_clone(src: *const c_void, dst: *mut c_void);
+    unsafe fn raw_clone(src: *const c_void, dst: *mut c_void);
+
+    /// Get a callback suitable for [`SchemaData`].
+    fn raw_clone_cb(
+    ) -> Unsafe<&'static (dyn Fn(*const c_void, *mut c_void) + Sync + Send + 'static)> {
+        unsafe { Unsafe::new(Box::leak(Box::new(|a, b| Self::raw_clone(a, b)))) }
+    }
 }
 impl<T: Clone> RawClone for T {
-    unsafe extern "C-unwind" fn raw_clone(src: *const c_void, dst: *mut c_void) {
+    unsafe fn raw_clone(src: *const c_void, dst: *mut c_void) {
         let t = &*(src as *const T);
         let t = t.clone();
         (dst as *mut T).write(t)
@@ -37,10 +45,15 @@ pub trait RawDrop {
     ///
     /// The pointer must be aligned, writable, and have the same layout that this function is
     /// assocated to.
-    unsafe extern "C-unwind" fn raw_drop(ptr: *mut c_void);
+    unsafe fn raw_drop(ptr: *mut c_void);
+
+    /// Get a callback suitable for [`SchemaData`].
+    fn raw_drop_cb() -> Unsafe<&'static (dyn Fn(*mut c_void) + Sync + Send + 'static)> {
+        unsafe { Unsafe::new(Box::leak(Box::new(|a| Self::raw_drop(a)))) }
+    }
 }
 impl<T> RawDrop for T {
-    unsafe extern "C-unwind" fn raw_drop(ptr: *mut c_void) {
+    unsafe fn raw_drop(ptr: *mut c_void) {
         if std::mem::needs_drop::<T>() {
             (ptr as *mut T).drop_in_place()
         }
@@ -56,10 +69,15 @@ pub trait RawHash {
     ///
     /// The pointer must be aligned, readable, and be a pointer to the type that this Hash function
     /// was created for.
-    unsafe extern "C-unwind" fn raw_hash(ptr: *const c_void) -> u64;
+    unsafe fn raw_hash(ptr: *const c_void) -> u64;
+
+    /// Get a callback suitable for [`SchemaData`].
+    fn raw_hash_cb() -> Unsafe<&'static (dyn Fn(*const c_void) -> u64 + Sync + Send + 'static)> {
+        unsafe { Unsafe::new(Box::leak(Box::new(|a| Self::raw_hash(a)))) }
+    }
 }
 impl<T: Hash> RawHash for T {
-    unsafe extern "C-unwind" fn raw_hash(ptr: *const c_void) -> u64 {
+    unsafe fn raw_hash(ptr: *const c_void) -> u64 {
         let this = unsafe { &*(ptr as *const Self) };
         let mut hasher = FxHasher::default();
         this.hash(&mut hasher);
@@ -76,10 +94,17 @@ pub trait RawEq {
     ///
     /// The pointer must be aligned, readable, and be a pointer to the type that this Hash function
     /// was created for.
-    unsafe extern "C-unwind" fn raw_eq(a: *const c_void, b: *const c_void) -> bool;
+    unsafe fn raw_eq(a: *const c_void, b: *const c_void) -> bool;
+
+    /// Get a callback suitable for [`SchemaData`].
+    fn raw_eq_cb(
+    ) -> Unsafe<&'static (dyn Fn(*const c_void, *const c_void) -> bool + Sync + Send + 'static)>
+    {
+        unsafe { Unsafe::new(Box::leak(Box::new(|a, b| Self::raw_eq(a, b)))) }
+    }
 }
 impl<T: Eq> RawEq for T {
-    unsafe extern "C-unwind" fn raw_eq(a: *const c_void, b: *const c_void) -> bool {
+    unsafe fn raw_eq(a: *const c_void, b: *const c_void) -> bool {
         let a = unsafe { &*(a as *const Self) };
         let b = unsafe { &*(b as *const Self) };
         a.eq(b)
@@ -95,10 +120,15 @@ pub trait RawDefault {
     ///
     /// The pointer must be aligned, writable, and have the same layout that this function is
     /// assocated to.
-    unsafe extern "C-unwind" fn raw_default(dst: *mut c_void);
+    unsafe fn raw_default(dst: *mut c_void);
+
+    /// Get a callback suitable for [`SchemaData`].
+    fn raw_default_cb() -> Unsafe<&'static (dyn Fn(*mut c_void) + Sync + Send + 'static)> {
+        unsafe { Unsafe::new(Box::leak(Box::new(|a| Self::raw_default(a)))) }
+    }
 }
 impl<T: Default> RawDefault for T {
-    unsafe extern "C-unwind" fn raw_default(dst: *mut c_void) {
+    unsafe fn raw_default(dst: *mut c_void) {
         let d = T::default();
         (dst as *mut T).write(d)
     }

@@ -20,7 +20,7 @@ piccolo         = { git = "https://github.com/kyren/piccolo.git" }
 gc-arena        = "0.4"
 gc-arena-derive = "0.4"
 send_wrapper    = "0.6.0"
-append-only-vec = "0.1.3"
+elsa            = "1.9"
 
 [dev-dependencies]
 piccolo         = { git = "https://github.com/kyren/piccolo.git" }

@@ -190,15 +190,15 @@ impl SchemaMap {
     /// # Safety
     /// The key's schema must match this map's key schema.
     pub unsafe fn get_ref_unchecked(&self, key: SchemaRef) -> Option<SchemaRef> {
-        let Some(hash_fn) = self.key_schema.hash_fn else {
+        let Some(hash_fn) = &self.key_schema.hash_fn else {
             panic!("Key schema doesn't implement hash");
         };
-        let Some(eq_fn) = self.key_schema.eq_fn else {
+        let Some(eq_fn) = &self.key_schema.eq_fn else {
             panic!("Key schema doesn't implement eq");
         };
         let key_ptr = key.as_ptr();
         // SOUND: caller asserts the key schema matches
-        let raw_hash = unsafe { (hash_fn)(key_ptr) };
+        let raw_hash = unsafe { (hash_fn.get())(key_ptr) };
         let hash = {
             let mut hasher = self.map.hasher().build_hasher();
             hasher.write_u64(raw_hash);
@@ -209,7 +209,7 @@ impl SchemaMap {
             .from_hash(hash, |key| {
                 let other_ptr = key.as_ref().as_ptr();
                 // SOUND: caller asserts the key schema matches.
-                unsafe { (eq_fn)(key_ptr, other_ptr) }
+                unsafe { (eq_fn.get())(key_ptr, other_ptr) }
             })
             .map(|x| x.1.as_ref())
     }
@@ -241,15 +241,15 @@ impl SchemaMap {
     /// # Safety
     /// The key's schema must match this map's key schema.
     pub unsafe fn get_ref_unchecked_mut(&mut self, key: SchemaRef) -> Option<SchemaRefMut> {
-        let Some(hash_fn) = self.key_schema.hash_fn else {
+        let Some(hash_fn) = &self.key_schema.hash_fn else {
             panic!("Key schema doesn't implement hash");
         };
-        let Some(eq_fn) = self.key_schema.eq_fn else {
+        let Some(eq_fn) = &self.key_schema.eq_fn else {
             panic!("Key schema doesn't implement eq");
         };
         let key_ptr = key.as_ptr();
         // SOUND: caller asserts the key schema matches
-        let raw_hash = unsafe { (hash_fn)(key_ptr) };
+        let raw_hash = unsafe { (hash_fn.get())(key_ptr) };
         let hash = {
             let mut hasher = self.map.hasher().build_hasher();
             hasher.write_u64(raw_hash);
@@ -258,7 +258,7 @@ impl SchemaMap {
         let entry = self.map.raw_entry_mut().from_hash(hash, |key| {
             let other_ptr = key.as_ref().as_ptr();
             // SOUND: caller asserts the key schema matches.
-            unsafe { (eq_fn)(key_ptr, other_ptr) }
+            unsafe { (eq_fn.get())(key_ptr, other_ptr) }
         });
         match entry {
             hash_map::RawEntryMut::Occupied(entry) => Some(entry.into_mut()),
@@ -349,15 +349,15 @@ impl SchemaMap {
     /// # Safety
     /// The key schema must match the map's.
     pub unsafe fn remove_unchecked(&mut self, key: SchemaRef) -> Option<SchemaBox> {
-        let Some(hash_fn) = self.key_schema.hash_fn else {
+        let Some(hash_fn) = &self.key_schema.hash_fn else {
             panic!("Key schema doesn't implement hash");
         };
-        let Some(eq_fn) = self.key_schema.eq_fn else {
+        let Some(eq_fn) = &self.key_schema.eq_fn else {
             panic!("Key schema doesn't implement eq");
         };
         let key_ptr = key.as_ptr();
         // SOUND: caller asserts the key schema matches
-        let hash = unsafe { (hash_fn)(key_ptr) };
+        let hash = unsafe { (hash_fn.get())(key_ptr) };
         let hash = {
             let mut hasher = self.map.hasher().build_hasher();
             hasher.write_u64(hash);
@@ -366,7 +366,7 @@ impl SchemaMap {
         let entry = self.map.raw_entry_mut().from_hash(hash, |key| {
             let other_ptr = key.as_ref().as_ptr();
             // SOUND: caller asserts the key schema matches
-            unsafe { (eq_fn)(key_ptr, other_ptr) }
+            unsafe { (eq_fn.get())(key_ptr, other_ptr) }
         });
         match entry {
             hash_map::RawEntryMut::Occupied(entry) => Some(entry.remove()),
@@ -563,11 +563,15 @@ unsafe impl<K: HasSchema, V: HasSchema> HasSchema for SMap<K, V> {
                     value: V::schema(),
                 },
                 type_id: Some(TypeId::of::<Self>()),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
-                drop_fn: Some(<Self as RawDrop>::raw_drop),
-                default_fn: Some(<Self as RawDefault>::raw_default),
-                hash_fn: Some(SchemaVec::raw_hash),
-                eq_fn: Some(SchemaVec::raw_eq),
+                clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
+                drop_fn: Some(<Self as RawDrop>::raw_drop_cb()),
+                default_fn: Some(<Self as RawDefault>::raw_default_cb()),
+                hash_fn: Some(unsafe {
+                    Unsafe::new(Box::leak(Box::new(|a| SchemaVec::raw_hash(a))))
+                }),
+                eq_fn: Some(unsafe {
+                    Unsafe::new(Box::leak(Box::new(|a, b| SchemaVec::raw_eq(a, b))))
+                }),
                 type_data: Default::default(),
             });
 

@@ -1,1 +1,3 @@
 root: game.yaml
+schemas:
+  - schemas/DemoSprite.yaml

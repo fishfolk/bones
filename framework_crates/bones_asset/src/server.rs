@@ -25,6 +25,8 @@ use bones_utils::{
     *,
 };
 
+mod schema_loader;
+
 /// Struct responsible for loading assets into it's contained [`AssetStore`], using an [`AssetIo`]
 /// implementation.
 #[derive(HasSchema, Deref, DerefMut, Clone)]
@@ -87,6 +89,8 @@ impl Default for AssetServerInner {
 pub struct CorePackfileMeta {
     /// The path to the root asset for the pack.
     pub root: PathBuf,
+    /// The paths to schema definitions to be loaded from this pack.
+    pub schemas: Vec<PathBuf>,
 }
 
 /// YAML format for asset packs' `pack.yaml` file.
@@ -100,6 +104,8 @@ pub struct PackfileMeta {
     pub version: Version,
     /// The required game version to be compatible with this asset pack.
     pub game_version: VersionReq,
+    /// The paths to schema definitions to be loaded from this pack.
+    pub schemas: Vec<PathBuf>,
 }
 
 /// The [`AssetPackId`] of the core pack.
@@ -301,6 +307,7 @@ impl AssetServer {
             .load_file((Path::new("pack.yaml"), pack).into())
             .await?;
         let meta: PackfileMeta = serde_yaml::from_slice(&packfile_contents)?;
+        tracing::debug!(?pack, ?meta, "Loaded asset pack meta.");
 
         // If the game version doesn't match, then don't continue loading this pack.
         if !meta.game_version.matches(&self.game_version) {
@@ -323,6 +330,9 @@ impl AssetServer {
             );
         }
 
+        // Load the schemas
+        let schemas = self.load_pack_schemas(pack, &meta.schemas).await?;
+
         // Load the asset and produce a handle
         let root_loc = AssetLocRef {
             path: &meta.root,
@@ -336,13 +346,7 @@ impl AssetServer {
             id: meta.id,
             version: meta.version,
             game_version: meta.game_version,
-            // TODO: Load & import schemas that are defined in asset packs.
-            // This is medium-sized effort. The idea is that asset packs shoudl be able to
-            // create YAML files that describe a `SchemaData`. This schema data should get
-            // registered with a file extension name, just like a Rust metadata asset does
-            // so that that schema can be used to load assets.
-            schemas: default(),
-            import_schemas: default(),
+            schemas,
             root: root_handle,
         })
     }
@@ -359,6 +363,7 @@ impl AssetServer {
             .await
             .context("Could not load pack file")?;
         let meta: CorePackfileMeta = serde_yaml::from_slice(&packfile_contents)?;
+        tracing::debug!(?meta, "Loaded core pack meta.");
 
         // Load the asset and produce a handle
         let root_loc = AssetLocRef {
@@ -366,6 +371,9 @@ impl AssetServer {
             pack: None,
         };
         let handle = self.load_asset(root_loc);
+
+        // Load the schemas
+        let schemas = self.load_pack_schemas(None, &meta.schemas).await?;
 
         // Return the loaded asset pack.
         Ok(AssetPack {
@@ -382,8 +390,7 @@ impl AssetServer {
                 }]
                 .to_vec(),
             },
-            schemas: default(),
-            import_schemas: default(),
+            schemas,
             root: handle,
         })
     }
@@ -858,6 +865,30 @@ impl AssetServer {
                 asset.cast_mut()
             }
         })
+    }
+
+    /// Load the schemas for an asset pack.
+    async fn load_pack_schemas(
+        &self,
+        pack: Option<&str>,
+        schema_paths: &[PathBuf],
+    ) -> anyhow::Result<Vec<&'static Schema>> {
+        let mut schemas = Vec::with_capacity(schema_paths.len());
+        for schema_path in schema_paths {
+            let contents = self
+                .io
+                .load_file(AssetLocRef {
+                    path: schema_path,
+                    pack,
+                })
+                .await?;
+
+            let pack_schema: schema_loader::PackSchema = serde_yaml::from_slice(&contents)?;
+            let schema = pack_schema.0;
+            tracing::debug!(?pack, ?schema.name, "Loaded schema from pack.");
+            schemas.push(schema);
+        }
+        Ok(schemas)
     }
 }
 

@@ -310,12 +310,12 @@ impl SchemaVec {
     #[track_caller]
     pub fn hash(&self) -> u64 {
         use std::hash::{Hash, Hasher};
-        let Some(hash_fn) = self.schema.hash_fn else {
+        let Some(hash_fn) = &self.schema.hash_fn else {
             panic!("Schema doesn't specify a hash_fn");
         };
         let mut hasher = FxHasher::default();
         for item_ptr in self.buffer.iter() {
-            let item_hash = unsafe { (hash_fn)(item_ptr) };
+            let item_hash = unsafe { (hash_fn.get())(item_ptr) };
             item_hash.hash(&mut hasher);
         }
         hasher.finish()
@@ -324,7 +324,7 @@ impl SchemaVec {
     /// Raw version of the [`hash()`][Self::hash] function. Not meant for normal use.
     /// # Safety
     /// Pointer must be a valid pointer to a [`SchemaVec`].
-    pub unsafe extern "C-unwind" fn raw_hash(ptr: *const c_void) -> u64 {
+    pub unsafe fn raw_hash(ptr: *const c_void) -> u64 {
         let this = unsafe { &*(ptr as *const Self) };
         this.hash()
     }
@@ -332,7 +332,7 @@ impl SchemaVec {
     /// Raw version of the [`eq()`][PartialEq::eq] function. Not meant for normal use.
     /// # Safety
     /// Pointers must be valid pointers to [`SchemaVec`]s.
-    pub unsafe extern "C-unwind" fn raw_eq(a: *const c_void, b: *const c_void) -> bool {
+    pub unsafe fn raw_eq(a: *const c_void, b: *const c_void) -> bool {
         let a = &*(a as *const Self);
         let b = &*(b as *const Self);
         a.eq(b)
@@ -410,7 +410,7 @@ impl PartialEq for SchemaVec {
         if self.schema != other.schema {
             panic!("Cannot compare two `SchemaVec`s with different schemas.");
         }
-        let Some(eq_fn) = self.schema.eq_fn else {
+        let Some(eq_fn) = &self.schema.eq_fn else {
             panic!("Schema doesn't have an eq_fn");
         };
 
@@ -418,7 +418,7 @@ impl PartialEq for SchemaVec {
             unsafe {
                 let a = self.buffer.unchecked_idx(i);
                 let b = self.buffer.unchecked_idx(i);
-                if !(eq_fn)(a, b) {
+                if !(eq_fn.get())(a, b) {
                     return false;
                 }
             }
@@ -429,7 +429,7 @@ impl PartialEq for SchemaVec {
 
 impl Clone for SchemaVec {
     fn clone(&self) -> Self {
-        let Some(clone_fn) = self.schema.clone_fn else {
+        let Some(clone_fn) = &self.schema.clone_fn else {
             panic!("This type cannot be cloned");
         };
         let mut buffer_clone = ResizableAlloc::new(self.schema.layout());
@@ -441,7 +441,7 @@ impl Clone for SchemaVec {
             // validity of the clone function.
             unsafe {
                 let item = self.buffer.unchecked_idx(i);
-                (clone_fn)(item, buffer_clone.unchecked_idx(i));
+                (clone_fn.get())(item, buffer_clone.unchecked_idx(i));
             }
         }
 
@@ -625,11 +625,15 @@ unsafe impl<T: HasSchema> HasSchema for SVec<T> {
                 full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
                 kind: SchemaKind::Vec(T::schema()),
                 type_id: Some(TypeId::of::<Self>()),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
-                drop_fn: Some(<Self as RawDrop>::raw_drop),
-                default_fn: Some(<Self as RawDefault>::raw_default),
-                hash_fn: Some(SchemaVec::raw_hash),
-                eq_fn: Some(SchemaVec::raw_eq),
+                clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
+                drop_fn: Some(<Self as RawDrop>::raw_drop_cb()),
+                default_fn: Some(<Self as RawDefault>::raw_default_cb()),
+                hash_fn: Some(unsafe {
+                    Unsafe::new(Box::leak(Box::new(|a| SchemaVec::raw_hash(a))))
+                }),
+                eq_fn: Some(unsafe {
+                    Unsafe::new(Box::leak(Box::new(|a, b| SchemaVec::raw_eq(a, b))))
+                }),
                 type_data: Default::default(),
             });
 

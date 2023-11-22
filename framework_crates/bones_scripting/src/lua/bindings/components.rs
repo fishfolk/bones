@@ -30,7 +30,7 @@ pub fn metatable(ctx: Context) -> Table {
             let schema = *schema.downcast_static::<&Schema>()?;
 
             let store = world.with(|world| {
-                let store = world.components.get_cell_by_schema_id(schema.id())?;
+                let store = world.components.get_cell_by_schema(schema);
                 Ok::<_, anyhow::Error>(store)
             })?;
 
@@ -57,7 +57,8 @@ pub fn metatable(ctx: Context) -> Table {
             let value = b.schema_ref()?;
 
             world.with(|world| {
-                let mut store = world.components.get_mut_by_schema_id(value.schema().id())?;
+                let store = world.components.get_by_schema(value.schema());
+                let mut store = store.borrow_mut();
                 store.insert_box(entity, value.clone_into_box());
                 Ok::<_, anyhow::Error>(())
             })?;
@@ -77,7 +78,8 @@ pub fn metatable(ctx: Context) -> Table {
             let schema = *schema.downcast_static::<&Schema>()?;
 
             world.with(|world| {
-                let mut store = world.components.get_mut_by_schema_id(schema.id())?;
+                let store = world.components.get_by_schema(schema);
+                let mut store = store.borrow_mut();
                 store.remove_box(entity);
                 Ok::<_, anyhow::Error>(())
             })?;

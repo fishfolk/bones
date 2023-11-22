@@ -2,6 +2,8 @@
 
 use std::{alloc::Layout, any::TypeId, borrow::Cow, ffi::c_void};
 
+use bones_utils::Ustr;
+
 use crate::{alloc::TypeDatas, prelude::*};
 
 /// Trait implemented for types that have a [`Schema`].
@@ -113,7 +115,7 @@ impl Schema {
         self == other
         // If the schemas don't have any opaque fields, and are equal to each-other, then they
         // have the same representation.
-        || (!self.has_opaque() && !other.has_opaque() && {
+        || (!self.kind.has_opaque() && !other.kind.has_opaque() && {
             match (&self.kind, &other.kind) {
                 (SchemaKind::Struct(s1), SchemaKind::Struct(s2)) => {
                     s1.fields.len() == s2.fields.len() &&
@@ -130,25 +132,22 @@ impl Schema {
 }
 
 /// Schema information describing the memory layout of a type.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+#[derive(Clone)]
 pub struct SchemaData {
     /// The short name of the type.
     ///
     /// **Note:** Currently bones isn't very standardized as far as name generation for Rust or
     /// other language type names, and this is mostly for diagnostics. This may change in the future
     /// but for now there are no guarantees.
-    pub name: Cow<'static, str>,
+    pub name: Ustr,
     /// The full name of the type, including any module specifiers.
     ///
     /// **Note:** Currently bones isn't very standardized as far as name generation for Rust or
     /// other language type names, and this is mostly for diagnostics. This may change in the future
     /// but for now there are no guarantees.
-    pub full_name: Cow<'static, str>,
+    pub full_name: Ustr,
     /// The kind of schema.
     pub kind: SchemaKind,
-    #[cfg_attr(feature = "serde", serde(skip))]
     /// Container for storing [`Schema`] type datas.
     ///
     /// "Type data" is extra data that is stored in a type's [`Schema`] that may be used for any number
@@ -184,31 +183,58 @@ pub struct SchemaData {
     // as type datas, we may want to remove these fields in favor of the type data.
     /// The Rust [`TypeId`] that this [`Schema`] was created from, if it was created from a Rust
     /// type.
-    #[cfg_attr(feature = "serde", serde(skip))]
     pub type_id: Option<TypeId>,
     /// The function pointer that may be used to clone data with this schema.
-    #[cfg_attr(feature = "serde", serde(skip))]
-    pub clone_fn: Option<unsafe extern "C-unwind" fn(src: *const c_void, dst: *mut c_void)>,
+    pub clone_fn:
+        Option<Unsafe<&'static (dyn Fn(*const c_void, *mut c_void) + Sync + Send + 'static)>>,
     /// The function pointer that may be used to drop data with this schema.
-    #[cfg_attr(feature = "serde", serde(skip))]
-    pub drop_fn: Option<unsafe extern "C-unwind" fn(ptr: *mut c_void)>,
+    pub drop_fn: Option<Unsafe<&'static (dyn Fn(*mut c_void) + Sync + Send + 'static)>>,
     /// The function pointer that may be used to write a default value to a pointer.
-    #[cfg_attr(feature = "serde", serde(skip))]
-    pub default_fn: Option<unsafe extern "C-unwind" fn(ptr: *mut c_void)>,
+    pub default_fn: Option<Unsafe<&'static (dyn Fn(*mut c_void) + Sync + Send + 'static)>>,
     /// The function pointer that may be used to hash the value.
-    #[cfg_attr(feature = "serde", serde(skip))]
-    pub hash_fn: Option<unsafe extern "C-unwind" fn(ptr: *const c_void) -> u64>,
+    pub hash_fn: Option<Unsafe<&'static (dyn Fn(*const c_void) -> u64 + Sync + Send + 'static)>>,
     /// The function pointer that may be used to compare two values for equality. Note that this is
     /// total equality, not partial equality.
-    #[cfg_attr(feature = "serde", serde(skip))]
-    pub eq_fn: Option<unsafe extern "C-unwind" fn(a: *const c_void, b: *const c_void) -> bool>,
+    pub eq_fn: Option<
+        Unsafe<&'static (dyn Fn(*const c_void, *const c_void) -> bool + Sync + Send + 'static)>,
+    >,
+}
+
+impl std::fmt::Debug for SchemaData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SchemaData")
+            .field("name", &self.name)
+            .field("full_name", &self.full_name)
+            .field("kind", &self.kind)
+            .field("type_data", &self.type_data)
+            .field("type_id", &self.type_id)
+            .finish_non_exhaustive()
+    }
+}
+
+/// A wrapper struct that marks it unsafe to both create and access the inner value.
+#[derive(Clone, Debug)]
+pub struct Unsafe<T>(T);
+
+impl<T> Unsafe<T> {
+    /// Create a new [`Unsafe`] contianing the `value`.
+    /// # Safety
+    /// The safety invariants are dependent on the inner type.
+    pub unsafe fn new(value: T) -> Self {
+        Self(value)
+    }
+
+    /// Unsafely get the inner value.
+    /// # Safety
+    /// The safety invariants are dependent on the inner type.
+    pub unsafe fn get(&self) -> &T {
+        &self.0
+    }
 }
 
 /// A schema describes the data layout of a type, to enable dynamic access to the type's data
 /// through a pointer.
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 pub enum SchemaKind {
     /// The type represents a struct.
     Struct(StructSchemaInfo),
@@ -289,7 +315,6 @@ pub struct StructSchemaInfo {
 
 /// Schema data for an enum.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 pub struct EnumSchemaInfo {
     /// The layout of the enum tag.
     pub tag_type: EnumTagType,
@@ -299,8 +324,6 @@ pub struct EnumSchemaInfo {
 
 /// A type for an enum tag for [`EnumSchemaInfo`].
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 pub enum EnumTagType {
     /// A [`u8`].
     U8,
@@ -323,8 +346,6 @@ impl EnumTagType {
 
 /// Information about an enum variant for [`EnumSchemaInfo`].
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 pub struct VariantInfo {
     /// The name of the enum variant.
     pub name: Cow<'static, str>,
@@ -336,7 +357,7 @@ pub struct VariantInfo {
 #[derive(Debug, Clone)]
 pub struct StructFieldInfo {
     /// The name of the field. Will be [`None`] if this is a field of a tuple struct.
-    pub name: Option<Cow<'static, str>>,
+    pub name: Option<Ustr>,
     /// The schema of the field.
     pub schema: &'static Schema,
     // TODO: Investigate adding attribute info to `StructFieldInfo`.
@@ -348,8 +369,6 @@ pub struct StructFieldInfo {
 
 /// A type of primitive.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 pub enum Primitive {
     /// A boolean.
     Bool,
@@ -397,7 +416,7 @@ pub trait FromType<T> {
     fn from_type() -> Self;
 }
 
-impl SchemaData {
+impl SchemaKind {
     /// Calculate the layout of the type represented by the schema.
     ///
     /// Usually you don't need to call this and should use the static, cached layout and field
@@ -418,10 +437,10 @@ impl SchemaData {
             }
         };
 
-        match &self.kind {
+        match &self {
             SchemaKind::Struct(s) => {
                 for field in &s.fields {
-                    let field_layout_info = field.schema.compute_layout_info();
+                    let field_layout_info = field.schema.kind.compute_layout_info();
                     offset = extend_layout(&mut layout, field_layout_info.layout);
                     field_offsets.push((field.name.as_deref(), offset));
                 }
@@ -496,13 +515,13 @@ impl SchemaData {
 
     /// Recursively checks whether or not the schema contains any [`Opaque`][Primitive::Opaque] primitives.
     pub fn has_opaque(&self) -> bool {
-        match &self.kind {
-            SchemaKind::Struct(s) => s.fields.iter().any(|field| field.schema.has_opaque()),
-            SchemaKind::Vec(v) => v.has_opaque(),
-            SchemaKind::Box(b) => b.schema().has_opaque(),
-            SchemaKind::Enum(e) => e.variants.iter().any(|var| var.schema.has_opaque()),
+        match &self {
+            SchemaKind::Struct(s) => s.fields.iter().any(|field| field.schema.kind.has_opaque()),
+            SchemaKind::Vec(v) => v.kind.has_opaque(),
+            SchemaKind::Box(b) => b.schema().kind.has_opaque(),
+            SchemaKind::Enum(e) => e.variants.iter().any(|var| var.schema.kind.has_opaque()),
             SchemaKind::Map { key, value } => {
-                key.schema().has_opaque() || value.schema().has_opaque()
+                key.schema().kind.has_opaque() || value.schema().kind.has_opaque()
             }
             SchemaKind::Primitive(p) => matches!(p, Primitive::Opaque { .. }),
         }

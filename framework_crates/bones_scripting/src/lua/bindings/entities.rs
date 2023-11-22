@@ -73,7 +73,8 @@ pub fn entities_metatable(ctx: Context) -> Table {
 
             world.with(|world| {
                 for schema in &schemas {
-                    let components = world.components.get_by_schema_id(schema.id())?;
+                    let components = world.components.get_by_schema(schema);
+                    let components = components.borrow();
                     bitset.bit_and(components.bitset());
                 }
                 Ok::<_, anyhow::Error>(())
@@ -110,7 +111,7 @@ pub fn entities_metatable(ctx: Context) -> Table {
 
                     world.with(|world| {
                         for schema in &state.schemas {
-                            let store = world.components.get_cell_by_schema_id(schema.id())?;
+                            let store = world.components.get_cell_by_schema(schema);
                             let ecsref = EcsRef {
                                 data: EcsRefData::Component(ComponentRef { store, entity }),
                                 path: default(),

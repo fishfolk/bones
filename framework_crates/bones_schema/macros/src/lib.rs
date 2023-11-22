@@ -138,12 +138,12 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     let clone_fn = if no_clone {
         quote!(None)
     } else {
-        quote!(Some(<Self as #schema_mod::raw_fns::RawClone>::raw_clone))
+        quote!(Some(<Self as #schema_mod::raw_fns::RawClone>::raw_clone_cb()))
     };
     let default_fn = if no_default {
         quote!(None)
     } else {
-        quote!(Some(<Self as #schema_mod::raw_fns::RawDefault>::raw_default))
+        quote!(Some(<Self as #schema_mod::raw_fns::RawDefault>::raw_default_cb()))
     };
 
     // Get the schema kind
@@ -206,7 +206,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                             default_fn: #default_fn,
                                             eq_fn: None,
                                             hash_fn: None,
-                                            drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
+                                            drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop_cb()),
                                         })
                                     },
                                 }
@@ -309,7 +309,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
             clone_fn: #clone_fn,
             eq_fn: None,
             hash_fn: None,
-            drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop),
+            drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop_cb()),
         })
     };
 

@@ -277,8 +277,11 @@ fn eq_hash() {
     assert_eq!(dbg!(b1.hash()), b2.hash());
     assert_ne!(dbg!(b3.hash()), b1.hash());
 
-    let s_hash_fn = b1.schema().hash_fn.unwrap();
-    assert_eq!(unsafe { (s_hash_fn)(b1.as_ref().as_ptr()) }, b1.hash());
+    let s_hash_fn = b1.schema().hash_fn.as_ref().unwrap();
+    assert_eq!(
+        unsafe { (s_hash_fn.get())(b1.as_ref().as_ptr()) },
+        b1.hash()
+    );
 }
 
 #[test]

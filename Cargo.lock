@@ -1100,6 +1100,7 @@ dependencies = [
  "bs58",
  "dashmap",
  "ehttp",
+ "elsa",
  "erased-serde",
  "event-listener 3.1.0",
  "glam",
@@ -1142,6 +1143,7 @@ dependencies = [
  "bones_schema",
  "bones_utils",
  "glam",
+ "once_map",
  "paste",
  "thiserror",
 ]
@@ -1221,7 +1223,6 @@ name = "bones_schema"
 version = "0.3.0"
 dependencies = [
  "append-only-vec",
- "bevy_ptr",
  "bones_schema_macros",
  "bones_utils",
  "erased-serde",
@@ -1231,6 +1232,7 @@ dependencies = [
  "serde",
  "serde_yaml",
  "sptr",
+ "stable_deref_trait",
  "ulid",
 ]
 
@@ -1247,11 +1249,11 @@ dependencies = [
 name = "bones_scripting"
 version = "0.3.0"
 dependencies = [
- "append-only-vec",
  "async-channel",
  "bevy_tasks",
  "bones_asset",
  "bones_lib",
+ "elsa",
  "gc-arena",
  "gc-arena-derive",
  "piccolo",
@@ -1842,6 +1844,15 @@ name = "either"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a26ae43d7bcc3b814de94796a5e736d4029efb0ee900c12e2d54c993ad1a1e07"
+
+[[package]]
+name = "elsa"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "714f766f3556b44e7e4776ad133fcc3445a489517c25c704ace411bb14790194"
+dependencies = [
+ "stable_deref_trait",
+]
 
 [[package]]
 name = "emath"
@@ -3341,6 +3352,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
 
 [[package]]
+name = "once_map"
+version = "0.4.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c64e67adc739ad601550e953442818011f3c21bc7bd2c77236dc167bfd4d4c42"
+dependencies = [
+ "ahash",
+ "hashbrown 0.14.2",
+ "parking_lot",
+ "stable_deref_trait",
+]
+
+[[package]]
 name = "openssl-probe"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4290,6 +4313,12 @@ name = "sptr"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b9b39299b249ad65f3b7e96443bad61c02ca5cd3589f46cb6d610a0fd6c0d6a"
+
+[[package]]
+name = "stable_deref_trait"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "static_assertions"

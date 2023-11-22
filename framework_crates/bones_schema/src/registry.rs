@@ -113,7 +113,7 @@ impl SchemaRegistry {
         let SchemaLayoutInfo {
             layout,
             field_offsets,
-        } = schema_data.compute_layout_info();
+        } = schema_data.kind.compute_layout_info();
 
         // Leak the field offsets to get static references
         let field_offsets: Box<_> = field_offsets

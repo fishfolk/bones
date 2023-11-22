@@ -43,9 +43,7 @@ pub struct AssetPack {
     pub game_version: VersionReq,
 
     /// Schemas provided in the asset pack.
-    pub schemas: HashMap<String, Schema>,
-    /// Specify schemas to import from other asset packs.
-    pub import_schemas: HashMap<String, SchemaPath>,
+    pub schemas: Vec<&'static Schema>,
     /// The root asset for the asset pack.
     pub root: UntypedHandle,
 }

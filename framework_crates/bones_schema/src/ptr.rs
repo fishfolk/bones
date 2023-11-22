@@ -107,7 +107,8 @@ impl<'pointer> SchemaRef<'pointer> {
     pub fn hash(&self) -> Option<u64> {
         self.schema
             .hash_fn
-            .map(|hash_fn| unsafe { (hash_fn)(self.ptr.as_ptr()) })
+            .as_ref()
+            .map(|hash_fn| unsafe { (hash_fn.get())(self.ptr.as_ptr()) })
     }
 
     /// Borrow the schema ref as a [`SchemaMap`] if it is one.
@@ -164,7 +165,7 @@ impl<'pointer> SchemaRef<'pointer> {
 
     /// Clone this schema ref into a new box.
     pub fn clone_into_box(&self) -> SchemaBox {
-        let Some(clone_fn) = self.schema.clone_fn else {
+        let Some(clone_fn) = &self.schema.clone_fn else {
             panic!(
                 "The schema for type `{}` does not allow cloning it.",
                 self.schema.full_name
@@ -172,7 +173,7 @@ impl<'pointer> SchemaRef<'pointer> {
         };
         unsafe {
             let b = SchemaBox::uninitialized(self.schema);
-            (clone_fn)(self.ptr.as_ptr(), b.ptr.as_ptr());
+            (clone_fn.get())(self.ptr.as_ptr(), b.ptr.as_ptr());
             b
         }
     }
@@ -801,7 +802,8 @@ impl<'pointer> SchemaRefMut<'pointer> {
     pub fn hash(&self) -> Option<u64> {
         self.schema
             .hash_fn
-            .map(|hash_fn| unsafe { (hash_fn)(self.ptr.as_ptr()) })
+            .as_ref()
+            .map(|hash_fn| unsafe { (hash_fn.get())(self.ptr.as_ptr()) })
     }
 
     /// Borrow this [`SchemaRefMut`] as a [`SchemaRef`].
@@ -867,14 +869,14 @@ impl<'pointer> SchemaRefMut<'pointer> {
     /// Clone `other` and write it's data to `self`. Panics if this schema doesn't support cloning.
     pub fn write(&mut self, other: SchemaRef) -> Result<(), SchemaMismatchError> {
         if self.schema == other.schema {
-            let clone_fn = self.schema.clone_fn.unwrap_or_else(|| {
+            let clone_fn = self.schema.clone_fn.as_ref().unwrap_or_else(|| {
                 panic!(
                     "Schema does not provide clone fn: {}",
                     self.schema.full_name
                 )
             });
             // SOUND: we've verified the clone fn matches the schema of both values.
-            unsafe { clone_fn(other.as_ptr(), self.as_ptr()) }
+            unsafe { clone_fn.get()(other.as_ptr(), self.as_ptr()) }
             Ok(())
         } else {
             Err(SchemaMismatchError)
@@ -1378,10 +1380,10 @@ impl std::fmt::Display for SchemaBox {
 impl Hash for SchemaBox {
     #[track_caller]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        let Some(hash_fn) = self.schema.hash_fn else {
+        let Some(hash_fn) = &self.schema.hash_fn else {
             panic!("Cannot hash schema box where schema doesn't provide hash_fn");
         };
-        let hash = unsafe { (hash_fn)(self.ptr.as_ptr()) };
+        let hash = unsafe { (hash_fn.get())(self.ptr.as_ptr()) };
         state.write_u64(hash);
     }
 }
@@ -1391,17 +1393,17 @@ impl PartialEq for SchemaBox {
         if self.schema != other.schema {
             panic!("Cannot compare two `SchemaBox`s with different schemas.");
         }
-        let Some(eq_fn) = self.schema.eq_fn else {
+        let Some(eq_fn) = &self.schema.eq_fn else {
             panic!("Cannot hash schema box where schema doesn't provide hash_fn.");
         };
-        unsafe { (eq_fn)(self.ptr.as_ptr(), other.ptr.as_ptr()) }
+        unsafe { (eq_fn.get())(self.ptr.as_ptr(), other.ptr.as_ptr()) }
     }
 }
 impl Eq for SchemaBox {}
 
 impl Clone for SchemaBox {
     fn clone(&self) -> Self {
-        let clone_fn = self.schema.clone_fn.unwrap_or_else(|| {
+        let clone_fn = self.schema.clone_fn.as_ref().unwrap_or_else(|| {
             panic!(
                 "The schema for this type does not allow cloning it.\nSchema: {:#?}",
                 self.schema
@@ -1416,7 +1418,7 @@ impl Clone for SchemaBox {
             unsafe { std::alloc::alloc(layout) as *mut c_void }
         };
         let new_ptr = unsafe {
-            (clone_fn)(self.ptr.as_ptr(), new_ptr);
+            (clone_fn.get())(self.ptr.as_ptr(), new_ptr);
             NonNull::new(new_ptr).unwrap_or_else(|| handle_alloc_error(layout))
         };
         Self {
@@ -1572,13 +1574,13 @@ impl SchemaBox {
     /// Panics if the passed in schema doesn't have a `default_fn`.
     #[track_caller]
     pub fn default(schema: &'static Schema) -> Self {
-        let Some(default_fn) = schema.default_fn else {
+        let Some(default_fn) = &schema.default_fn else {
             panic!("Schema doesn't have `default_fn` to create default value with.");
         };
 
         unsafe {
             let b = SchemaBox::uninitialized(schema);
-            (default_fn)(b.ptr.as_ptr());
+            (default_fn.get())(b.ptr.as_ptr());
             b
         }
     }
@@ -1634,7 +1636,8 @@ impl SchemaBox {
     pub fn try_hash(&self) -> Option<u64> {
         self.schema
             .hash_fn
-            .map(|hash_fn| unsafe { (hash_fn)(self.ptr.as_ptr()) })
+            .as_ref()
+            .map(|hash_fn| unsafe { (hash_fn.get())(self.ptr.as_ptr()) })
     }
 
     /// Get the hash of this schema box.
@@ -1654,9 +1657,9 @@ impl SchemaBox {
 
     /// Drop the inner type, without dealocating the box's memory.
     unsafe fn drop_inner(&mut self) {
-        if let Some(drop_fn) = self.schema.drop_fn {
+        if let Some(drop_fn) = &self.schema.drop_fn {
             // Drop the type
-            (drop_fn)(self.ptr.as_ptr());
+            (drop_fn.get())(self.ptr.as_ptr());
         }
     }
 }
@@ -1676,11 +1679,11 @@ unsafe impl HasSchema for SchemaBox {
                     align: layout.align(),
                 }),
                 type_id: Some(TypeId::of::<Self>()),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
-                drop_fn: Some(<Self as RawDrop>::raw_drop),
+                clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
+                drop_fn: Some(<Self as RawDrop>::raw_drop_cb()),
                 default_fn: None,
-                hash_fn: Some(<Self as RawHash>::raw_hash),
-                eq_fn: Some(<Self as RawEq>::raw_eq),
+                hash_fn: Some(<Self as RawHash>::raw_hash_cb()),
+                eq_fn: Some(<Self as RawEq>::raw_eq_cb()),
                 type_data: default(),
             })
         })
@@ -1713,7 +1716,7 @@ impl<T: HasSchema> Default for SBox<T> {
     #[track_caller]
     fn default() -> Self {
         let schema = T::schema();
-        let Some(default_fn) = schema.default_fn else {
+        let Some(default_fn) = &schema.default_fn else {
             panic!("Schema doesn't implement default");
         };
         Self {
@@ -1721,7 +1724,7 @@ impl<T: HasSchema> Default for SBox<T> {
             // fn is valid for the type.
             b: unsafe {
                 let mut b = SchemaBox::uninitialized(schema);
-                (default_fn)(b.as_mut().as_ptr());
+                (default_fn.get())(b.as_mut().as_ptr());
                 b
             },
             _phantom: Default::default(),
@@ -1756,11 +1759,15 @@ unsafe impl<T: HasSchema> HasSchema for SBox<T> {
                 full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
                 kind: SchemaKind::Box(T::schema()),
                 type_id: Some(TypeId::of::<Self>()),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
-                drop_fn: Some(<Self as RawDrop>::raw_drop),
-                default_fn: Some(<Self as RawDefault>::raw_default),
-                hash_fn: Some(SchemaVec::raw_hash),
-                eq_fn: Some(SchemaVec::raw_eq),
+                clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
+                drop_fn: Some(<Self as RawDrop>::raw_drop_cb()),
+                default_fn: Some(<Self as RawDefault>::raw_default_cb()),
+                hash_fn: Some(unsafe {
+                    Unsafe::new(Box::leak(Box::new(|a| SchemaVec::raw_hash(a))))
+                }),
+                eq_fn: Some(unsafe {
+                    Unsafe::new(Box::leak(Box::new(|a, b| SchemaVec::raw_eq(a, b))))
+                }),
                 type_data: Default::default(),
             });
 

@@ -26,7 +26,7 @@ use bevy_egui::EguiContext;
 use glam::*;
 
 use bevy_prototype_lyon::prelude as lyon;
-use bones_framework::prelude::{self as bones, SchemaBox, SCHEMA_REGISTRY};
+use bones_framework::prelude::{self as bones, BitSet, SchemaBox, SCHEMA_REGISTRY};
 use prelude::convert::{IntoBevy, IntoBones};
 use serde::{de::Visitor, Deserialize, Serialize};
 
@@ -910,15 +910,25 @@ fn sync_cameras(
         let world = &session.world;
 
         // Skip worlds without cameras and transforms
-        if !(world.components.get_cell::<bones::Transform>().is_ok()
-            && world.components.get_cell::<bones::Camera>().is_ok())
+        if !(world
+            .components
+            .get::<bones::Transform>()
+            .borrow()
+            .bitset()
+            .bit_any()
+            && world
+                .components
+                .get::<bones::Camera>()
+                .borrow()
+                .bitset()
+                .bit_any())
         {
             continue;
         }
 
         let entities = world.resource::<bones::Entities>();
-        let transforms = world.components.get::<bones::Transform>().unwrap();
-        let cameras = world.components.get::<bones::Camera>().unwrap();
+        let transforms = world.components.get::<bones::Transform>().borrow();
+        let cameras = world.components.get::<bones::Camera>().borrow();
 
         // Sync cameras
         for (_ent, (transform, camera)) in entities.iter_with((&transforms, &cameras)) {
@@ -953,90 +963,107 @@ fn extract_bones_sprites(
         let world = &session.world;
 
         // Skip worlds without cameras and transforms
-        if !(world.components.get_cell::<bones::Transform>().is_ok()
-            && world.components.get_cell::<bones::Camera>().is_ok()
-            && (world.components.get_cell::<bones::Sprite>().is_ok()
-                || world.components.get_cell::<bones::AtlasSprite>().is_ok()))
+        if !(world
+            .components
+            .get::<bones::Transform>()
+            .borrow()
+            .bitset()
+            .bit_any()
+            && world
+                .components
+                .get::<bones::Camera>()
+                .borrow()
+                .bitset()
+                .bit_any()
+            && (world
+                .components
+                .get::<bones::Sprite>()
+                .borrow()
+                .bitset()
+                .bit_any()
+                || world
+                    .components
+                    .get::<bones::AtlasSprite>()
+                    .borrow()
+                    .bitset()
+                    .bit_any()))
         {
             continue;
         }
 
         let entities = world.resource::<bones::Entities>();
-        let transforms = world.components.get::<bones::Transform>().unwrap();
+        let transforms = world.components.get::<bones::Transform>().borrow();
+        let sprites = world.components.get::<bones::Sprite>().borrow();
+        let atlas_sprites = world.components.get::<bones::AtlasSprite>().borrow();
 
         // Extract normal sprites
-        if let Ok(sprites) = world.components.get::<bones::Sprite>() {
-            let mut z_offset = 0.0;
-            for (_, (sprite, transform)) in entities.iter_with((&sprites, &transforms)) {
-                let Some(sprite_image) = bones_assets.try_get(sprite.image) else {
-                    warn!("Sprite not loaded: {:?}", sprite.image);
-                    continue;
-                };
-                let image_id = if let bones::Image::External(id) = &*sprite_image {
-                    *id
-                } else {
-                    panic!(
-                        "Images added at runtime not supported yet, \
+        let mut z_offset = 0.0;
+        for (_, (sprite, transform)) in entities.iter_with((&sprites, &transforms)) {
+            let Some(sprite_image) = bones_assets.try_get(sprite.image) else {
+                warn!("Sprite not loaded: {:?}", sprite.image);
+                continue;
+            };
+            let image_id = if let bones::Image::External(id) = &*sprite_image {
+                *id
+            } else {
+                panic!(
+                    "Images added at runtime not supported yet, \
                 please open an issue."
-                    );
-                };
-                extracted_sprites.sprites.push(ExtractedSprite {
-                    entity: bones_renderable_entity.0,
-                    transform: {
-                        let mut t: Transform = transform.into_bevy();
-                        // Add tiny z offset to enforce a consistent z-sort
-                        t.translation.z += z_offset;
-                        z_offset += 0.00001;
-                        t.into()
-                    },
-                    color: sprite.color.into_bevy(),
-                    rect: None,
-                    custom_size: None,
-                    image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
-                    flip_x: sprite.flip_x,
-                    flip_y: sprite.flip_y,
-                    anchor: Anchor::Center.as_vec(),
-                })
-            }
+                );
+            };
+            extracted_sprites.sprites.push(ExtractedSprite {
+                entity: bones_renderable_entity.0,
+                transform: {
+                    let mut t: Transform = transform.into_bevy();
+                    // Add tiny z offset to enforce a consistent z-sort
+                    t.translation.z += z_offset;
+                    z_offset += 0.00001;
+                    t.into()
+                },
+                color: sprite.color.into_bevy(),
+                rect: None,
+                custom_size: None,
+                image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
+                flip_x: sprite.flip_x,
+                flip_y: sprite.flip_y,
+                anchor: Anchor::Center.as_vec(),
+            })
         }
 
         // Extract atlas sprites
-        if let Ok(atlas_sprites) = world.components.get::<bones::AtlasSprite>() {
-            for (_, (atlas_sprite, transform)) in entities.iter_with((&atlas_sprites, &transforms))
-            {
-                let atlas = bones_assets.get(atlas_sprite.atlas);
-                let atlas_image = bones_assets.get(atlas.image);
-                let image_id = if let bones::Image::External(id) = &*atlas_image {
-                    *id
-                } else {
-                    panic!(
-                        "Images added at runtime not supported yet, \
+        for (_, (atlas_sprite, transform)) in entities.iter_with((&atlas_sprites, &transforms)) {
+            let atlas = bones_assets.get(atlas_sprite.atlas);
+            let atlas_image = bones_assets.get(atlas.image);
+            let image_id = if let bones::Image::External(id) = &*atlas_image {
+                *id
+            } else {
+                panic!(
+                    "Images added at runtime not supported yet, \
                         please open an issue."
-                    );
-                };
-                let index = atlas_sprite.index;
-                let y = index / atlas.columns;
-                let x = index - (y * atlas.columns);
-                let cell = Vec2::new(x as f32, y as f32);
-                let current_padding = atlas.padding
-                    * Vec2::new(if x > 0 { 1.0 } else { 0.0 }, if y > 0 { 1.0 } else { 0.0 });
-                let min = (atlas.tile_size + current_padding) * cell + atlas.offset;
-                let rect = Rect {
-                    min,
-                    max: min + atlas.tile_size,
-                };
-                extracted_sprites.sprites.push(ExtractedSprite {
-                    entity: bones_renderable_entity.0,
-                    transform: transform.into_bevy().into(),
-                    color: atlas_sprite.color.into_bevy(),
-                    rect: Some(rect),
-                    custom_size: None,
-                    image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
-                    flip_x: atlas_sprite.flip_x,
-                    flip_y: atlas_sprite.flip_y,
-                    anchor: Anchor::Center.as_vec(),
-                })
-            }
+                );
+            };
+            let index = atlas_sprite.index;
+            let y = index / atlas.columns;
+            let x = index - (y * atlas.columns);
+            let cell = Vec2::new(x as f32, y as f32);
+            let current_padding = atlas.padding
+                * Vec2::new(if x > 0 { 1.0 } else { 0.0 }, if y > 0 { 1.0 } else { 0.0 });
+            let min = (atlas.tile_size + current_padding) * cell + atlas.offset;
+            let rect = Rect {
+                min,
+                max: min + atlas.tile_size,
+            };
+            extracted_sprites.sprites.push(ExtractedSprite {
+                entity: bones_renderable_entity.0,
+                transform: transform.into_bevy().into(),
+                color: atlas_sprite.color.into_bevy(),
+                rect: Some(rect),
+                custom_size: None,
+                image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
+                flip_x: atlas_sprite.flip_x,
+                flip_y: atlas_sprite.flip_y,
+                anchor: Anchor::Center.as_vec(),
+            })
         }
     }
 }
@@ -1061,17 +1088,32 @@ fn extract_bones_tilemaps(
         let world = &session.world;
 
         // Skip worlds without cameras renderable tile layers
-        if !(world.components.get_cell::<bones::Transform>().is_ok()
-            && world.components.get_cell::<bones::Camera>().is_ok()
-            && world.components.get_cell::<bones::TileLayer>().is_ok())
+        if !(world
+            .components
+            .get::<bones::Transform>()
+            .borrow()
+            .bitset()
+            .bit_any()
+            && world
+                .components
+                .get::<bones::Camera>()
+                .borrow()
+                .bitset()
+                .bit_any()
+            && world
+                .components
+                .get::<bones::TileLayer>()
+                .borrow()
+                .bitset()
+                .bit_any())
         {
             continue;
         }
 
         let entities = world.resource::<bones::Entities>();
-        let transforms = world.components.get::<bones::Transform>().unwrap();
-        let tile_layers = world.components.get::<bones::TileLayer>().unwrap();
-        let tiles = world.components.get::<bones::Tile>().unwrap();
+        let transforms = world.components.get::<bones::Transform>().borrow();
+        let tile_layers = world.components.get::<bones::TileLayer>().borrow();
+        let tiles = world.components.get::<bones::Tile>().borrow();
 
         // Extract tiles as sprites
         for (_, (tile_layer, transform)) in entities.iter_with((&tile_layers, &transforms)) {
@@ -1209,16 +1251,31 @@ fn sync_bones_path2ds(
         let world = &session.world;
 
         // Skip worlds without cameras renderable tile layers
-        if !(world.components.get_cell::<bones::Transform>().is_ok()
-            && world.components.get_cell::<bones::Camera>().is_ok()
-            && world.components.get_cell::<bones::Path2d>().is_ok())
+        if !(world
+            .components
+            .get::<bones::Transform>()
+            .borrow()
+            .bitset()
+            .bit_any()
+            && world
+                .components
+                .get::<bones::Camera>()
+                .borrow()
+                .bitset()
+                .bit_any()
+            && world
+                .components
+                .get::<bones::Path2d>()
+                .borrow()
+                .bitset()
+                .bit_any())
         {
             continue;
         }
 
         let entities = world.resource::<bones::Entities>();
-        let transforms = world.components.get::<bones::Transform>().unwrap();
-        let path2ds = world.components.get::<bones::Path2d>().unwrap();
+        let transforms = world.components.get::<bones::Transform>().borrow();
+        let path2ds = world.components.get::<bones::Path2d>().borrow();
 
         // Extract tiles as sprites
         for (_, (path2d, transform)) in entities.iter_with((&path2ds, &transforms)) {

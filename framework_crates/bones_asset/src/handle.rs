@@ -130,11 +130,11 @@ unsafe impl<T: HasSchema> HasSchema for Handle<T> {
                         schema: u128::schema(),
                     }],
                 }),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
+                clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
                 drop_fn: None,
-                default_fn: Some(<Self as RawDefault>::raw_default),
-                eq_fn: Some(<Self as RawEq>::raw_eq),
-                hash_fn: Some(<Self as RawHash>::raw_hash),
+                default_fn: Some(<Self as RawDefault>::raw_default_cb()),
+                eq_fn: Some(<Self as RawEq>::raw_eq_cb()),
+                hash_fn: Some(<Self as RawHash>::raw_hash_cb()),
                 type_data: {
                     let td = bones_schema::alloc::TypeDatas::default();
                     td.insert(SchemaAssetHandle {
@@ -179,11 +179,11 @@ unsafe impl HasSchema for UntypedHandle {
                         schema: u128::schema(),
                     }],
                 }),
-                clone_fn: Some(<Self as RawClone>::raw_clone),
+                clone_fn: Some(<Self as RawClone>::raw_clone_cb()),
                 drop_fn: None,
-                default_fn: Some(<Self as RawDefault>::raw_default),
-                eq_fn: Some(<Self as RawEq>::raw_eq),
-                hash_fn: Some(<Self as RawHash>::raw_hash),
+                default_fn: Some(<Self as RawDefault>::raw_default_cb()),
+                eq_fn: Some(<Self as RawEq>::raw_eq_cb()),
+                hash_fn: Some(<Self as RawHash>::raw_hash_cb()),
                 type_data: {
                     let td = bones_schema::alloc::TypeDatas::default();
                     td.insert(SchemaAssetHandle { schema: None }).unwrap();

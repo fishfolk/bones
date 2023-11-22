@@ -36,7 +36,12 @@ impl Clone for UntypedComponentStore {
                 unsafe {
                     let prev_ptr = self.storage.as_ptr().add(i * size);
                     let new_ptr = new_storage.as_ptr().add(i * size);
-                    (self.schema.clone_fn.expect("Cannot clone component"))(prev_ptr, new_ptr);
+                    (self
+                        .schema
+                        .clone_fn
+                        .as_ref()
+                        .expect("Cannot clone component")
+                        .get())(prev_ptr, new_ptr);
                 }
             }
         }
@@ -52,7 +57,7 @@ impl Clone for UntypedComponentStore {
 
 impl Drop for UntypedComponentStore {
     fn drop(&mut self) {
-        if let Some(drop_fn) = self.schema.drop_fn {
+        if let Some(drop_fn) = &self.schema.drop_fn {
             for i in 0..self.storage.capacity() {
                 if self.bitset.bit_test(i) {
                     // SAFE: constructing an UntypedComponent store is unsafe, and the user affirms
@@ -61,7 +66,7 @@ impl Drop for UntypedComponentStore {
                     // And our pointer is valid.
                     unsafe {
                         let ptr = self.storage.unchecked_idx(i);
-                        drop_fn(ptr);
+                        drop_fn.get()(ptr);
                     }
                 }
             }
@@ -74,12 +79,7 @@ impl UntypedComponentStore {
     ///
     /// In Rust, you will usually not use [`UntypedComponentStore`] and will use the statically
     /// typed [`ComponentStore<T>`] instead.
-    ///
-    /// # Safety
-    ///
-    /// The `clone_fn` and `drop_fn`, if specified, must not do anything unsound, when given valid
-    /// pointers to clone or drop.
-    pub unsafe fn new(schema: &'static Schema) -> Self {
+    pub fn new(schema: &'static Schema) -> Self {
         Self {
             bitset: create_bitset(),
             storage: ResizableAlloc::new(schema.layout()),
@@ -462,11 +462,11 @@ impl UntypedComponentStore {
             if let Some(out) = out {
                 // SAFE: user asserts `out` is non-overlapping
                 out.copy_from_nonoverlapping(ptr, size);
-            } else if let Some(drop_fn) = self.schema.drop_fn {
+            } else if let Some(drop_fn) = &self.schema.drop_fn {
                 // SAFE: construcing `UntypedComponentStore` asserts the soundess of the drop_fn
                 //
                 // And ptr is a valid pointer to the component type.
-                drop_fn(ptr);
+                drop_fn.get()(ptr);
             }
 
             // Found previous component
