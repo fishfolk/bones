@@ -1,6 +1,7 @@
 use std::ffi::c_void;
 
-use bones_utils::{default, ustr};
+use bones_schema::alloc::TypeDatas;
+use bones_utils::ustr;
 use serde::Deserialize;
 
 use crate::prelude::*;
@@ -14,6 +15,8 @@ struct SchemaMeta {
     name: String,
     full_name: String,
     kind: SchemaKindMeta,
+    #[serde(default)]
+    asset_extension: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -171,11 +174,18 @@ impl<'de> Deserialize<'de> for PackSchema {
             }
         };
 
+        let type_data = TypeDatas::default();
+        if let Some(ext) = meta.asset_extension {
+            type_data
+                .insert(AssetKind::Metadata { extension: ext })
+                .unwrap();
+        }
+
         let schema_data = SchemaData {
             name,
             full_name,
             kind: schema_kind,
-            type_data: default(),
+            type_data,
             type_id: None,
             clone_fn: Some(unsafe { Unsafe::new(Box::leak(Box::new(clone_fn))) }),
             drop_fn: Some(unsafe { Unsafe::new(Box::leak(Box::new(drop_fn))) }),

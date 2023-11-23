@@ -1,5 +1,6 @@
 pub mod lua;
 
+use bones_asset::UntypedHandle;
 use bones_lib::prelude::*;
 
 /// The prelude.
@@ -22,6 +23,8 @@ impl Default for ScriptingGamePlugin {
 
 impl GamePlugin for ScriptingGamePlugin {
     fn install(self, game: &mut Game) {
+        UntypedHandle::register_schema();
+
         if self.enable_lua {
             game.install_plugin(lua::lua_game_plugin);
         }

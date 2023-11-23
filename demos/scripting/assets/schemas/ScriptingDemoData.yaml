@@ -1,0 +1,9 @@
+# A marker type for our demo sprite.
+name: ScriptingDemoData
+full_name: demo_scripting::ScriptingDemoData
+asset_extension: demo-data
+kind: !Struct
+  fields:
+    - name: sprite
+      schema: UntypedHandle
+  

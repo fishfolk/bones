@@ -348,7 +348,7 @@ impl SchemaMetaAssetLoader {
     }
 }
 
-/// The kind of asset a type represents.
+/// A [type data][bones_schema::alloc::TypeDatas] that indicates how to load a type as an asset.
 #[derive(HasSchema)]
 #[schema(opaque, no_default, no_clone)]
 pub enum AssetKind {

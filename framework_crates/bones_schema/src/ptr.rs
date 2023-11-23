@@ -1361,6 +1361,11 @@ pub struct SchemaBox {
     ptr: NonNull<c_void>,
     schema: &'static Schema,
 }
+impl Default for SchemaBox {
+    fn default() -> Self {
+        SchemaBox::new(())
+    }
+}
 unsafe impl Sync for SchemaBox {}
 unsafe impl Send for SchemaBox {}
 impl std::fmt::Debug for SchemaBox {
