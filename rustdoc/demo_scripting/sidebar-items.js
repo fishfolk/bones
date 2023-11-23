@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["DemoState"],"fn":["game_startup","launch_game_session","main"],"struct":["DemoData","GameInfoMeta","GameMeta"]};
+window.SIDEBAR_ITEMS = {"fn":["game_startup","launch_game_session","main"],"struct":["GameMeta"]};

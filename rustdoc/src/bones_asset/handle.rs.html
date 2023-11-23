@@ -365,8 +365,8 @@
         </span>);
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
-                name: type_name::&lt;<span class="self">Self</span>&gt;().into(),
-                full_name: <span class="macro">format!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
+                name: <span class="string">&quot;UntypedHandle&quot;</span>.into(),
+                full_name: <span class="macro">format!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="macro">module_path!</span>(), <span class="string">&quot;UntypedHandle&quot;</span>).into(),
                 type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="self">Self</span>&gt;()),
                 kind: SchemaKind::Struct(StructSchemaInfo {
                     fields: <span class="macro">vec!</span>[StructFieldInfo {

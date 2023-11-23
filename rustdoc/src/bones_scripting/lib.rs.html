@@ -27,8 +27,12 @@
 <a href="#27" id="27">27</a>
 <a href="#28" id="28">28</a>
 <a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
 </pre></div><pre class="rust"><code><span class="kw">pub mod </span>lua;
 
+<span class="kw">use </span>bones_asset::UntypedHandle;
 <span class="kw">use </span>bones_lib::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// The prelude.
@@ -51,6 +55,8 @@
 
 <span class="kw">impl </span>GamePlugin <span class="kw">for </span>ScriptingGamePlugin {
     <span class="kw">fn </span>install(<span class="self">self</span>, game: <span class="kw-2">&amp;mut </span>Game) {
+        UntypedHandle::register_schema();
+
         <span class="kw">if </span><span class="self">self</span>.enable_lua {
             game.install_plugin(lua::lua_game_plugin);
         }

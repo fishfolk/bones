@@ -1917,6 +1917,11 @@
 <a href="#1917" id="1917">1917</a>
 <a href="#1918" id="1918">1918</a>
 <a href="#1919" id="1919">1919</a>
+<a href="#1920" id="1920">1920</a>
+<a href="#1921" id="1921">1921</a>
+<a href="#1922" id="1922">1922</a>
+<a href="#1923" id="1923">1923</a>
+<a href="#1924" id="1924">1924</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Schema-aware smart pointers.
 
 </span><span class="kw">use </span>std::{
@@ -3279,6 +3284,11 @@
 </span><span class="kw">pub struct </span>SchemaBox {
     ptr: NonNull&lt;c_void&gt;,
     schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
+}
+<span class="kw">impl </span>Default <span class="kw">for </span>SchemaBox {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        SchemaBox::new(())
+    }
 }
 <span class="kw">unsafe impl </span>Sync <span class="kw">for </span>SchemaBox {}
 <span class="kw">unsafe impl </span>Send <span class="kw">for </span>SchemaBox {}

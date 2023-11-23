@@ -415,6 +415,13 @@
 <a href="#415" id="415">415</a>
 <a href="#416" id="416">416</a>
 <a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span><span class="kw">crate</span>::ser_de::SchemaDeserialize;
 <span class="kw">use </span>bones_utils::{fxhash::FxHasher, Ustr};
@@ -428,7 +435,7 @@
 <span class="kw">use </span>std::{alloc::Layout, any::TypeId, hash::Hasher, sync::OnceLock, time::Duration};
 
 <span class="macro">macro_rules! </span>impl_primitive {
-    (<span class="macro-nonterminal">$t</span>:ty, <span class="macro-nonterminal">$prim</span>:ident) =&gt; {
+    (<span class="macro-nonterminal">$t</span>:ty, <span class="macro-nonterminal">$prim</span>:expr ) =&gt; {
         <span class="kw">unsafe impl </span>HasSchema <span class="kw">for </span><span class="macro-nonterminal">$t </span>{
             <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
                 <span class="kw">static </span>S: OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt; = OnceLock::new();
@@ -436,7 +443,7 @@
                     SCHEMA_REGISTRY.register(SchemaData {
                         name: <span class="macro">stringify!</span>(<span class="macro-nonterminal">$t</span>).into(),
                         full_name: <span class="macro">concat!</span>(<span class="string">&quot;std::&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$t</span>)).into(),
-                        kind: SchemaKind::Primitive(Primitive::<span class="macro-nonterminal">$prim</span>),
+                        kind: SchemaKind::Primitive(<span class="macro-nonterminal">$prim</span>),
                         type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="macro-nonterminal">$t</span>&gt;()),
                         clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
                         drop_fn: <span class="prelude-val">Some</span>(&lt;<span class="macro-nonterminal">$t </span><span class="kw">as </span>RawDrop&gt;::raw_drop_cb()),
@@ -451,18 +458,25 @@
     };
 }
 
-<span class="macro">impl_primitive!</span>(String, String);
-<span class="macro">impl_primitive!</span>(bool, Bool);
-<span class="macro">impl_primitive!</span>(u8, U8);
-<span class="macro">impl_primitive!</span>(u16, U16);
-<span class="macro">impl_primitive!</span>(u32, U32);
-<span class="macro">impl_primitive!</span>(u64, U64);
-<span class="macro">impl_primitive!</span>(u128, U128);
-<span class="macro">impl_primitive!</span>(i8, I8);
-<span class="macro">impl_primitive!</span>(i16, I16);
-<span class="macro">impl_primitive!</span>(i32, I32);
-<span class="macro">impl_primitive!</span>(i64, I64);
-<span class="macro">impl_primitive!</span>(i128, I128);
+<span class="macro">impl_primitive!</span>(String, Primitive::String);
+<span class="macro">impl_primitive!</span>(
+    (),
+    Primitive::Opaque {
+        size: std::mem::size_of::&lt;()&gt;(),
+        align: std::mem::align_of::&lt;()&gt;()
+    }
+);
+<span class="macro">impl_primitive!</span>(bool, Primitive::Bool);
+<span class="macro">impl_primitive!</span>(u8, Primitive::U8);
+<span class="macro">impl_primitive!</span>(u16, Primitive::U16);
+<span class="macro">impl_primitive!</span>(u32, Primitive::U32);
+<span class="macro">impl_primitive!</span>(u64, Primitive::U64);
+<span class="macro">impl_primitive!</span>(u128, Primitive::U128);
+<span class="macro">impl_primitive!</span>(i8, Primitive::I8);
+<span class="macro">impl_primitive!</span>(i16, Primitive::I16);
+<span class="macro">impl_primitive!</span>(i32, Primitive::I32);
+<span class="macro">impl_primitive!</span>(i64, Primitive::I64);
+<span class="macro">impl_primitive!</span>(i128, Primitive::I128);
 
 <span class="macro">macro_rules! </span>schema_impl_float {
     (<span class="macro-nonterminal">$t</span>:ty, <span class="macro-nonterminal">$prim</span>:ident) =&gt; {
