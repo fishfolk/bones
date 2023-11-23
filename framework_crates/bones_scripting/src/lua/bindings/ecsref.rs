@@ -363,7 +363,32 @@ pub fn metatable(ctx: Context) -> Table {
                         let newvalue = newvalue.as_static_user_data::<EcsRef>()?;
                         let newvalue_b = newvalue.borrow();
                         let newvalue_ref = newvalue_b.schema_ref()?;
-                        this_ref.write(newvalue_ref)?;
+
+                        // If the current and new ref are asset handles
+                        if this_ref
+                            .schema()
+                            .type_data
+                            .get::<SchemaAssetHandle>()
+                            .is_some()
+                            && newvalue_ref
+                                .schema()
+                                .type_data
+                                .get::<SchemaAssetHandle>()
+                                .is_some()
+                        {
+                            // SOUND: the `SchemaAssetHandle` type data asserts that these types
+                            // are represented by `UntypedHandle`. Additionally, `SchemaAssetHandle`
+                            // cannot be constructed outside the crate due to private fields, so it
+                            // cannot be added to non-conforming types.
+                            unsafe {
+                                *this_ref.cast_mut_unchecked::<UntypedHandle>() =
+                                    *newvalue_ref.cast_unchecked::<UntypedHandle>()
+                            }
+                        } else {
+                            // If we are not dealing with asset handles
+                            // Attempt to write the new value
+                            this_ref.write(newvalue_ref)?;
+                        }
                     }
                     SchemaRefMutAccess::Primitive(p) => match (p, newvalue) {
                         (PrimitiveRefMut::Bool(b), Value::Boolean(newb)) => *b = newb,

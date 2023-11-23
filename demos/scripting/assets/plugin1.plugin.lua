@@ -9,10 +9,13 @@ local function startup()
   local meta = assets.root
   local entities = resources:get(Entities)
 
+  local data_handle = meta.data
+  local data = assets:get(data_handle)
+
   local ent = entities:create()
   components:insert(ent, Transform:create())
   local sprite = Sprite:create()
-  sprite.image = meta.sprite
+  sprite.image = data.sprite
   components:insert(ent, sprite)
   components:insert(ent, DemoSprite:create())
 end

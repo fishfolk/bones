@@ -11,7 +11,7 @@ use crate::{alloc::TypeDatas, prelude::*, raw_fns::*};
 use std::{alloc::Layout, any::TypeId, hash::Hasher, sync::OnceLock, time::Duration};
 
 macro_rules! impl_primitive {
-    ($t:ty, $prim:ident) => {
+    ($t:ty, $prim:expr ) => {
         unsafe impl HasSchema for $t {
             fn schema() -> &'static Schema {
                 static S: OnceLock<&'static Schema> = OnceLock::new();
@@ -19,7 +19,7 @@ macro_rules! impl_primitive {
                     SCHEMA_REGISTRY.register(SchemaData {
                         name: stringify!($t).into(),
                         full_name: concat!("std::", stringify!($t)).into(),
-                        kind: SchemaKind::Primitive(Primitive::$prim),
+                        kind: SchemaKind::Primitive($prim),
                         type_id: Some(TypeId::of::<$t>()),
                         clone_fn: Some(<$t as RawClone>::raw_clone_cb()),
                         drop_fn: Some(<$t as RawDrop>::raw_drop_cb()),
@@ -34,18 +34,25 @@ macro_rules! impl_primitive {
     };
 }
 
-impl_primitive!(String, String);
-impl_primitive!(bool, Bool);
-impl_primitive!(u8, U8);
-impl_primitive!(u16, U16);
-impl_primitive!(u32, U32);
-impl_primitive!(u64, U64);
-impl_primitive!(u128, U128);
-impl_primitive!(i8, I8);
-impl_primitive!(i16, I16);
-impl_primitive!(i32, I32);
-impl_primitive!(i64, I64);
-impl_primitive!(i128, I128);
+impl_primitive!(String, Primitive::String);
+impl_primitive!(
+    (),
+    Primitive::Opaque {
+        size: std::mem::size_of::<()>(),
+        align: std::mem::align_of::<()>()
+    }
+);
+impl_primitive!(bool, Primitive::Bool);
+impl_primitive!(u8, Primitive::U8);
+impl_primitive!(u16, Primitive::U16);
+impl_primitive!(u32, Primitive::U32);
+impl_primitive!(u64, Primitive::U64);
+impl_primitive!(u128, Primitive::U128);
+impl_primitive!(i8, Primitive::I8);
+impl_primitive!(i16, Primitive::I16);
+impl_primitive!(i32, Primitive::I32);
+impl_primitive!(i64, Primitive::I64);
+impl_primitive!(i128, Primitive::I128);
 
 macro_rules! schema_impl_float {
     ($t:ty, $prim:ident) => {

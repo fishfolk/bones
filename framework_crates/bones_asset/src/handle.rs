@@ -170,8 +170,8 @@ unsafe impl HasSchema for UntypedHandle {
         );
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
-                name: type_name::<Self>().into(),
-                full_name: format!("{}::{}", module_path!(), type_name::<Self>()).into(),
+                name: "UntypedHandle".into(),
+                full_name: format!("{}::{}", module_path!(), "UntypedHandle").into(),
                 type_id: Some(TypeId::of::<Self>()),
                 kind: SchemaKind::Struct(StructSchemaInfo {
                     fields: vec![StructFieldInfo {
