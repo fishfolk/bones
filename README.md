@@ -35,7 +35,7 @@ Bones is designed around a simple, custom Entity Component System ( ECS ), desig
 
 - **Determinism:** Bones ECS is deterministic by default, making it easier to get a re-producible and predictable gameplay.
 - **Snapshot/Restore:** The Bones ECS world can be trivially snapshot and restored.
-- **Modding/Scripting ( work-in-progress ):** Bones ECS is built on our [`bones_schema`] system, which allows for runtime reflection and the ability to interact with data types defined outside of Rust.
+- **Modding/Scripting:** Bones ECS is built on our [`bones_schema`] system, which allows for runtime reflection and the ability to interact with data types defined outside of Rust.
 
 [`bones_schema`]: https://fishfolk.github.io/bones/rustdoc/bones_schema/index.html
 
@@ -43,7 +43,9 @@ Determinism and Snapshot/Restore are also key features for getting excellent **n
 
 ### Bones Lib
 
-The [`bones_lib`] contains the [`bones_ecs`] and the [`bones_asset`] system. It defines the concept of a [`Game`] which contains all of your game logic and data in a collection of [`Session`]s that each have their own ECS [`World`].
+The [`bones_lib`] contains the [`bones_ecs`] and the [`bones_asset`] system. It defines the concept
+of a [`Game`] which contains all of your game logic and data in a collection of [`Session`]s that
+each have their own ECS [`World`].
 
 Bones lib has no rendering components or even math types, it is only concerned with organizing your game logic and assets.
 
@@ -56,17 +58,46 @@ Bones lib has no rendering components or even math types, it is only concerned w
 
 ### Bones Framework
 
-On top of [`bones_lib`] there is the [`bones_framework`], which defines the rendering components and math types. Right now [`bones_framework`] is focused only on 2D rendering. 3D is not a priority for us now, but there is no technical limitation preventing community developed 3D rendering components either on top of [`bones_lib`] directly or as an extension to the [`bones_framework`].
+On top of [`bones_lib`] there is the [`bones_framework`], which defines the rendering components and
+math types. Right now [`bones_framework`] is focused only on 2D rendering. 3D is not a priority for
+us now, but there is no technical limitation preventing community developed 3D rendering components
+either on top of [`bones_lib`] directly or as an extension to the [`bones_framework`].
 
 [`bones_framework`]: https://fishfolk.github.io/bones/rustdoc/bones_framework/index.html
 
 ### Bones Bevy Renderer
 
-A game created with the [`bones_framework`] is renderer agnostic. This allows us to create rendering integrations with other engines. Our official integration is with the [Bevy] engine. The [`bones_bevy_renderer`] allows you to create a Bevy `App` for rendering a [`bones_framework`] game.
+A game created with only the [`bones_framework`] is renderer agnostic, allowing us to create
+rendering integrations with other engines. Our official integration is with the [Bevy] engine.
 
-This also allows you to create custom extensions to the Bevy renderer, if you need a bones integration with a feature not supported out-of-the-box in the [`bones_framework`].
+Rendering in the [`bones_framework`] is intentionally simple, and some games may need more advanced
+features that aren't supported out of the box. Bones, and it's Bevy integration, are designed so
+that you can create custom rendering specific to your needs. That means you can still take advantage
+of any fancy new Bevy plugins, or maybe use something other than Bevy entirely!
 
-[`bones_bevy_renderer`]: https://fishfolk.github.io/bones/rustdoc/bones_bevy_renderer/index.html
+### Bones Scripting
+
+[`bones_ecs`] is built to be scripted. Effort has also been made to avoid putting unnecessary
+performance limitations into the scripting system. Bones comes with an integration with the
+[`piccolo`] VM to enable Lua scripting out-of-the-box.
+
+This integration allows Lua scripts to access the ECS world in a way very similar to the
+Rust API. Rust components and resources can be annotated with `#[repr(C)]` to enable direct
+access by Lua scripts, and if a type cannot be `#[repr(C)]`, you can still manually
+create your own Lua bindings for that type.
+
+Allowing both Rust and the scripting language to talk to the _same_ ECS world allows you to easily
+blend both languages in your game, and have them interact quite easily in many circumstances. If
+a portion of your game needs extra high performance or low-level access, you can use Rust, but
+if you want hot reloaded and moddable elements of your game, you can use Lua.
+
+The scripting system is not limited to Lua. Using the simple dynamic API to [`bones_ecs`], you can
+create your own integrations to any language or system you desire.
+
+The scripting system is new and work-in-progress, but all of the major things have been
+successfully implemented, and it is going to be actively used in [Jumpy].
+
+[`piccolo`]: https://github.com/kyren/piccolo/
 
 ## Contributing
 
