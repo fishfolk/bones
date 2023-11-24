@@ -141,9 +141,6 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
 </pre></div><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// A wrapper around [`Schema`] that indicates that it should be excluded from, for example,
@@ -240,19 +237,17 @@
         }),
     );
 
-    <span class="kw">let </span>eq_fn = ctx.state.registry.stash(
-        <span class="kw-2">&amp;</span>ctx,
-        AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
-            <span class="kw">let </span>(this, other): (AnyUserData, AnyUserData) = stack.consume(ctx)<span class="question-mark">?</span>;
-            <span class="kw">let </span>(this, other) = (
-                this.downcast_static::&lt;<span class="kw-2">&amp;</span>Schema&gt;()<span class="question-mark">?</span>,
-                other.downcast_static::&lt;<span class="kw-2">&amp;</span>Schema&gt;()<span class="question-mark">?</span>,
-            );
-            stack.replace(ctx, this.id() == other.id());
-            <span class="prelude-val">Ok</span>(CallbackReturn::Return)
-        }),
-    );
+    <span class="kw">let </span>eq_fn = AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+        <span class="kw">let </span>(this, other): (AnyUserData, AnyUserData) = stack.consume(ctx)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(this, other) = (
+            this.downcast_static::&lt;<span class="kw-2">&amp;</span>Schema&gt;()<span class="question-mark">?</span>,
+            other.downcast_static::&lt;<span class="kw-2">&amp;</span>Schema&gt;()<span class="question-mark">?</span>,
+        );
+        stack.replace(ctx, this.id() == other.id());
+        <span class="prelude-val">Ok</span>(CallbackReturn::Return)
+    });
 
+    metatable.set(ctx, <span class="string">&quot;__eq&quot;</span>, eq_fn).unwrap();
     metatable
         .set(
             ctx,
@@ -262,7 +257,6 @@
                 <span class="kw">let </span>this = this.downcast_static::&lt;<span class="kw-2">&amp;</span>Schema&gt;()<span class="question-mark">?</span>;
 
                 <span class="kw">match </span>key.as_bytes() {
-                    <span class="string">b&quot;eq&quot; </span>=&gt; stack.replace(ctx, ctx.state.registry.fetch(<span class="kw-2">&amp;</span>eq_fn)),
                     <span class="string">b&quot;name&quot; </span>=&gt; {
                         stack.replace(
                             ctx,
