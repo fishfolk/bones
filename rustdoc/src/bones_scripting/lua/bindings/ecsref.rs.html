@@ -448,6 +448,23 @@
 <a href="#448" id="448">448</a>
 <a href="#449" id="449">449</a>
 <a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
 </pre></div><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// A type data that can be used to specify a custom metatable to use for the type when it is
@@ -756,7 +773,7 @@
             ctx,
             <span class="string">&quot;__index&quot;</span>,
             AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
-                <span class="kw">let </span>(this, key): (<span class="kw-2">&amp;</span>EcsRef, lua::String) = stack.consume(ctx)<span class="question-mark">?</span>;
+                <span class="kw">let </span>(this, key): (<span class="kw-2">&amp;</span>EcsRef, lua::Value) = stack.consume(ctx)<span class="question-mark">?</span>;
 
                 <span class="kw">let </span><span class="kw-2">mut </span>newref = this.clone();
                 newref.path = ustr(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}.{key}&quot;</span>, this.path));
@@ -884,8 +901,25 @@
                                 );
                             }
                         }
-                        (PrimitiveRefMut::Opaque { .. }, Value::UserData(<span class="kw">_</span>)) =&gt; {
-                            <span class="macro">todo!</span>(<span class="string">&quot;Opaque type assignment&quot;</span>)
+                        (PrimitiveRefMut::Opaque { <span class="kw-2">mut </span>schema_ref, .. }, value) =&gt; {
+                            <span class="comment">// Special handling for `Ustr`
+                            </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(ustr) = schema_ref.reborrow().try_cast_mut::&lt;Ustr&gt;() {
+                                <span class="kw">if let </span>Value::String(s) = value {
+                                    <span class="kw-2">*</span>ustr = s.to_str()<span class="question-mark">?</span>.into()
+                                } <span class="kw">else if let </span>Value::UserData(data) = value {
+                                    <span class="kw">let </span>ecsref = data.downcast_static::&lt;EcsRef&gt;()<span class="question-mark">?</span>;
+                                    <span class="kw">let </span>b = ecsref.borrow();
+                                    <span class="kw">let </span>value_ref = b.schema_ref()<span class="question-mark">?</span>;
+
+                                    <span class="kw">if let </span><span class="prelude-val">Ok</span>(value) = value_ref.try_cast::&lt;Ustr&gt;() {
+                                        <span class="kw-2">*</span>ustr = <span class="kw-2">*</span>value;
+                                    } <span class="kw">else if let </span><span class="prelude-val">Ok</span>(value) = value_ref.try_cast::&lt;String&gt;() {
+                                        <span class="kw-2">*</span>ustr = value.as_str().into();
+                                    }
+                                }
+                            } <span class="kw">else </span>{
+                                <span class="macro">todo!</span>(<span class="string">&quot;Opaque type assignment&quot;</span>)
+                            }
                         }
                         <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::format_err!</span>(<span class="string">&quot;Invalid type&quot;</span>).into()),
                     },

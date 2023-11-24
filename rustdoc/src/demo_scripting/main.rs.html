@@ -54,7 +54,11 @@
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>bones_bevy_renderer::BonesBevyRenderer;
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
+
+<span class="kw">use </span>bones_bevy_renderer::BonesBevyRenderer;
 <span class="kw">use </span>bones_framework::prelude::<span class="kw-2">*</span>;
 
 <span class="attr">#[derive(HasSchema, Default, Clone)]
@@ -98,7 +102,7 @@
         <span class="comment">// Install the plugin that will load our lua plugins and run them in the game session
         </span>.install_plugin(LuaPluginLoaderSessionPlugin(
             <span class="comment">// Tell it to install the lua plugins specified in our game meta
-            </span>meta.plugins.iter().copied().collect(),
+            </span>Arc::new(meta.plugins.iter().copied().collect()),
         ))
         .add_startup_system(game_startup);
 }

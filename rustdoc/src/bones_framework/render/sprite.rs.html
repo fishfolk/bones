@@ -113,6 +113,8 @@
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Sprite rendering components.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -120,6 +122,7 @@
 <span class="doccomment">/// Sprite session plugin.
 </span><span class="kw">pub fn </span>sprite_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
     Sprite::register_schema();
+    AtlasSprite::register_schema();
     session.world.init_param::&lt;Comp&lt;Sprite&gt;&gt;();
 }
 
@@ -202,6 +205,7 @@
 /// Represents one or more [`Atlas`]s stacked on top of each other, and possibly animated through a
 /// range of frames out of the atlas.
 </span><span class="attr">#[derive(Debug, Default, Clone, HasSchema)]
+#[repr(C)]
 </span><span class="kw">pub struct </span>AtlasSprite {
     <span class="doccomment">/// The sprite&#39;s color tint
     </span><span class="kw">pub </span>color: Color,

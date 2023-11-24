@@ -118,6 +118,9 @@
 <a href="#118" id="118">118</a>
 <a href="#119" id="119">119</a>
 <a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
 </pre></div><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
 
 <span class="kw">pub fn </span>metatable(ctx: Context) -&gt; Table {
@@ -173,13 +176,16 @@
             <span class="kw">let </span>b = entity_ecsref.borrow();
             <span class="kw">let </span>entity = <span class="kw-2">*</span>b.schema_ref()<span class="question-mark">?</span>.try_cast::&lt;Entity&gt;()<span class="question-mark">?</span>;
 
-            <span class="kw">let </span>b = value_ecsref.borrow();
-            <span class="kw">let </span>value = b.schema_ref()<span class="question-mark">?</span>;
+            <span class="kw">let </span>value = {
+                <span class="kw">let </span>b = value_ecsref.borrow();
+                <span class="kw">let </span>value = b.schema_ref()<span class="question-mark">?</span>;
+                value.clone_into_box()
+            };
 
             world.with(|world| {
                 <span class="kw">let </span>store = world.components.get_by_schema(value.schema());
                 <span class="kw">let </span><span class="kw-2">mut </span>store = store.borrow_mut();
-                store.insert_box(entity, value.clone_into_box());
+                store.insert_box(entity, value);
                 <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, anyhow::Error&gt;(())
             })<span class="question-mark">?</span>;
 

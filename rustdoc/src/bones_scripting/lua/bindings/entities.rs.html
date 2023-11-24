@@ -164,7 +164,20 @@
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
 <a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>lua::Variadic;
+
+<span class="kw">use </span><span class="kw">crate</span>::prelude::bindings::schema::WithoutSchema;
 
 <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
@@ -223,13 +236,9 @@
     <span class="kw">let </span>iter_with_callback = ctx.state.registry.stash(
         <span class="kw-2">&amp;</span>ctx,
         AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
-            <span class="kw">let </span>(this, schemas): (<span class="kw-2">&amp;</span>EcsRef, Variadic&lt;Vec&lt;AnyUserData&gt;&gt;) = stack.consume(ctx)<span class="question-mark">?</span>;
+            <span class="kw">let </span>(this, schema_args): (<span class="kw-2">&amp;</span>EcsRef, Variadic&lt;Vec&lt;AnyUserData&gt;&gt;) = stack.consume(ctx)<span class="question-mark">?</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>b = this.borrow_mut();
             <span class="kw">let </span>entities = b.schema_ref_mut()<span class="question-mark">?</span>.cast_into_mut::&lt;Entities&gt;();
-            <span class="kw">let </span>schemas = schemas
-                .into_iter()
-                .map(|x| x.downcast_static::&lt;<span class="kw-2">&amp;</span>Schema&gt;().map(|x| <span class="kw-2">*</span>x))
-                .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
             <span class="kw">let </span>world = ctx
                 .state
                 .globals
@@ -237,11 +246,24 @@
                 .as_static_user_data::&lt;WorldRef&gt;()<span class="question-mark">?</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>bitset = entities.bitset().clone();
 
+            <span class="kw">let </span><span class="kw-2">mut </span>schemas = Vec::with_capacity(schema_args.len());
             world.with(|world| {
-                <span class="kw">for </span>schema <span class="kw">in </span><span class="kw-2">&amp;</span>schemas {
-                    <span class="kw">let </span>components = world.components.get_by_schema(schema);
-                    <span class="kw">let </span>components = components.borrow();
-                    bitset.bit_and(components.bitset());
+                <span class="kw">for </span>schema_arg <span class="kw">in </span><span class="kw-2">&amp;</span>schema_args {
+                    <span class="kw">if let </span><span class="prelude-val">Ok</span>(schema) = schema_arg.downcast_static::&lt;<span class="kw-2">&amp;</span>Schema&gt;() {
+                        <span class="kw">let </span>components = world.components.get_by_schema(schema);
+                        <span class="kw">let </span>components = components.borrow();
+                        bitset.bit_and(components.bitset());
+                        schemas.push(<span class="kw-2">*</span>schema);
+                    } <span class="kw">else if let </span><span class="prelude-val">Ok</span>(without_schema) = schema_arg.downcast_static::&lt;WithoutSchema&gt;()
+                    {
+                        <span class="kw">let </span>components = world.components.get_by_schema(without_schema.<span class="number">0</span>);
+                        <span class="kw">let </span>components = components.borrow();
+                        bitset.bit_and(components.bitset().clone().bit_not());
+                    } <span class="kw">else </span>{
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::format_err!</span>(
+                            <span class="string">&quot;Invalid type for argument to `entities:iter_with()`: {schema_arg:?}&quot;
+                        </span>));
+                    }
                 }
                 <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, anyhow::Error&gt;(())
             })<span class="question-mark">?</span>;

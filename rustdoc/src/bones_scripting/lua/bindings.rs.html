@@ -149,31 +149,6 @@
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bones_lib::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>gc_arena_derive::Collect;
 <span class="kw">use </span>piccolo::{
@@ -214,38 +189,13 @@
     env.set(ctx, <span class="string">&quot;math&quot;</span>, ctx.state.globals.get(ctx, <span class="string">&quot;math&quot;</span>))
         .unwrap();
 
-    <span class="kw">let </span>schema_fn = AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
-        <span class="kw">let </span>singletons = ctx.singletons();
-        <span class="kw">let </span>schema_metatable = singletons.get(ctx, schema::metatable);
-
-        <span class="kw">let </span>schema_name = stack.pop_front();
-        <span class="kw">let </span>Value::String(schema_name) = schema_name <span class="kw">else </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::format_err!</span>(<span class="string">&quot;Type error: expected string schema name&quot;</span>).into());
-        };
-        <span class="kw">let </span><span class="kw-2">mut </span>matches = SCHEMA_REGISTRY.schemas.iter().filter(|schema| {
-            schema.name.as_bytes() == schema_name.as_bytes()
-                || schema.full_name.as_bytes() == schema_name.as_bytes()
-        });
-
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(next_match) = matches.next() {
-            <span class="kw">if </span>matches.next().is_some() {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::format_err!</span>(<span class="string">&quot;Found multiple schemas matching name.&quot;</span>).into());
-            }
-
-            <span class="comment">// TODO: setup `toString` implementation so that printing schemas gives more information.
-            </span><span class="kw">let </span>schema = AnyUserData::new_static(<span class="kw-2">&amp;</span>ctx, next_match);
-            schema.set_metatable(<span class="kw-2">&amp;</span>ctx, <span class="prelude-val">Some</span>(schema_metatable));
-            stack.push_front(schema.into());
-        } <span class="kw">else </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::format_err!</span>(<span class="string">&quot;Schema not found: {schema_name}&quot;</span>).into());
-        }
-
-        <span class="prelude-val">Ok</span>(CallbackReturn::Return)
-    });
+    <span class="kw">let </span>schema_fn = ctx.singletons().get(ctx, schema::schema_fn);
     env.set(ctx, <span class="string">&quot;schema&quot;</span>, schema_fn).unwrap();
     env.set(ctx, <span class="string">&quot;s&quot;</span>, schema_fn).unwrap(); <span class="comment">// Alias for schema
+    </span><span class="kw">let </span>schema_of_fn = ctx.singletons().get(ctx, schema::schema_of_fn);
+    env.set(ctx, <span class="string">&quot;schema_of&quot;</span>, schema_of_fn).unwrap();
 
-    </span>WorldRef::default().add_to_env(ctx, env);
+    WorldRef::default().add_to_env(ctx, env);
 
     <span class="comment">// Set the `CoreStage` enum global
     </span><span class="kw">let </span>core_stage_table = Table::new(<span class="kw-2">&amp;</span>ctx);
