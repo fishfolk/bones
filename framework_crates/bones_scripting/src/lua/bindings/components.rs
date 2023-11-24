@@ -53,13 +53,16 @@ pub fn metatable(ctx: Context) -> Table {
             let b = entity_ecsref.borrow();
             let entity = *b.schema_ref()?.try_cast::<Entity>()?;
 
-            let b = value_ecsref.borrow();
-            let value = b.schema_ref()?;
+            let value = {
+                let b = value_ecsref.borrow();
+                let value = b.schema_ref()?;
+                value.clone_into_box()
+            };
 
             world.with(|world| {
                 let store = world.components.get_by_schema(value.schema());
                 let mut store = store.borrow_mut();
-                store.insert_box(entity, value.clone_into_box());
+                store.insert_box(entity, value);
                 Ok::<_, anyhow::Error>(())
             })?;
 

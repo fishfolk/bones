@@ -1,5 +1,7 @@
 use lua::Variadic;
 
+use crate::prelude::bindings::schema::WithoutSchema;
+
 use super::*;
 
 pub fn entities_metatable(ctx: Context) -> Table {
@@ -57,13 +59,9 @@ pub fn entities_metatable(ctx: Context) -> Table {
     let iter_with_callback = ctx.state.registry.stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-            let (this, schemas): (&EcsRef, Variadic<Vec<AnyUserData>>) = stack.consume(ctx)?;
+            let (this, schema_args): (&EcsRef, Variadic<Vec<AnyUserData>>) = stack.consume(ctx)?;
             let mut b = this.borrow_mut();
             let entities = b.schema_ref_mut()?.cast_into_mut::<Entities>();
-            let schemas = schemas
-                .into_iter()
-                .map(|x| x.downcast_static::<&Schema>().map(|x| *x))
-                .collect::<Result<Vec<_>, _>>()?;
             let world = ctx
                 .state
                 .globals
@@ -71,11 +69,24 @@ pub fn entities_metatable(ctx: Context) -> Table {
                 .as_static_user_data::<WorldRef>()?;
             let mut bitset = entities.bitset().clone();
 
+            let mut schemas = Vec::with_capacity(schema_args.len());
             world.with(|world| {
-                for schema in &schemas {
-                    let components = world.components.get_by_schema(schema);
-                    let components = components.borrow();
-                    bitset.bit_and(components.bitset());
+                for schema_arg in &schema_args {
+                    if let Ok(schema) = schema_arg.downcast_static::<&Schema>() {
+                        let components = world.components.get_by_schema(schema);
+                        let components = components.borrow();
+                        bitset.bit_and(components.bitset());
+                        schemas.push(*schema);
+                    } else if let Ok(without_schema) = schema_arg.downcast_static::<WithoutSchema>()
+                    {
+                        let components = world.components.get_by_schema(without_schema.0);
+                        let components = components.borrow();
+                        bitset.bit_and(components.bitset().clone().bit_not());
+                    } else {
+                        return Err(anyhow::format_err!(
+                            "Invalid type for argument to `entities:iter_with()`: {schema_arg:?}"
+                        ));
+                    }
                 }
                 Ok::<_, anyhow::Error>(())
             })?;

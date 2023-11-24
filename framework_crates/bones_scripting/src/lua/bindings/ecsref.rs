@@ -306,7 +306,7 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__index",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-                let (this, key): (&EcsRef, lua::String) = stack.consume(ctx)?;
+                let (this, key): (&EcsRef, lua::Value) = stack.consume(ctx)?;
 
                 let mut newref = this.clone();
                 newref.path = ustr(&format!("{}.{key}", this.path));
@@ -434,8 +434,25 @@ pub fn metatable(ctx: Context) -> Table {
                                 );
                             }
                         }
-                        (PrimitiveRefMut::Opaque { .. }, Value::UserData(_)) => {
-                            todo!("Opaque type assignment")
+                        (PrimitiveRefMut::Opaque { mut schema_ref, .. }, value) => {
+                            // Special handling for `Ustr`
+                            if let Ok(ustr) = schema_ref.reborrow().try_cast_mut::<Ustr>() {
+                                if let Value::String(s) = value {
+                                    *ustr = s.to_str()?.into()
+                                } else if let Value::UserData(data) = value {
+                                    let ecsref = data.downcast_static::<EcsRef>()?;
+                                    let b = ecsref.borrow();
+                                    let value_ref = b.schema_ref()?;
+
+                                    if let Ok(value) = value_ref.try_cast::<Ustr>() {
+                                        *ustr = *value;
+                                    } else if let Ok(value) = value_ref.try_cast::<String>() {
+                                        *ustr = value.as_str().into();
+                                    }
+                                }
+                            } else {
+                                todo!("Opaque type assignment")
+                            }
                         }
                         _ => return Err(anyhow::format_err!("Invalid type").into()),
                     },

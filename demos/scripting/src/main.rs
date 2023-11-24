@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bones_bevy_renderer::BonesBevyRenderer;
 use bones_framework::prelude::*;
 
@@ -42,7 +44,7 @@ fn launch_game_session(
         // Install the plugin that will load our lua plugins and run them in the game session
         .install_plugin(LuaPluginLoaderSessionPlugin(
             // Tell it to install the lua plugins specified in our game meta
-            meta.plugins.iter().copied().collect(),
+            Arc::new(meta.plugins.iter().copied().collect()),
         ))
         .add_startup_system(game_startup);
 }

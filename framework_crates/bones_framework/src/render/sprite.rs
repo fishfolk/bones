@@ -5,6 +5,7 @@ use crate::prelude::*;
 /// Sprite session plugin.
 pub fn sprite_plugin(session: &mut Session) {
     Sprite::register_schema();
+    AtlasSprite::register_schema();
     session.world.init_param::<Comp<Sprite>>();
 }
 
@@ -87,6 +88,7 @@ pub struct Sprite {
 /// Represents one or more [`Atlas`]s stacked on top of each other, and possibly animated through a
 /// range of frames out of the atlas.
 #[derive(Debug, Default, Clone, HasSchema)]
+#[repr(C)]
 pub struct AtlasSprite {
     /// The sprite's color tint
     pub color: Color,

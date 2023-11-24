@@ -38,15 +38,15 @@ pub fn lua_game_plugin(game: &mut Game) {
 }
 
 /// A [`SessionPlugin] that will run the provided lua plugins
-pub struct LuaPluginLoaderSessionPlugin(pub Vec<Handle<LuaPlugin>>);
+pub struct LuaPluginLoaderSessionPlugin(pub Arc<Vec<Handle<LuaPlugin>>>);
 
 /// Resource containing the lua plugins that have been installed in this session.
 #[derive(HasSchema, Deref, DerefMut, Default, Clone)]
-pub struct LuaPlugins(Arc<Vec<Handle<LuaPlugin>>>);
+pub struct LuaPlugins(pub Arc<Vec<Handle<LuaPlugin>>>);
 
 impl SessionPlugin for LuaPluginLoaderSessionPlugin {
     fn install(self, session: &mut Session) {
-        session.world.insert_resource(LuaPlugins(Arc::new(self.0)));
+        session.world.insert_resource(LuaPlugins(self.0));
 
         for lua_stage in [
             CoreStage::First,
