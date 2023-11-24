@@ -37,9 +37,16 @@ pub fn metatable(ctx: Context) -> Table {
             let ecsref = EcsRef {
                 data: EcsRefData::Component(ComponentRef { store, entity }),
                 path: default(),
+            };
+
+            // Return nil if the component is not present
+            if ecsref.borrow().schema_ref().is_err() {
+                stack.replace(ctx, Value::Nil);
+                return Ok(CallbackReturn::Return);
             }
-            .into_value(ctx);
-            stack.push_front(ecsref);
+
+            let ecsref = ecsref.into_value(ctx);
+            stack.replace(ctx, ecsref);
 
             Ok(CallbackReturn::Return)
         }),
