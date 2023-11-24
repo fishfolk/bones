@@ -38,36 +38,11 @@ pub fn env(ctx: Context) -> Table {
     env.set(ctx, "math", ctx.state.globals.get(ctx, "math"))
         .unwrap();
 
-    let schema_fn = AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-        let singletons = ctx.singletons();
-        let schema_metatable = singletons.get(ctx, schema::metatable);
-
-        let schema_name = stack.pop_front();
-        let Value::String(schema_name) = schema_name else {
-            return Err(anyhow::format_err!("Type error: expected string schema name").into());
-        };
-        let mut matches = SCHEMA_REGISTRY.schemas.iter().filter(|schema| {
-            schema.name.as_bytes() == schema_name.as_bytes()
-                || schema.full_name.as_bytes() == schema_name.as_bytes()
-        });
-
-        if let Some(next_match) = matches.next() {
-            if matches.next().is_some() {
-                return Err(anyhow::format_err!("Found multiple schemas matching name.").into());
-            }
-
-            // TODO: setup `toString` implementation so that printing schemas gives more information.
-            let schema = AnyUserData::new_static(&ctx, next_match);
-            schema.set_metatable(&ctx, Some(schema_metatable));
-            stack.push_front(schema.into());
-        } else {
-            return Err(anyhow::format_err!("Schema not found: {schema_name}").into());
-        }
-
-        Ok(CallbackReturn::Return)
-    });
+    let schema_fn = ctx.singletons().get(ctx, schema::schema_fn);
     env.set(ctx, "schema", schema_fn).unwrap();
     env.set(ctx, "s", schema_fn).unwrap(); // Alias for schema
+    let schema_of_fn = ctx.singletons().get(ctx, schema::schema_of_fn);
+    env.set(ctx, "schema_of", schema_of_fn).unwrap();
 
     WorldRef::default().add_to_env(ctx, env);
 
