@@ -7,8 +7,8 @@ use bones_lib::ecs::utils::*;
 use parking_lot::Mutex;
 use piccolo::{
     registry::{Fetchable, Stashable},
-    AnyUserData, Closure, Context, Executor, FromValue, Fuel, Lua, ProtoCompileError,
-    StashedClosure, Table, Value,
+    AnyUserData, Closure, Context, Executor, FromValue, Lua, ProtoCompileError, StashedClosure,
+    Table, Value,
 };
 use send_wrapper::SendWrapper;
 use std::{any::Any, rc::Rc, sync::Arc};

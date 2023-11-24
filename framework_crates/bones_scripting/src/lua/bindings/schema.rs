@@ -94,19 +94,17 @@ pub fn metatable(ctx: Context) -> Table {
         }),
     );
 
-    let eq_fn = ctx.state.registry.stash(
-        &ctx,
-        AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-            let (this, other): (AnyUserData, AnyUserData) = stack.consume(ctx)?;
-            let (this, other) = (
-                this.downcast_static::<&Schema>()?,
-                other.downcast_static::<&Schema>()?,
-            );
-            stack.replace(ctx, this.id() == other.id());
-            Ok(CallbackReturn::Return)
-        }),
-    );
+    let eq_fn = AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+        let (this, other): (AnyUserData, AnyUserData) = stack.consume(ctx)?;
+        let (this, other) = (
+            this.downcast_static::<&Schema>()?,
+            other.downcast_static::<&Schema>()?,
+        );
+        stack.replace(ctx, this.id() == other.id());
+        Ok(CallbackReturn::Return)
+    });
 
+    metatable.set(ctx, "__eq", eq_fn).unwrap();
     metatable
         .set(
             ctx,
@@ -116,7 +114,6 @@ pub fn metatable(ctx: Context) -> Table {
                 let this = this.downcast_static::<&Schema>()?;
 
                 match key.as_bytes() {
-                    b"eq" => stack.replace(ctx, ctx.state.registry.fetch(&eq_fn)),
                     b"name" => {
                         stack.replace(
                             ctx,

@@ -82,7 +82,7 @@ pub fn env(ctx: Context) -> Table {
                     fn poll<'a>(
                         &mut self,
                         ctx: Context<'gc>,
-                        _fuel: &mut Fuel,
+                        _ex: piccolo::Execution<'gc, '_>,
                         mut stack: Stack<'gc, 'a>,
                     ) -> Result<SequencePoll<'gc>, Error<'gc>> {
                         if self.mode == Mode::Init {
