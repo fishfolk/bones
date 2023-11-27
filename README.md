@@ -2,36 +2,28 @@
 <img src="https://raw.githubusercontent.com/fishfolk/bones_branding/main/renders/logo-rect.svg" align="center" width="250px" />
 <h1>Bones</h1>
 
-An easy-to-use game engine for making real games.
+A 'meta-engine' framework made to facilitate the development of moddable, multiplayer 2D games.
 
 [![Documentation](https://img.shields.io/badge/documentation-fishfolk.org-green.svg?labelColor=1e1c24&color=f3ee7a)](https://fishfolk.org/bones/overview/introduction/)
 [![Crates.io](https://img.shields.io/crates/v/bones_lib?labelColor=1e1c24)](https://crates.io/crates/bones_lib)
 [![docs.rs](https://img.shields.io/docsrs/bones_framework?label=API%20Docs&labelColor=1e1c24)](https://docs.rs/bones_framework)
 [![Main Branch Docs](https://img.shields.io/badge/API_Docs-Main_Branch-blue?labelColor=1e1c24&color=red)](https://fishfolk.github.io/bones/rustdoc/bones_framework/index.html)
 [![License](https://img.shields.io/badge/License-MIT%20or%20Apache%202-green.svg?label=license&labelColor=1e1c24&color=34925e)](./LICENSE)
-[![Discord](https://img.shields.io/badge/chat-on%20discord-green.svg?logo=discord&logoColor=fff&labelColor=1e1c24&color=8d5b3f)][Discord]
+[![Discord](https://img.shields.io/discord/865004050357682246?logo=discord&logoColor=white)](https://discord.gg/4smxjcheE5)
 
 <hr />
 
 </div>
 
-Bones is a work-in-progress game engine for helping your make real games. This means that we are building real games with it, and everything that we can make game-independent is being put back into bones. The bones framework can be rendered with [Bevy], but is fundamentally engine agnostic and comes with it's own ECS, asset server, and user experience. Bones is officially focused on 2D games, but can be used for 3D games too if you are willing to create custom rendering integrations.
+Initially borne out of [Jumpy](https://github.com/fishfolk/jumpy), Bones will eventually be the engine of choice for all [Fish Folk](https://github.com/fishfolk) games. It is suitable for any other games with similar requirements.
 
-Bones is used in the [Jumpy] game, and will possibly be used in other FishFolk games in the future.
-
-Check out [Fishfolk.org] for more documentation and tutorials.
-
-[fishfolk.org]: https://fishfolk.org
-[bevy]: https://bevyengine.org
-[jumpy]: https://github.com/fishfolk/jumpy
-[discord]: https://discord.gg/4smxjcheE5
-[revolt]: https://weird.dev/invite/ZagXxrS4
+By default Bones is rendered with [Bevy](https://bevyengine.org), but it is fundamentally engine-agnostic and comes with its own lightweight ECS, asset server and user experience. Bones is officially focused on 2D games and models itself after the likes of [Corgi](https://corgi-engine.moremountains.com/). It can however be used for 3D games as well, if you are willing to create custom rendering integrations.
 
 ## Overview
 
 ### Bones ECS
 
-Bones is designed around a simple, custom Entity Component System ( ECS ), designed to make it easier to get a few features that are important to us:
+Bones is designed around a simple, custom Entity Component System (ECS), designed to make it easier to get a few features that are important to us:
 
 - **Determinism:** Bones ECS is deterministic by default, making it easier to get a re-producible and predictable gameplay.
 - **Snapshot/Restore:** The Bones ECS world can be trivially snapshot and restored.
@@ -95,13 +87,13 @@ The scripting system is not limited to Lua. Using the simple dynamic API to [`bo
 create your own integrations to any language or system you desire.
 
 The scripting system is new and work-in-progress, but all of the major things have been
-successfully implemented, and it is going to be actively used in [Jumpy].
+successfully implemented, and it is going to be actively used in Jumpy.
 
 [`piccolo`]: https://github.com/kyren/piccolo/
 
 ## Contributing
 
-If you would like to contribute, feel free to reach out on our [Discord] or [Revolt] server to ask questions!
+If you would like to contribute, feel free to reach out on our [Discord](https://discord.gg/4smxjcheE5) or [Revolt](https://weird.dev/invite/ZagXxrS4) server to ask questions!
 
 We also use [TODO Issue][tdi] to automatically create issues from all of our `TODO` comments in code. You can check out the [todo issue list][tdil] to see if there's any thing you'd like to take a hack at.
 
@@ -114,5 +106,6 @@ Our architecure has many things in common with these other awesome projects:
 
 - [Gamercade](https://github.com/gamercade-io/) / wasm4
 - [Ambient](https://github.com/AmbientRun/Ambient)
+- [flecs-polyglot](https://github.com/flecs-hub/flecs-polyglot)
 - [Tangle](https://github.com/kettle11/tangle)
 - [Godot sandbox #5010](https://github.com/godotengine/godot-proposals/issues/5010)
