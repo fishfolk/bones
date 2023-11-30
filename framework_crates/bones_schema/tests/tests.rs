@@ -97,7 +97,7 @@ fn ptr_cast() {
     // Finally, we can conver the box to the inner type, if we know what it is. This will panic if
     // the schema doesn't match.
     let ptr = SchemaBox::new(String::from("hello"));
-    let inner = ptr.into_inner::<String>();
+    let inner = ptr.cast_into::<String>();
     assert_eq!(inner, "hello");
 }
 

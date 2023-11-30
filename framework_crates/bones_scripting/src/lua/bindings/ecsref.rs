@@ -94,7 +94,7 @@ impl EcsRefBorrowMut<'_> {
 #[derive(Clone)]
 pub enum EcsRefData {
     /// A resource ref.
-    Resource(UntypedAtomicResource),
+    Resource(AtomicUntypedResource),
     /// A component ref.
     Component(ComponentRef),
     /// An asset ref.
@@ -106,7 +106,7 @@ pub enum EcsRefData {
 
 /// A kind of borrow into an [`EcsRef`].
 pub enum EcsRefBorrowKind<'a> {
-    Resource(AtomicSchemaRef<'a>),
+    Resource(Ref<'a, Option<SchemaBox>>),
     Component(ComponentBorrow<'a>),
     Free(Ref<'a, SchemaBox>),
     Asset(Option<MappedRef<'a, Cid, LoadedAsset, SchemaBox>>),
@@ -115,6 +115,7 @@ pub enum EcsRefBorrowKind<'a> {
 /// An error that occurs when borrowing an [`EcsRef`].
 #[derive(Debug)]
 pub enum EcsRefBorrowError {
+    MissingResource,
     MissingComponent {
         entity: Entity,
         component_name: &'static str,
@@ -135,6 +136,9 @@ impl std::fmt::Display for EcsRefBorrowError {
             ),
             EcsRefBorrowError::AssetNotLoaded => write!(f, "Asset not loaded"),
             EcsRefBorrowError::FieldNotFound(field) => write!(f, "Field not found: {field}"),
+            EcsRefBorrowError::MissingResource => {
+                write!(f, "Resource not in world.")
+            }
         }
     }
 }
@@ -146,7 +150,10 @@ impl EcsRefBorrowKind<'_> {
     /// that is not set for a given entity.
     pub fn schema_ref(&self) -> Result<SchemaRef, EcsRefBorrowError> {
         match self {
-            EcsRefBorrowKind::Resource(r) => Ok(r.schema_ref()),
+            EcsRefBorrowKind::Resource(r) => Ok(r
+                .as_ref()
+                .ok_or(EcsRefBorrowError::MissingResource)?
+                .as_ref()),
             EcsRefBorrowKind::Component(c) => {
                 c.borrow
                     .get_ref(c.entity)
@@ -178,7 +185,7 @@ pub struct ComponentBorrowMut<'a> {
 
 /// A kind of mutable borrow of an [`EcsRef`].
 pub enum EcsRefBorrowMutKind<'a> {
-    Resource(AtomicSchemaRefMut<'a>),
+    Resource(RefMut<'a, Option<SchemaBox>>),
     Component(ComponentBorrowMut<'a>),
     Free(RefMut<'a, SchemaBox>),
     Asset(Option<MappedRefMut<'a, Cid, LoadedAsset, SchemaBox>>),
@@ -191,7 +198,10 @@ impl EcsRefBorrowMutKind<'_> {
     /// that is not set for a given entity.
     pub fn schema_ref_mut(&mut self) -> Result<SchemaRefMut, EcsRefBorrowError> {
         match self {
-            EcsRefBorrowMutKind::Resource(r) => Ok(r.schema_ref_mut()),
+            EcsRefBorrowMutKind::Resource(r) => Ok(r
+                .as_mut()
+                .ok_or(EcsRefBorrowError::MissingResource)?
+                .as_mut()),
             EcsRefBorrowMutKind::Component(c) => {
                 c.borrow
                     .get_ref_mut(c.entity)

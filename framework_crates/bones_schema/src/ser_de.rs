@@ -571,7 +571,7 @@ map:
         let data = SchemaDeserializer(MyData::schema())
             .deserialize(deserializer)
             .unwrap()
-            .into_inner::<MyData>();
+            .cast_into::<MyData>();
 
         assert_eq!(data.name, "John");
         assert_eq!(data.age.0, 8);

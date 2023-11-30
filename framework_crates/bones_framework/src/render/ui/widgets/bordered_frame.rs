@@ -269,6 +269,7 @@ impl BorderedFramePrepared {
                 map.get_temp::<AtomicResource<EguiTextures>>(egui::Id::null())
                     .unwrap()
                     .borrow()
+                    .unwrap()
                     .get(self.frame.bg_handle)
             });
             let shape = self.frame.paint(texture, paint_rect);

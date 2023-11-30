@@ -24,7 +24,7 @@ impl std::fmt::Debug for World {
 
 impl Default for World {
     fn default() -> Self {
-        let mut resources = Resources::new();
+        let resources = Resources::new();
 
         // Always initialize an Entities resource
         resources.insert(Entities::default());
@@ -42,16 +42,30 @@ impl World {
         Self::default()
     }
 
+    /// Create a new world that uses the provided entities resource.
+    ///
+    /// This allows multiple worlds to avoid allocating the same entity IDs.
+    pub fn with_entities(entities: AtomicResource<Entities>) -> Self {
+        let resources = Resources::new();
+        resources
+            .untyped()
+            .insert_cell(entities.into_untyped())
+            .unwrap();
+        World {
+            resources,
+            components: default(),
+        }
+    }
+
     /// Remove the component info for dead entities.
     ///
     /// This should be called every game frame to cleanup entities that have been killed.
     ///
     /// This will remove the component storage for all killed entities, and allow their slots to be
     /// re-used for any new entities.
-    pub fn maintain(&mut self) {
+    pub fn maintain(&self) {
         let mut entities = self.resources.get_mut::<Entities>().unwrap();
-
-        for components in &mut self.components.components.values_mut() {
+        for components in self.components.components.read_only_view().values() {
             let mut components = components.borrow_mut();
             let killed = entities.killed();
             for &entity in killed {
@@ -68,7 +82,7 @@ impl World {
     /// Run a system once.
     ///
     /// This is good for initializing the world with setup systems.
-    pub fn run_system<'system, R, In, Out, S>(&mut self, system: S, input: In) -> Out
+    pub fn run_system<'system, R, In, Out, S>(&self, system: S, input: In) -> Out
     where
         In: 'system,
         Out: 'system,
@@ -76,40 +90,11 @@ impl World {
         S::Sys: 'system,
     {
         let mut s = system.system();
-
-        s.initialize(self);
-        s.run(self, input)
-    }
-
-    /// Run a system once, assuming any necessary initialization has already been performed for that
-    /// system.
-    ///
-    /// This **will not** intialize the system, like [`run_system()`][Self::run_system] will, but it
-    /// only requires an immutable reference to the world.
-    ///
-    /// # Panics
-    ///
-    /// Panics may occur if you pass in a system, for example, that takes a component type argument
-    /// and that component has not been initialized yet.
-    ///
-    /// If all the system parameters have already been initialized, by calling
-    /// [`initialize()`][System::initialize] on the system, then this will work fine.
-    ///
-    /// You can also use [`world.init_param()`][Self::init_param] to manually initialize specific
-    /// parameters if you know which ones will need to be initialized.
-    pub fn run_initialized_system<'system, Args, In, Out, S>(&self, system: S, input: In) -> Out
-    where
-        In: 'system,
-        Out: 'system,
-        S: IntoSystem<Args, In, Out>,
-        S::Sys: 'system,
-    {
-        let mut s = system.system();
         s.run(self, input)
     }
 
     /// Initialize a resource of type `T` by inserting it's default value.
-    pub fn init_resource<R: HasSchema + FromWorld>(&mut self) -> RefMut<'_, R> {
+    pub fn init_resource<R: HasSchema + FromWorld>(&mut self) -> RefMut<R> {
         if unlikely(!self.resources.contains::<R>()) {
             let value = R::from_world(self);
             self.resources.insert(value);
@@ -117,18 +102,8 @@ impl World {
         self.resource_mut()
     }
 
-    /// Initialize a system parameter.
-    ///
-    /// It is not necessary to do this manually unless you are going to run a system using
-    /// [`world.run_initialized_system()`][Self::run_initialized_system()] and you need to make sure
-    /// one of it's parameters are pre-initialized.
-    pub fn init_param<P: SystemParam>(&mut self) -> &mut Self {
-        P::initialize(self);
-        self
-    }
-
     /// Insert a resource.
-    pub fn insert_resource<R: HasSchema>(&mut self, resource: R) -> Option<AtomicResource<R>> {
+    pub fn insert_resource<R: HasSchema>(&mut self, resource: R) -> Option<R> {
         self.resources.insert(resource)
     }
 
@@ -151,7 +126,7 @@ impl World {
     /// # Panics
     /// Panics if the resource does not exist in the store.
     #[track_caller]
-    pub fn resource_mut<T: HasSchema>(&mut self) -> RefMut<T> {
+    pub fn resource_mut<T: HasSchema>(&self) -> RefMut<T> {
         match self.resources.get_mut::<T>() {
             Some(r) => r,
             None => panic!(
@@ -179,11 +154,11 @@ impl World {
 /// This can be helpful for complex initialization or context-aware defaults.
 pub trait FromWorld {
     /// Creates `Self` using data from the given [`World`].
-    fn from_world(world: &mut World) -> Self;
+    fn from_world(world: &World) -> Self;
 }
 
 impl<T: Default> FromWorld for T {
-    fn from_world(_world: &mut World) -> Self {
+    fn from_world(_world: &World) -> Self {
         T::default()
     }
 }
@@ -272,7 +247,7 @@ mod tests {
 
     #[test]
     fn sanity_check() {
-        let mut world = World::new();
+        let world = World::new();
 
         world.run_system(setup_world, ());
 
@@ -289,11 +264,11 @@ mod tests {
 
     #[test]
     fn snapshot() {
-        let mut world1 = World::new();
+        let world1 = World::new();
         world1.run_system(setup_world, ());
 
         // Snapshot world1
-        let mut snap = world1.clone();
+        let snap = world1.clone();
 
         // Make sure the snapshot represents world1's state
         snap.run_system(test_after_setup_state, ());
@@ -332,7 +307,7 @@ mod tests {
     #[schema(opaque, no_default)]
     struct TestFromWorld(u32);
     impl FromWorld for TestFromWorld {
-        fn from_world(world: &mut World) -> Self {
+        fn from_world(world: &World) -> Self {
             let b = world.resource::<TestResource>();
             Self(b.0)
         }

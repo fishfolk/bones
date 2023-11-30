@@ -27,15 +27,13 @@ pub fn metatable(ctx: Context) -> Table {
             let schema = schema.downcast_static::<&Schema>()?;
 
             world.with(|world| {
-                let cell = world.resources.untyped().get_cell(schema.id());
-                if let Some(cell) = cell {
-                    let ecsref = EcsRef {
-                        data: EcsRefData::Resource(cell),
-                        path: default(),
-                    }
-                    .into_value(ctx);
-                    stack.push_front(ecsref);
+                let cell = world.resources.untyped().get_cell(schema);
+                let ecsref = EcsRef {
+                    data: EcsRefData::Resource(cell),
+                    path: default(),
                 }
+                .into_value(ctx);
+                stack.push_front(ecsref);
             });
 
             Ok(CallbackReturn::Return)
@@ -47,15 +45,10 @@ pub fn metatable(ctx: Context) -> Table {
             ctx,
             "__index",
             AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-                let (world, key): (&WorldRef, lua::String) = stack.consume(ctx)?;
+                let (_world, key): (&WorldRef, lua::String) = stack.consume(ctx)?;
 
                 #[allow(clippy::single_match)]
                 match key.as_bytes() {
-                    b"len" => {
-                        stack.push_front(Value::Integer(
-                            world.with(|world| world.resources.len()) as i64
-                        ));
-                    }
                     b"get" => {
                         stack.push_front(ctx.state.registry.fetch(&get_callback).into());
                     }

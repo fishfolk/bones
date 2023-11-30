@@ -37,19 +37,7 @@ impl Default for SystemStages {
 }
 
 impl SystemStages {
-    /// Initialize the systems in the stages agains the [`World`].
-    ///
-    /// This must be called once before calling [`run()`][Self::run].
-    pub fn initialize_systems(&mut self, world: &mut World) {
-        for stage in &mut self.stages {
-            stage.initialize(world);
-        }
-    }
-
     /// Execute the systems on the given `world`.
-    ///
-    /// > **Note:** You must call [`initialize_systems()`][Self::initialize_systems] once before
-    /// > calling `run()` one or more times.
     pub fn run(&mut self, world: &mut World) {
         // If we haven't run our startup systems yet
         if !self.has_started {
@@ -58,8 +46,7 @@ impl SystemStages {
 
             // For each startup system
             for system in &mut self.startup_systems {
-                // Initialize and run the system
-                system.initialize(world);
+                // Run the system
                 system.run(world, ());
             }
 
@@ -80,7 +67,7 @@ impl SystemStages {
         world.maintain();
 
         // Remove the current system stage resource
-        world.resources.remove_cell::<CurrentSystemStage>();
+        world.resources.remove::<CurrentSystemStage>();
     }
 
     /// Create a [`SystemStages`] collection, initialized with a stage for each [`CoreStage`].
@@ -173,14 +160,7 @@ pub trait SystemStage: Sync + Send {
     /// The human-readable name for the stage, used for error messages when something goes wrong.
     fn name(&self) -> String;
     /// Execute the systems on the given `world`.
-    ///
-    /// > **Note:** You must call [`initialize()`][Self::initialize] once before calling `run()` one
-    /// > or more times.
-    fn run(&mut self, world: &mut World);
-    /// Initialize the contained systems for the given `world`.
-    ///
-    /// Must be called once before calling [`run()`][Self::run].
-    fn initialize(&mut self, world: &mut World);
+    fn run(&mut self, world: &World);
 
     /// Add a system to this stage.
     fn add_system(&mut self, system: StaticSystem<(), ()>);
@@ -218,29 +198,18 @@ impl SystemStage for SimpleSystemStage {
         self.name.clone()
     }
 
-    fn run(&mut self, world: &mut World) {
+    fn run(&mut self, world: &World) {
         // Run the systems
         for system in &mut self.systems {
             system.run(world, ());
         }
 
         // Drain the command queue
-        {
-            if let Some(command_queue) = world.resources.get_cell::<CommandQueue>() {
-                let mut command_queue = command_queue.borrow_mut();
-
-                for mut system in command_queue.queue.drain(..) {
-                    system.initialize(world);
-                    system.run(world, ());
-                }
+        let queue = world.resources.get_mut::<CommandQueue>();
+        if let Some(mut command_queue) = queue {
+            for mut system in command_queue.queue.drain(..) {
+                system.run(world, ());
             }
-        }
-    }
-
-    fn initialize(&mut self, world: &mut World) {
-        world.init_resource::<CommandQueue>();
-        for system in &mut self.systems {
-            system.initialize(world);
         }
     }
 
@@ -333,13 +302,13 @@ impl<'a> SystemParam for Commands<'a> {
     type State = AtomicResource<CommandQueue>;
     type Param<'s> = Commands<'s>;
 
-    fn initialize(_world: &mut World) {}
-
     fn get_state(world: &World) -> Self::State {
-        world.resources.get_cell::<CommandQueue>().unwrap()
+        let cell = world.resources.get_cell::<CommandQueue>();
+        cell.init(world);
+        cell
     }
 
     fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
-        Commands(state.borrow_mut())
+        Commands(state.borrow_mut().unwrap())
     }
 }

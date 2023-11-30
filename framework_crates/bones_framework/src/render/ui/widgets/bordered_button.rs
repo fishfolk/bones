@@ -202,6 +202,7 @@ impl<'a> Widget for BorderedButton<'a> {
                     map.get_temp::<AtomicResource<EguiTextures>>(egui::Id::null())
                         .unwrap()
                         .borrow()
+                        .unwrap()
                         .get(border.image)
                 });
                 ui.painter()
