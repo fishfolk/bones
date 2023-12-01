@@ -416,146 +416,137 @@
 <a href="#416" id="416">416</a>
 <a href="#417" id="417">417</a>
 <a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! World resource storage.
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
-<span class="kw">use </span>atomicell::borrow::{AtomicBorrow, AtomicBorrowMut};
+<span class="kw">use </span>once_map::OnceMap;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
+<span class="doccomment">/// An untyped, atomic resource cell.
+</span><span class="kw">pub type </span>AtomicUntypedResource = Arc&lt;UntypedResource&gt;;
+
 <span class="doccomment">/// An untyped resource that may be inserted into [`UntypedResources`].
-</span><span class="attr">#[derive(Clone)]
-</span><span class="kw">pub struct </span>UntypedAtomicResource {
-    cell: Arc&lt;AtomicCell&lt;SchemaBox&gt;&gt;,
+///
+/// This is fundamentally a [`Arc&lt;AtomicCell&lt;Option&lt;SchemaBox&gt;&gt;&gt;`] and thus represents
+/// a cell that may or may not contain a resource of it&#39;s schema.
+</span><span class="kw">pub struct </span>UntypedResource {
+    cell: AtomicCell&lt;<span class="prelude-ty">Option</span>&lt;SchemaBox&gt;&gt;,
     schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
 }
 
-<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>UntypedAtomicResource {
+<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>UntypedResource {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        f.debug_struct(<span class="string">&quot;UntypedAtomicResource&quot;</span>)
-            .finish_non_exhaustive()
+        f.debug_struct(<span class="string">&quot;UntypedResource&quot;</span>).finish_non_exhaustive()
     }
 }
 
-<span class="kw">impl </span>UntypedAtomicResource {
-    <span class="doccomment">/// Creates a new [`UntypedAtomicResource`] storing the given data.
-    </span><span class="kw">pub fn </span>new(resource: SchemaBox) -&gt; <span class="self">Self </span>{
+<span class="kw">impl </span>UntypedResource {
+    <span class="doccomment">/// Initialize a new, empty [`UntypedResource`].
+    </span><span class="kw">pub fn </span>empty(schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            schema: resource.schema(),
-            cell: Arc::new(AtomicCell::new(resource)),
+            cell: AtomicCell::new(<span class="prelude-val">None</span>),
+            schema,
         }
     }
 
-    <span class="doccomment">/// Create a new [`UntypedAtomicResource`] for the given schema, initially populated with the default
-    /// value for the schema.
-    </span><span class="kw">pub fn </span>from_schema(schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Creates a new [`UntypedResource`] storing the given data.
+    </span><span class="kw">pub fn </span>new(resource: SchemaBox) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            cell: Arc::new(AtomicCell::new(SchemaBox::default(schema))),
+            schema: resource.schema(),
+            cell: AtomicCell::new(<span class="prelude-val">Some</span>(resource)),
+        }
+    }
+
+    <span class="doccomment">/// Create a new [`UntypedResource`] for the given schema, initially populated with the default
+    /// value for the schema.
+    </span><span class="kw">pub fn </span>from_default(schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            cell: AtomicCell::new(<span class="prelude-val">Some</span>(SchemaBox::default(schema))),
             schema,
         }
     }
 
     <span class="doccomment">/// Clone the inner data, creating a new copy instead of returning another handle the the same
     /// data, as the normal `clone()` implementation does.
-    </span><span class="kw">pub fn </span>clone_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            cell: Arc::new(AtomicCell::new((<span class="kw-2">*</span><span class="self">self</span>.cell.borrow()).clone())),
-            schema: <span class="self">self</span>.schema,
-        }
+    </span><span class="kw">pub fn </span>clone_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaBox&gt; {
+        (<span class="kw-2">*</span><span class="self">self</span>.cell.borrow()).clone()
+    }
+
+    <span class="doccomment">/// Insert resource data into the cell, returning the previous data.
+    /// # Errors
+    /// Errors if the schema of the data does not match that of this cell.
+    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;</span><span class="self">self</span>, data: SchemaBox) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SchemaBox&gt;, SchemaMismatchError&gt; {
+        <span class="self">self</span>.schema.ensure_match(data.schema())<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>data = <span class="prelude-val">Some</span>(data);
+        std::mem::swap(<span class="kw-2">&amp;mut </span>data, <span class="kw-2">&amp;mut *</span><span class="self">self</span>.cell.borrow_mut());
+        <span class="prelude-val">Ok</span>(data)
+    }
+
+    <span class="doccomment">/// Remove the resource data, returning what was stored in it.
+    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaBox&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>data = <span class="prelude-val">None</span>;
+        std::mem::swap(<span class="kw-2">&amp;mut </span>data, <span class="kw-2">&amp;mut *</span><span class="self">self</span>.cell.borrow_mut());
+        data
     }
 
     <span class="doccomment">/// Borrow the resource.
-    </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicSchemaRef {
-        <span class="kw">let </span>(reference, borrow) = Ref::into_split(<span class="self">self</span>.cell.borrow());
-        <span class="comment">// SOUND: we keep the borrow along with the reference so that the pointer remains valid.
-        </span><span class="kw">let </span>schema_ref = <span class="kw">unsafe </span>{ reference.as_ref() }.as_ref();
-        AtomicSchemaRef { schema_ref, borrow }
+    </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ref&lt;<span class="prelude-ty">Option</span>&lt;SchemaBox&gt;&gt; {
+        <span class="self">self</span>.cell.borrow()
     }
 
     <span class="doccomment">/// Mutably borrow the resource.
-    </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicSchemaRefMut {
-        <span class="kw">let </span>(<span class="kw-2">mut </span>reference, borrow) = RefMut::into_split(<span class="self">self</span>.cell.borrow_mut());
-        <span class="comment">// SOUND: we keep the borrow along with the reference so that the pointer remains valid.
-        </span><span class="kw">let </span>schema_ref = <span class="kw">unsafe </span>{ reference.as_mut() }.as_mut();
-        AtomicSchemaRefMut { schema_ref, borrow }
-    }
-
-    <span class="doccomment">/// Try to extract the inner schema box, if this is the reference to atomic resource.
-    </span><span class="kw">pub fn </span>try_into_inner(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaBox, <span class="self">Self</span>&gt; {
-        <span class="kw">let </span>schema = <span class="self">self</span>.schema;
-        <span class="kw">let </span>cell =
-            Arc::try_unwrap(<span class="self">self</span>.cell).map_err(|cell| UntypedAtomicResource { cell, schema })<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(cell.into_inner())
+    </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;<span class="prelude-ty">Option</span>&lt;SchemaBox&gt;&gt; {
+        <span class="self">self</span>.cell.borrow_mut()
     }
 
     <span class="doccomment">/// Get the schema of the resource.
     </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
         <span class="self">self</span>.schema
-    }
-}
-
-<span class="doccomment">/// An atomic borrow of a [`SchemaRef`].
-</span><span class="kw">pub struct </span>AtomicSchemaRef&lt;<span class="lifetime">&#39;a</span>&gt; {
-    schema_ref: SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;,
-    borrow: AtomicBorrow&lt;<span class="lifetime">&#39;a</span>&gt;,
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; AtomicSchemaRef&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="doccomment">/// Get a [`SchemaRef`] that points to the inner value.
-    ///
-    /// &gt; **Note:** Ideally this method would be unnecessary, but it is impossible to properly
-    /// implement [`Deref`][std::ops::Deref] because deref must return a reference and we actually
-    /// need to return a [`SchemaRef`] with a shortened lifetime, binding it to this
-    /// [`AtomicSchemaRef`] borrow.
-    </span><span class="kw">pub fn </span>schema_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">&#39;_</span>&gt; {
-        <span class="self">self</span>.schema_ref
-    }
-
-    <span class="doccomment">/// # Safety
-    /// You must know that T represents the data in the [`SchemaRef`].
-    </span><span class="kw">pub unsafe fn </span>deref&lt;T: <span class="lifetime">&#39;static</span>&gt;(<span class="self">self</span>) -&gt; Ref&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-        Ref::with_borrow(<span class="self">self</span>.schema_ref.cast_into_unchecked(), <span class="self">self</span>.borrow)
-    }
-
-    <span class="doccomment">/// Convert into typed [`Ref`]. This panics if the schema doesn&#39;t match.
-    </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>typed&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; Ref&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-        <span class="macro">assert_eq!</span>(T::schema(), <span class="self">self</span>.schema_ref.schema(), <span class="string">&quot;Schema mismatch&quot;</span>);
-        <span class="comment">// SOUND: we&#39;ve checked for matching schema.
-        </span><span class="kw">unsafe </span>{ <span class="self">self</span>.deref() }
-    }
-}
-
-<span class="doccomment">/// An atomic borrow of a [`SchemaRefMut`].
-</span><span class="kw">pub struct </span>AtomicSchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    schema_ref: SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;,
-    borrow: AtomicBorrowMut&lt;<span class="lifetime">&#39;a</span>&gt;,
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; AtomicSchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="doccomment">/// Get a [`SchemaRefMut`] that points to the inner value.
-    ///
-    /// &gt; **Note:** Ideally this method would be unnecessary, but it is impossible to properly
-    /// implement [`DerefMut`][std::ops::Deref] because deref must return a reference and we actually
-    /// need to return a [`SchemaRefMut`] with a shortened lifetime, binding it to this
-    /// [`AtomicSchemaRefMut`] borrow.
-    </span><span class="kw">pub fn </span>schema_ref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">&#39;_</span>&gt; {
-        <span class="self">self</span>.schema_ref.reborrow()
-    }
-
-    <span class="doccomment">/// # Safety
-    /// You must know that T represents the data in the [`SchemaRefMut`].
-    </span><span class="kw">pub unsafe fn </span>deref_mut&lt;T: <span class="lifetime">&#39;static</span>&gt;(<span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-        RefMut::with_borrow(<span class="self">self</span>.schema_ref.cast_into_mut_unchecked(), <span class="self">self</span>.borrow)
-    }
-
-    <span class="doccomment">/// Convert into typed [`RefMut`]. This panics if the schema doesn&#39;t match.
-    </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>typed&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-        <span class="macro">assert_eq!</span>(T::schema(), <span class="self">self</span>.schema_ref.schema(), <span class="string">&quot;Schema mismatch&quot;</span>);
-        <span class="comment">// SOUND: we&#39;ve checked for matching schema.
-        </span><span class="kw">unsafe </span>{ <span class="self">self</span>.deref_mut() }
     }
 }
 
@@ -567,19 +558,41 @@
 /// should use [`Resources`] instead.
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>UntypedResources {
-    resources: HashMap&lt;SchemaId, UntypedAtomicResource&gt;,
+    resources: OnceMap&lt;SchemaId, AtomicUntypedResource&gt;,
 }
 
 <span class="kw">impl </span>Clone <span class="kw">for </span>UntypedResources {
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>resources = <span class="self">self
-            </span>.resources
-            .iter()
-            .map(|(k, v)| (<span class="kw-2">*</span>k, v.clone_data()))
-            .collect();
-        <span class="self">Self </span>{ resources }
+        <span class="kw">let </span>binding = <span class="self">self</span>.resources.read_only_view();
+        <span class="kw">let </span>resources = binding.iter().map(|(<span class="kw">_</span>, v)| (v.schema, v.clone_data()));
+
+        <span class="kw">let </span>new_resources = OnceMap::default();
+        <span class="kw">for </span>(schema, resource) <span class="kw">in </span>resources {
+            new_resources.map_insert(
+                schema.id(),
+                |<span class="kw">_</span>| Arc::new(UntypedResource::empty(schema)),
+                |<span class="kw">_</span>, cell| {
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(resource) = resource {
+                        cell.insert(resource).unwrap();
+                    }
+                },
+            );
+        }
+        <span class="self">Self </span>{
+            resources: new_resources,
+        }
     }
 }
+
+<span class="doccomment">/// Error thrown when a resource cell cannot be inserted because it already exists.
+</span><span class="attr">#[derive(Debug, Clone, Copy)]
+</span><span class="kw">pub struct </span>CellAlreadyPresentError;
+<span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>CellAlreadyPresentError {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        f.write_str(<span class="string">&quot;Resource cell already present&quot;</span>)
+    }
+}
+<span class="kw">impl </span>std::error::Error <span class="kw">for </span>CellAlreadyPresentError {}
 
 <span class="kw">impl </span>UntypedResources {
     <span class="doccomment">/// Create an empty [`UntypedResources`].
@@ -587,57 +600,52 @@
         <span class="self">Self</span>::default()
     }
 
-    <span class="doccomment">/// Get the number of resources in the store.
-    </span><span class="attr">#[must_use]
-    </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.resources.len()
-    }
-
-    <span class="doccomment">/// Returns whether the store is empty.
-    </span><span class="attr">#[must_use]
-    </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="self">self</span>.len() == <span class="number">0
-    </span>}
-
-    <span class="doccomment">/// Insert a resource.
-    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: SchemaBox) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedAtomicResource&gt; {
-        <span class="kw">let </span>id = resource.schema().id();
-        <span class="self">self</span>.resources
-            .insert(id, UntypedAtomicResource::new(resource))
-    }
-
-    <span class="doccomment">/// Check whether or not the resoruce with the given ID is present.
-    </span><span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, id: SchemaId) -&gt; bool {
+    <span class="doccomment">/// Check whether or not a cell for the given resource has been initialized yet.
+    </span><span class="kw">pub fn </span>contains_cell(<span class="kw-2">&amp;</span><span class="self">self</span>, id: SchemaId) -&gt; bool {
         <span class="self">self</span>.resources.contains_key(<span class="kw-2">&amp;</span>id)
     }
 
-    <span class="doccomment">/// Insert a resource.
-    </span><span class="kw">pub fn </span>insert_cell(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        resource: UntypedAtomicResource,
-    ) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedAtomicResource&gt; {
-        <span class="kw">let </span>id = resource.schema().id();
-        <span class="self">self</span>.resources.insert(id, resource)
+    <span class="doccomment">/// Check whether or not the resource with the given ID is present.
+    </span><span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, id: SchemaId) -&gt; bool {
+        <span class="self">self</span>.resources
+            .map_get(<span class="kw-2">&amp;</span>id, |<span class="kw">_</span>, cell| cell.borrow().is_some())
+            .unwrap_or_default()
     }
 
-    <span class="doccomment">/// Get a cell containing the resource data pointer for the given ID.
-    </span><span class="kw">pub fn </span>get_cell(<span class="kw-2">&amp;</span><span class="self">self</span>, schema_id: SchemaId) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedAtomicResource&gt; {
-        <span class="self">self</span>.resources.get(<span class="kw-2">&amp;</span>schema_id).cloned()
+    <span class="doccomment">/// This is an advanced use-case function that allows you to insert a resource cell directly.
+    ///
+    /// Normally this is completely unnecessary, because cells are automatically inserted lazily as
+    /// requested.
+    ///
+    /// Inserting this manually is used internally for shared resources, by inserting the same
+    /// cell into multiple worlds.
+    ///
+    /// # Errors
+    /// This will error if there is already a cell for the resource present. You cannot add a new
+    /// cell once one has already been inserted.
+    </span><span class="kw">pub fn </span>insert_cell(<span class="kw-2">&amp;</span><span class="self">self</span>, cell: AtomicUntypedResource) -&gt; <span class="prelude-ty">Result</span>&lt;(), CellAlreadyPresentError&gt; {
+        <span class="kw">let </span>schema = cell.schema;
+        <span class="kw">if </span><span class="self">self</span>.resources.contains_key(<span class="kw-2">&amp;</span>schema.id()) {
+            <span class="prelude-val">Err</span>(CellAlreadyPresentError)
+        } <span class="kw">else </span>{
+            <span class="self">self</span>.resources.insert(schema.id(), |<span class="kw">_</span>| cell);
+            <span class="prelude-val">Ok</span>(())
+        }
     }
 
-    <span class="doccomment">/// Get a reference to an untyped resource.
-    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, schema_id: SchemaId) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicSchemaRef&gt; {
-        <span class="self">self</span>.resources.get(<span class="kw-2">&amp;</span>schema_id).map(|x| x.borrow())
+    <span class="doccomment">/// Borrow the resource for the given schema.
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="kw-2">&amp;</span>UntypedResource {
+        <span class="self">self</span>.resources
+            .insert(schema.id(), |<span class="kw">_</span>| Arc::new(UntypedResource::empty(schema)))
     }
 
-    <span class="doccomment">/// Get a mutable reference to an untyped resource.
-    </span><span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, schema_id: SchemaId) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicSchemaRefMut&gt; {
-        <span class="self">self</span>.resources.get(<span class="kw-2">&amp;</span>schema_id).map(|x| x.borrow_mut())
-    }
-
-    <span class="doccomment">/// Remove a resource.
-    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: SchemaId) -&gt; <span class="prelude-ty">Option</span>&lt;UntypedAtomicResource&gt; {
-        <span class="self">self</span>.resources.remove(<span class="kw-2">&amp;</span>id)
+    <span class="doccomment">/// Get a cell for the resource with the given schema.
+    </span><span class="kw">pub fn </span>get_cell(<span class="kw-2">&amp;</span><span class="self">self</span>, schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; AtomicUntypedResource {
+        <span class="self">self</span>.resources.map_insert(
+            schema.id(),
+            |<span class="kw">_</span>| Arc::new(UntypedResource::empty(schema)),
+            |<span class="kw">_</span>, cell| cell.clone(),
+        )
     }
 }
 
@@ -655,44 +663,13 @@
         <span class="self">Self</span>::default()
     }
 
-    <span class="doccomment">/// Get the number of resources in the store.
-    </span><span class="attr">#[must_use]
-    </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.untyped.len()
-    }
-
-    <span class="doccomment">/// Returns whether the store is empty.
-    </span><span class="attr">#[must_use]
-    </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="self">self</span>.len() == <span class="number">0
-    </span>}
-
     <span class="doccomment">/// Insert a resource.
-    </span><span class="kw">pub fn </span>insert&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: T) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>insert&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, resource: T) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
         <span class="self">self</span>.untyped
+            .get(T::schema())
             .insert(SchemaBox::new(resource))
-            .map(|x| AtomicResource::from_untyped(x))
-    }
-
-    <span class="doccomment">/// Insert a resource cell.
-    </span><span class="kw">pub fn </span>insert_cell&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: AtomicResource&lt;T&gt;) {
-        <span class="self">self</span>.untyped.insert_cell(resource.untyped);
-    }
-
-    <span class="doccomment">/// Borrow a resource.
-    </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;T&gt;&gt; {
-        <span class="self">self</span>.untyped.get(T::schema().id()).map(|x| {
-            <span class="comment">// SOUND: untyped resources returns data matching the schema of T.
-            </span><span class="kw">unsafe </span>{ x.deref() }
-        })
-    }
-
-    <span class="doccomment">/// Mutably borrow a resource.
-    </span><span class="kw">pub fn </span>get_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
-        <span class="self">self</span>.untyped.get_mut(T::schema().id()).map(|x| {
-            <span class="comment">// SOUND: untyped resources returns data matching the schema of T.
-            </span><span class="kw">unsafe </span>{ x.deref_mut() }
-        })
+            .unwrap()
+            .map(|x| x.cast_into())
     }
 
     <span class="doccomment">/// Check whether or not a resource is in the store.
@@ -702,30 +679,53 @@
         <span class="self">self</span>.untyped.resources.contains_key(<span class="kw-2">&amp;</span>T::schema().id())
     }
 
-    <span class="doccomment">/// Gets a clone of the resource cell for the resource of the given type.
-    </span><span class="kw">pub fn </span>get_cell&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;T&gt;&gt; {
-        <span class="kw">let </span>untyped = <span class="self">self</span>.untyped.get_cell(T::schema().id())<span class="question-mark">?</span>;
-
-        <span class="prelude-val">Some</span>(AtomicResource {
-            untyped,
-            _phantom: PhantomData,
-        })
+    <span class="doccomment">/// Remove a resource from the store, if it is present.
+    </span><span class="kw">pub fn </span>remove&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
+        <span class="self">self</span>.untyped
+            .get(T::schema())
+            .remove()
+            <span class="comment">// SOUND: we know the type matches because we retrieve it by it&#39;s schema.
+            </span>.map(|x| <span class="kw">unsafe </span>{ x.cast_into_unchecked() })
     }
 
-    <span class="doccomment">/// Remove a resource from the store.
-    </span><span class="kw">pub fn </span>remove_cell&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;T&gt;&gt; {
-        <span class="kw">let </span>previous = <span class="self">self</span>.untyped.remove(T::schema().id());
-        previous.map(|x| AtomicResource::from_untyped(x))
+    <span class="doccomment">/// Borrow a resource.
+    </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;T&gt;&gt; {
+        <span class="kw">let </span>b = <span class="self">self</span>.untyped.get(T::schema()).borrow();
+        <span class="kw">if </span>b.is_some() {
+            <span class="prelude-val">Some</span>(Ref::map(b, |b| <span class="kw">unsafe </span>{
+                b.as_ref().unwrap().as_ref().cast_into_unchecked()
+            }))
+        } <span class="kw">else </span>{
+            <span class="prelude-val">None
+        </span>}
+    }
+
+    <span class="doccomment">/// Borrow a resource.
+    </span><span class="kw">pub fn </span>get_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
+        <span class="kw">let </span>b = <span class="self">self</span>.untyped.get(T::schema()).borrow_mut();
+        <span class="kw">if </span>b.is_some() {
+            <span class="prelude-val">Some</span>(RefMut::map(b, |b| <span class="kw">unsafe </span>{
+                b.as_mut().unwrap().as_mut().cast_into_mut_unchecked()
+            }))
+        } <span class="kw">else </span>{
+            <span class="prelude-val">None
+        </span>}
+    }
+
+    <span class="doccomment">/// Gets a clone of the resource cell for the resource of the given type.
+    </span><span class="kw">pub fn </span>get_cell&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AtomicResource&lt;T&gt; {
+        <span class="kw">let </span>untyped = <span class="self">self</span>.untyped.get_cell(T::schema()).clone();
+        AtomicResource {
+            untyped,
+            _phantom: PhantomData,
+        }
     }
 
     <span class="doccomment">/// Borrow the underlying [`UntypedResources`] store.
     </span><span class="kw">pub fn </span>untyped(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>UntypedResources {
         <span class="kw-2">&amp;</span><span class="self">self</span>.untyped
     }
-    <span class="doccomment">/// Mutably borrow the underlying [`UntypedResources`] store.
-    </span><span class="kw">pub fn </span>untyped_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>UntypedResources {
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>.untyped
-    }
+
     <span class="doccomment">/// Consume [`Resources`] and extract the underlying [`UntypedResources`].
     </span><span class="kw">pub fn </span>into_untyped(<span class="self">self</span>) -&gt; UntypedResources {
         <span class="self">self</span>.untyped
@@ -740,13 +740,18 @@
 /// [`borrow_mut()`][Self::borrow_mut].
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>AtomicResource&lt;T: HasSchema&gt; {
-    untyped: UntypedAtomicResource,
+    untyped: AtomicUntypedResource,
     _phantom: PhantomData&lt;T&gt;,
 }
 <span class="kw">impl</span>&lt;T: HasSchema + Debug&gt; Debug <span class="kw">for </span>AtomicResource&lt;T&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
         f.write_str(<span class="string">&quot;AtomicResource(&quot;</span>)<span class="question-mark">?</span>;
-        T::fmt(<span class="self">self</span>.untyped.cell.borrow().cast_ref(), f)<span class="question-mark">?</span>;
+        <span class="self">self</span>.untyped
+            .cell
+            .borrow()
+            .as_ref()
+            .map(|x| x.cast_ref::&lt;T&gt;())
+            .fmt(f)<span class="question-mark">?</span>;
         f.write_str(<span class="string">&quot;)&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
@@ -755,48 +760,122 @@
 <span class="kw">impl</span>&lt;T: HasSchema + Default&gt; Default <span class="kw">for </span>AtomicResource&lt;T&gt; {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            untyped: UntypedAtomicResource::new(SchemaBox::new(T::default())),
+            untyped: Arc::new(UntypedResource::new(SchemaBox::new(T::default()))),
             _phantom: Default::default(),
         }
     }
 }
 
 <span class="kw">impl</span>&lt;T: HasSchema&gt; AtomicResource&lt;T&gt; {
-    <span class="doccomment">/// Create a new atomic resource.
-    ///
-    /// This can be inserted into a world by calling `world.resources.insert_cell`.
-    </span><span class="kw">pub fn </span>new(data: T) -&gt; <span class="self">Self </span>{
-        AtomicResource {
-            untyped: UntypedAtomicResource::new(SchemaBox::new(data)),
+    <span class="doccomment">/// Create a new, empty resource cell.
+    </span><span class="kw">pub fn </span>empty() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            untyped: Arc::new(UntypedResource::empty(T::schema())),
             _phantom: PhantomData,
         }
     }
 
-    <span class="doccomment">/// Create from an [`UntypedAtomicResource`].
-    </span><span class="kw">pub fn </span>from_untyped(untyped: UntypedAtomicResource) -&gt; <span class="self">Self </span>{
-        <span class="macro">assert_eq!</span>(T::schema(), untyped.schema);
+    <span class="doccomment">/// Create a new resource cell with the given data.
+    </span><span class="kw">pub fn </span>new(data: T) -&gt; <span class="self">Self </span>{
         AtomicResource {
-            untyped,
+            untyped: Arc::new(UntypedResource::new(SchemaBox::new(data))),
             _phantom: PhantomData,
         }
+    }
+
+    <span class="doccomment">/// Create from an [`UntypedResource`].
+    </span><span class="kw">pub fn </span>from_untyped(untyped: AtomicUntypedResource) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, SchemaMismatchError&gt; {
+        T::schema().ensure_match(untyped.schema)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(AtomicResource {
+            untyped,
+            _phantom: PhantomData,
+        })
+    }
+
+    <span class="doccomment">/// Remove the resource from the cell, leaving the cell empty.
+    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
+        <span class="self">self</span>.untyped
+            .remove()
+            <span class="comment">// SOUND: The untyped data of an atomic resource must always be `T`.
+            </span>.map(|x| <span class="kw">unsafe </span>{ x.cast_into_unchecked() })
     }
 
     <span class="doccomment">/// Lock the resource for reading.
     ///
     /// This returns a read guard, very similar to an [`RwLock`][std::sync::RwLock].
-    </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ref&lt;T&gt; {
+    </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;T&gt;&gt; {
         <span class="kw">let </span>borrow = <span class="self">self</span>.untyped.borrow();
-        <span class="comment">// SOUND: We know that the data pointer is valid for type T.
-        </span><span class="kw">unsafe </span>{ borrow.deref() }
+        <span class="kw">if </span>borrow.is_some() {
+            <span class="prelude-val">Some</span>(Ref::map(borrow, |r| <span class="kw">unsafe </span>{
+                r.as_ref().unwrap().as_ref().cast_into_unchecked()
+            }))
+        } <span class="kw">else </span>{
+            <span class="prelude-val">None
+        </span>}
     }
 
     <span class="doccomment">/// Lock the resource for read-writing.
     ///
     /// This returns a write guard, very similar to an [`RwLock`][std::sync::RwLock].
-    </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;T&gt; {
+    </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
         <span class="kw">let </span>borrow = <span class="self">self</span>.untyped.borrow_mut();
-        <span class="comment">// SOUND: We know that the data pointer is valid for type T.
-        </span><span class="kw">unsafe </span>{ borrow.deref_mut() }
+        <span class="kw">if </span>borrow.is_some() {
+            <span class="prelude-val">Some</span>(RefMut::map(borrow, |r| <span class="kw">unsafe </span>{
+                r.as_mut().unwrap().as_mut().cast_into_mut_unchecked()
+            }))
+        } <span class="kw">else </span>{
+            <span class="prelude-val">None
+        </span>}
+    }
+
+    <span class="doccomment">/// Convert into an untyped resource.
+    </span><span class="kw">pub fn </span>into_untyped(<span class="self">self</span>) -&gt; AtomicUntypedResource {
+        <span class="self">self</span>.untyped
+    }
+}
+
+<span class="kw">impl</span>&lt;T: HasSchema + FromWorld&gt; AtomicResource&lt;T&gt; {
+    <span class="doccomment">/// Initialize the resource using it&#39;s [`FromWorld`] implementation, if it is not present.
+    </span><span class="kw">pub fn </span>init(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World) {
+        <span class="kw">let </span><span class="kw-2">mut </span>borrow = <span class="self">self</span>.untyped.borrow_mut();
+        <span class="kw">if </span>unlikely(borrow.is_none()) {
+            <span class="kw-2">*</span>borrow = <span class="prelude-val">Some</span>(SchemaBox::new(T::from_world(world)))
+        }
+    }
+
+    <span class="doccomment">/// Borrow the resource, initializing it if it doesn&#39;t exist.
+    </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>init_borrow(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World) -&gt; Ref&lt;T&gt; {
+        <span class="kw">let </span>map_borrow = |borrow| {
+            <span class="comment">// SOUND: we know the schema matches.
+            </span>Ref::map(borrow, |b: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;SchemaBox&gt;| <span class="kw">unsafe </span>{
+                b.as_ref().unwrap().as_ref().cast_into_unchecked()
+            })
+        };
+        <span class="kw">let </span>borrow = <span class="self">self</span>.untyped.borrow();
+        <span class="kw">if </span>unlikely(borrow.is_none()) {
+            drop(borrow);
+            {
+                <span class="kw">let </span><span class="kw-2">mut </span>borrow_mut = <span class="self">self</span>.untyped.borrow_mut();
+                <span class="kw-2">*</span>borrow_mut = <span class="prelude-val">Some</span>(SchemaBox::new(T::from_world(world)));
+            }
+
+            map_borrow(<span class="self">self</span>.untyped.borrow())
+        } <span class="kw">else </span>{
+            map_borrow(borrow)
+        }
+    }
+
+    <span class="doccomment">/// Borrow the resource, initializing it if it doesn&#39;t exist.
+    </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>init_borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World) -&gt; RefMut&lt;T&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>borrow = <span class="self">self</span>.untyped.borrow_mut();
+        <span class="kw">if </span>unlikely(borrow.is_none()) {
+            <span class="kw-2">*</span>borrow = <span class="prelude-val">Some</span>(SchemaBox::new(T::from_world(world)));
+        }
+        RefMut::map(borrow, |b| <span class="kw">unsafe </span>{
+            b.as_mut().unwrap().as_mut().cast_into_mut_unchecked()
+        })
     }
 }
 
@@ -814,24 +893,27 @@
         #[repr(C)]
         </span><span class="kw">struct </span>B(u32);
 
-        <span class="kw">let </span><span class="kw-2">mut </span>resources = Resources::new();
+        <span class="kw">let </span>r1 = Resources::new();
 
-        resources.insert(A(String::from(<span class="string">&quot;hi&quot;</span>)));
-        <span class="macro">assert_eq!</span>(resources.get::&lt;A&gt;().unwrap().<span class="number">0</span>, <span class="string">&quot;hi&quot;</span>);
+        r1.insert(A(String::from(<span class="string">&quot;hi&quot;</span>)));
+        <span class="kw">let </span>r1a = r1.get_cell::&lt;A&gt;();
+        <span class="macro">assert_eq!</span>(r1a.borrow().unwrap().<span class="number">0</span>, <span class="string">&quot;hi&quot;</span>);
 
-        <span class="kw">let </span>r2 = resources.clone();
+        <span class="kw">let </span>r2 = r1.clone();
 
-        resources.insert(A(String::from(<span class="string">&quot;bye&quot;</span>)));
-        resources.insert(A(String::from(<span class="string">&quot;world&quot;</span>)));
-        <span class="macro">assert_eq!</span>(resources.get::&lt;A&gt;().unwrap().<span class="number">0</span>, <span class="string">&quot;world&quot;</span>);
+        r1.insert(A(String::from(<span class="string">&quot;bye&quot;</span>)));
+        r1.insert(A(String::from(<span class="string">&quot;world&quot;</span>)));
+        <span class="macro">assert_eq!</span>(r1a.borrow().unwrap().<span class="number">0</span>, <span class="string">&quot;world&quot;</span>);
 
-        <span class="macro">assert_eq!</span>(r2.get::&lt;A&gt;().unwrap().<span class="number">0</span>, <span class="string">&quot;hi&quot;</span>);
+        <span class="kw">let </span>r2a = r2.get_cell::&lt;A&gt;();
+        <span class="macro">assert_eq!</span>(r2a.borrow().unwrap().<span class="number">0</span>, <span class="string">&quot;hi&quot;</span>);
 
-        resources.insert(B(<span class="number">1</span>));
-        <span class="macro">assert_eq!</span>(resources.get::&lt;B&gt;().unwrap().<span class="number">0</span>, <span class="number">1</span>);
-        resources.insert(B(<span class="number">2</span>));
-        <span class="macro">assert_eq!</span>(resources.get::&lt;B&gt;().unwrap().<span class="number">0</span>, <span class="number">2</span>);
-        <span class="macro">assert_eq!</span>(resources.get::&lt;A&gt;().unwrap().<span class="number">0</span>, <span class="string">&quot;world&quot;</span>);
+        r1.insert(B(<span class="number">1</span>));
+        <span class="kw">let </span>r1b = r1.get_cell::&lt;B&gt;();
+        <span class="macro">assert_eq!</span>(r1b.borrow().unwrap().<span class="number">0</span>, <span class="number">1</span>);
+        r1.insert(B(<span class="number">2</span>));
+        <span class="macro">assert_eq!</span>(r1b.borrow().unwrap().<span class="number">0</span>, <span class="number">2</span>);
+        <span class="macro">assert_eq!</span>(r1a.borrow().unwrap().<span class="number">0</span>, <span class="string">&quot;world&quot;</span>);
     }
 }
 </code></pre></div></section></main></body></html>

@@ -566,6 +566,18 @@
 <a href="#566" id="566">566</a>
 <a href="#567" id="567">567</a>
 <a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -587,7 +599,7 @@
 <span class="kw">pub use </span>instant;
 <span class="kw">pub mod </span>time;
 
-<span class="kw">use </span>std::fmt::Debug;
+<span class="kw">use </span>std::{fmt::Debug, sync::Arc};
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
@@ -607,8 +619,6 @@
     </span><span class="kw">pub </span>priority: i32,
     <span class="doccomment">/// The session runner to use for this session.
     </span><span class="kw">pub </span>runner: Box&lt;<span class="kw">dyn </span>SessionRunner&gt;,
-    <span class="doccomment">/// Whether or not the session systems in it&#39;s `stages` have been initialized yet.
-    </span><span class="kw">pub </span>has_initialized: bool,
 }
 
 <span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>Session {
@@ -626,8 +636,19 @@
 
 <span class="kw">impl </span>Session {
     <span class="doccomment">/// Create an empty [`Session`].
-    </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>::default()
+    </span><span class="kw">pub fn </span>new(entities: AtomicResource&lt;Entities&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            world: {
+                <span class="kw">let </span><span class="kw-2">mut </span>w = World::with_entities(entities);
+                w.init_resource::&lt;Time&gt;();
+                w
+            },
+            stages: default(),
+            active: <span class="bool-val">true</span>,
+            visible: <span class="bool-val">true</span>,
+            priority: <span class="number">0</span>,
+            runner: Box::&lt;DefaultSessionRunner&gt;::default(),
+        }
     }
 
     <span class="doccomment">/// Install a plugin.
@@ -651,24 +672,6 @@
     /// This is the same as doing an [`std::mem::swap`] on `self.world`, but it is more explicit.
     </span><span class="kw">pub fn </span>restore(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
         std::mem::swap(<span class="kw-2">&amp;mut </span><span class="self">self</span>.world, world)
-    }
-}
-
-<span class="kw">impl </span>Default <span class="kw">for </span>Session {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            world: {
-                <span class="kw">let </span><span class="kw-2">mut </span>w = World::default();
-                w.init_resource::&lt;Time&gt;();
-                w
-            },
-            stages: default(),
-            active: <span class="bool-val">true</span>,
-            visible: <span class="bool-val">true</span>,
-            priority: <span class="number">0</span>,
-            runner: Box::&lt;DefaultSessionRunner&gt;::default(),
-            has_initialized: <span class="bool-val">false</span>,
-        }
     }
 }
 
@@ -746,7 +749,7 @@
     </span><span class="kw">pub </span>sorted_session_keys: Vec&lt;Ustr&gt;,
     <span class="doccomment">/// Collection of resources that will have a shared instance of each be inserted into each
     /// session automatically.
-    </span><span class="kw">pub </span>shared_resources: Vec&lt;UntypedAtomicResource&gt;,
+    </span><span class="kw">pub </span>shared_resources: Vec&lt;AtomicUntypedResource&gt;,
 }
 
 <span class="kw">impl </span>Game {
@@ -762,26 +765,47 @@
     </span>}
     <span class="doccomment">/// Get the shared resource of a given type out of this [`Game`]s shared resources.
     </span><span class="kw">pub fn </span>shared_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;T&gt;&gt; {
-        <span class="self">self</span>.shared_resources
+        <span class="kw">let </span>res = <span class="self">self
+            </span>.shared_resources
             .iter()
-            .find(|x| x.schema() == T::schema())
-            .map(|x| x.borrow().typed())
+            .find(|x| x.schema() == T::schema())<span class="question-mark">?</span>;
+        <span class="kw">let </span>borrow = res.borrow();
+
+        <span class="kw">if </span>borrow.is_some() {
+            <span class="comment">// SOUND: We know the type matches T
+            </span><span class="prelude-val">Some</span>(Ref::map(borrow, |b| <span class="kw">unsafe </span>{
+                b.as_ref().unwrap().as_ref().cast_into_unchecked()
+            }))
+        } <span class="kw">else </span>{
+            <span class="prelude-val">None
+        </span>}
     }
 
     <span class="doccomment">/// Get the shared resource of a given type out of this [`Game`]s shared resources.
     </span><span class="kw">pub fn </span>shared_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
-        <span class="self">self</span>.shared_resources
+        <span class="kw">let </span>res = <span class="self">self
+            </span>.shared_resources
             .iter()
-            .find(|x| x.schema() == T::schema())
-            .map(|x| x.borrow_mut().typed())
+            .find(|x| x.schema() == T::schema())<span class="question-mark">?</span>;
+        <span class="kw">let </span>borrow = res.borrow_mut();
+
+        <span class="kw">if </span>borrow.is_some() {
+            <span class="comment">// SOUND: We know the type matches T
+            </span><span class="prelude-val">Some</span>(RefMut::map(borrow, |b| <span class="kw">unsafe </span>{
+                b.as_mut().unwrap().as_mut().cast_into_mut_unchecked()
+            }))
+        } <span class="kw">else </span>{
+            <span class="prelude-val">None
+        </span>}
     }
 
     <span class="doccomment">/// Get the shared resource cell of a given type out of this [`Game`]s shared resources.
     </span><span class="kw">pub fn </span>shared_resource_cell&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;T&gt;&gt; {
-        <span class="self">self</span>.shared_resources
+        <span class="kw">let </span>res = <span class="self">self
+            </span>.shared_resources
             .iter()
-            .find(|x| x.schema() == T::schema())
-            .map(|x| AtomicResource::from_untyped(x.clone()))
+            .find(|x| x.schema() == T::schema())<span class="question-mark">?</span>;
+        <span class="prelude-val">Some</span>(AtomicResource::from_untyped(res.clone()).unwrap())
     }
 
     <span class="doccomment">/// Initialize a resource that will be shared across game sessions using it&#39;s [`Default`] value
@@ -798,38 +822,47 @@
     }
 
     <span class="doccomment">/// Insert a resource that will be shared across all game sessions.
+    ///
+    /// &gt; **Note:** This resource will only be visible in sessions that have not already
+    /// &gt; initialized or access a resource of the same type locally.
     </span><span class="kw">pub fn </span>insert_shared_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: T) {
         <span class="comment">// Update an existing resource of the same type.
         </span><span class="kw">for </span>r <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.shared_resources {
             <span class="kw">if </span>r.schema() == T::schema() {
-                <span class="kw-2">*</span>r.borrow_mut().schema_ref_mut().cast_mut() = resource;
+                <span class="kw">let </span><span class="kw-2">mut </span>borrow = r.borrow_mut();
+
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(b) = borrow.as_mut().as_mut() {
+                    <span class="kw-2">*</span>b.cast_mut() = resource;
+                } <span class="kw">else </span>{
+                    <span class="kw-2">*</span>borrow = <span class="prelude-val">Some</span>(SchemaBox::new(resource))
+                }
                 <span class="kw">return</span>;
             }
         }
 
         <span class="comment">// Or insert a new resource if we couldn&#39;t find one
         </span><span class="self">self</span>.shared_resources
-            .push(UntypedAtomicResource::new(SchemaBox::new(resource)));
+            .push(Arc::new(UntypedResource::new(SchemaBox::new(resource))));
     }
 
-    <span class="doccomment">/// Remove a shared resource, if it is present in the world.
-    /// # Panics
-    /// Panics if the resource is set and it&#39;s cell has another handle to it and cannot be
-    /// unwrapped.
-    </span><span class="kw">pub fn </span>remove_shared_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
-        <span class="self">self</span>.shared_resources
-            .iter()
-            .position(|x| x.schema() == T::schema())
-            .map(|idx| {
-                <span class="self">self</span>.shared_resources
-                    .remove(idx)
-                    .try_into_inner()
-                    .unwrap()
-                    .into_inner()
-            })
-    }
+    <span class="comment">// /// Remove a shared resource, if it is present in the world.
+    // /// # Panics
+    // /// Panics if the resource is set and it&#39;s cell has another handle to it and cannot be
+    // /// unwrapped.
+    // pub fn remove_shared_resource&lt;T: HasSchema&gt;(&amp;mut self) -&gt; Option&lt;T&gt; {
+    //     self.shared_resources
+    //         .iter()
+    //         .position(|x| x.schema() == T::schema())
+    //         .map(|idx| {
+    //             self.shared_resources
+    //                 .remove(idx)
+    //                 .try_into_inner()
+    //                 .unwrap()
+    //                 .into_inner()
+    //         })
+    // }
 
-    <span class="doccomment">/// Step the game simulation.
+    </span><span class="doccomment">/// Step the game simulation.
     </span><span class="kw">pub fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>, now: instant::Instant) {
         <span class="comment">// Pull out the game systems so that we can run them on the game
         </span><span class="kw">let </span><span class="kw-2">mut </span>game_systems = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.systems);
@@ -876,13 +909,14 @@
                         .world
                         .resources
                         .untyped()
-                        .contains(r.schema().id())
+                        .contains_cell(r.schema().id())
                     {
                         current_session
                             .world
                             .resources
-                            .untyped_mut()
-                            .insert_cell(r.clone());
+                            .untyped()
+                            .insert_cell(r.clone())
+                            .unwrap();
                     }
                 }
 
@@ -897,13 +931,6 @@
                 </span>{
                     <span class="kw">let </span><span class="kw-2">mut </span>sessions = current_session.world.resource_mut::&lt;Sessions&gt;();
                     std::mem::swap(<span class="kw-2">&amp;mut *</span>sessions, <span class="kw-2">&amp;mut </span><span class="self">self</span>.sessions);
-                }
-
-                <span class="comment">// Initialize the session if necessary
-                </span><span class="kw">if </span>unlikely(!current_session.has_initialized) {
-                    current_session
-                        .stages
-                        .initialize_systems(<span class="kw-2">&amp;mut </span>current_session.world);
                 }
 
                 <span class="comment">// Step the current session&#39;s simulation using it&#39;s session runner
@@ -1073,10 +1100,7 @@
     {
         <span class="kw">let </span>name = name.try_into().unwrap();
         <span class="comment">// Create a blank session
-        </span><span class="kw">let </span><span class="kw-2">mut </span>session = Session::new();
-
-        <span class="comment">// Make sure the new session has the same entities as the other sessions.
-        </span>session.world.resources.insert_cell(<span class="self">self</span>.entities.clone());
+        </span><span class="kw">let </span><span class="kw-2">mut </span>session = Session::new(<span class="self">self</span>.entities.clone());
 
         <span class="comment">// Initialize the sessions resource in the session so it will be available in [`Game::step()`].
         </span>session.world.init_resource::&lt;Sessions&gt;();

@@ -1184,7 +1184,7 @@ map:
         <span class="kw">let </span>data = SchemaDeserializer(MyData::schema())
             .deserialize(deserializer)
             .unwrap()
-            .into_inner::&lt;MyData&gt;();
+            .cast_into::&lt;MyData&gt;();
 
         <span class="macro">assert_eq!</span>(data.name, <span class="string">&quot;John&quot;</span>);
         <span class="macro">assert_eq!</span>(data.age.<span class="number">0</span>, <span class="number">8</span>);

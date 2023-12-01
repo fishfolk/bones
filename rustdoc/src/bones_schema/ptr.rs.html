@@ -3367,17 +3367,17 @@
     /// # Panics
     /// Panics if the schema of the box does not match that of the type you are casting to.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>into_inner&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; T {
-        <span class="self">self</span>.try_into_inner().unwrap()
+    </span><span class="kw">pub fn </span>cast_into&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; T {
+        <span class="self">self</span>.try_cast_into().unwrap()
     }
 
     <span class="doccomment">/// Cast this box to it&#39;s inner type and return it.
     /// # Errors
     /// Errors if the schema of the box does not match that of the type you are casting to.
-    </span><span class="kw">pub fn </span>try_into_inner&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;T, SchemaMismatchError&gt; {
+    </span><span class="kw">pub fn </span>try_cast_into&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;T, SchemaMismatchError&gt; {
         <span class="kw">if </span><span class="self">self</span>.schema == T::schema() {
             <span class="comment">// We&#39;ve validated that the schema of the box matches T
-            </span><span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.into_inner_unchecked() })
+            </span><span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.cast_into_unchecked() })
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         }
@@ -3386,7 +3386,7 @@
     <span class="doccomment">/// Unsafely convert this box into an owned T.
     /// # Safety
     /// - The schema of type T must equal that of this box.
-    </span><span class="kw">pub unsafe fn </span>into_inner_unchecked&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; T {
+    </span><span class="kw">pub unsafe fn </span>cast_into_unchecked&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; T {
         <span class="comment">// Allocate memory for T on the stack
         </span><span class="kw">let </span><span class="kw-2">mut </span>ret = MaybeUninit::&lt;T&gt;::uninit();
 

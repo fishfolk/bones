@@ -214,6 +214,7 @@
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(dead_code)] </span><span class="comment">// We haven&#39;t used all of these methods yet but we still want them there
 
 </span><span class="kw">use </span>egui::{
@@ -418,6 +419,7 @@
                     map.get_temp::&lt;AtomicResource&lt;EguiTextures&gt;&gt;(egui::Id::null())
                         .unwrap()
                         .borrow()
+                        .unwrap()
                         .get(border.image)
                 });
                 ui.painter()

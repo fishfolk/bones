@@ -465,6 +465,16 @@
 <a href="#465" id="465">465</a>
 <a href="#466" id="466">466</a>
 <a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
 </pre></div><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// A type data that can be used to specify a custom metatable to use for the type when it is
@@ -561,7 +571,7 @@
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub enum </span>EcsRefData {
     <span class="doccomment">/// A resource ref.
-    </span>Resource(UntypedAtomicResource),
+    </span>Resource(AtomicUntypedResource),
     <span class="doccomment">/// A component ref.
     </span>Component(ComponentRef),
     <span class="doccomment">/// An asset ref.
@@ -573,7 +583,7 @@
 
 <span class="doccomment">/// A kind of borrow into an [`EcsRef`].
 </span><span class="kw">pub enum </span>EcsRefBorrowKind&lt;<span class="lifetime">&#39;a</span>&gt; {
-    Resource(AtomicSchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;),
+    Resource(Ref&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Option</span>&lt;SchemaBox&gt;&gt;),
     Component(ComponentBorrow&lt;<span class="lifetime">&#39;a</span>&gt;),
     Free(Ref&lt;<span class="lifetime">&#39;a</span>, SchemaBox&gt;),
     Asset(<span class="prelude-ty">Option</span>&lt;MappedRef&lt;<span class="lifetime">&#39;a</span>, Cid, LoadedAsset, SchemaBox&gt;&gt;),
@@ -582,6 +592,7 @@
 <span class="doccomment">/// An error that occurs when borrowing an [`EcsRef`].
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub enum </span>EcsRefBorrowError {
+    MissingResource,
     MissingComponent {
         entity: Entity,
         component_name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
@@ -602,6 +613,9 @@
             </span>),
             EcsRefBorrowError::AssetNotLoaded =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Asset not loaded&quot;</span>),
             EcsRefBorrowError::FieldNotFound(field) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Field not found: {field}&quot;</span>),
+            EcsRefBorrowError::MissingResource =&gt; {
+                <span class="macro">write!</span>(f, <span class="string">&quot;Resource not in world.&quot;</span>)
+            }
         }
     }
 }
@@ -613,7 +627,10 @@
     /// that is not set for a given entity.
     </span><span class="kw">pub fn </span>schema_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRef, EcsRefBorrowError&gt; {
         <span class="kw">match </span><span class="self">self </span>{
-            EcsRefBorrowKind::Resource(r) =&gt; <span class="prelude-val">Ok</span>(r.schema_ref()),
+            EcsRefBorrowKind::Resource(r) =&gt; <span class="prelude-val">Ok</span>(r
+                .as_ref()
+                .ok_or(EcsRefBorrowError::MissingResource)<span class="question-mark">?
+                </span>.as_ref()),
             EcsRefBorrowKind::Component(c) =&gt; {
                 c.borrow
                     .get_ref(c.entity)
@@ -645,7 +662,7 @@
 
 <span class="doccomment">/// A kind of mutable borrow of an [`EcsRef`].
 </span><span class="kw">pub enum </span>EcsRefBorrowMutKind&lt;<span class="lifetime">&#39;a</span>&gt; {
-    Resource(AtomicSchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;),
+    Resource(RefMut&lt;<span class="lifetime">&#39;a</span>, <span class="prelude-ty">Option</span>&lt;SchemaBox&gt;&gt;),
     Component(ComponentBorrowMut&lt;<span class="lifetime">&#39;a</span>&gt;),
     Free(RefMut&lt;<span class="lifetime">&#39;a</span>, SchemaBox&gt;),
     Asset(<span class="prelude-ty">Option</span>&lt;MappedRefMut&lt;<span class="lifetime">&#39;a</span>, Cid, LoadedAsset, SchemaBox&gt;&gt;),
@@ -658,7 +675,10 @@
     /// that is not set for a given entity.
     </span><span class="kw">pub fn </span>schema_ref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMut, EcsRefBorrowError&gt; {
         <span class="kw">match </span><span class="self">self </span>{
-            EcsRefBorrowMutKind::Resource(r) =&gt; <span class="prelude-val">Ok</span>(r.schema_ref_mut()),
+            EcsRefBorrowMutKind::Resource(r) =&gt; <span class="prelude-val">Ok</span>(r
+                .as_mut()
+                .ok_or(EcsRefBorrowError::MissingResource)<span class="question-mark">?
+                </span>.as_mut()),
             EcsRefBorrowMutKind::Component(c) =&gt; {
                 c.borrow
                     .get_ref_mut(c.entity)

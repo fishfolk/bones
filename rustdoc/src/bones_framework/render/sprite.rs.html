@@ -114,16 +114,14 @@
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Sprite rendering components.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// Sprite session plugin.
-</span><span class="kw">pub fn </span>sprite_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+</span><span class="kw">pub fn </span>sprite_plugin(_session: <span class="kw-2">&amp;mut </span>Session) {
     Sprite::register_schema();
     AtlasSprite::register_schema();
-    session.world.init_param::&lt;Comp&lt;Sprite&gt;&gt;();
 }
 
 <span class="doccomment">/// Image component.

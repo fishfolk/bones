@@ -520,60 +520,6 @@
 <a href="#520" id="520">520</a>
 <a href="#521" id="521">521</a>
 <a href="#522" id="522">522</a>
-<a href="#523" id="523">523</a>
-<a href="#524" id="524">524</a>
-<a href="#525" id="525">525</a>
-<a href="#526" id="526">526</a>
-<a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
-<a href="#530" id="530">530</a>
-<a href="#531" id="531">531</a>
-<a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
-<a href="#539" id="539">539</a>
-<a href="#540" id="540">540</a>
-<a href="#541" id="541">541</a>
-<a href="#542" id="542">542</a>
-<a href="#543" id="543">543</a>
-<a href="#544" id="544">544</a>
-<a href="#545" id="545">545</a>
-<a href="#546" id="546">546</a>
-<a href="#547" id="547">547</a>
-<a href="#548" id="548">548</a>
-<a href="#549" id="549">549</a>
-<a href="#550" id="550">550</a>
-<a href="#551" id="551">551</a>
-<a href="#552" id="552">552</a>
-<a href="#553" id="553">553</a>
-<a href="#554" id="554">554</a>
-<a href="#555" id="555">555</a>
-<a href="#556" id="556">556</a>
-<a href="#557" id="557">557</a>
-<a href="#558" id="558">558</a>
-<a href="#559" id="559">559</a>
-<a href="#560" id="560">560</a>
-<a href="#561" id="561">561</a>
-<a href="#562" id="562">562</a>
-<a href="#563" id="563">563</a>
-<a href="#564" id="564">564</a>
-<a href="#565" id="565">565</a>
-<a href="#566" id="566">566</a>
-<a href="#567" id="567">567</a>
-<a href="#568" id="568">568</a>
-<a href="#569" id="569">569</a>
-<a href="#570" id="570">570</a>
-<a href="#571" id="571">571</a>
-<a href="#572" id="572">572</a>
-<a href="#573" id="573">573</a>
-<a href="#574" id="574">574</a>
-<a href="#575" id="575">575</a>
-<a href="#576" id="576">576</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Implements the system API for the ECS.
 
 </span><span class="kw">use </span>std::sync::Arc;
@@ -587,9 +533,6 @@
 
 <span class="doccomment">/// Trait implemented by systems.
 </span><span class="kw">pub trait </span>System&lt;In, Out&gt; {
-    <span class="doccomment">/// Initialize the system, creating any component or resource storages necessary for the system
-    /// to run in the world.
-    </span><span class="kw">fn </span>initialize(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World);
     <span class="doccomment">/// Run the system.
     </span><span class="kw">fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World, input: In) -&gt; Out;
     <span class="doccomment">/// Get a best-effort name for the system, used in diagnostics.
@@ -598,12 +541,6 @@
 
 <span class="doccomment">/// Struct containing a static system.
 </span><span class="kw">pub struct </span>StaticSystem&lt;In, Out&gt; {
-    <span class="doccomment">/// This should be called once to initialize the system, allowing it to intialize any resources
-    /// or components in the world.
-    ///
-    /// Usually only called once, but this is not guaranteed so the implementation should be
-    /// idempotent.
-    </span><span class="kw">pub </span>initialize: <span class="kw">fn</span>(<span class="kw-2">&amp;mut </span>World),
     <span class="doccomment">/// This is run every time the system is executed
     </span><span class="kw">pub </span>run: Box&lt;<span class="kw">dyn </span>FnMut(<span class="kw-2">&amp;</span>World, In) -&gt; Out + Send + Sync&gt;,
     <span class="doccomment">/// A best-effort name for the system, for diagnostic purposes.
@@ -611,9 +548,6 @@
 }
 
 <span class="kw">impl</span>&lt;In, Out&gt; System&lt;In, Out&gt; <span class="kw">for </span>StaticSystem&lt;In, Out&gt; {
-    <span class="kw">fn </span>initialize(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
-        (<span class="self">self</span>.initialize)(world)
-    }
     <span class="kw">fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World, input: In) -&gt; Out {
         (<span class="self">self</span>.run)(world, input)
     }
@@ -671,10 +605,6 @@
     /// &gt; If the type is not the same, then system functions will not be able to take it as an
     /// &gt; argument.
     </span><span class="kw">type </span>Param&lt;<span class="lifetime">&#39;s</span>&gt;;
-    <span class="doccomment">/// This will be called to give the parameter a chance to initialize it&#39;s world storage.
-    ///
-    /// You can use this chance to init any resources or components you need in the world.
-    </span><span class="kw">fn </span>initialize(world: <span class="kw-2">&amp;mut </span>World);
     <span class="doccomment">/// This is called to produce the intermediate state of the system parameter.
     ///
     /// This state will be created immediately before the system is run, and will kept alive until
@@ -689,7 +619,6 @@
 <span class="kw">impl </span>SystemParam <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;_ </span>World {
     <span class="kw">type </span>State = ();
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;s</span>&gt; = <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World;
-    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
     <span class="kw">fn </span>get_state(_world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {}
     <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, _state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
         world
@@ -760,10 +689,12 @@
     <span class="kw">type </span>State = AtomicResource&lt;T&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = Res&lt;<span class="lifetime">&#39;p</span>, T&gt;;
 
-    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
-
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
-        world.resources.get_cell::&lt;T&gt;().unwrap_or_else(|| {
+        world.resources.get_cell::&lt;T&gt;()
+    }
+
+    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
+        Res(state.borrow().unwrap_or_else(|| {
             <span class="macro">panic!</span>(
                 <span class="string">&quot;Resource of type `{}` not in world. \
                 You may need to insert or initialize the resource or use \
@@ -771,26 +702,20 @@
                 resource with the default value.&quot;</span>,
                 std::any::type_name::&lt;T&gt;()
             )
-        })
-    }
-
-    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
-        Res(state.borrow())
+        }))
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; SystemParam <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Res&lt;<span class="lifetime">&#39;a</span>, T&gt;&gt; {
-    <span class="kw">type </span>State = <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;T&gt;&gt;;
+    <span class="kw">type </span>State = AtomicResource&lt;T&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = <span class="prelude-ty">Option</span>&lt;Res&lt;<span class="lifetime">&#39;p</span>, T&gt;&gt;;
-
-    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
 
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
         world.resources.get_cell::&lt;T&gt;()
     }
 
     <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
-        state.as_ref().map(|state| Res(state.borrow()))
+        state.borrow().map(|x| Res(x))
     }
 }
 
@@ -798,18 +723,14 @@
     <span class="kw">type </span>State = AtomicResource&lt;T&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = ResInit&lt;<span class="lifetime">&#39;p</span>, T&gt;;
 
-    <span class="kw">fn </span>initialize(world: <span class="kw-2">&amp;mut </span>World) {
-        <span class="kw">if </span>!world.resources.contains::&lt;T&gt;() {
-            world.init_resource::&lt;T&gt;();
-        }
-    }
-
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
-        world.resources.get_cell::&lt;T&gt;().unwrap()
+        <span class="kw">let </span>cell = world.resources.get_cell::&lt;T&gt;();
+        cell.init(world);
+        cell
     }
 
     <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
-        ResInit(state.borrow())
+        ResInit(state.borrow().unwrap())
     }
 }
 
@@ -817,10 +738,12 @@
     <span class="kw">type </span>State = AtomicResource&lt;T&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = ResMut&lt;<span class="lifetime">&#39;p</span>, T&gt;;
 
-    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
-
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
-        world.resources.get_cell::&lt;T&gt;().unwrap_or_else(|| {
+        world.resources.get_cell::&lt;T&gt;()
+    }
+
+    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
+        ResMut(state.borrow_mut().unwrap_or_else(|| {
             <span class="macro">panic!</span>(
                 <span class="string">&quot;Resource of type `{}` not in world. \
                 You may need to insert or initialize the resource or use \
@@ -828,26 +751,20 @@
                 resource with the default value.&quot;</span>,
                 std::any::type_name::&lt;T&gt;()
             )
-        })
-    }
-
-    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
-        ResMut(state.borrow_mut())
+        }))
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; SystemParam <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;ResMut&lt;<span class="lifetime">&#39;a</span>, T&gt;&gt; {
-    <span class="kw">type </span>State = <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;T&gt;&gt;;
+    <span class="kw">type </span>State = AtomicResource&lt;T&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = <span class="prelude-ty">Option</span>&lt;ResMut&lt;<span class="lifetime">&#39;p</span>, T&gt;&gt;;
-
-    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
 
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
         world.resources.get_cell::&lt;T&gt;()
     }
 
     <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
-        state.as_mut().map(|state| ResMut(state.borrow_mut()))
+        state.borrow_mut().map(|state| ResMut(state))
     }
 }
 
@@ -855,18 +772,14 @@
     <span class="kw">type </span>State = AtomicResource&lt;T&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = ResMutInit&lt;<span class="lifetime">&#39;p</span>, T&gt;;
 
-    <span class="kw">fn </span>initialize(world: <span class="kw-2">&amp;mut </span>World) {
-        <span class="kw">if </span>!world.resources.contains::&lt;T&gt;() {
-            world.init_resource::&lt;T&gt;();
-        }
-    }
-
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
-        world.resources.get_cell::&lt;T&gt;().unwrap()
+        <span class="kw">let </span>cell = world.resources.get_cell::&lt;T&gt;();
+        cell.init(world);
+        cell
     }
 
     <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
-        ResMutInit(state.borrow_mut())
+        ResMutInit(state.borrow_mut().unwrap())
     }
 }
 
@@ -878,8 +791,6 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; SystemParam <span class="kw">for </span>Comp&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">type </span>State = Arc&lt;AtomicCell&lt;ComponentStore&lt;T&gt;&gt;&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = Comp&lt;<span class="lifetime">&#39;p</span>, T&gt;;
-
-    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
 
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
         world.components.get_cell::&lt;T&gt;()
@@ -893,8 +804,6 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema&gt; SystemParam <span class="kw">for </span>CompMut&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="kw">type </span>State = Arc&lt;AtomicCell&lt;ComponentStore&lt;T&gt;&gt;&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;p</span>&gt; = CompMut&lt;<span class="lifetime">&#39;p</span>, T&gt;;
-
-    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
 
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
         world.components.get_cell::&lt;T&gt;()
@@ -931,11 +840,6 @@
             <span class="kw">fn </span>system(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Sys {
                 StaticSystem {
                     name: std::any::type_name::&lt;F&gt;(),
-                    initialize: |_world| {
-                        $(
-                            <span class="macro-nonterminal">$args::initialize</span>(_world);
-                        )*
-                    },
                     run: Box::new(<span class="kw">move </span>|_world, _input| {
                         $(
                             <span class="attr">#[allow(non_snake_case)]
@@ -984,11 +888,6 @@
             <span class="kw">fn </span>system(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Sys {
                 StaticSystem {
                     name: std::any::type_name::&lt;F&gt;(),
-                    initialize: |_world| {
-                        $(
-                            <span class="macro-nonterminal">$args::initialize</span>(_world);
-                        )*
-                    },
                     run: Box::new(<span class="kw">move </span>|_world, input| {
                         $(
                             <span class="attr">#[allow(non_snake_case)]
@@ -1111,11 +1010,11 @@
         <span class="kw">let </span><span class="kw-2">mut </span>world = World::new();
         world.insert_resource(<span class="number">2usize</span>);
 
-        <span class="kw">let </span>result = world.run_initialized_system(mul_by_res, <span class="number">3</span>);
+        <span class="kw">let </span>result = world.run_system(mul_by_res, <span class="number">3</span>);
         <span class="macro">assert_eq!</span>(result, <span class="number">6</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>n = <span class="number">3</span>;
-        world.run_initialized_system(sys_with_ref_in, <span class="kw-2">&amp;mut </span>n)
+        world.run_system(sys_with_ref_in, <span class="kw-2">&amp;mut </span>n)
     }
 
     <span class="attr">#[test]
@@ -1126,22 +1025,15 @@
         </span><span class="kw">pub struct </span>B {
             x: u32,
         }
-        <span class="kw">let </span><span class="kw-2">mut </span>world = World::default();
-        <span class="kw">let </span><span class="kw-2">mut </span>my_system = (|_a: ResInit&lt;A&gt;, <span class="kw-2">mut </span>b: ResMutInit&lt;B&gt;| {
+        <span class="kw">let </span>world = World::default();
+        <span class="kw">let </span>my_system = (|_a: ResInit&lt;A&gt;, <span class="kw-2">mut </span>b: ResMutInit&lt;B&gt;| {
             <span class="kw">let </span>b2 = B { x: <span class="number">45 </span>};
             <span class="kw-2">*</span>b = b2;
         })
         .system();
 
-        <span class="macro">assert!</span>(world.resources.get_cell::&lt;B&gt;().is_none());
-        my_system.initialize(<span class="kw-2">&amp;mut </span>world);
-
-        {
-            <span class="kw">let </span>res = world.resource::&lt;B&gt;();
-            <span class="macro">assert_eq!</span>(res.x, <span class="number">0</span>);
-        }
-
-        my_system.run(<span class="kw-2">&amp;</span>world, ());
+        <span class="macro">assert!</span>(world.resources.get_cell::&lt;B&gt;().borrow().is_none());
+        world.run_system(my_system, ());
 
         <span class="kw">let </span>res = world.resource::&lt;B&gt;();
         <span class="macro">assert_eq!</span>(res.x, <span class="number">45</span>);

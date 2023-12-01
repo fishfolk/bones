@@ -324,31 +324,6 @@
 <a href="#324" id="324">324</a>
 <a href="#325" id="325">325</a>
 <a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
-<a href="#329" id="329">329</a>
-<a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Contains the ECS [`World`].
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -375,7 +350,7 @@
 
 <span class="kw">impl </span>Default <span class="kw">for </span>World {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>resources = Resources::new();
+        <span class="kw">let </span>resources = Resources::new();
 
         <span class="comment">// Always initialize an Entities resource
         </span>resources.insert(Entities::default());
@@ -393,16 +368,30 @@
         <span class="self">Self</span>::default()
     }
 
+    <span class="doccomment">/// Create a new world that uses the provided entities resource.
+    ///
+    /// This allows multiple worlds to avoid allocating the same entity IDs.
+    </span><span class="kw">pub fn </span>with_entities(entities: AtomicResource&lt;Entities&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>resources = Resources::new();
+        resources
+            .untyped()
+            .insert_cell(entities.into_untyped())
+            .unwrap();
+        World {
+            resources,
+            components: default(),
+        }
+    }
+
     <span class="doccomment">/// Remove the component info for dead entities.
     ///
     /// This should be called every game frame to cleanup entities that have been killed.
     ///
     /// This will remove the component storage for all killed entities, and allow their slots to be
     /// re-used for any new entities.
-    </span><span class="kw">pub fn </span>maintain(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    </span><span class="kw">pub fn </span>maintain(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="kw">let </span><span class="kw-2">mut </span>entities = <span class="self">self</span>.resources.get_mut::&lt;Entities&gt;().unwrap();
-
-        <span class="kw">for </span>components <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.components.components.values_mut() {
+        <span class="kw">for </span>components <span class="kw">in </span><span class="self">self</span>.components.components.read_only_view().values() {
             <span class="kw">let </span><span class="kw-2">mut </span>components = components.borrow_mut();
             <span class="kw">let </span>killed = entities.killed();
             <span class="kw">for </span><span class="kw-2">&amp;</span>entity <span class="kw">in </span>killed {
@@ -419,7 +408,7 @@
     <span class="doccomment">/// Run a system once.
     ///
     /// This is good for initializing the world with setup systems.
-    </span><span class="kw">pub fn </span>run_system&lt;<span class="lifetime">&#39;system</span>, R, In, Out, S&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: S, input: In) -&gt; Out
+    </span><span class="kw">pub fn </span>run_system&lt;<span class="lifetime">&#39;system</span>, R, In, Out, S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, system: S, input: In) -&gt; Out
     <span class="kw">where
         </span>In: <span class="lifetime">&#39;system</span>,
         Out: <span class="lifetime">&#39;system</span>,
@@ -427,40 +416,11 @@
         S::Sys: <span class="lifetime">&#39;system</span>,
     {
         <span class="kw">let </span><span class="kw-2">mut </span>s = system.system();
-
-        s.initialize(<span class="self">self</span>);
-        s.run(<span class="self">self</span>, input)
-    }
-
-    <span class="doccomment">/// Run a system once, assuming any necessary initialization has already been performed for that
-    /// system.
-    ///
-    /// This **will not** intialize the system, like [`run_system()`][Self::run_system] will, but it
-    /// only requires an immutable reference to the world.
-    ///
-    /// # Panics
-    ///
-    /// Panics may occur if you pass in a system, for example, that takes a component type argument
-    /// and that component has not been initialized yet.
-    ///
-    /// If all the system parameters have already been initialized, by calling
-    /// [`initialize()`][System::initialize] on the system, then this will work fine.
-    ///
-    /// You can also use [`world.init_param()`][Self::init_param] to manually initialize specific
-    /// parameters if you know which ones will need to be initialized.
-    </span><span class="kw">pub fn </span>run_initialized_system&lt;<span class="lifetime">&#39;system</span>, Args, In, Out, S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, system: S, input: In) -&gt; Out
-    <span class="kw">where
-        </span>In: <span class="lifetime">&#39;system</span>,
-        Out: <span class="lifetime">&#39;system</span>,
-        S: IntoSystem&lt;Args, In, Out&gt;,
-        S::Sys: <span class="lifetime">&#39;system</span>,
-    {
-        <span class="kw">let </span><span class="kw-2">mut </span>s = system.system();
         s.run(<span class="self">self</span>, input)
     }
 
     <span class="doccomment">/// Initialize a resource of type `T` by inserting it&#39;s default value.
-    </span><span class="kw">pub fn </span>init_resource&lt;R: HasSchema + FromWorld&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">&#39;_</span>, R&gt; {
+    </span><span class="kw">pub fn </span>init_resource&lt;R: HasSchema + FromWorld&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;R&gt; {
         <span class="kw">if </span>unlikely(!<span class="self">self</span>.resources.contains::&lt;R&gt;()) {
             <span class="kw">let </span>value = R::from_world(<span class="self">self</span>);
             <span class="self">self</span>.resources.insert(value);
@@ -468,18 +428,8 @@
         <span class="self">self</span>.resource_mut()
     }
 
-    <span class="doccomment">/// Initialize a system parameter.
-    ///
-    /// It is not necessary to do this manually unless you are going to run a system using
-    /// [`world.run_initialized_system()`][Self::run_initialized_system()] and you need to make sure
-    /// one of it&#39;s parameters are pre-initialized.
-    </span><span class="kw">pub fn </span>init_param&lt;P: SystemParam&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self </span>{
-        P::initialize(<span class="self">self</span>);
-        <span class="self">self
-    </span>}
-
     <span class="doccomment">/// Insert a resource.
-    </span><span class="kw">pub fn </span>insert_resource&lt;R: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: R) -&gt; <span class="prelude-ty">Option</span>&lt;AtomicResource&lt;R&gt;&gt; {
+    </span><span class="kw">pub fn </span>insert_resource&lt;R: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: R) -&gt; <span class="prelude-ty">Option</span>&lt;R&gt; {
         <span class="self">self</span>.resources.insert(resource)
     }
 
@@ -502,7 +452,7 @@
     /// # Panics
     /// Panics if the resource does not exist in the store.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;T&gt; {
+    </span><span class="kw">pub fn </span>resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;T&gt; {
         <span class="kw">match </span><span class="self">self</span>.resources.get_mut::&lt;T&gt;() {
             <span class="prelude-val">Some</span>(r) =&gt; r,
             <span class="prelude-val">None </span>=&gt; <span class="macro">panic!</span>(
@@ -530,11 +480,11 @@
 /// This can be helpful for complex initialization or context-aware defaults.
 </span><span class="kw">pub trait </span>FromWorld {
     <span class="doccomment">/// Creates `Self` using data from the given [`World`].
-    </span><span class="kw">fn </span>from_world(world: <span class="kw-2">&amp;mut </span>World) -&gt; <span class="self">Self</span>;
+    </span><span class="kw">fn </span>from_world(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>;
 }
 
 <span class="kw">impl</span>&lt;T: Default&gt; FromWorld <span class="kw">for </span>T {
-    <span class="kw">fn </span>from_world(_world: <span class="kw-2">&amp;mut </span>World) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>from_world(_world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self </span>{
         T::default()
     }
 }
@@ -623,7 +573,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>sanity_check() {
-        <span class="kw">let </span><span class="kw-2">mut </span>world = World::new();
+        <span class="kw">let </span>world = World::new();
 
         world.run_system(setup_world, ());
 
@@ -640,11 +590,11 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>snapshot() {
-        <span class="kw">let </span><span class="kw-2">mut </span>world1 = World::new();
+        <span class="kw">let </span>world1 = World::new();
         world1.run_system(setup_world, ());
 
         <span class="comment">// Snapshot world1
-        </span><span class="kw">let </span><span class="kw-2">mut </span>snap = world1.clone();
+        </span><span class="kw">let </span>snap = world1.clone();
 
         <span class="comment">// Make sure the snapshot represents world1&#39;s state
         </span>snap.run_system(test_after_setup_state, ());
@@ -683,7 +633,7 @@
     #[schema(opaque, no_default)]
     </span><span class="kw">struct </span>TestFromWorld(u32);
     <span class="kw">impl </span>FromWorld <span class="kw">for </span>TestFromWorld {
-        <span class="kw">fn </span>from_world(world: <span class="kw-2">&amp;mut </span>World) -&gt; <span class="self">Self </span>{
+        <span class="kw">fn </span>from_world(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self </span>{
             <span class="kw">let </span>b = world.resource::&lt;TestResource&gt;();
             <span class="self">Self</span>(b.<span class="number">0</span>)
         }

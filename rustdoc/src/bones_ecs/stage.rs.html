@@ -312,37 +312,6 @@
 <a href="#312" id="312">312</a>
 <a href="#313" id="313">313</a>
 <a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
-<a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
-<a href="#324" id="324">324</a>
-<a href="#325" id="325">325</a>
-<a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
-<a href="#329" id="329">329</a>
-<a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Implementation of stage abstraction for running collections of systems over a [`World`].
 
 </span><span class="kw">use </span>std::collections::VecDeque;
@@ -382,19 +351,7 @@
 }
 
 <span class="kw">impl </span>SystemStages {
-    <span class="doccomment">/// Initialize the systems in the stages agains the [`World`].
-    ///
-    /// This must be called once before calling [`run()`][Self::run].
-    </span><span class="kw">pub fn </span>initialize_systems(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
-        <span class="kw">for </span>stage <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.stages {
-            stage.initialize(world);
-        }
-    }
-
     <span class="doccomment">/// Execute the systems on the given `world`.
-    ///
-    /// &gt; **Note:** You must call [`initialize_systems()`][Self::initialize_systems] once before
-    /// &gt; calling `run()` one or more times.
     </span><span class="kw">pub fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
         <span class="comment">// If we haven&#39;t run our startup systems yet
         </span><span class="kw">if </span>!<span class="self">self</span>.has_started {
@@ -403,9 +360,8 @@
 
             <span class="comment">// For each startup system
             </span><span class="kw">for </span>system <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.startup_systems {
-                <span class="comment">// Initialize and run the system
-                </span>system.initialize(world);
-                system.run(world, ());
+                <span class="comment">// Run the system
+                </span>system.run(world, ());
             }
 
             <span class="comment">// Don&#39;t run startup systems again
@@ -425,7 +381,7 @@
         </span>world.maintain();
 
         <span class="comment">// Remove the current system stage resource
-        </span>world.resources.remove_cell::&lt;CurrentSystemStage&gt;();
+        </span>world.resources.remove::&lt;CurrentSystemStage&gt;();
     }
 
     <span class="doccomment">/// Create a [`SystemStages`] collection, initialized with a stage for each [`CoreStage`].
@@ -518,14 +474,7 @@
     <span class="doccomment">/// The human-readable name for the stage, used for error messages when something goes wrong.
     </span><span class="kw">fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String;
     <span class="doccomment">/// Execute the systems on the given `world`.
-    ///
-    /// &gt; **Note:** You must call [`initialize()`][Self::initialize] once before calling `run()` one
-    /// &gt; or more times.
-    </span><span class="kw">fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World);
-    <span class="doccomment">/// Initialize the contained systems for the given `world`.
-    ///
-    /// Must be called once before calling [`run()`][Self::run].
-    </span><span class="kw">fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World);
+    </span><span class="kw">fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World);
 
     <span class="doccomment">/// Add a system to this stage.
     </span><span class="kw">fn </span>add_system(<span class="kw-2">&amp;mut </span><span class="self">self</span>, system: StaticSystem&lt;(), ()&gt;);
@@ -563,29 +512,18 @@
         <span class="self">self</span>.name.clone()
     }
 
-    <span class="kw">fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
+    <span class="kw">fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World) {
         <span class="comment">// Run the systems
         </span><span class="kw">for </span>system <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.systems {
             system.run(world, ());
         }
 
         <span class="comment">// Drain the command queue
-        </span>{
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(command_queue) = world.resources.get_cell::&lt;CommandQueue&gt;() {
-                <span class="kw">let </span><span class="kw-2">mut </span>command_queue = command_queue.borrow_mut();
-
-                <span class="kw">for </span><span class="kw-2">mut </span>system <span class="kw">in </span>command_queue.queue.drain(..) {
-                    system.initialize(world);
-                    system.run(world, ());
-                }
+        </span><span class="kw">let </span>queue = world.resources.get_mut::&lt;CommandQueue&gt;();
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>command_queue) = queue {
+            <span class="kw">for </span><span class="kw-2">mut </span>system <span class="kw">in </span>command_queue.queue.drain(..) {
+                system.run(world, ());
             }
-        }
-    }
-
-    <span class="kw">fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
-        world.init_resource::&lt;CommandQueue&gt;();
-        <span class="kw">for </span>system <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.systems {
-            system.initialize(world);
         }
     }
 
@@ -678,14 +616,14 @@
     <span class="kw">type </span>State = AtomicResource&lt;CommandQueue&gt;;
     <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;s</span>&gt; = Commands&lt;<span class="lifetime">&#39;s</span>&gt;;
 
-    <span class="kw">fn </span>initialize(_world: <span class="kw-2">&amp;mut </span>World) {}
-
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
-        world.resources.get_cell::&lt;CommandQueue&gt;().unwrap()
+        <span class="kw">let </span>cell = world.resources.get_cell::&lt;CommandQueue&gt;();
+        cell.init(world);
+        cell
     }
 
     <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(_world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
-        Commands(state.borrow_mut())
+        Commands(state.borrow_mut().unwrap())
     }
 }
 </code></pre></div></section></main></body></html>

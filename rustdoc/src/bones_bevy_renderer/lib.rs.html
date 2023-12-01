@@ -1911,7 +1911,7 @@
         <span class="comment">// TODO: Avoid doing this every frame when there have been no assets loaded.
         // We should should be able to use the asset load progress event listener to detect newly
         // loaded assets that will need to be handled.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>bones_egui_textures = bones_egui_textures_cell.borrow_mut();
+        </span><span class="kw">let </span><span class="kw-2">mut </span>bones_egui_textures = bones_egui_textures_cell.borrow_mut().unwrap();
         <span class="comment">// Take all loaded image assets and conver them to external images that reference bevy handles
         </span>bones_image_ids.load_bones_images(
             asset_server,
@@ -1955,7 +1955,7 @@
     <span class="kw-2">mut </span>data: ResMut&lt;BonesData&gt;,
 ) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(hook) = data.game.shared_resource_cell::&lt;bones::EguiInputHook&gt;() {
-        <span class="kw">let </span>hook = hook.borrow();
+        <span class="kw">let </span>hook = hook.borrow().unwrap();
         <span class="kw">let </span><span class="kw-2">mut </span>egui_input = egui_query.get_single_mut().unwrap();
         (hook.<span class="number">0</span>)(<span class="kw-2">&amp;mut </span>data.game, <span class="kw-2">&amp;mut </span>egui_input);
     }
@@ -2072,7 +2072,7 @@
             data.game.shared_resource_cell().unwrap()
         }
     };
-    <span class="kw">let </span>bones_window = bones_window.borrow_mut();
+    <span class="kw">let </span>bones_window = bones_window.borrow_mut().unwrap();
 
     <span class="kw">let </span>is_fullscreen = <span class="macro">matches!</span>(<span class="kw-2">&amp;</span>window.mode, WindowMode::Fullscreen);
     <span class="kw">if </span>is_fullscreen != bones_window.fullscreen {

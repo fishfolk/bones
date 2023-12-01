@@ -278,6 +278,7 @@
 <a href="#278" id="278">278</a>
 <a href="#279" id="279">279</a>
 <a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// A 9-patch style bordered frame.
@@ -549,6 +550,7 @@
                 map.get_temp::&lt;AtomicResource&lt;EguiTextures&gt;&gt;(egui::Id::null())
                     .unwrap()
                     .borrow()
+                    .unwrap()
                     .get(<span class="self">self</span>.frame.bg_handle)
             });
             <span class="kw">let </span>shape = <span class="self">self</span>.frame.paint(texture, paint_rect);
