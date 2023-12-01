@@ -15,7 +15,6 @@ impl<'a, T: HasSchema> SystemParam for Root<'a, T> {
     type State = AssetServer;
     type Param<'s> = Root<'s, T>;
 
-    fn initialize(_world: &mut World) {}
     fn get_state(world: &World) -> Self::State {
         (*world.resources.get::<AssetServer>().unwrap()).clone()
     }

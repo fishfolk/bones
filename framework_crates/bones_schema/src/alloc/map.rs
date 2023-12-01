@@ -79,7 +79,7 @@ impl SchemaMap {
         self.try_insert_box(key, value)
             // SOUND: try_insert_box won't succeed unless the schema's match, so we have already
             // checked that the value schema matches.
-            .map(|value| value.map(|x| unsafe { x.into_inner_unchecked() }))
+            .map(|value| value.map(|x| unsafe { x.cast_into_unchecked() }))
     }
 
     /// Insert an untyped item into the map.
@@ -317,7 +317,7 @@ impl SchemaMap {
             // SOUND: we've checked that the key schema matches.
             let value = unsafe { self.remove_unchecked(SchemaRef::new(key)) }
                 // SOUND: we've checked that the value schema matches.
-                .map(|x| unsafe { x.into_inner_unchecked() });
+                .map(|x| unsafe { x.cast_into_unchecked() });
             Ok(value)
         }
     }
@@ -596,7 +596,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
         unsafe {
             self.map
                 .insert_box_unchecked(SchemaBox::new(k), SchemaBox::new(v))
-                .map(|x| x.into_inner_unchecked())
+                .map(|x| x.cast_into_unchecked())
         }
     }
 
@@ -626,7 +626,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
         unsafe {
             self.map
                 .remove_unchecked(SchemaRef::new(key))
-                .map(|x| x.into_inner_unchecked())
+                .map(|x| x.cast_into_unchecked())
         }
     }
 
@@ -648,7 +648,9 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     /// Iterate over entries in the map.
     #[allow(clippy::type_complexity)]
     pub fn iter(&self) -> SMapIter<K, V> {
-        fn map_fn<'a, K, V>((key, value): (&'a SchemaBox, &'a SchemaBox)) -> (&K, &V) {
+        fn map_fn<'a, K: HasSchema, V: HasSchema>(
+            (key, value): (&'a SchemaBox, &'a SchemaBox),
+        ) -> (&K, &V) {
             // SOUND: SMap ensures K and V schemas always match.
             unsafe {
                 (
@@ -663,7 +665,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     /// Iterate over entries in the map.
     #[allow(clippy::type_complexity)]
     pub fn iter_mut(&mut self) -> SMapIterMut<K, V> {
-        fn map_fn<'a, K, V>(
+        fn map_fn<'a, K: HasSchema, V: HasSchema>(
             (key, value): (&'a SchemaBox, &'a mut SchemaBox),
         ) -> (&'a K, &'a mut V) {
             // SOUND: SMap ensures K and V schemas always match.
@@ -683,7 +685,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
         &self,
     ) -> std::iter::Map<hash_map::Keys<SchemaBox, SchemaBox>, for<'a> fn(&'a SchemaBox) -> &'a K>
     {
-        fn map_fn<K>(key: &SchemaBox) -> &K {
+        fn map_fn<K: HasSchema>(key: &SchemaBox) -> &K {
             // SOUND: SMap ensures key schema always match
             unsafe { key.as_ref().cast_into_unchecked() }
         }
@@ -696,7 +698,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
         &self,
     ) -> std::iter::Map<hash_map::Values<SchemaBox, SchemaBox>, for<'a> fn(&'a SchemaBox) -> &V>
     {
-        fn map_fn<V>(value: &SchemaBox) -> &V {
+        fn map_fn<V: HasSchema>(value: &SchemaBox) -> &V {
             // SOUND: SMap ensures value schema always matches.
             unsafe { value.as_ref().cast_into_unchecked() }
         }

@@ -77,7 +77,7 @@ mod test {
 
     #[test]
     fn insert_comp_with_gap() {
-        let mut w = World::new();
+        let w = World::new();
 
         #[derive(HasSchema, Default, Clone)]
         #[repr(C)]

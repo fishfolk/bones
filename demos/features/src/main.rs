@@ -274,11 +274,7 @@ fn menu_system(
                     //
                     // This makes it easier to compose widgets that have differing access to the
                     // bones world.
-                    //
-                    // Note that all of the parameters of the system must have been initialized
-                    // already, so if they are not initialized by another system, you have to use
-                    // `world.init_param::<SomeParam>()` in the session plugin to initialize them.
-                    world.run_initialized_system(demo_widget, ui);
+                    world.run_system(demo_widget, ui);
 
                     ui.add_space(30.0);
                 });

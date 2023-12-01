@@ -621,7 +621,7 @@ fn load_egui_textures(
         // TODO: Avoid doing this every frame when there have been no assets loaded.
         // We should should be able to use the asset load progress event listener to detect newly
         // loaded assets that will need to be handled.
-        let mut bones_egui_textures = bones_egui_textures_cell.borrow_mut();
+        let mut bones_egui_textures = bones_egui_textures_cell.borrow_mut().unwrap();
         // Take all loaded image assets and conver them to external images that reference bevy handles
         bones_image_ids.load_bones_images(
             asset_server,
@@ -665,7 +665,7 @@ fn egui_input_hook(
     mut data: ResMut<BonesData>,
 ) {
     if let Some(hook) = data.game.shared_resource_cell::<bones::EguiInputHook>() {
-        let hook = hook.borrow();
+        let hook = hook.borrow().unwrap();
         let mut egui_input = egui_query.get_single_mut().unwrap();
         (hook.0)(&mut data.game, &mut egui_input);
     }
@@ -782,7 +782,7 @@ fn step_bones_game(world: &mut World) {
             data.game.shared_resource_cell().unwrap()
         }
     };
-    let bones_window = bones_window.borrow_mut();
+    let bones_window = bones_window.borrow_mut().unwrap();
 
     let is_fullscreen = matches!(&window.mode, WindowMode::Fullscreen);
     if is_fullscreen != bones_window.fullscreen {

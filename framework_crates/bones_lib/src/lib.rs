@@ -19,7 +19,7 @@ pub mod prelude {
 pub use instant;
 pub mod time;
 
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 
 use crate::prelude::*;
 
@@ -39,8 +39,6 @@ pub struct Session {
     pub priority: i32,
     /// The session runner to use for this session.
     pub runner: Box<dyn SessionRunner>,
-    /// Whether or not the session systems in it's `stages` have been initialized yet.
-    pub has_initialized: bool,
 }
 
 impl std::fmt::Debug for Session {
@@ -58,8 +56,19 @@ impl std::fmt::Debug for Session {
 
 impl Session {
     /// Create an empty [`Session`].
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(entities: AtomicResource<Entities>) -> Self {
+        Self {
+            world: {
+                let mut w = World::with_entities(entities);
+                w.init_resource::<Time>();
+                w
+            },
+            stages: default(),
+            active: true,
+            visible: true,
+            priority: 0,
+            runner: Box::<DefaultSessionRunner>::default(),
+        }
     }
 
     /// Install a plugin.
@@ -83,24 +92,6 @@ impl Session {
     /// This is the same as doing an [`std::mem::swap`] on `self.world`, but it is more explicit.
     pub fn restore(&mut self, world: &mut World) {
         std::mem::swap(&mut self.world, world)
-    }
-}
-
-impl Default for Session {
-    fn default() -> Self {
-        Self {
-            world: {
-                let mut w = World::default();
-                w.init_resource::<Time>();
-                w
-            },
-            stages: default(),
-            active: true,
-            visible: true,
-            priority: 0,
-            runner: Box::<DefaultSessionRunner>::default(),
-            has_initialized: false,
-        }
     }
 }
 
@@ -178,7 +169,7 @@ pub struct Game {
     pub sorted_session_keys: Vec<Ustr>,
     /// Collection of resources that will have a shared instance of each be inserted into each
     /// session automatically.
-    pub shared_resources: Vec<UntypedAtomicResource>,
+    pub shared_resources: Vec<AtomicUntypedResource>,
 }
 
 impl Game {
@@ -194,26 +185,47 @@ impl Game {
     }
     /// Get the shared resource of a given type out of this [`Game`]s shared resources.
     pub fn shared_resource<T: HasSchema>(&self) -> Option<Ref<T>> {
-        self.shared_resources
+        let res = self
+            .shared_resources
             .iter()
-            .find(|x| x.schema() == T::schema())
-            .map(|x| x.borrow().typed())
+            .find(|x| x.schema() == T::schema())?;
+        let borrow = res.borrow();
+
+        if borrow.is_some() {
+            // SOUND: We know the type matches T
+            Some(Ref::map(borrow, |b| unsafe {
+                b.as_ref().unwrap().as_ref().cast_into_unchecked()
+            }))
+        } else {
+            None
+        }
     }
 
     /// Get the shared resource of a given type out of this [`Game`]s shared resources.
     pub fn shared_resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
-        self.shared_resources
+        let res = self
+            .shared_resources
             .iter()
-            .find(|x| x.schema() == T::schema())
-            .map(|x| x.borrow_mut().typed())
+            .find(|x| x.schema() == T::schema())?;
+        let borrow = res.borrow_mut();
+
+        if borrow.is_some() {
+            // SOUND: We know the type matches T
+            Some(RefMut::map(borrow, |b| unsafe {
+                b.as_mut().unwrap().as_mut().cast_into_mut_unchecked()
+            }))
+        } else {
+            None
+        }
     }
 
     /// Get the shared resource cell of a given type out of this [`Game`]s shared resources.
     pub fn shared_resource_cell<T: HasSchema>(&self) -> Option<AtomicResource<T>> {
-        self.shared_resources
+        let res = self
+            .shared_resources
             .iter()
-            .find(|x| x.schema() == T::schema())
-            .map(|x| AtomicResource::from_untyped(x.clone()))
+            .find(|x| x.schema() == T::schema())?;
+        Some(AtomicResource::from_untyped(res.clone()).unwrap())
     }
 
     /// Initialize a resource that will be shared across game sessions using it's [`Default`] value
@@ -230,36 +242,45 @@ impl Game {
     }
 
     /// Insert a resource that will be shared across all game sessions.
+    ///
+    /// > **Note:** This resource will only be visible in sessions that have not already
+    /// > initialized or access a resource of the same type locally.
     pub fn insert_shared_resource<T: HasSchema>(&mut self, resource: T) {
         // Update an existing resource of the same type.
         for r in &mut self.shared_resources {
             if r.schema() == T::schema() {
-                *r.borrow_mut().schema_ref_mut().cast_mut() = resource;
+                let mut borrow = r.borrow_mut();
+
+                if let Some(b) = borrow.as_mut().as_mut() {
+                    *b.cast_mut() = resource;
+                } else {
+                    *borrow = Some(SchemaBox::new(resource))
+                }
                 return;
             }
         }
 
         // Or insert a new resource if we couldn't find one
         self.shared_resources
-            .push(UntypedAtomicResource::new(SchemaBox::new(resource)));
+            .push(Arc::new(UntypedResource::new(SchemaBox::new(resource))));
     }
 
-    /// Remove a shared resource, if it is present in the world.
-    /// # Panics
-    /// Panics if the resource is set and it's cell has another handle to it and cannot be
-    /// unwrapped.
-    pub fn remove_shared_resource<T: HasSchema>(&mut self) -> Option<T> {
-        self.shared_resources
-            .iter()
-            .position(|x| x.schema() == T::schema())
-            .map(|idx| {
-                self.shared_resources
-                    .remove(idx)
-                    .try_into_inner()
-                    .unwrap()
-                    .into_inner()
-            })
-    }
+    // /// Remove a shared resource, if it is present in the world.
+    // /// # Panics
+    // /// Panics if the resource is set and it's cell has another handle to it and cannot be
+    // /// unwrapped.
+    // pub fn remove_shared_resource<T: HasSchema>(&mut self) -> Option<T> {
+    //     self.shared_resources
+    //         .iter()
+    //         .position(|x| x.schema() == T::schema())
+    //         .map(|idx| {
+    //             self.shared_resources
+    //                 .remove(idx)
+    //                 .try_into_inner()
+    //                 .unwrap()
+    //                 .into_inner()
+    //         })
+    // }
 
     /// Step the game simulation.
     pub fn step(&mut self, now: instant::Instant) {
@@ -308,13 +329,14 @@ impl Game {
                         .world
                         .resources
                         .untyped()
-                        .contains(r.schema().id())
+                        .contains_cell(r.schema().id())
                     {
                         current_session
                             .world
                             .resources
-                            .untyped_mut()
-                            .insert_cell(r.clone());
+                            .untyped()
+                            .insert_cell(r.clone())
+                            .unwrap();
                     }
                 }
 
@@ -329,13 +351,6 @@ impl Game {
                 {
                     let mut sessions = current_session.world.resource_mut::<Sessions>();
                     std::mem::swap(&mut *sessions, &mut self.sessions);
-                }
-
-                // Initialize the session if necessary
-                if unlikely(!current_session.has_initialized) {
-                    current_session
-                        .stages
-                        .initialize_systems(&mut current_session.world);
                 }
 
                 // Step the current session's simulation using it's session runner
@@ -505,10 +520,7 @@ impl Sessions {
     {
         let name = name.try_into().unwrap();
         // Create a blank session
-        let mut session = Session::new();
-
-        // Make sure the new session has the same entities as the other sessions.
-        session.world.resources.insert_cell(self.entities.clone());
+        let mut session = Session::new(self.entities.clone());
 
         // Initialize the sessions resource in the session so it will be available in [`Game::step()`].
         session.world.init_resource::<Sessions>();

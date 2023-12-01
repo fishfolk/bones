@@ -31,9 +31,6 @@ fn main() {
         .add_system_to_stage(CoreStage::Update, pos_vel_system)
         .add_system_to_stage(CoreStage::PostUpdate, print_system);
 
-    // Initialize our systems ( must be called once before calling stages.run() )
-    stages.initialize_systems(&mut world);
-
     // Run our game loop for 10 frames
     for _ in 0..10 {
         stages.run(&mut world);

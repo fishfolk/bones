@@ -1443,17 +1443,17 @@ impl SchemaBox {
     /// # Panics
     /// Panics if the schema of the box does not match that of the type you are casting to.
     #[track_caller]
-    pub fn into_inner<T: HasSchema>(self) -> T {
-        self.try_into_inner().unwrap()
+    pub fn cast_into<T: HasSchema>(self) -> T {
+        self.try_cast_into().unwrap()
     }
 
     /// Cast this box to it's inner type and return it.
     /// # Errors
     /// Errors if the schema of the box does not match that of the type you are casting to.
-    pub fn try_into_inner<T: HasSchema>(self) -> Result<T, SchemaMismatchError> {
+    pub fn try_cast_into<T: HasSchema>(self) -> Result<T, SchemaMismatchError> {
         if self.schema == T::schema() {
             // We've validated that the schema of the box matches T
-            Ok(unsafe { self.into_inner_unchecked() })
+            Ok(unsafe { self.cast_into_unchecked() })
         } else {
             Err(SchemaMismatchError)
         }
@@ -1462,7 +1462,7 @@ impl SchemaBox {
     /// Unsafely convert this box into an owned T.
     /// # Safety
     /// - The schema of type T must equal that of this box.
-    pub unsafe fn into_inner_unchecked<T: HasSchema>(self) -> T {
+    pub unsafe fn cast_into_unchecked<T: HasSchema>(self) -> T {
         // Allocate memory for T on the stack
         let mut ret = MaybeUninit::<T>::uninit();
 

@@ -105,25 +105,19 @@ impl<T: HasSchema> SystemParam for Localization<'_, T> {
     type State = (AssetServer, AtomicResource<RootLocalizationFieldIdx>);
     type Param<'s> = Localization<'s, T>;
 
-    fn initialize(world: &mut World) {
-        world.init_resource::<RootLocalizationFieldIdx>();
-    }
     fn get_state(world: &World) -> Self::State {
         (
             (*world.resources.get::<AssetServer>().unwrap()).clone(),
-            world
-                .resources
-                .get_cell::<RootLocalizationFieldIdx>()
-                .unwrap(),
+            world.resources.get_cell::<RootLocalizationFieldIdx>(),
         )
     }
     fn borrow<'s>(
-        _world: &'s World,
+        world: &'s World,
         (asset_server, field_idx): &'s mut Self::State,
     ) -> Self::Param<'s> {
         const ERR: &str = "Could not find a `Handle<LocalizationAsset>` field on root asset, \
                            needed for `Localization` parameter to work";
-        let field_idx = field_idx.borrow();
+        let field_idx = field_idx.init_borrow(world);
         let field_idx = field_idx.0.get_or_init(|| {
             let mut idx = None;
             for (i, field) in T::schema()

@@ -11,9 +11,6 @@ struct Test {
 
 /// Trait implemented by systems.
 pub trait System<In, Out> {
-    /// Initialize the system, creating any component or resource storages necessary for the system
-    /// to run in the world.
-    fn initialize(&self, world: &mut World);
     /// Run the system.
     fn run(&mut self, world: &World, input: In) -> Out;
     /// Get a best-effort name for the system, used in diagnostics.
@@ -22,12 +19,6 @@ pub trait System<In, Out> {
 
 /// Struct containing a static system.
 pub struct StaticSystem<In, Out> {
-    /// This should be called once to initialize the system, allowing it to intialize any resources
-    /// or components in the world.
-    ///
-    /// Usually only called once, but this is not guaranteed so the implementation should be
-    /// idempotent.
-    pub initialize: fn(&mut World),
     /// This is run every time the system is executed
     pub run: Box<dyn FnMut(&World, In) -> Out + Send + Sync>,
     /// A best-effort name for the system, for diagnostic purposes.
@@ -35,9 +26,6 @@ pub struct StaticSystem<In, Out> {
 }
 
 impl<In, Out> System<In, Out> for StaticSystem<In, Out> {
-    fn initialize(&self, world: &mut World) {
-        (self.initialize)(world)
-    }
     fn run(&mut self, world: &World, input: In) -> Out {
         (self.run)(world, input)
     }
@@ -95,10 +83,6 @@ pub trait SystemParam: Sized {
     /// > If the type is not the same, then system functions will not be able to take it as an
     /// > argument.
     type Param<'s>;
-    /// This will be called to give the parameter a chance to initialize it's world storage.
-    ///
-    /// You can use this chance to init any resources or components you need in the world.
-    fn initialize(world: &mut World);
     /// This is called to produce the intermediate state of the system parameter.
     ///
     /// This state will be created immediately before the system is run, and will kept alive until
@@ -113,7 +97,6 @@ pub trait SystemParam: Sized {
 impl SystemParam for &'_ World {
     type State = ();
     type Param<'s> = &'s World;
-    fn initialize(_world: &mut World) {}
     fn get_state(_world: &World) -> Self::State {}
     fn borrow<'s>(world: &'s World, _state: &'s mut Self::State) -> Self::Param<'s> {
         world
@@ -184,10 +167,12 @@ impl<'a, T: HasSchema> SystemParam for Res<'a, T> {
     type State = AtomicResource<T>;
     type Param<'p> = Res<'p, T>;
 
-    fn initialize(_world: &mut World) {}
-
     fn get_state(world: &World) -> Self::State {
-        world.resources.get_cell::<T>().unwrap_or_else(|| {
+        world.resources.get_cell::<T>()
+    }
+
+    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
+        Res(state.borrow().unwrap_or_else(|| {
             panic!(
                 "Resource of type `{}` not in world. \
                 You may need to insert or initialize the resource or use \
@@ -195,26 +180,20 @@ impl<'a, T: HasSchema> SystemParam for Res<'a, T> {
                 resource with the default value.",
                 std::any::type_name::<T>()
             )
-        })
-    }
-
-    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
-        Res(state.borrow())
+        }))
     }
 }
 
 impl<'a, T: HasSchema> SystemParam for Option<Res<'a, T>> {
-    type State = Option<AtomicResource<T>>;
+    type State = AtomicResource<T>;
     type Param<'p> = Option<Res<'p, T>>;
-
-    fn initialize(_world: &mut World) {}
 
     fn get_state(world: &World) -> Self::State {
         world.resources.get_cell::<T>()
     }
 
     fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
-        state.as_ref().map(|state| Res(state.borrow()))
+        state.borrow().map(|x| Res(x))
     }
 }
 
@@ -222,18 +201,14 @@ impl<'a, T: HasSchema + FromWorld> SystemParam for ResInit<'a, T> {
     type State = AtomicResource<T>;
     type Param<'p> = ResInit<'p, T>;
 
-    fn initialize(world: &mut World) {
-        if !world.resources.contains::<T>() {
-            world.init_resource::<T>();
-        }
-    }
-
     fn get_state(world: &World) -> Self::State {
-        world.resources.get_cell::<T>().unwrap()
+        let cell = world.resources.get_cell::<T>();
+        cell.init(world);
+        cell
     }
 
     fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
-        ResInit(state.borrow())
+        ResInit(state.borrow().unwrap())
     }
 }
 
@@ -241,10 +216,12 @@ impl<'a, T: HasSchema> SystemParam for ResMut<'a, T> {
     type State = AtomicResource<T>;
     type Param<'p> = ResMut<'p, T>;
 
-    fn initialize(_world: &mut World) {}
-
     fn get_state(world: &World) -> Self::State {
-        world.resources.get_cell::<T>().unwrap_or_else(|| {
+        world.resources.get_cell::<T>()
+    }
+
+    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
+        ResMut(state.borrow_mut().unwrap_or_else(|| {
             panic!(
                 "Resource of type `{}` not in world. \
                 You may need to insert or initialize the resource or use \
@@ -252,26 +229,20 @@ impl<'a, T: HasSchema> SystemParam for ResMut<'a, T> {
                 resource with the default value.",
                 std::any::type_name::<T>()
             )
-        })
-    }
-
-    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
-        ResMut(state.borrow_mut())
+        }))
     }
 }
 
 impl<'a, T: HasSchema> SystemParam for Option<ResMut<'a, T>> {
-    type State = Option<AtomicResource<T>>;
+    type State = AtomicResource<T>;
     type Param<'p> = Option<ResMut<'p, T>>;
-
-    fn initialize(_world: &mut World) {}
 
     fn get_state(world: &World) -> Self::State {
         world.resources.get_cell::<T>()
     }
 
     fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
-        state.as_mut().map(|state| ResMut(state.borrow_mut()))
+        state.borrow_mut().map(|state| ResMut(state))
     }
 }
 
@@ -279,18 +250,14 @@ impl<'a, T: HasSchema + FromWorld> SystemParam for ResMutInit<'a, T> {
     type State = AtomicResource<T>;
     type Param<'p> = ResMutInit<'p, T>;
 
-    fn initialize(world: &mut World) {
-        if !world.resources.contains::<T>() {
-            world.init_resource::<T>();
-        }
-    }
-
     fn get_state(world: &World) -> Self::State {
-        world.resources.get_cell::<T>().unwrap()
+        let cell = world.resources.get_cell::<T>();
+        cell.init(world);
+        cell
     }
 
     fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
-        ResMutInit(state.borrow_mut())
+        ResMutInit(state.borrow_mut().unwrap())
     }
 }
 
@@ -302,8 +269,6 @@ pub type CompMut<'a, T> = RefMut<'a, ComponentStore<T>>;
 impl<'a, T: HasSchema> SystemParam for Comp<'a, T> {
     type State = Arc<AtomicCell<ComponentStore<T>>>;
     type Param<'p> = Comp<'p, T>;
-
-    fn initialize(_world: &mut World) {}
 
     fn get_state(world: &World) -> Self::State {
         world.components.get_cell::<T>()
@@ -317,8 +282,6 @@ impl<'a, T: HasSchema> SystemParam for Comp<'a, T> {
 impl<'a, T: HasSchema> SystemParam for CompMut<'a, T> {
     type State = Arc<AtomicCell<ComponentStore<T>>>;
     type Param<'p> = CompMut<'p, T>;
-
-    fn initialize(_world: &mut World) {}
 
     fn get_state(world: &World) -> Self::State {
         world.components.get_cell::<T>()
@@ -355,11 +318,6 @@ macro_rules! impl_system {
             fn system(mut self) -> Self::Sys {
                 StaticSystem {
                     name: std::any::type_name::<F>(),
-                    initialize: |_world| {
-                        $(
-                            $args::initialize(_world);
-                        )*
-                    },
                     run: Box::new(move |_world, _input| {
                         $(
                             #[allow(non_snake_case)]
@@ -408,11 +366,6 @@ macro_rules! impl_system_with_input {
             fn system(mut self) -> Self::Sys {
                 StaticSystem {
                     name: std::any::type_name::<F>(),
-                    initialize: |_world| {
-                        $(
-                            $args::initialize(_world);
-                        )*
-                    },
                     run: Box::new(move |_world, input| {
                         $(
                             #[allow(non_snake_case)]
@@ -535,11 +488,11 @@ mod tests {
         let mut world = World::new();
         world.insert_resource(2usize);
 
-        let result = world.run_initialized_system(mul_by_res, 3);
+        let result = world.run_system(mul_by_res, 3);
         assert_eq!(result, 6);
 
         let mut n = 3;
-        world.run_initialized_system(sys_with_ref_in, &mut n)
+        world.run_system(sys_with_ref_in, &mut n)
     }
 
     #[test]
@@ -550,22 +503,15 @@ mod tests {
         pub struct B {
             x: u32,
         }
-        let mut world = World::default();
-        let mut my_system = (|_a: ResInit<A>, mut b: ResMutInit<B>| {
+        let world = World::default();
+        let my_system = (|_a: ResInit<A>, mut b: ResMutInit<B>| {
             let b2 = B { x: 45 };
             *b = b2;
         })
         .system();
 
-        assert!(world.resources.get_cell::<B>().is_none());
-        my_system.initialize(&mut world);
-
-        {
-            let res = world.resource::<B>();
-            assert_eq!(res.x, 0);
-        }
-
-        my_system.run(&world, ());
+        assert!(world.resources.get_cell::<B>().borrow().is_none());
+        world.run_system(my_system, ());
 
         let res = world.resource::<B>();
         assert_eq!(res.x, 45);
