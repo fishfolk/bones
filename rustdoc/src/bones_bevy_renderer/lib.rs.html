@@ -1288,6 +1288,7 @@
 <a href="#1288" id="1288">1288</a>
 <a href="#1289" id="1289">1289</a>
 <a href="#1290" id="1290">1290</a>
+<a href="#1291" id="1291">1291</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -1528,6 +1529,7 @@
             <span class="kw">else </span>{
                 <span class="kw">break </span><span class="lifetime">&#39;asset_load</span>;
             };
+            asset_server.set_game_version(<span class="self">self</span>.game_version);
 
             <span class="comment">// Configure the AssetIO implementation
             </span><span class="attr">#[cfg(not(target_arch = <span class="string">&quot;wasm32&quot;</span>))]

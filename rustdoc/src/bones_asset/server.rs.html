@@ -1362,9 +1362,50 @@
 <a href="#1362" id="1362">1362</a>
 <a href="#1363" id="1363">1363</a>
 <a href="#1364" id="1364">1364</a>
+<a href="#1365" id="1365">1365</a>
+<a href="#1366" id="1366">1366</a>
+<a href="#1367" id="1367">1367</a>
+<a href="#1368" id="1368">1368</a>
+<a href="#1369" id="1369">1369</a>
+<a href="#1370" id="1370">1370</a>
+<a href="#1371" id="1371">1371</a>
+<a href="#1372" id="1372">1372</a>
+<a href="#1373" id="1373">1373</a>
+<a href="#1374" id="1374">1374</a>
+<a href="#1375" id="1375">1375</a>
+<a href="#1376" id="1376">1376</a>
+<a href="#1377" id="1377">1377</a>
+<a href="#1378" id="1378">1378</a>
+<a href="#1379" id="1379">1379</a>
+<a href="#1380" id="1380">1380</a>
+<a href="#1381" id="1381">1381</a>
+<a href="#1382" id="1382">1382</a>
+<a href="#1383" id="1383">1383</a>
+<a href="#1384" id="1384">1384</a>
+<a href="#1385" id="1385">1385</a>
+<a href="#1386" id="1386">1386</a>
+<a href="#1387" id="1387">1387</a>
+<a href="#1388" id="1388">1388</a>
+<a href="#1389" id="1389">1389</a>
+<a href="#1390" id="1390">1390</a>
+<a href="#1391" id="1391">1391</a>
+<a href="#1392" id="1392">1392</a>
+<a href="#1393" id="1393">1393</a>
+<a href="#1394" id="1394">1394</a>
+<a href="#1395" id="1395">1395</a>
+<a href="#1396" id="1396">1396</a>
+<a href="#1397" id="1397">1397</a>
+<a href="#1398" id="1398">1398</a>
+<a href="#1399" id="1399">1399</a>
+<a href="#1400" id="1400">1400</a>
+<a href="#1401" id="1401">1401</a>
+<a href="#1402" id="1402">1402</a>
+<a href="#1403" id="1403">1403</a>
+<a href="#1404" id="1404">1404</a>
+<a href="#1405" id="1405">1405</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, Mutex},
 };
 
 <span class="kw">use </span>anyhow::Context;
@@ -1406,7 +1447,7 @@
 </span><span class="kw">pub struct </span>AssetServerInner {
     <span class="doccomment">/// The version of the game. This is used to evaluate whether asset packs are compatible with
     /// the game.
-    </span><span class="kw">pub </span>game_version: Version,
+    </span><span class="kw">pub </span>game_version: Mutex&lt;Version&gt;,
     <span class="doccomment">/// The asset store.
     </span><span class="kw">pub </span>store: AssetStore,
     <span class="doccomment">/// Sender for asset changes, used by the [`AssetIo`] implementation or other tasks to trigger
@@ -1439,7 +1480,7 @@
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>(asset_change_send, asset_change_recv) = async_channel::unbounded();
         <span class="self">Self </span>{
-            game_version: Version::new(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>),
+            game_version: Mutex::new(Version::new(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>)),
             store: default(),
             load_progress: default(),
             asset_change_send,
@@ -1461,8 +1502,8 @@
 <span class="doccomment">/// YAML format for asset packs&#39; `pack.yaml` file.
 </span><span class="attr">#[derive(Debug, Clone, Deserialize)]
 </span><span class="kw">pub struct </span>PackfileMeta {
-    <span class="doccomment">/// The path to the root asset for the pack.
-    </span><span class="kw">pub </span>root: PathBuf,
+    <span class="doccomment">/// User friendly pack name.
+    </span><span class="kw">pub </span>name: String,
     <span class="doccomment">/// The unique ID of the asset pack.
     </span><span class="kw">pub </span>id: AssetPackId,
     <span class="doccomment">/// The version of the asset pack.
@@ -1472,6 +1513,8 @@
     <span class="doccomment">/// The paths to schema definitions to be loaded from this pack.
     </span><span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>schemas: Vec&lt;PathBuf&gt;,
+    <span class="doccomment">/// The path to the root asset for the pack.
+    </span><span class="kw">pub </span>root: PathBuf,
 }
 
 <span class="doccomment">/// The [`AssetPackId`] of the core pack.
@@ -1525,7 +1568,7 @@
     </span><span class="kw">pub fn </span>new&lt;Io: AssetIo + <span class="lifetime">&#39;static</span>&gt;(io: Io, version: Version) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             inner: Arc::new(AssetServerInner {
-                game_version: version,
+                game_version: Mutex::new(version),
                 ..default()
             }),
             io: Arc::new(io),
@@ -1615,27 +1658,23 @@
     <span class="doccomment">/// Load all assets. This is usually done in an async task.
     </span><span class="kw">pub async fn </span>load_assets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
         <span class="comment">// Load the core asset pack
-        </span><span class="kw">let </span>core_pack = <span class="self">self</span>.load_pack(<span class="prelude-val">None</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        </span><span class="self">self</span>.load_pack(<span class="prelude-val">None</span>).<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="comment">// Load the user asset packs
-        </span><span class="kw">let </span><span class="kw-2">mut </span>packs = HashMap::default();
-        <span class="kw">for </span>pack_dir <span class="kw">in </span><span class="self">self</span>.io.enumerate_packs().<span class="kw">await</span><span class="question-mark">? </span>{
+        </span><span class="kw">for </span>pack_dir <span class="kw">in </span><span class="self">self</span>.io.enumerate_packs().<span class="kw">await</span><span class="question-mark">? </span>{
             <span class="comment">// Load the asset pack
             </span><span class="kw">let </span>pack_result = <span class="self">self</span>.load_pack(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>pack_dir)).<span class="kw">await</span>;
-            <span class="kw">match </span>pack_result {
-                <span class="comment">// If the load was successful
-                </span><span class="prelude-val">Ok</span>(pack) =&gt; {
-                    <span class="comment">// Add it to our pack list.
-                    </span><span class="kw">let </span>spec = AssetPackSpec {
-                        id: pack.id,
-                        version: pack.version.clone(),
-                    };
-                    packs.insert(spec, pack);
-                }
-                <span class="comment">// If there was an error.
-                </span><span class="prelude-val">Err</span>(e) =&gt; <span class="kw">match </span>e.downcast::&lt;IncompatibleGameVersionError&gt;() {
+            <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = pack_result {
+                <span class="kw">match </span>e.downcast::&lt;IncompatibleGameVersionError&gt;() {
                     <span class="comment">// Check for a compatibility error
                     </span><span class="prelude-val">Ok</span>(e) =&gt; {
+                        <span class="macro">tracing::warn!</span>(
+                            <span class="string">&quot;Not loading pack `{}` because it requires game version \
+                            `{}` and this is version `{}`&quot;</span>,
+                            e.pack_meta.name,
+                            e.pack_meta.game_version,
+                            e.game_version,
+                        );
                         <span class="comment">// Add it to the list of incompatible packs.
                         </span><span class="self">self</span>.store.incompabile_packs.insert(e.pack_dir, e.pack_meta);
                     }
@@ -1643,22 +1682,15 @@
                     </span><span class="prelude-val">Err</span>(e) =&gt; {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(e).context(<span class="macro">format!</span>(<span class="string">&quot;Error loading asset pack: {pack_dir}&quot;</span>))
                     }
-                },
+                }
             }
-        }
-
-        <span class="comment">// Insert core pack into the asset server
-        </span><span class="kw-2">*</span><span class="self">self</span>.store.core_pack.lock() = <span class="prelude-val">Some</span>(core_pack);
-        <span class="comment">// Insert loaded packs into the asset server.
-        </span><span class="kw">for </span>(k, v) <span class="kw">in </span>packs.into_iter() {
-            <span class="self">self</span>.store.packs.insert(k, v);
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Load the asset pack with the given folder name, or else the default pack if [`None`].
-    </span><span class="kw">pub async fn </span>load_pack(<span class="kw-2">&amp;</span><span class="self">self</span>, pack: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; anyhow::Result&lt;AssetPack&gt; {
+    </span><span class="kw">pub async fn </span>load_pack(<span class="kw-2">&amp;</span><span class="self">self</span>, pack: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; anyhow::Result&lt;AssetPackSpec&gt; {
         <span class="comment">// Load the core pack differently
         </span><span class="kw">if </span>pack.is_none() {
             <span class="kw">return </span><span class="self">self
@@ -1676,9 +1708,9 @@
         <span class="macro">tracing::debug!</span>(<span class="question-mark">?</span>pack, <span class="question-mark">?</span>meta, <span class="string">&quot;Loaded asset pack meta.&quot;</span>);
 
         <span class="comment">// If the game version doesn&#39;t match, then don&#39;t continue loading this pack.
-        </span><span class="kw">if </span>!meta.game_version.matches(<span class="kw-2">&amp;</span><span class="self">self</span>.game_version) {
+        </span><span class="kw">if </span>!meta.game_version.matches(<span class="kw-2">&amp;</span><span class="self">self</span>.game_version()) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(IncompatibleGameVersionError {
-                game_version: <span class="self">self</span>.game_version.clone(),
+                game_version: <span class="self">self</span>.game_version(),
                 pack_dir: pack.unwrap().to_owned(),
                 pack_meta: meta,
             }
@@ -1704,21 +1736,31 @@
             path: <span class="kw-2">&amp;</span>meta.root,
             pack,
         };
-        <span class="kw">let </span>root_handle = <span class="self">self</span>.load_asset(root_loc);
 
         <span class="comment">// Return the loaded asset pack.
-        </span><span class="prelude-val">Ok</span>(AssetPack {
-            name: <span class="string">&quot;Core&quot;</span>.into(),
+        </span><span class="kw">let </span>spec = AssetPackSpec {
             id: meta.id,
-            version: meta.version,
-            game_version: meta.game_version,
-            schemas,
-            root: root_handle,
-        })
+            version: meta.version.clone(),
+        };
+        <span class="self">self</span>.store.packs.insert(
+            spec.clone(),
+            AssetPack {
+                name: meta.name,
+                id: meta.id,
+                version: meta.version,
+                game_version: meta.game_version,
+                schemas,
+                root: default(),
+            },
+        );
+        <span class="kw">let </span>root_handle = <span class="self">self</span>.load_asset(root_loc);
+        <span class="self">self</span>.store.packs.get_mut(<span class="kw-2">&amp;</span>spec).unwrap().root = root_handle;
+
+        <span class="prelude-val">Ok</span>(spec)
     }
 
     <span class="doccomment">/// Load the core asset pack.
-    </span><span class="kw">pub async fn </span>load_core_pack(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;AssetPack&gt; {
+    </span><span class="kw">pub async fn </span>load_core_pack(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;AssetPackSpec&gt; {
         <span class="comment">// Load the core asset packfile
         </span><span class="kw">let </span>packfile_contents = <span class="self">self
             </span>.io
@@ -1742,22 +1784,30 @@
         </span><span class="kw">let </span>schemas = <span class="self">self</span>.load_pack_schemas(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>meta.schemas).<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="comment">// Return the loaded asset pack.
-        </span><span class="prelude-val">Ok</span>(AssetPack {
+        </span><span class="kw">let </span>game_version = <span class="self">self</span>.game_version();
+
+        <span class="kw">let </span>id = <span class="kw-2">*</span>CORE_PACK_ID;
+        <span class="kw-2">*</span><span class="self">self</span>.store.core_pack.lock() = <span class="prelude-val">Some</span>(AssetPack {
             name: <span class="string">&quot;Core&quot;</span>.into(),
-            id: <span class="kw-2">*</span>CORE_PACK_ID,
-            version: <span class="self">self</span>.game_version.clone(),
+            id,
+            version: game_version.clone(),
             game_version: VersionReq {
                 comparators: [semver::Comparator {
                     op: semver::Op::Exact,
-                    major: <span class="self">self</span>.game_version.major,
-                    minor: <span class="prelude-val">Some</span>(<span class="self">self</span>.game_version.minor),
-                    patch: <span class="prelude-val">Some</span>(<span class="self">self</span>.game_version.patch),
-                    pre: <span class="self">self</span>.game_version.pre.clone(),
+                    major: game_version.major,
+                    minor: <span class="prelude-val">Some</span>(game_version.minor),
+                    patch: <span class="prelude-val">Some</span>(game_version.patch),
+                    pre: game_version.pre.clone(),
                 }]
                 .to_vec(),
             },
             schemas,
             root: handle,
+        });
+
+        <span class="prelude-val">Ok</span>(AssetPackSpec {
+            id,
+            version: game_version.clone(),
         })
     }
 
@@ -2256,6 +2306,18 @@
         }
         <span class="prelude-val">Ok</span>(schemas)
     }
+
+    <span class="doccomment">/// Get the game version config, used when making sure asset packs are compatible with this
+    /// game version.
+    </span><span class="kw">pub fn </span>game_version(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Version {
+        <span class="self">self</span>.game_version.lock().unwrap().clone()
+    }
+
+    <span class="doccomment">/// Set the game version config, used when making sure asset packs are compatible with this
+    /// game version.
+    </span><span class="kw">pub fn </span>set_game_version(<span class="kw-2">&amp;</span><span class="self">self</span>, version: Version) {
+        <span class="kw-2">*</span><span class="self">self</span>.game_version.lock().unwrap() = version;
+    }
 }
 
 <span class="doccomment">/// Partial of a [`LoadedAsset`] used internally while loading is in progress.
@@ -2335,14 +2397,34 @@
                 .get::&lt;SchemaAssetHandle&gt;()
                 .is_some()
             {
-                <span class="kw">let </span>relative_path = PathBuf::from(String::deserialize(deserializer)<span class="question-mark">?</span>);
+                <span class="kw">let </span>path_string = String::deserialize(deserializer)<span class="question-mark">?</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>pack = <span class="self">self</span>.ctx.loc.pack.map(|x| x.to_owned());
+                <span class="kw">let </span>relative_path;
+                <span class="kw">if let </span><span class="prelude-val">Some</span>((pack_prefix, path)) = path_string.split_once(<span class="string">&#39;:&#39;</span>) {
+                    <span class="kw">let </span>pack_id = LabeledId::new(pack_prefix).map_err(|e| D::Error::custom(<span class="macro">format!</span>(<span class="string">&quot;Error parsing pack prefix while parsing asset path `{path_string}`: {e}&quot;</span>)))<span class="question-mark">?</span>;
+                    <span class="kw">if </span>pack_prefix == <span class="string">&quot;core&quot; </span>{
+                        pack = <span class="prelude-val">None</span>;
+                    } <span class="kw">else </span>{
+                        pack = <span class="prelude-val">Some</span>(<span class="self">self</span>.ctx
+                            .server
+                            .store
+                            .pack_dirs
+                            .iter()
+                            .find(|x| x.value().id == pack_id)
+                            .map(|x| x.key().to_owned())
+                            .ok_or_else(|| {
+                                D::Error::custom(<span class="macro">format!</span>(<span class="string">&quot;Dependent pack {pack_id} not loaded when trying to load asset with path: {path_string}.&quot;</span>))
+                            })<span class="question-mark">?</span>);
+                    }
+                    relative_path = path;
+                } <span class="kw">else </span>{
+                    relative_path = <span class="kw-2">&amp;</span>path_string;
+                };
+                <span class="kw">let </span>relative_path = PathBuf::from(relative_path);
                 <span class="kw">let </span>path = relative_path
                     .absolutize_from(<span class="self">self</span>.ctx.loc.path.parent().unwrap())
                     .unwrap();
-                <span class="kw">let </span>handle = <span class="self">self
-                    </span>.ctx
-                    .server
-                    .load_asset((<span class="kw-2">&amp;*</span>path, <span class="self">self</span>.ctx.loc.pack).into());
+                <span class="kw">let </span>handle = <span class="self">self</span>.ctx.server.load_asset((<span class="kw-2">&amp;*</span>path, pack.as_deref()).into());
                 <span class="self">self</span>.ctx.dependencies.push(handle);
                 <span class="kw-2">*</span><span class="self">self
                     </span>.ptr
