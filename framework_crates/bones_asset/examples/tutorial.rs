@@ -234,7 +234,7 @@ fn main() -> anyhow::Result<()> {
         let (folder_name, pack_meta) = (entry.key(), entry.value());
         let id = pack_meta.id;
         let version = &pack_meta.version;
-        let actual_game_version = &asset_server.game_version;
+        let actual_game_version = &asset_server.game_version();
         let compatible_game_version = &pack_meta.game_version;
         println!(
             "{id}@{version} in folder `{folder_name}` is not compatible with game version \
