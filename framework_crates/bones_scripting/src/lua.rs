@@ -6,9 +6,10 @@ use bones_lib::ecs::utils::*;
 
 use parking_lot::Mutex;
 use piccolo::{
+    compiler::{LineNumber, ParseError},
     registry::{Fetchable, Stashable},
-    AnyUserData, Closure, Context, Executor, FromValue, Lua, ProtoCompileError, StashedClosure,
-    Table, Value,
+    AnyUserData, Closure, Context, Executor, FromValue, Lua, PrototypeError, StashedClosure, Table,
+    Value,
 };
 use send_wrapper::SendWrapper;
 use std::{any::Any, rc::Rc, sync::Arc};
@@ -329,20 +330,25 @@ impl LuaEngine {
                             .get(&script.untyped())
                             .ok_or_else(|| {
                                 tracing::warn!("Script asset not loaded.");
-                                ProtoCompileError::Parser(
-                                    piccolo::compiler::ParserError::EndOfStream { expected: None },
-                                )
+                                PrototypeError::Parser(ParseError {
+                                    kind: piccolo::compiler::ParseErrorKind::EndOfStream {
+                                        expected: None,
+                                    },
+                                    line_number: LineNumber(0),
+                                })
                             })?;
 
                         let mut compiled_scripts = self.state.compiled_scripts.lock();
                         let closure = compiled_scripts.get(&cid);
 
-                        Ok::<_, ProtoCompileError>(match closure {
+                        Ok::<_, PrototypeError>(match closure {
                             Some(closure) => ctx.state.registry.fetch(closure),
                             None => {
                                 let asset = asset_server.store.assets.get(&cid).unwrap();
                                 let source = &asset.data.cast_ref::<LuaScript>().source;
-                                let closure = Closure::load_with_env(ctx, source.as_bytes(), env)?;
+                                // TODO: Provide a meaningfull name to loaded scripts.
+                                let closure =
+                                    Closure::load_with_env(ctx, None, source.as_bytes(), env)?;
                                 compiled_scripts
                                     .insert(cid, ctx.state.registry.stash(&ctx, closure));
 
