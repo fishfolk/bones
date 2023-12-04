@@ -99,7 +99,8 @@ impl LuaPlugin {
             session_var.set_metatable(&ctx, Some(ctx.singletons().get(ctx, session_metatable)));
             env.set(ctx, "session", session_var)?;
 
-            let closure = Closure::load_with_env(ctx, self.source.as_bytes(), env)?;
+            // TODO: Provide a meaningfull name to loaded scripts.
+            let closure = Closure::load_with_env(ctx, None, self.source.as_bytes(), env)?;
             let ex = Executor::start(ctx, closure.into(), ());
             Ok(ctx.state.registry.stash(&ctx, ex))
         })?;
