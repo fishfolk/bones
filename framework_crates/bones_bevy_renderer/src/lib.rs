@@ -238,6 +238,7 @@ impl BonesBevyRenderer {
             else {
                 break 'asset_load;
             };
+            asset_server.set_game_version(self.game_version);
 
             // Configure the AssetIO implementation
             #[cfg(not(target_arch = "wasm32"))]

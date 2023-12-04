@@ -1,6 +1,6 @@
 use std::{
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, Mutex},
 };
 
 use anyhow::Context;
@@ -42,7 +42,7 @@ pub struct AssetServer {
 pub struct AssetServerInner {
     /// The version of the game. This is used to evaluate whether asset packs are compatible with
     /// the game.
-    pub game_version: Version,
+    pub game_version: Mutex<Version>,
     /// The asset store.
     pub store: AssetStore,
     /// Sender for asset changes, used by the [`AssetIo`] implementation or other tasks to trigger
@@ -75,7 +75,7 @@ impl Default for AssetServerInner {
     fn default() -> Self {
         let (asset_change_send, asset_change_recv) = async_channel::unbounded();
         Self {
-            game_version: Version::new(0, 0, 0),
+            game_version: Mutex::new(Version::new(0, 0, 0)),
             store: default(),
             load_progress: default(),
             asset_change_send,
@@ -97,8 +97,8 @@ pub struct CorePackfileMeta {
 /// YAML format for asset packs' `pack.yaml` file.
 #[derive(Debug, Clone, Deserialize)]
 pub struct PackfileMeta {
-    /// The path to the root asset for the pack.
-    pub root: PathBuf,
+    /// User friendly pack name.
+    pub name: String,
     /// The unique ID of the asset pack.
     pub id: AssetPackId,
     /// The version of the asset pack.
@@ -108,6 +108,8 @@ pub struct PackfileMeta {
     /// The paths to schema definitions to be loaded from this pack.
     #[serde(default)]
     pub schemas: Vec<PathBuf>,
+    /// The path to the root asset for the pack.
+    pub root: PathBuf,
 }
 
 /// The [`AssetPackId`] of the core pack.
@@ -161,7 +163,7 @@ impl AssetServer {
     pub fn new<Io: AssetIo + 'static>(io: Io, version: Version) -> Self {
         Self {
             inner: Arc::new(AssetServerInner {
-                game_version: version,
+                game_version: Mutex::new(version),
                 ..default()
             }),
             io: Arc::new(io),
@@ -251,27 +253,23 @@ impl AssetServer {
     /// Load all assets. This is usually done in an async task.
     pub async fn load_assets(&self) -> anyhow::Result<()> {
         // Load the core asset pack
-        let core_pack = self.load_pack(None).await?;
+        self.load_pack(None).await?;
 
         // Load the user asset packs
-        let mut packs = HashMap::default();
         for pack_dir in self.io.enumerate_packs().await? {
             // Load the asset pack
             let pack_result = self.load_pack(Some(&pack_dir)).await;
-            match pack_result {
-                // If the load was successful
-                Ok(pack) => {
-                    // Add it to our pack list.
-                    let spec = AssetPackSpec {
-                        id: pack.id,
-                        version: pack.version.clone(),
-                    };
-                    packs.insert(spec, pack);
-                }
-                // If there was an error.
-                Err(e) => match e.downcast::<IncompatibleGameVersionError>() {
+            if let Err(e) = pack_result {
+                match e.downcast::<IncompatibleGameVersionError>() {
                     // Check for a compatibility error
                     Ok(e) => {
+                        tracing::warn!(
+                            "Not loading pack `{}` because it requires game version \
+                            `{}` and this is version `{}`",
+                            e.pack_meta.name,
+                            e.pack_meta.game_version,
+                            e.game_version,
+                        );
                         // Add it to the list of incompatible packs.
                         self.store.incompabile_packs.insert(e.pack_dir, e.pack_meta);
                     }
@@ -279,22 +277,15 @@ impl AssetServer {
                     Err(e) => {
                         return Err(e).context(format!("Error loading asset pack: {pack_dir}"))
                     }
-                },
+                }
             }
-        }
-
-        // Insert core pack into the asset server
-        *self.store.core_pack.lock() = Some(core_pack);
-        // Insert loaded packs into the asset server.
-        for (k, v) in packs.into_iter() {
-            self.store.packs.insert(k, v);
         }
 
         Ok(())
     }
 
     /// Load the asset pack with the given folder name, or else the default pack if [`None`].
-    pub async fn load_pack(&self, pack: Option<&str>) -> anyhow::Result<AssetPack> {
+    pub async fn load_pack(&self, pack: Option<&str>) -> anyhow::Result<AssetPackSpec> {
         // Load the core pack differently
         if pack.is_none() {
             return self
@@ -312,9 +303,9 @@ impl AssetServer {
         tracing::debug!(?pack, ?meta, "Loaded asset pack meta.");
 
         // If the game version doesn't match, then don't continue loading this pack.
-        if !meta.game_version.matches(&self.game_version) {
+        if !meta.game_version.matches(&self.game_version()) {
             return Err(IncompatibleGameVersionError {
-                game_version: self.game_version.clone(),
+                game_version: self.game_version(),
                 pack_dir: pack.unwrap().to_owned(),
                 pack_meta: meta,
             }
@@ -340,21 +331,31 @@ impl AssetServer {
             path: &meta.root,
             pack,
         };
-        let root_handle = self.load_asset(root_loc);
 
         // Return the loaded asset pack.
-        Ok(AssetPack {
-            name: "Core".into(),
+        let spec = AssetPackSpec {
             id: meta.id,
-            version: meta.version,
-            game_version: meta.game_version,
-            schemas,
-            root: root_handle,
-        })
+            version: meta.version.clone(),
+        };
+        self.store.packs.insert(
+            spec.clone(),
+            AssetPack {
+                name: meta.name,
+                id: meta.id,
+                version: meta.version,
+                game_version: meta.game_version,
+                schemas,
+                root: default(),
+            },
+        );
+        let root_handle = self.load_asset(root_loc);
+        self.store.packs.get_mut(&spec).unwrap().root = root_handle;
+
+        Ok(spec)
     }
 
     /// Load the core asset pack.
-    pub async fn load_core_pack(&self) -> anyhow::Result<AssetPack> {
+    pub async fn load_core_pack(&self) -> anyhow::Result<AssetPackSpec> {
         // Load the core asset packfile
         let packfile_contents = self
             .io
@@ -378,22 +379,30 @@ impl AssetServer {
         let schemas = self.load_pack_schemas(None, &meta.schemas).await?;
 
         // Return the loaded asset pack.
-        Ok(AssetPack {
+        let game_version = self.game_version();
+
+        let id = *CORE_PACK_ID;
+        *self.store.core_pack.lock() = Some(AssetPack {
             name: "Core".into(),
-            id: *CORE_PACK_ID,
-            version: self.game_version.clone(),
+            id,
+            version: game_version.clone(),
             game_version: VersionReq {
                 comparators: [semver::Comparator {
                     op: semver::Op::Exact,
-                    major: self.game_version.major,
-                    minor: Some(self.game_version.minor),
-                    patch: Some(self.game_version.patch),
-                    pre: self.game_version.pre.clone(),
+                    major: game_version.major,
+                    minor: Some(game_version.minor),
+                    patch: Some(game_version.patch),
+                    pre: game_version.pre.clone(),
                 }]
                 .to_vec(),
             },
             schemas,
             root: handle,
+        });
+
+        Ok(AssetPackSpec {
+            id,
+            version: game_version.clone(),
         })
     }
 
@@ -892,6 +901,18 @@ impl AssetServer {
         }
         Ok(schemas)
     }
+
+    /// Get the game version config, used when making sure asset packs are compatible with this
+    /// game version.
+    pub fn game_version(&self) -> Version {
+        self.game_version.lock().unwrap().clone()
+    }
+
+    /// Set the game version config, used when making sure asset packs are compatible with this
+    /// game version.
+    pub fn set_game_version(&self, version: Version) {
+        *self.game_version.lock().unwrap() = version;
+    }
 }
 
 /// Partial of a [`LoadedAsset`] used internally while loading is in progress.
@@ -971,14 +992,34 @@ mod metadata {
                 .get::<SchemaAssetHandle>()
                 .is_some()
             {
-                let relative_path = PathBuf::from(String::deserialize(deserializer)?);
+                let path_string = String::deserialize(deserializer)?;
+                let mut pack = self.ctx.loc.pack.map(|x| x.to_owned());
+                let relative_path;
+                if let Some((pack_prefix, path)) = path_string.split_once(':') {
+                    let pack_id = LabeledId::new(pack_prefix).map_err(|e| D::Error::custom(format!("Error parsing pack prefix while parsing asset path `{path_string}`: {e}")))?;
+                    if pack_prefix == "core" {
+                        pack = None;
+                    } else {
+                        pack = Some(self.ctx
+                            .server
+                            .store
+                            .pack_dirs
+                            .iter()
+                            .find(|x| x.value().id == pack_id)
+                            .map(|x| x.key().to_owned())
+                            .ok_or_else(|| {
+                                D::Error::custom(format!("Dependent pack {pack_id} not loaded when trying to load asset with path: {path_string}."))
+                            })?);
+                    }
+                    relative_path = path;
+                } else {
+                    relative_path = &path_string;
+                };
+                let relative_path = PathBuf::from(relative_path);
                 let path = relative_path
                     .absolutize_from(self.ctx.loc.path.parent().unwrap())
                     .unwrap();
-                let handle = self
-                    .ctx
-                    .server
-                    .load_asset((&*path, self.ctx.loc.pack).into());
+                let handle = self.ctx.server.load_asset((&*path, pack.as_deref()).into());
                 self.ctx.dependencies.push(handle);
                 *self
                     .ptr
