@@ -268,6 +268,7 @@
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
 <a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>bevy_tasks::ThreadExecutor;
@@ -369,7 +370,8 @@
             session_var.set_metatable(<span class="kw-2">&amp;</span>ctx, <span class="prelude-val">Some</span>(ctx.singletons().get(ctx, session_metatable)));
             env.set(ctx, <span class="string">&quot;session&quot;</span>, session_var)<span class="question-mark">?</span>;
 
-            <span class="kw">let </span>closure = Closure::load_with_env(ctx, <span class="self">self</span>.source.as_bytes(), env)<span class="question-mark">?</span>;
+            <span class="comment">// TODO: Provide a meaningfull name to loaded scripts.
+            </span><span class="kw">let </span>closure = Closure::load_with_env(ctx, <span class="prelude-val">None</span>, <span class="self">self</span>.source.as_bytes(), env)<span class="question-mark">?</span>;
             <span class="kw">let </span>ex = Executor::start(ctx, closure.into(), ());
             <span class="prelude-val">Ok</span>(ctx.state.registry.stash(<span class="kw-2">&amp;</span>ctx, ex))
         })<span class="question-mark">?</span>;

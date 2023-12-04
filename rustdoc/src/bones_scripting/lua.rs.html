@@ -366,6 +366,12 @@
 <a href="#366" id="366">366</a>
 <a href="#367" id="367">367</a>
 <a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>bevy_tasks::{ComputeTaskPool, TaskPool, ThreadExecutor};
@@ -374,9 +380,10 @@
 
 <span class="kw">use </span>parking_lot::Mutex;
 <span class="kw">use </span>piccolo::{
+    compiler::{LineNumber, ParseError},
     registry::{Fetchable, Stashable},
-    AnyUserData, Closure, Context, Executor, FromValue, Lua, ProtoCompileError, StashedClosure,
-    Table, Value,
+    AnyUserData, Closure, Context, Executor, FromValue, Lua, PrototypeError, StashedClosure, Table,
+    Value,
 };
 <span class="kw">use </span>send_wrapper::SendWrapper;
 <span class="kw">use </span>std::{any::Any, rc::Rc, sync::Arc};
@@ -697,20 +704,25 @@
                             .get(<span class="kw-2">&amp;</span>script.untyped())
                             .ok_or_else(|| {
                                 <span class="macro">tracing::warn!</span>(<span class="string">&quot;Script asset not loaded.&quot;</span>);
-                                ProtoCompileError::Parser(
-                                    piccolo::compiler::ParserError::EndOfStream { expected: <span class="prelude-val">None </span>},
-                                )
+                                PrototypeError::Parser(ParseError {
+                                    kind: piccolo::compiler::ParseErrorKind::EndOfStream {
+                                        expected: <span class="prelude-val">None</span>,
+                                    },
+                                    line_number: LineNumber(<span class="number">0</span>),
+                                })
                             })<span class="question-mark">?</span>;
 
                         <span class="kw">let </span><span class="kw-2">mut </span>compiled_scripts = <span class="self">self</span>.state.compiled_scripts.lock();
                         <span class="kw">let </span>closure = compiled_scripts.get(<span class="kw-2">&amp;</span>cid);
 
-                        <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, ProtoCompileError&gt;(<span class="kw">match </span>closure {
+                        <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, PrototypeError&gt;(<span class="kw">match </span>closure {
                             <span class="prelude-val">Some</span>(closure) =&gt; ctx.state.registry.fetch(closure),
                             <span class="prelude-val">None </span>=&gt; {
                                 <span class="kw">let </span>asset = asset_server.store.assets.get(<span class="kw-2">&amp;</span>cid).unwrap();
                                 <span class="kw">let </span>source = <span class="kw-2">&amp;</span>asset.data.cast_ref::&lt;LuaScript&gt;().source;
-                                <span class="kw">let </span>closure = Closure::load_with_env(ctx, source.as_bytes(), env)<span class="question-mark">?</span>;
+                                <span class="comment">// TODO: Provide a meaningfull name to loaded scripts.
+                                </span><span class="kw">let </span>closure =
+                                    Closure::load_with_env(ctx, <span class="prelude-val">None</span>, source.as_bytes(), env)<span class="question-mark">?</span>;
                                 compiled_scripts
                                     .insert(cid, ctx.state.registry.stash(<span class="kw-2">&amp;</span>ctx, closure));
 
