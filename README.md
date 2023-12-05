@@ -93,7 +93,7 @@ successfully implemented, and it is going to be actively used in Jumpy.
 
 ## Contributing
 
-If you would like to contribute, feel free to reach out on our [Discord](https://discord.gg/4smxjcheE5) or [Revolt](https://weird.dev/invite/ZagXxrS4) server to ask questions!
+If you would like to contribute, feel free to reach out on our [Discord](https://discord.gg/4smxjcheE5) server to ask questions!
 
 We also use [TODO Issue][tdi] to automatically create issues from all of our `TODO` comments in code. You can check out the [todo issue list][tdil] to see if there's any thing you'd like to take a hack at.
 
