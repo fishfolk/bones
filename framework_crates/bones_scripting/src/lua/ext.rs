@@ -10,7 +10,7 @@ pub trait CtxExt {
 }
 impl CtxExt for piccolo::Context<'_> {
     fn singletons(&self) -> &LuaSingletons {
-        let Value::UserData(data) = self.state.globals.get(*self, "luasingletons") else {
+        let Value::UserData(data) = self.globals().get(*self, "luasingletons") else {
             unreachable!();
         };
         data.downcast_static::<LuaSingletons>().unwrap()

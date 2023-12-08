@@ -804,7 +804,10 @@ fn step_bones_game(world: &mut World) {
         asset_server.handle_asset_changes(|asset_server, handle| {
             let mut bones_egui_textures =
                 game.shared_resource_mut::<bones::EguiTextures>().unwrap();
-            let mut asset = asset_server.get_asset_untyped_mut(handle).unwrap();
+            let Some(mut asset) = asset_server.get_asset_untyped_mut(handle) else {
+                // There was an issue loading the asset. The error will have been logged.
+                return;
+            };
 
             // TODO: hot reload changed fonts.
 

@@ -19,7 +19,7 @@ pub fn metatable(ctx: Context) -> Table {
         )
         .unwrap();
 
-    let get_callback = ctx.state.registry.stash(
+    let get_callback = ctx.registry().stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
             let (world, schema): (&WorldRef, AnyUserData) = stack.consume(ctx)?;
@@ -50,7 +50,7 @@ pub fn metatable(ctx: Context) -> Table {
                 #[allow(clippy::single_match)]
                 match key.as_bytes() {
                     b"get" => {
-                        stack.push_front(ctx.state.registry.fetch(&get_callback).into());
+                        stack.push_front(ctx.registry().fetch(&get_callback).into());
                     }
                     _ => (),
                 }

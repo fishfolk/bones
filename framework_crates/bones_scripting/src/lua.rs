@@ -5,6 +5,7 @@ use bones_asset::dashmap::mapref::one::{MappedRef, MappedRefMut};
 use bones_lib::ecs::utils::*;
 
 use parking_lot::Mutex;
+pub use piccolo;
 use piccolo::{
     compiler::{LineNumber, ParseError},
     registry::{Fetchable, Stashable},
@@ -64,7 +65,7 @@ impl SessionPlugin for LuaPluginLoaderSessionPlugin {
                       world: &World| {
                     engine.exec(|lua| {
                         Frozen::<Freeze![&'freeze World]>::in_scope(world, |world| {
-                            lua.run(|ctx| {
+                            lua.enter(|ctx| {
                                 let env = ctx.singletons().get(ctx, bindings::env);
                                 let worldref = WorldRef(world);
                                 worldref.add_to_env(ctx, env);
@@ -87,10 +88,10 @@ impl SessionPlugin for LuaPluginLoaderSessionPlugin {
 
                                 for (has_run, closure) in &mut systems.startup {
                                     if !*has_run {
-                                        let executor = lua.run(|ctx| {
-                                            let closure = ctx.state.registry.fetch(closure);
+                                        let executor = lua.enter(|ctx| {
+                                            let closure = ctx.registry().fetch(closure);
                                             let ex = Executor::start(ctx, closure.into(), ());
-                                            ctx.state.registry.stash(&ctx, ex)
+                                            ctx.registry().stash(&ctx, ex)
                                         });
                                         if let Err(e) = lua.execute::<()>(&executor) {
                                             tracing::error!("Error running lua plugin system: {e}");
@@ -102,10 +103,10 @@ impl SessionPlugin for LuaPluginLoaderSessionPlugin {
 
                                 for (stage, closure) in &systems.core_stages {
                                     if stage == &lua_stage {
-                                        let executor = lua.run(|ctx| {
-                                            let closure = ctx.state.registry.fetch(closure);
+                                        let executor = lua.enter(|ctx| {
+                                            let closure = ctx.registry().fetch(closure);
                                             let ex = Executor::start(ctx, closure.into(), ());
-                                            ctx.state.registry.stash(&ctx, ex)
+                                            ctx.registry().stash(&ctx, ex)
                                         });
                                         if let Err(e) = lua.execute::<()>(&executor) {
                                             tracing::error!("Error running lua plugin system: {e}");
@@ -150,8 +151,7 @@ impl WorldRef {
 
     /// Add this world
     fn add_to_env<'gc>(&self, ctx: Context<'gc>, env: Table<'gc>) {
-        ctx.state
-            .globals
+        ctx.globals()
             .set(ctx, "world", self.clone().into_userdata(ctx))
             .unwrap();
         for (name, metatable) in [
@@ -227,11 +227,11 @@ impl LuaSingletons {
                 "Encountered two functions with different return types and \
                 the same function pointer.",
             );
-            ctx.state.registry.fetch(stashed)
+            ctx.registry().fetch(stashed)
         } else {
             drop(map); // Make sure we don't deadlock
             let v = singleton(ctx);
-            let stashed = ctx.state.registry.stash(&ctx, v);
+            let stashed = ctx.registry().stash(&ctx, v);
             self.singletons.borrow_mut().insert(id, Box::new(stashed));
             v
         }
@@ -242,9 +242,9 @@ impl Default for EngineState {
     fn default() -> Self {
         // Initialize an empty lua engine and our lua data.
         let mut lua = Lua::core();
-        lua.try_run(|ctx| {
+        lua.try_enter(|ctx| {
             // Insert our lua singletons.
-            ctx.state.globals.set(
+            ctx.globals().set(
                 ctx,
                 "luasingletons",
                 AnyUserData::new_static(&ctx, LuaSingletons::default()),
@@ -317,7 +317,7 @@ impl LuaEngine {
                 // Wrap world reference so that it can be converted to lua userdata.
                 let worldref = WorldRef(world);
 
-                let executor = lua.try_run(|ctx| {
+                let executor = lua.try_enter(|ctx| {
                     // Fetch the env table
                     let env = self.state.data.get(ctx, bindings::env);
 
@@ -342,15 +342,14 @@ impl LuaEngine {
                         let closure = compiled_scripts.get(&cid);
 
                         Ok::<_, PrototypeError>(match closure {
-                            Some(closure) => ctx.state.registry.fetch(closure),
+                            Some(closure) => ctx.registry().fetch(closure),
                             None => {
                                 let asset = asset_server.store.assets.get(&cid).unwrap();
                                 let source = &asset.data.cast_ref::<LuaScript>().source;
                                 // TODO: Provide a meaningfull name to loaded scripts.
                                 let closure =
                                     Closure::load_with_env(ctx, None, source.as_bytes(), env)?;
-                                compiled_scripts
-                                    .insert(cid, ctx.state.registry.stash(&ctx, closure));
+                                compiled_scripts.insert(cid, ctx.registry().stash(&ctx, closure));
 
                                 closure
                             }
@@ -361,7 +360,7 @@ impl LuaEngine {
                     worldref.add_to_env(ctx, env);
 
                     let ex = Executor::start(ctx, closure.into(), ());
-                    let ex = ctx.state.registry.stash(&ctx, ex);
+                    let ex = ctx.registry().stash(&ctx, ex);
                     Ok(ex)
                 });
 

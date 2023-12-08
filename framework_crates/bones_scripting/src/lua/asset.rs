@@ -92,7 +92,7 @@ impl LuaPlugin {
         }
     }
     fn load_impl(&self, lua: &mut piccolo::Lua) -> Result<(), anyhow::Error> {
-        let executor = lua.try_run(|ctx| {
+        let executor = lua.try_enter(|ctx| {
             let env = ctx.singletons().get(ctx, super::bindings::env);
 
             let session_var = AnyUserData::new_static(&ctx, self.systems.clone());
@@ -102,7 +102,7 @@ impl LuaPlugin {
             // TODO: Provide a meaningfull name to loaded scripts.
             let closure = Closure::load_with_env(ctx, None, self.source.as_bytes(), env)?;
             let ex = Executor::start(ctx, closure.into(), ());
-            Ok(ctx.state.registry.stash(&ctx, ex))
+            Ok(ctx.registry().stash(&ctx, ex))
         })?;
 
         lua.execute::<()>(&executor)?;
@@ -134,7 +134,7 @@ fn session_metatable(ctx: Context) -> Table {
         )
         .unwrap();
 
-    let add_startup_system_callback = ctx.state.registry.stash(
+    let add_startup_system_callback = ctx.registry().stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
             let (this, closure): (AnyUserData, Closure) = stack.consume(ctx)?;
@@ -144,12 +144,12 @@ fn session_metatable(ctx: Context) -> Table {
             systems
                 .as_loaded_mut()
                 .startup
-                .push((false, ctx.state.registry.stash(&ctx, closure)));
+                .push((false, ctx.registry().stash(&ctx, closure)));
 
             Ok(CallbackReturn::Return)
         }),
     );
-    let add_system_to_stage_callback = ctx.state.registry.stash(
+    let add_system_to_stage_callback = ctx.registry().stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
             let (this, stage, closure): (AnyUserData, AnyUserData, Closure) = stack.consume(ctx)?;
@@ -160,7 +160,7 @@ fn session_metatable(ctx: Context) -> Table {
             systems
                 .as_loaded_mut()
                 .core_stages
-                .push((*stage, ctx.state.registry.stash(&ctx, closure)));
+                .push((*stage, ctx.registry().stash(&ctx, closure)));
 
             Ok(CallbackReturn::Return)
         }),
@@ -176,20 +176,11 @@ fn session_metatable(ctx: Context) -> Table {
                 #[allow(clippy::single_match)]
                 match key.as_bytes() {
                     b"add_system_to_stage" => {
-                        stack.push_front(
-                            ctx.state
-                                .registry
-                                .fetch(&add_system_to_stage_callback)
-                                .into(),
-                        );
+                        stack
+                            .push_front(ctx.registry().fetch(&add_system_to_stage_callback).into());
                     }
                     b"add_startup_system" => {
-                        stack.push_front(
-                            ctx.state
-                                .registry
-                                .fetch(&add_startup_system_callback)
-                                .into(),
-                        );
+                        stack.push_front(ctx.registry().fetch(&add_startup_system_callback).into());
                     }
                     _ => (),
                 }

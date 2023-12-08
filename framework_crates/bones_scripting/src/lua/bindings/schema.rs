@@ -67,7 +67,7 @@ pub fn metatable(ctx: Context) -> Table {
             }),
         )
         .unwrap();
-    let create_fn = ctx.state.registry.stash(
+    let create_fn = ctx.registry().stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
             let this: AnyUserData = stack.consume(ctx)?;
@@ -84,7 +84,7 @@ pub fn metatable(ctx: Context) -> Table {
         }),
     );
 
-    let without_fn = ctx.state.registry.stash(
+    let without_fn = ctx.registry().stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
             let this: AnyUserData = stack.consume(ctx)?;
@@ -129,8 +129,8 @@ pub fn metatable(ctx: Context) -> Table {
                             )),
                         );
                     }
-                    b"create" => stack.replace(ctx, ctx.state.registry.fetch(&create_fn)),
-                    b"without" => stack.replace(ctx, ctx.state.registry.fetch(&without_fn)),
+                    b"create" => stack.replace(ctx, ctx.registry().fetch(&create_fn)),
+                    b"without" => stack.replace(ctx, ctx.registry().fetch(&without_fn)),
                     _ => (),
                 }
 

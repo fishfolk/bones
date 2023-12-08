@@ -18,7 +18,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(ctx, "__newindex", ctx.singletons().get(ctx, no_newindex))
         .unwrap();
 
-    let get_callback = ctx.state.registry.stash(
+    let get_callback = ctx.registry().stash(
         &ctx,
         AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
             let (world, entity_ecsref, schema): (&WorldRef, &EcsRef, AnyUserData) =
@@ -51,7 +51,7 @@ pub fn metatable(ctx: Context) -> Table {
             Ok(CallbackReturn::Return)
         }),
     );
-    let insert_callback = ctx.state.registry.stash(
+    let insert_callback = ctx.registry().stash(
         &ctx,
         AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
             let (world, entity_ecsref, value_ecsref): (&WorldRef, &EcsRef, &EcsRef) =
@@ -76,7 +76,7 @@ pub fn metatable(ctx: Context) -> Table {
             Ok(CallbackReturn::Return)
         }),
     );
-    let remove_callback = ctx.state.registry.stash(
+    let remove_callback = ctx.registry().stash(
         &ctx,
         AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
             let (world, entity_ecsref, schema): (&WorldRef, &EcsRef, AnyUserData) =
@@ -109,13 +109,13 @@ pub fn metatable(ctx: Context) -> Table {
                     #[allow(clippy::single_match)]
                     match key.as_bytes() {
                         b"get" => {
-                            stack.push_front(ctx.state.registry.fetch(&get_callback).into());
+                            stack.push_front(ctx.registry().fetch(&get_callback).into());
                         }
                         b"insert" => {
-                            stack.push_front(ctx.state.registry.fetch(&insert_callback).into());
+                            stack.push_front(ctx.registry().fetch(&insert_callback).into());
                         }
                         b"remove" => {
-                            stack.push_front(ctx.state.registry.fetch(&remove_callback).into());
+                            stack.push_front(ctx.registry().fetch(&remove_callback).into());
                         }
                         _ => (),
                     }

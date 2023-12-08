@@ -35,7 +35,7 @@ pub fn no_newindex(ctx: Context) -> AnyCallback {
 pub fn env(ctx: Context) -> Table {
     let env = Table::new(&ctx);
 
-    env.set(ctx, "math", ctx.state.globals.get(ctx, "math"))
+    env.set(ctx, "math", ctx.globals().get(ctx, "math"))
         .unwrap();
 
     let schema_fn = ctx.singletons().get(ctx, schema::schema_fn);
