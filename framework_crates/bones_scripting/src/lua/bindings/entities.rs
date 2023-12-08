@@ -23,7 +23,7 @@ pub fn entities_metatable(ctx: Context) -> Table {
         .set(ctx, "__newindex", ctx.singletons().get(ctx, no_newindex))
         .unwrap();
 
-    let create_callback = ctx.state.registry.stash(
+    let create_callback = ctx.registry().stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
             let this: &EcsRef = stack.consume(ctx)?;
@@ -42,7 +42,7 @@ pub fn entities_metatable(ctx: Context) -> Table {
             Ok(CallbackReturn::Return)
         }),
     );
-    let kill_callback = ctx.state.registry.stash(
+    let kill_callback = ctx.registry().stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
             let (this, entity_ecsref): (&EcsRef, &EcsRef) = stack.consume(ctx)?;
@@ -56,15 +56,14 @@ pub fn entities_metatable(ctx: Context) -> Table {
             Ok(CallbackReturn::Return)
         }),
     );
-    let iter_with_callback = ctx.state.registry.stash(
+    let iter_with_callback = ctx.registry().stash(
         &ctx,
         AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
             let (this, schema_args): (&EcsRef, Variadic<Vec<AnyUserData>>) = stack.consume(ctx)?;
             let mut b = this.borrow_mut();
             let entities = b.schema_ref_mut()?.cast_into_mut::<Entities>();
             let world = ctx
-                .state
-                .globals
+                .globals()
                 .get(ctx, "world")
                 .as_static_user_data::<WorldRef>()?;
             let mut bitset = entities.bitset().clone();
@@ -108,8 +107,7 @@ pub fn entities_metatable(ctx: Context) -> Table {
 
                 if let Some(entity) = next_ent {
                     let world = ctx
-                        .state
-                        .globals
+                        .globals()
                         .get(ctx, "world")
                         .as_static_user_data::<WorldRef>()?;
 
@@ -157,13 +155,13 @@ pub fn entities_metatable(ctx: Context) -> Table {
                 #[allow(clippy::single_match)]
                 match key.as_bytes() {
                     b"create" => {
-                        stack.push_front(ctx.state.registry.fetch(&create_callback).into());
+                        stack.push_front(ctx.registry().fetch(&create_callback).into());
                     }
                     b"kill" => {
-                        stack.push_front(ctx.state.registry.fetch(&kill_callback).into());
+                        stack.push_front(ctx.registry().fetch(&kill_callback).into());
                     }
                     b"iter_with" => {
-                        stack.push_front(ctx.state.registry.fetch(&iter_with_callback).into());
+                        stack.push_front(ctx.registry().fetch(&iter_with_callback).into());
                     }
                     _ => (),
                 }

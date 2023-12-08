@@ -16,7 +16,7 @@ tracing = "0.1"
 bevy_tasks      = "0.11"
 bones_lib       = { version = "0.3", path = "../bones_lib" }
 bones_asset     = { version = "0.3", path = "../bones_asset" }
-piccolo         = { git = "https://github.com/kyren/piccolo.git" }
+piccolo         = { git = "https://github.com/kyren/piccolo.git", rev = "d25ef38" }
 gc-arena        = { git = "https://github.com/kyren/gc-arena.git" }
 gc-arena-derive = { git = "https://github.com/kyren/gc-arena.git" }
 send_wrapper    = "0.6.0"
@@ -26,5 +26,5 @@ elsa            = "1.9"
 wasm-bindgen-futures = "0.4"
 
 [dev-dependencies]
-piccolo         = { git = "https://github.com/kyren/piccolo.git" }
+piccolo         = { git = "https://github.com/kyren/piccolo.git", rev = "d25ef38" }
 

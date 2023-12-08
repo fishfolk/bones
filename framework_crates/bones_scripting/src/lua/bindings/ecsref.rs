@@ -132,7 +132,10 @@ impl std::fmt::Display for EcsRefBorrowError {
                 component_name,
             } => write!(
                 f,
-                "Entity {entity:?} does not have component `{component_name}`"
+                "Cannot access variable because entity {entity:?} no longer has the \
+                component `{component_name}`. This may happen if you remove the cmponent \
+                while you still have a variable referencing the component data, and you \
+                then try to access the component data through the variable."
             ),
             EcsRefBorrowError::AssetNotLoaded => write!(f, "Asset not loaded"),
             EcsRefBorrowError::FieldNotFound(field) => write!(f, "Field not found: {field}"),
