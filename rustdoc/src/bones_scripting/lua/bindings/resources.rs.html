@@ -83,7 +83,7 @@
         )
         .unwrap();
 
-    <span class="kw">let </span>get_callback = ctx.state.registry.stash(
+    <span class="kw">let </span>get_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
         AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>(world, schema): (<span class="kw-2">&amp;</span>WorldRef, AnyUserData) = stack.consume(ctx)<span class="question-mark">?</span>;
@@ -114,7 +114,7 @@
                 <span class="attr">#[allow(clippy::single_match)]
                 </span><span class="kw">match </span>key.as_bytes() {
                     <span class="string">b&quot;get&quot; </span>=&gt; {
-                        stack.push_front(ctx.state.registry.fetch(<span class="kw-2">&amp;</span>get_callback).into());
+                        stack.push_front(ctx.registry().fetch(<span class="kw-2">&amp;</span>get_callback).into());
                     }
                     <span class="kw">_ </span>=&gt; (),
                 }

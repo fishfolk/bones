@@ -96,7 +96,7 @@
         )
         .unwrap();
 
-    <span class="kw">let </span>get_callback = ctx.state.registry.stash(
+    <span class="kw">let </span>get_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
         AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>(world, ecsref): (<span class="kw-2">&amp;</span>WorldRef, <span class="kw-2">&amp;</span>EcsRef) = stack.consume(ctx)<span class="question-mark">?</span>;
@@ -145,7 +145,7 @@
                             });
                         }
                         <span class="string">b&quot;get&quot; </span>=&gt; {
-                            stack.push_front(ctx.state.registry.fetch(<span class="kw-2">&amp;</span>get_callback).into());
+                            stack.push_front(ctx.registry().fetch(<span class="kw-2">&amp;</span>get_callback).into());
                         }
                         <span class="kw">_ </span>=&gt; (),
                     }

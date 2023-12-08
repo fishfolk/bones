@@ -475,6 +475,9 @@
 <a href="#475" id="475">475</a>
 <a href="#476" id="476">476</a>
 <a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
 </pre></div><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// A type data that can be used to specify a custom metatable to use for the type when it is
@@ -609,7 +612,10 @@
                 component_name,
             } =&gt; <span class="macro">write!</span>(
                 f,
-                <span class="string">&quot;Entity {entity:?} does not have component `{component_name}`&quot;
+                <span class="string">&quot;Cannot access variable because entity {entity:?} no longer has the \
+                component `{component_name}`. This may happen if you remove the cmponent \
+                while you still have a variable referencing the component data, and you \
+                then try to access the component data through the variable.&quot;
             </span>),
             EcsRefBorrowError::AssetNotLoaded =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Asset not loaded&quot;</span>),
             EcsRefBorrowError::FieldNotFound(field) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Field not found: {field}&quot;</span>),

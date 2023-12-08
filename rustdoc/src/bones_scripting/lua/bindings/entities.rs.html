@@ -173,8 +173,6 @@
 <a href="#173" id="173">173</a>
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>lua::Variadic;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::bindings::schema::WithoutSchema;
@@ -200,7 +198,7 @@
         .set(ctx, <span class="string">&quot;__newindex&quot;</span>, ctx.singletons().get(ctx, no_newindex))
         .unwrap();
 
-    <span class="kw">let </span>create_callback = ctx.state.registry.stash(
+    <span class="kw">let </span>create_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
         AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>this: <span class="kw-2">&amp;</span>EcsRef = stack.consume(ctx)<span class="question-mark">?</span>;
@@ -219,7 +217,7 @@
             <span class="prelude-val">Ok</span>(CallbackReturn::Return)
         }),
     );
-    <span class="kw">let </span>kill_callback = ctx.state.registry.stash(
+    <span class="kw">let </span>kill_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
         AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>(this, entity_ecsref): (<span class="kw-2">&amp;</span>EcsRef, <span class="kw-2">&amp;</span>EcsRef) = stack.consume(ctx)<span class="question-mark">?</span>;
@@ -233,15 +231,14 @@
             <span class="prelude-val">Ok</span>(CallbackReturn::Return)
         }),
     );
-    <span class="kw">let </span>iter_with_callback = ctx.state.registry.stash(
+    <span class="kw">let </span>iter_with_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
         AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>(this, schema_args): (<span class="kw-2">&amp;</span>EcsRef, Variadic&lt;Vec&lt;AnyUserData&gt;&gt;) = stack.consume(ctx)<span class="question-mark">?</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>b = this.borrow_mut();
             <span class="kw">let </span>entities = b.schema_ref_mut()<span class="question-mark">?</span>.cast_into_mut::&lt;Entities&gt;();
             <span class="kw">let </span>world = ctx
-                .state
-                .globals
+                .globals()
                 .get(ctx, <span class="string">&quot;world&quot;</span>)
                 .as_static_user_data::&lt;WorldRef&gt;()<span class="question-mark">?</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>bitset = entities.bitset().clone();
@@ -285,8 +282,7 @@
 
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(entity) = next_ent {
                     <span class="kw">let </span>world = ctx
-                        .state
-                        .globals
+                        .globals()
                         .get(ctx, <span class="string">&quot;world&quot;</span>)
                         .as_static_user_data::&lt;WorldRef&gt;()<span class="question-mark">?</span>;
 
@@ -334,13 +330,13 @@
                 <span class="attr">#[allow(clippy::single_match)]
                 </span><span class="kw">match </span>key.as_bytes() {
                     <span class="string">b&quot;create&quot; </span>=&gt; {
-                        stack.push_front(ctx.state.registry.fetch(<span class="kw-2">&amp;</span>create_callback).into());
+                        stack.push_front(ctx.registry().fetch(<span class="kw-2">&amp;</span>create_callback).into());
                     }
                     <span class="string">b&quot;kill&quot; </span>=&gt; {
-                        stack.push_front(ctx.state.registry.fetch(<span class="kw-2">&amp;</span>kill_callback).into());
+                        stack.push_front(ctx.registry().fetch(<span class="kw-2">&amp;</span>kill_callback).into());
                     }
                     <span class="string">b&quot;iter_with&quot; </span>=&gt; {
-                        stack.push_front(ctx.state.registry.fetch(<span class="kw-2">&amp;</span>iter_with_callback).into());
+                        stack.push_front(ctx.registry().fetch(<span class="kw-2">&amp;</span>iter_with_callback).into());
                     }
                     <span class="kw">_ </span>=&gt; (),
                 }

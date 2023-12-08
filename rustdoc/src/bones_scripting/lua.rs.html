@@ -371,7 +371,6 @@
 <a href="#371" id="371">371</a>
 <a href="#372" id="372">372</a>
 <a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>bevy_tasks::{ComputeTaskPool, TaskPool, ThreadExecutor};
@@ -379,6 +378,7 @@
 <span class="kw">use </span>bones_lib::ecs::utils::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>parking_lot::Mutex;
+<span class="kw">pub use </span>piccolo;
 <span class="kw">use </span>piccolo::{
     compiler::{LineNumber, ParseError},
     registry::{Fetchable, Stashable},
@@ -438,7 +438,7 @@
                       world: <span class="kw-2">&amp;</span>World| {
                     engine.exec(|lua| {
                         Frozen::&lt;<span class="macro">Freeze!</span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;freeze </span>World]&gt;::in_scope(world, |world| {
-                            lua.run(|ctx| {
+                            lua.enter(|ctx| {
                                 <span class="kw">let </span>env = ctx.singletons().get(ctx, bindings::env);
                                 <span class="kw">let </span>worldref = WorldRef(world);
                                 worldref.add_to_env(ctx, env);
@@ -461,10 +461,10 @@
 
                                 <span class="kw">for </span>(has_run, closure) <span class="kw">in </span><span class="kw-2">&amp;mut </span>systems.startup {
                                     <span class="kw">if </span>!<span class="kw-2">*</span>has_run {
-                                        <span class="kw">let </span>executor = lua.run(|ctx| {
-                                            <span class="kw">let </span>closure = ctx.state.registry.fetch(closure);
+                                        <span class="kw">let </span>executor = lua.enter(|ctx| {
+                                            <span class="kw">let </span>closure = ctx.registry().fetch(closure);
                                             <span class="kw">let </span>ex = Executor::start(ctx, closure.into(), ());
-                                            ctx.state.registry.stash(<span class="kw-2">&amp;</span>ctx, ex)
+                                            ctx.registry().stash(<span class="kw-2">&amp;</span>ctx, ex)
                                         });
                                         <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = lua.execute::&lt;()&gt;(<span class="kw-2">&amp;</span>executor) {
                                             <span class="macro">tracing::error!</span>(<span class="string">&quot;Error running lua plugin system: {e}&quot;</span>);
@@ -476,10 +476,10 @@
 
                                 <span class="kw">for </span>(stage, closure) <span class="kw">in </span><span class="kw-2">&amp;</span>systems.core_stages {
                                     <span class="kw">if </span>stage == <span class="kw-2">&amp;</span>lua_stage {
-                                        <span class="kw">let </span>executor = lua.run(|ctx| {
-                                            <span class="kw">let </span>closure = ctx.state.registry.fetch(closure);
+                                        <span class="kw">let </span>executor = lua.enter(|ctx| {
+                                            <span class="kw">let </span>closure = ctx.registry().fetch(closure);
                                             <span class="kw">let </span>ex = Executor::start(ctx, closure.into(), ());
-                                            ctx.state.registry.stash(<span class="kw-2">&amp;</span>ctx, ex)
+                                            ctx.registry().stash(<span class="kw-2">&amp;</span>ctx, ex)
                                         });
                                         <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = lua.execute::&lt;()&gt;(<span class="kw-2">&amp;</span>executor) {
                                             <span class="macro">tracing::error!</span>(<span class="string">&quot;Error running lua plugin system: {e}&quot;</span>);
@@ -524,8 +524,7 @@
 
     <span class="doccomment">/// Add this world
     </span><span class="kw">fn </span>add_to_env&lt;<span class="lifetime">&#39;gc</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context&lt;<span class="lifetime">&#39;gc</span>&gt;, env: Table&lt;<span class="lifetime">&#39;gc</span>&gt;) {
-        ctx.state
-            .globals
+        ctx.globals()
             .set(ctx, <span class="string">&quot;world&quot;</span>, <span class="self">self</span>.clone().into_userdata(ctx))
             .unwrap();
         <span class="kw">for </span>(name, metatable) <span class="kw">in </span>[
@@ -601,11 +600,11 @@
                 <span class="string">&quot;Encountered two functions with different return types and \
                 the same function pointer.&quot;</span>,
             );
-            ctx.state.registry.fetch(stashed)
+            ctx.registry().fetch(stashed)
         } <span class="kw">else </span>{
             drop(map); <span class="comment">// Make sure we don&#39;t deadlock
             </span><span class="kw">let </span>v = singleton(ctx);
-            <span class="kw">let </span>stashed = ctx.state.registry.stash(<span class="kw-2">&amp;</span>ctx, v);
+            <span class="kw">let </span>stashed = ctx.registry().stash(<span class="kw-2">&amp;</span>ctx, v);
             <span class="self">self</span>.singletons.borrow_mut().insert(id, Box::new(stashed));
             v
         }
@@ -616,9 +615,9 @@
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="comment">// Initialize an empty lua engine and our lua data.
         </span><span class="kw">let </span><span class="kw-2">mut </span>lua = Lua::core();
-        lua.try_run(|ctx| {
+        lua.try_enter(|ctx| {
             <span class="comment">// Insert our lua singletons.
-            </span>ctx.state.globals.set(
+            </span>ctx.globals().set(
                 ctx,
                 <span class="string">&quot;luasingletons&quot;</span>,
                 AnyUserData::new_static(<span class="kw-2">&amp;</span>ctx, LuaSingletons::default()),
@@ -691,7 +690,7 @@
                 <span class="comment">// Wrap world reference so that it can be converted to lua userdata.
                 </span><span class="kw">let </span>worldref = WorldRef(world);
 
-                <span class="kw">let </span>executor = lua.try_run(|ctx| {
+                <span class="kw">let </span>executor = lua.try_enter(|ctx| {
                     <span class="comment">// Fetch the env table
                     </span><span class="kw">let </span>env = <span class="self">self</span>.state.data.get(ctx, bindings::env);
 
@@ -716,15 +715,14 @@
                         <span class="kw">let </span>closure = compiled_scripts.get(<span class="kw-2">&amp;</span>cid);
 
                         <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, PrototypeError&gt;(<span class="kw">match </span>closure {
-                            <span class="prelude-val">Some</span>(closure) =&gt; ctx.state.registry.fetch(closure),
+                            <span class="prelude-val">Some</span>(closure) =&gt; ctx.registry().fetch(closure),
                             <span class="prelude-val">None </span>=&gt; {
                                 <span class="kw">let </span>asset = asset_server.store.assets.get(<span class="kw-2">&amp;</span>cid).unwrap();
                                 <span class="kw">let </span>source = <span class="kw-2">&amp;</span>asset.data.cast_ref::&lt;LuaScript&gt;().source;
                                 <span class="comment">// TODO: Provide a meaningfull name to loaded scripts.
                                 </span><span class="kw">let </span>closure =
                                     Closure::load_with_env(ctx, <span class="prelude-val">None</span>, source.as_bytes(), env)<span class="question-mark">?</span>;
-                                compiled_scripts
-                                    .insert(cid, ctx.state.registry.stash(<span class="kw-2">&amp;</span>ctx, closure));
+                                compiled_scripts.insert(cid, ctx.registry().stash(<span class="kw-2">&amp;</span>ctx, closure));
 
                                 closure
                             }
@@ -735,7 +733,7 @@
                     </span>worldref.add_to_env(ctx, env);
 
                     <span class="kw">let </span>ex = Executor::start(ctx, closure.into(), ());
-                    <span class="kw">let </span>ex = ctx.state.registry.stash(<span class="kw-2">&amp;</span>ctx, ex);
+                    <span class="kw">let </span>ex = ctx.registry().stash(<span class="kw-2">&amp;</span>ctx, ex);
                     <span class="prelude-val">Ok</span>(ex)
                 });
 

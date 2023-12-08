@@ -210,7 +210,7 @@
             }),
         )
         .unwrap();
-    <span class="kw">let </span>create_fn = ctx.state.registry.stash(
+    <span class="kw">let </span>create_fn = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
         AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>this: AnyUserData = stack.consume(ctx)<span class="question-mark">?</span>;
@@ -227,7 +227,7 @@
         }),
     );
 
-    <span class="kw">let </span>without_fn = ctx.state.registry.stash(
+    <span class="kw">let </span>without_fn = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
         AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>this: AnyUserData = stack.consume(ctx)<span class="question-mark">?</span>;
@@ -272,8 +272,8 @@
                             )),
                         );
                     }
-                    <span class="string">b&quot;create&quot; </span>=&gt; stack.replace(ctx, ctx.state.registry.fetch(<span class="kw-2">&amp;</span>create_fn)),
-                    <span class="string">b&quot;without&quot; </span>=&gt; stack.replace(ctx, ctx.state.registry.fetch(<span class="kw-2">&amp;</span>without_fn)),
+                    <span class="string">b&quot;create&quot; </span>=&gt; stack.replace(ctx, ctx.registry().fetch(<span class="kw-2">&amp;</span>create_fn)),
+                    <span class="string">b&quot;without&quot; </span>=&gt; stack.replace(ctx, ctx.registry().fetch(<span class="kw-2">&amp;</span>without_fn)),
                     <span class="kw">_ </span>=&gt; (),
                 }
 

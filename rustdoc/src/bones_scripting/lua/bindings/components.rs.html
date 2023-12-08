@@ -148,7 +148,7 @@
         .set(ctx, <span class="string">&quot;__newindex&quot;</span>, ctx.singletons().get(ctx, no_newindex))
         .unwrap();
 
-    <span class="kw">let </span>get_callback = ctx.state.registry.stash(
+    <span class="kw">let </span>get_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
         AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>(world, entity_ecsref, schema): (<span class="kw-2">&amp;</span>WorldRef, <span class="kw-2">&amp;</span>EcsRef, AnyUserData) =
@@ -181,7 +181,7 @@
             <span class="prelude-val">Ok</span>(CallbackReturn::Return)
         }),
     );
-    <span class="kw">let </span>insert_callback = ctx.state.registry.stash(
+    <span class="kw">let </span>insert_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
         AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>(world, entity_ecsref, value_ecsref): (<span class="kw-2">&amp;</span>WorldRef, <span class="kw-2">&amp;</span>EcsRef, <span class="kw-2">&amp;</span>EcsRef) =
@@ -206,7 +206,7 @@
             <span class="prelude-val">Ok</span>(CallbackReturn::Return)
         }),
     );
-    <span class="kw">let </span>remove_callback = ctx.state.registry.stash(
+    <span class="kw">let </span>remove_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
         AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>(world, entity_ecsref, schema): (<span class="kw-2">&amp;</span>WorldRef, <span class="kw-2">&amp;</span>EcsRef, AnyUserData) =
@@ -239,13 +239,13 @@
                     <span class="attr">#[allow(clippy::single_match)]
                     </span><span class="kw">match </span>key.as_bytes() {
                         <span class="string">b&quot;get&quot; </span>=&gt; {
-                            stack.push_front(ctx.state.registry.fetch(<span class="kw-2">&amp;</span>get_callback).into());
+                            stack.push_front(ctx.registry().fetch(<span class="kw-2">&amp;</span>get_callback).into());
                         }
                         <span class="string">b&quot;insert&quot; </span>=&gt; {
-                            stack.push_front(ctx.state.registry.fetch(<span class="kw-2">&amp;</span>insert_callback).into());
+                            stack.push_front(ctx.registry().fetch(<span class="kw-2">&amp;</span>insert_callback).into());
                         }
                         <span class="string">b&quot;remove&quot; </span>=&gt; {
-                            stack.push_front(ctx.state.registry.fetch(<span class="kw-2">&amp;</span>remove_callback).into());
+                            stack.push_front(ctx.registry().fetch(<span class="kw-2">&amp;</span>remove_callback).into());
                         }
                         <span class="kw">_ </span>=&gt; (),
                     }

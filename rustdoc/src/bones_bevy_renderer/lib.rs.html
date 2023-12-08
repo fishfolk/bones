@@ -1289,6 +1289,9 @@
 <a href="#1289" id="1289">1289</a>
 <a href="#1290" id="1290">1290</a>
 <a href="#1291" id="1291">1291</a>
+<a href="#1292" id="1292">1292</a>
+<a href="#1293" id="1293">1293</a>
+<a href="#1294" id="1294">1294</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -2095,7 +2098,10 @@
         asset_server.handle_asset_changes(|asset_server, handle| {
             <span class="kw">let </span><span class="kw-2">mut </span>bones_egui_textures =
                 game.shared_resource_mut::&lt;bones::EguiTextures&gt;().unwrap();
-            <span class="kw">let </span><span class="kw-2">mut </span>asset = asset_server.get_asset_untyped_mut(handle).unwrap();
+            <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset) = asset_server.get_asset_untyped_mut(handle) <span class="kw">else </span>{
+                <span class="comment">// There was an issue loading the asset. The error will have been logged.
+                </span><span class="kw">return</span>;
+            };
 
             <span class="comment">// TODO: hot reload changed fonts.
 

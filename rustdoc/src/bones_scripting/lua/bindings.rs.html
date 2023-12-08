@@ -186,7 +186,7 @@
 </span><span class="kw">pub fn </span>env(ctx: Context) -&gt; Table {
     <span class="kw">let </span>env = Table::new(<span class="kw-2">&amp;</span>ctx);
 
-    env.set(ctx, <span class="string">&quot;math&quot;</span>, ctx.state.globals.get(ctx, <span class="string">&quot;math&quot;</span>))
+    env.set(ctx, <span class="string">&quot;math&quot;</span>, ctx.globals().get(ctx, <span class="string">&quot;math&quot;</span>))
         .unwrap();
 
     <span class="kw">let </span>schema_fn = ctx.singletons().get(ctx, schema::schema_fn);
