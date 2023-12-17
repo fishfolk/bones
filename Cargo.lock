@@ -1231,6 +1231,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bones_networking"
+version = "0.3.0"
+
+[[package]]
 name = "bones_schema"
 version = "0.3.0"
 dependencies = [
@@ -1265,7 +1269,6 @@ dependencies = [
  "bevy_tasks",
  "bones_asset",
  "bones_lib",
- "elsa",
  "gc-arena",
  "gc-arena-derive",
  "piccolo",
