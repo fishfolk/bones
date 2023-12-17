@@ -56,10 +56,10 @@ impl std::fmt::Debug for Session {
 
 impl Session {
     /// Create an empty [`Session`].
-    pub fn new(entities: AtomicResource<Entities>) -> Self {
+    pub fn new() -> Self {
         Self {
             world: {
-                let mut w = World::with_entities(entities);
+                let mut w = World::default();
                 w.init_resource::<Time>();
                 w
             },
@@ -92,6 +92,12 @@ impl Session {
     /// This is the same as doing an [`std::mem::swap`] on `self.world`, but it is more explicit.
     pub fn restore(&mut self, world: &mut World) {
         std::mem::swap(&mut self.world, world)
+    }
+}
+
+impl Default for Session {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -495,7 +501,6 @@ impl GameSystems {
 /// Each session shares the same [`Entities`].
 #[derive(HasSchema, Default, Debug)]
 pub struct Sessions {
-    entities: AtomicResource<Entities>,
     map: UstrMap<Session>,
 }
 
@@ -520,7 +525,7 @@ impl Sessions {
     {
         let name = name.try_into().unwrap();
         // Create a blank session
-        let mut session = Session::new(self.entities.clone());
+        let mut session = Session::new();
 
         // Initialize the sessions resource in the session so it will be available in [`Game::step()`].
         session.world.init_resource::<Sessions>();
