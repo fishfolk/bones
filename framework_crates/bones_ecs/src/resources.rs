@@ -100,27 +100,38 @@ impl UntypedResource {
 #[derive(Default)]
 pub struct UntypedResources {
     resources: OnceMap<SchemaId, AtomicUntypedResource>,
+    shared_resources: OnceMap<SchemaId, Box<()>>,
 }
 
 impl Clone for UntypedResources {
     fn clone(&self) -> Self {
         let binding = self.resources.read_only_view();
-        let resources = binding.iter().map(|(_, v)| (v.schema, v.clone_data()));
+        let resources = binding.iter().map(|(_, v)| (v.schema, v));
 
         let new_resources = OnceMap::default();
-        for (schema, resource) in resources {
-            new_resources.map_insert(
-                schema.id(),
-                |_| Arc::new(UntypedResource::empty(schema)),
-                |_, cell| {
-                    if let Some(resource) = resource {
-                        cell.insert(resource).unwrap();
-                    }
-                },
-            );
+        let new_shared_resources = OnceMap::default();
+        for (schema, resource_cell) in resources {
+            let is_shared = self.shared_resources.contains_key(&schema.id());
+
+            if !is_shared {
+                let resource = resource_cell.clone_data();
+                new_resources.map_insert(
+                    schema.id(),
+                    |_| Arc::new(UntypedResource::empty(schema)),
+                    |_, cell| {
+                        if let Some(resource) = resource {
+                            cell.insert(resource).unwrap();
+                        }
+                    },
+                );
+            } else {
+                new_shared_resources.insert(schema.id(), |_| Box::new(()));
+                new_resources.insert(schema.id(), |_| resource_cell.clone());
+            }
         }
         Self {
             resources: new_resources,
+            shared_resources: new_shared_resources,
         }
     }
 }
@@ -170,6 +181,7 @@ impl UntypedResources {
             Err(CellAlreadyPresentError)
         } else {
             self.resources.insert(schema.id(), |_| cell);
+            self.shared_resources.insert(schema.id(), |_| Box::new(()));
             Ok(())
         }
     }
