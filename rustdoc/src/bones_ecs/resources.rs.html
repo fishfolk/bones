@@ -457,6 +457,18 @@
 <a href="#457" id="457">457</a>
 <a href="#458" id="458">458</a>
 <a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! World resource storage.
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
@@ -559,27 +571,38 @@
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>UntypedResources {
     resources: OnceMap&lt;SchemaId, AtomicUntypedResource&gt;,
+    shared_resources: OnceMap&lt;SchemaId, Box&lt;()&gt;&gt;,
 }
 
 <span class="kw">impl </span>Clone <span class="kw">for </span>UntypedResources {
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>binding = <span class="self">self</span>.resources.read_only_view();
-        <span class="kw">let </span>resources = binding.iter().map(|(<span class="kw">_</span>, v)| (v.schema, v.clone_data()));
+        <span class="kw">let </span>resources = binding.iter().map(|(<span class="kw">_</span>, v)| (v.schema, v));
 
         <span class="kw">let </span>new_resources = OnceMap::default();
-        <span class="kw">for </span>(schema, resource) <span class="kw">in </span>resources {
-            new_resources.map_insert(
-                schema.id(),
-                |<span class="kw">_</span>| Arc::new(UntypedResource::empty(schema)),
-                |<span class="kw">_</span>, cell| {
-                    <span class="kw">if let </span><span class="prelude-val">Some</span>(resource) = resource {
-                        cell.insert(resource).unwrap();
-                    }
-                },
-            );
+        <span class="kw">let </span>new_shared_resources = OnceMap::default();
+        <span class="kw">for </span>(schema, resource_cell) <span class="kw">in </span>resources {
+            <span class="kw">let </span>is_shared = <span class="self">self</span>.shared_resources.contains_key(<span class="kw-2">&amp;</span>schema.id());
+
+            <span class="kw">if </span>!is_shared {
+                <span class="kw">let </span>resource = resource_cell.clone_data();
+                new_resources.map_insert(
+                    schema.id(),
+                    |<span class="kw">_</span>| Arc::new(UntypedResource::empty(schema)),
+                    |<span class="kw">_</span>, cell| {
+                        <span class="kw">if let </span><span class="prelude-val">Some</span>(resource) = resource {
+                            cell.insert(resource).unwrap();
+                        }
+                    },
+                );
+            } <span class="kw">else </span>{
+                new_shared_resources.insert(schema.id(), |<span class="kw">_</span>| Box::new(()));
+                new_resources.insert(schema.id(), |<span class="kw">_</span>| resource_cell.clone());
+            }
         }
         <span class="self">Self </span>{
             resources: new_resources,
+            shared_resources: new_shared_resources,
         }
     }
 }
@@ -629,6 +652,7 @@
             <span class="prelude-val">Err</span>(CellAlreadyPresentError)
         } <span class="kw">else </span>{
             <span class="self">self</span>.resources.insert(schema.id(), |<span class="kw">_</span>| cell);
+            <span class="self">self</span>.shared_resources.insert(schema.id(), |<span class="kw">_</span>| Box::new(()));
             <span class="prelude-val">Ok</span>(())
         }
     }

@@ -578,6 +578,11 @@
 <a href="#578" id="578">578</a>
 <a href="#579" id="579">579</a>
 <a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -636,10 +641,10 @@
 
 <span class="kw">impl </span>Session {
     <span class="doccomment">/// Create an empty [`Session`].
-    </span><span class="kw">pub fn </span>new(entities: AtomicResource&lt;Entities&gt;) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             world: {
-                <span class="kw">let </span><span class="kw-2">mut </span>w = World::with_entities(entities);
+                <span class="kw">let </span><span class="kw-2">mut </span>w = World::default();
                 w.init_resource::&lt;Time&gt;();
                 w
             },
@@ -672,6 +677,12 @@
     /// This is the same as doing an [`std::mem::swap`] on `self.world`, but it is more explicit.
     </span><span class="kw">pub fn </span>restore(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;mut </span>World) {
         std::mem::swap(<span class="kw-2">&amp;mut </span><span class="self">self</span>.world, world)
+    }
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>Session {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new()
     }
 }
 
@@ -1075,7 +1086,6 @@
 /// Each session shares the same [`Entities`].
 </span><span class="attr">#[derive(HasSchema, Default, Debug)]
 </span><span class="kw">pub struct </span>Sessions {
-    entities: AtomicResource&lt;Entities&gt;,
     map: UstrMap&lt;Session&gt;,
 }
 
@@ -1100,7 +1110,7 @@
     {
         <span class="kw">let </span>name = name.try_into().unwrap();
         <span class="comment">// Create a blank session
-        </span><span class="kw">let </span><span class="kw-2">mut </span>session = Session::new(<span class="self">self</span>.entities.clone());
+        </span><span class="kw">let </span><span class="kw-2">mut </span>session = Session::new();
 
         <span class="comment">// Initialize the sessions resource in the session so it will be available in [`Game::step()`].
         </span>session.world.init_resource::&lt;Sessions&gt;();
