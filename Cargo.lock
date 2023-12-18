@@ -1215,7 +1215,7 @@ dependencies = [
  "quinn",
  "quinn_runtime_bevy",
  "rand 0.8.5",
- "rcgen",
+ "rcgen 0.11.3",
  "rustls",
  "scc",
  "serde",
@@ -1233,6 +1233,13 @@ dependencies = [
 [[package]]
 name = "bones_networking"
 version = "0.3.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "quinn",
+ "rcgen 0.12.0",
+ "rustls",
+]
 
 [[package]]
 name = "bones_schema"
@@ -3910,6 +3917,18 @@ checksum = "52c4f3084aa3bc7dfbba4eff4fab2a54db4324965d8872ab933565e6fbd83bc6"
 dependencies = [
  "pem",
  "ring 0.16.20",
+ "time",
+ "yasna",
+]
+
+[[package]]
+name = "rcgen"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d918c80c5a4c7560db726763020bd16db179e4d5b828078842274a443addb5d"
+dependencies = [
+ "pem",
+ "ring 0.17.7",
  "time",
  "yasna",
 ]
