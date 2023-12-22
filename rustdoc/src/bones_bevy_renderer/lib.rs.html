@@ -1292,6 +1292,7 @@
 <a href="#1292" id="1292">1292</a>
 <a href="#1293" id="1293">1293</a>
 <a href="#1294" id="1294">1294</a>
+<a href="#1295" id="1295">1295</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -1308,6 +1309,7 @@
         gamepad::GamepadEvent,
         keyboard::KeyboardInput,
         mouse::{MouseButtonInput, MouseMotion, MouseWheel},
+        InputSystem,
     },
     prelude::<span class="kw-2">*</span>,
     render::{camera::ScalingMode, Extract, RenderApp},
@@ -1612,7 +1614,7 @@
             PreUpdate,
             (
                 setup_egui,
-                get_bones_input.pipe(insert_bones_input),
+                get_bones_input.pipe(insert_bones_input).after(InputSystem),
                 egui_input_hook,
             )
                 .chain()
