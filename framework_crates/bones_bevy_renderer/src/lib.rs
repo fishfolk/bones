@@ -14,6 +14,7 @@ use bevy::{
         gamepad::GamepadEvent,
         keyboard::KeyboardInput,
         mouse::{MouseButtonInput, MouseMotion, MouseWheel},
+        InputSystem,
     },
     prelude::*,
     render::{camera::ScalingMode, Extract, RenderApp},
@@ -318,7 +319,7 @@ impl BonesBevyRenderer {
             PreUpdate,
             (
                 setup_egui,
-                get_bones_input.pipe(insert_bones_input),
+                get_bones_input.pipe(insert_bones_input).after(InputSystem),
                 egui_input_hook,
             )
                 .chain()
