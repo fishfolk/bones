@@ -9,7 +9,11 @@ use bones_schema::{prelude::*, raw_fns::*};
 use bones_utils::{parking_lot::RwLock, HashMap};
 use ulid::Ulid;
 
+use crate::{AssetServer, NetworkHandle};
+
 /// A typed handle to an asset.
+///
+/// To serialize for replication, use: `handle.network_handle(asset_server)`
 #[repr(C)]
 pub struct Handle<T> {
     /// The runtime ID of the asset.
@@ -55,6 +59,15 @@ impl<T> Handle<T> {
     /// Convert the handle to an [`UntypedHandle`].
     pub fn untyped(self) -> UntypedHandle {
         UntypedHandle { rid: self.id }
+    }
+
+    /// Get a [`NetworkHandle`] that can be Serialized and replicated over network.
+    /// (Panics if handle is not found in [`AssetServer`].)
+    pub fn network_handle(&self, asset_server: &AssetServer) -> NetworkHandle<T> {
+        // Use untyped handle to get Cid so we do not require HasSchema.
+        let content_id = *asset_server.get_untyped(self.untyped()).key();
+
+        NetworkHandle::<T>::from_cid(content_id)
     }
 }
 

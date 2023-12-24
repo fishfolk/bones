@@ -1,7 +1,9 @@
+use serde::{Deserialize, Serialize};
+
 /// A unique content ID.
 ///
 /// Represents the Sha-256 hash of the contents of a [`LoadedAsset`][crate::LoadedAsset].
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Default, PartialOrd, Ord)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Default, PartialOrd, Ord, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct Cid(pub [u8; 32]);
 
