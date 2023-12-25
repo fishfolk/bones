@@ -635,7 +635,14 @@ impl AssetServer {
         };
 
         // Update Cid with the Cids of it's dependencies
-        dependencies.sort();
+
+        // TODO: Dependencies should be sorted as a consistent order is required to
+        // compute the same cid. We can't sort Vec<UntypedHandle>, runtime IDs vary each run.
+        //
+        // dependencies.sort();
+
+        // For now, gather cids and sort them before update
+        let mut dep_cids: Vec<Cid> = vec![];
         for dep in &dependencies {
             let dep_cid = loop {
                 let listener = self.load_progress.listen();
@@ -645,6 +652,12 @@ impl AssetServer {
                 };
                 break *cid;
             };
+            // cid.update(dep_cid.0.as_slice());
+            dep_cids.push(dep_cid);
+        }
+
+        dep_cids.sort();
+        for dep_cid in dep_cids {
             cid.update(dep_cid.0.as_slice());
         }
 
@@ -710,8 +723,16 @@ impl AssetServer {
         let sbox = loader.load(ctx, contents).await?;
 
         // Update Cid with the Cids of it's dependencies
-        let mut dependencies = dependencies.iter().cloned().collect::<Vec<_>>();
-        dependencies.sort();
+        let dependencies = dependencies.iter().cloned().collect::<Vec<_>>();
+
+        // TODO: Dependencies should be sorted as a consistent order is required to
+        // compute the same cid. We can't sort Vec<UntypedHandle>, runtime IDs vary each run.
+        //
+        // dependencies.sort();
+
+        // For now, gather cids and sort them before update
+        let mut dep_cids: Vec<Cid> = vec![];
+
         for dep in &dependencies {
             let dep_cid = loop {
                 let listener = self.load_progress.listen();
@@ -721,6 +742,11 @@ impl AssetServer {
                 };
                 break *cid;
             };
+            dep_cids.push(dep_cid);
+            // cid.update(dep_cid.0.as_slice());
+        }
+        dep_cids.sort();
+        for dep_cid in dep_cids {
             cid.update(dep_cid.0.as_slice());
         }
 
