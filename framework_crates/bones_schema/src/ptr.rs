@@ -115,21 +115,21 @@ impl<'pointer> SchemaRef<'pointer> {
     pub fn as_map(&self) -> Option<&'pointer SchemaMap> {
         matches!(self.schema.kind, SchemaKind::Map { .. })
             // SOUND: Schema asserts this is a schema map
-            .then_some(unsafe { self.cast_into_unchecked::<SchemaMap>() })
+            .then(|| unsafe { self.cast_into_unchecked::<SchemaMap>() })
     }
 
     /// Borrow the schema ref as a [`SchemaVec`] if it is one.
     pub fn as_vec(&self) -> Option<&'pointer SchemaVec> {
         matches!(self.schema.kind, SchemaKind::Vec(_))
             // SOUND: Schema asserts this is a schema map
-            .then_some(unsafe { self.cast_into_unchecked::<SchemaVec>() })
+            .then(|| unsafe { self.cast_into_unchecked::<SchemaVec>() })
     }
 
     /// Borrow the schema ref as a [`SchemaBox`] if it is one.
     pub fn as_box(&self) -> Option<SchemaRef<'pointer>> {
         matches!(self.schema.kind, SchemaKind::Vec(_))
             // SOUND: Schema asserts this is a schema box
-            .then_some(unsafe { self.cast_into_unchecked::<SchemaBox>().as_ref() })
+            .then(|| unsafe { self.cast_into_unchecked::<SchemaBox>().as_ref() })
     }
 
     /// Debug format the value stored in the schema box.
@@ -758,7 +758,7 @@ impl<'pointer> SchemaRefMut<'pointer> {
     pub fn into_map(self) -> Result<&'pointer mut SchemaMap, Self> {
         matches!(self.schema.kind, SchemaKind::Map { .. })
             // SOUND: Schema asserts this is a schema map
-            .then_some(unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaMap) })
+            .then(|| unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaMap) })
             .ok_or(self)
     }
 
@@ -766,7 +766,7 @@ impl<'pointer> SchemaRefMut<'pointer> {
     pub fn into_vec(self) -> Result<&'pointer mut SchemaVec, Self> {
         matches!(self.schema.kind, SchemaKind::Vec(_))
             // SOUND: Schema asserts this is a schema map
-            .then_some(unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaVec) })
+            .then(|| unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaVec) })
             .ok_or(self)
     }
 
@@ -774,7 +774,7 @@ impl<'pointer> SchemaRefMut<'pointer> {
     pub fn into_box(self) -> Result<SchemaRefMut<'pointer>, Self> {
         matches!(self.schema.kind, SchemaKind::Vec(_))
             // SOUND: Schema asserts this is a schema box
-            .then_some(unsafe { (*(self.ptr.as_ptr() as *mut SchemaBox)).as_mut() })
+            .then(|| unsafe { (*(self.ptr.as_ptr() as *mut SchemaBox)).as_mut() })
             .ok_or(self)
     }
 
