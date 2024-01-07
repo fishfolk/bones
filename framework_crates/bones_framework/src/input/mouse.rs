@@ -42,7 +42,7 @@ pub struct MouseButtonEvent {
 }
 
 /// A button on the mouse.
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum MouseButton {
     #[default]
