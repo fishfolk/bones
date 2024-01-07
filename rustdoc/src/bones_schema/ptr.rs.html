@@ -2039,21 +2039,21 @@
     </span><span class="kw">pub fn </span>as_map(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span>SchemaMap&gt; {
         <span class="macro">matches!</span>(<span class="self">self</span>.schema.kind, SchemaKind::Map { .. })
             <span class="comment">// SOUND: Schema asserts this is a schema map
-            </span>.then_some(<span class="kw">unsafe </span>{ <span class="self">self</span>.cast_into_unchecked::&lt;SchemaMap&gt;() })
+            </span>.then(|| <span class="kw">unsafe </span>{ <span class="self">self</span>.cast_into_unchecked::&lt;SchemaMap&gt;() })
     }
 
     <span class="doccomment">/// Borrow the schema ref as a [`SchemaVec`] if it is one.
     </span><span class="kw">pub fn </span>as_vec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span>SchemaVec&gt; {
         <span class="macro">matches!</span>(<span class="self">self</span>.schema.kind, SchemaKind::Vec(<span class="kw">_</span>))
             <span class="comment">// SOUND: Schema asserts this is a schema map
-            </span>.then_some(<span class="kw">unsafe </span>{ <span class="self">self</span>.cast_into_unchecked::&lt;SchemaVec&gt;() })
+            </span>.then(|| <span class="kw">unsafe </span>{ <span class="self">self</span>.cast_into_unchecked::&lt;SchemaVec&gt;() })
     }
 
     <span class="doccomment">/// Borrow the schema ref as a [`SchemaBox`] if it is one.
     </span><span class="kw">pub fn </span>as_box(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&lt;<span class="lifetime">&#39;pointer</span>&gt;&gt; {
         <span class="macro">matches!</span>(<span class="self">self</span>.schema.kind, SchemaKind::Vec(<span class="kw">_</span>))
             <span class="comment">// SOUND: Schema asserts this is a schema box
-            </span>.then_some(<span class="kw">unsafe </span>{ <span class="self">self</span>.cast_into_unchecked::&lt;SchemaBox&gt;().as_ref() })
+            </span>.then(|| <span class="kw">unsafe </span>{ <span class="self">self</span>.cast_into_unchecked::&lt;SchemaBox&gt;().as_ref() })
     }
 
     <span class="doccomment">/// Debug format the value stored in the schema box.
@@ -2682,7 +2682,7 @@
     </span><span class="kw">pub fn </span>into_map(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span><span class="kw-2">mut </span>SchemaMap, <span class="self">Self</span>&gt; {
         <span class="macro">matches!</span>(<span class="self">self</span>.schema.kind, SchemaKind::Map { .. })
             <span class="comment">// SOUND: Schema asserts this is a schema map
-            </span>.then_some(<span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>SchemaMap) })
+            </span>.then(|| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>SchemaMap) })
             .ok_or(<span class="self">self</span>)
     }
 
@@ -2690,7 +2690,7 @@
     </span><span class="kw">pub fn </span>into_vec(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span><span class="kw-2">mut </span>SchemaVec, <span class="self">Self</span>&gt; {
         <span class="macro">matches!</span>(<span class="self">self</span>.schema.kind, SchemaKind::Vec(<span class="kw">_</span>))
             <span class="comment">// SOUND: Schema asserts this is a schema map
-            </span>.then_some(<span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>SchemaVec) })
+            </span>.then(|| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>SchemaVec) })
             .ok_or(<span class="self">self</span>)
     }
 
@@ -2698,7 +2698,7 @@
     </span><span class="kw">pub fn </span>into_box(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMut&lt;<span class="lifetime">&#39;pointer</span>&gt;, <span class="self">Self</span>&gt; {
         <span class="macro">matches!</span>(<span class="self">self</span>.schema.kind, SchemaKind::Vec(<span class="kw">_</span>))
             <span class="comment">// SOUND: Schema asserts this is a schema box
-            </span>.then_some(<span class="kw">unsafe </span>{ (<span class="kw-2">*</span>(<span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>SchemaBox)).as_mut() })
+            </span>.then(|| <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>(<span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>SchemaBox)).as_mut() })
             .ok_or(<span class="self">self</span>)
     }
 
