@@ -99,7 +99,7 @@
 }
 
 <span class="doccomment">/// A button on the mouse.
-</span><span class="attr">#[derive(Debug, Default, Clone, Copy)]
+</span><span class="attr">#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 </span><span class="kw">pub enum </span>MouseButton {
     <span class="attr">#[default]
