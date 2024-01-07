@@ -13,5 +13,6 @@ async-io       = "1.9"
 bevy_tasks     = "0.11"
 futures-lite   = "1.0"
 pin-project    = "1.0"
-quinn          = { version = "0.10", default-features = false, features = ["native-certs", "tls-rustls"] }
-quinn-udp      = { version = "0.4", default-features = false }
+# crates.io quinn release (0.10.2) not compiling, use 0.10.2 git branch instead (https://github.com/quinn-rs/quinn/issues/1735)
+quinn          = { git = "https://github.com/quinn-rs/quinn.git", rev = "0.10.2", default-features = false, features = ["native-certs", "tls-rustls"] }
+quinn-udp      = { git = "https://github.com/quinn-rs/quinn.git", rev = "0.10.2", default-features = false }

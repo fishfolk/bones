@@ -3732,8 +3732,7 @@ checksum = "d135ede8821cf6376eb7a64148901e1690b788c11ae94dc297ae917dbc91dc0e"
 [[package]]
 name = "quinn"
 version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cc2c5017e4b43d5995dcea317bc46c1e09404c0a9664d2908f7f02dfe943d75"
+source = "git+https://github.com/quinn-rs/quinn.git?rev=0.10.2#023f10376dbfdda4dfab2d775c5af61a4a29a803"
 dependencies = [
  "bytes",
  "futures-io",
@@ -3749,9 +3748,8 @@ dependencies = [
 
 [[package]]
 name = "quinn-proto"
-version = "0.10.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "141bf7dfde2fbc246bfd3fe12f2455aa24b0fbd9af535d8c86c7bd1381ff2b1a"
+version = "0.10.2"
+source = "git+https://github.com/quinn-rs/quinn.git?rev=0.10.2#023f10376dbfdda4dfab2d775c5af61a4a29a803"
 dependencies = [
  "bytes",
  "rand 0.8.5",
@@ -3767,9 +3765,8 @@ dependencies = [
 
 [[package]]
 name = "quinn-udp"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "055b4e778e8feb9f93c4e439f71dc2156ef13360b432b799e179a8c4cdf0b1d7"
+version = "0.4.0"
+source = "git+https://github.com/quinn-rs/quinn.git?rev=0.10.2#023f10376dbfdda4dfab2d775c5af61a4a29a803"
 dependencies = [
  "bytes",
  "libc",
