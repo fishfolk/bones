@@ -20,8 +20,8 @@ pub use glam;
 /// The prelude.
 pub mod prelude {
     pub use crate::{
-        animation::*, input::prelude::*, params::*, render::prelude::*, storage::*, time::*,
-        AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin,
+        animation::*, input::prelude::*, params::*, render::prelude::*,
+        storage::*, time::*, utils::*, AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin,
     };
     pub use bones_asset::anyhow::Context;
     pub use bones_asset::prelude::*;
@@ -41,6 +41,7 @@ pub mod params;
 pub mod render;
 pub mod storage;
 pub mod time;
+pub mod utils;
 
 #[cfg(feature = "scripting")]
 pub use bones_scripting as scripting;
