@@ -29,10 +29,14 @@
 <a href="#29" id="29">29</a>
 <a href="#30" id="30">30</a>
 <a href="#31" id="31">31</a>
-</pre></div><pre class="rust"><code><span class="doccomment">/// A unique content ID.
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>serde::{Deserialize, Serialize};
+
+<span class="doccomment">/// A unique content ID.
 ///
 /// Represents the Sha-256 hash of the contents of a [`LoadedAsset`][crate::LoadedAsset].
-</span><span class="attr">#[derive(Clone, Copy, Eq, PartialEq, Hash, Default, PartialOrd, Ord)]
+</span><span class="attr">#[derive(Clone, Copy, Eq, PartialEq, Hash, Default, PartialOrd, Ord, Serialize, Deserialize)]
 #[repr(transparent)]
 </span><span class="kw">pub struct </span>Cid(<span class="kw">pub </span>[u8; <span class="number">32</span>]);
 
