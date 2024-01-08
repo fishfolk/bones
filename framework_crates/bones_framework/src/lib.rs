@@ -58,10 +58,6 @@ pub use bones_scripting as scripting;
 #[cfg(feature = "localization")]
 pub mod localization;
 
-// TODO: make configurable
-/// Max players in networked game
-pub const MAX_PLAYERS: usize = 4;
-
 /// Default plugins for bones framework sessions.
 pub struct DefaultSessionPlugin;
 impl lib::SessionPlugin for DefaultSessionPlugin {
