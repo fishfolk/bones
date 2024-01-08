@@ -1230,7 +1230,6 @@ dependencies = [
  "postcard",
  "quinn",
  "quinn_runtime_bevy",
- "rand 0.8.5",
  "rcgen 0.10.0",
  "rustls",
  "serde",

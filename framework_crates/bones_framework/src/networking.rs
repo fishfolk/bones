@@ -5,7 +5,6 @@ use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 use ggrs::P2PSession;
 use instant::Duration;
 use once_cell::sync::Lazy;
-use rand::Rng;
 use tracing::{debug, error, info, warn};
 
 use crate::prelude::*;
@@ -103,7 +102,7 @@ pub static NETWORK_ENDPOINT: Lazy<quinn::Endpoint> = Lazy::new(|| {
     server_config.transport = Arc::new(transport_config);
 
     // Open Socket and create endpoint
-    let port = rand::thread_rng().gen_range(10000..=11000); // Bind a random port
+    let port = THREAD_RNG.with(|rng| rng.u16(10000..=11000));
     info!(port, "Started network endpoint");
     let socket = std::net::UdpSocket::bind(("0.0.0.0", port)).unwrap();
 
