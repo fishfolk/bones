@@ -23,6 +23,10 @@ pub mod prelude {
         animation::*, input::prelude::*, params::*, render::prelude::*,
         storage::*, time::*, utils::*, AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin,
     };
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub use crate::networking::prelude::*;
+
     pub use bones_asset::anyhow::Context;
     pub use bones_asset::prelude::*;
     pub use bones_lib::prelude::*;
@@ -42,6 +46,9 @@ pub mod render;
 pub mod storage;
 pub mod time;
 pub mod utils;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod networking;
 
 #[cfg(feature = "scripting")]
 pub use bones_scripting as scripting;
