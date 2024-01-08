@@ -6,7 +6,7 @@ use numquant::{IntRange, Quantized};
 use crate::prelude::*;
 
 /// A newtype around [`Vec2`] that implements [`From<u16>`] and [`Into<u16>`] as a way to compress
-/// user stick input for use in [`DensePlayerControl`].
+/// user stick input for use in [`self::input::DenseInput`].
 #[derive(Debug, Deref, DerefMut, Default)]
 pub struct DenseMoveDirection(pub Vec2);
 

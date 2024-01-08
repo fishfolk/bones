@@ -20,8 +20,8 @@ pub use glam;
 /// The prelude.
 pub mod prelude {
     pub use crate::{
-        animation::*, input::prelude::*, params::*, render::prelude::*,
-        storage::*, time::*, utils::*, AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin,
+        animation::*, input::prelude::*, params::*, render::prelude::*, storage::*, time::*,
+        utils::*, AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin,
     };
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -57,6 +57,19 @@ pub use bones_scripting as scripting;
 
 #[cfg(feature = "localization")]
 pub mod localization;
+
+/// External crate documentation.
+///
+/// This module only exists during docs builds and serves to make it eaiser to link to relevant
+/// documentation in external crates.
+#[cfg(doc)]
+pub mod external {
+    #[doc(inline)]
+    pub use ggrs;
+
+    #[doc(inline)]
+    pub use bones_matchmaker_proto;
+}
 
 /// Default plugins for bones framework sessions.
 pub struct DefaultSessionPlugin;

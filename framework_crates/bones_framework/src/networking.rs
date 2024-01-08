@@ -46,7 +46,7 @@ pub mod prelude {
     pub use super::{certs, input, lan, online, proto};
 }
 
-/// The muliplier for the [`jumpy_core::FPS`] that will be used when playing an online match.
+/// Muliplier for framerate that will be used when playing an online match.
 ///
 /// Lowering the frame rate a little for online matches reduces bandwidth and may help overall
 /// gameplay. This may not be necessary once we improve network performance.
@@ -71,7 +71,7 @@ pub const NETWORK_LOCAL_INPUT_DELAY: usize = 1;
 /// Max players in networked game
 pub const MAX_PLAYERS: usize = 4;
 
-/// Possible errors returned by [`update_networking`].
+/// Possible errors returned by network loop.
 pub enum NetworkError {
     /// The session was disconnected.
     Disconnected,
@@ -133,7 +133,7 @@ pub static NETWORK_ENDPOINT: Lazy<quinn::Endpoint> = Lazy::new(|| {
 #[schema(no_default)]
 pub struct NetworkMatchSocket(Arc<dyn NetworkSocket>);
 
-/// A type-erased [`ggrs::NonBlockingSocket`][crate::external::ggrs::NonBlockingSocket]
+/// A type-erased [`ggrs::NonBlockingSocket`]
 /// implementation.
 #[derive(Deref, DerefMut)]
 pub struct BoxedNonBlockingSocket(Box<dyn ggrs::NonBlockingSocket<usize> + 'static>);
@@ -178,7 +178,7 @@ pub enum SocketTarget {
     All,
 }
 
-/// [`SessionRunner`] implementation that uses [`ggrs`][crate::external::ggrs] for network play.
+/// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
 ///
 /// This is where the whole `ggrs` integration is implemented.
 pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {

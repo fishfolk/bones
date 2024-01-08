@@ -5,10 +5,6 @@
 //! The LAN matchmaker works by allowing the player to start a match and wait for people to join it,
 //! or to join player's started match.
 //!
-//! Players hosting matches are found using the MDNS protocol. Currently the MDNS logic resides in
-//! the [`ui::main_menu::network_game`] module, in the menu code. This probably isn't the best place
-//! for it, and it should be moved into here to be a part of the [`lan_matchmaker`] task.
-//!
 //! Communication happens directly between LAN peers over the QUIC protocol.
 
 // TODO
@@ -234,7 +230,7 @@ pub fn prepare_to_host<'a>(
 
 /// Implementation of the lan matchmaker task.
 ///
-/// This is a long-running tasks that listens for messages sent through the [`LAN_MATCHMAKER`]
+/// This is a long-running tasks that listens for messages sent through the `LAN_MATCHMAKER`
 /// channel.
 async fn lan_matchmaker(
     matchmaker_channel: BiChannelServer<LanMatchmakerRequest, LanMatchmakerResponse>,
@@ -473,11 +469,11 @@ async fn lan_matchmaker(
     }
 }
 
-/// The type of the [`LAN_MATCHMAKER`] channel.
+/// The type of the `LAN_MATCHMAKER` channel.
 #[derive(DerefMut, Deref)]
 pub struct LanMatchmaker(BiChannelClient<LanMatchmakerRequest, LanMatchmakerResponse>);
 
-/// A request that may be sent to the [`LAN_MATCHMAKER`].
+/// A request that may be sent to the `LAN_MATCHMAKER`.
 #[derive(Debug)]
 pub enum LanMatchmakerRequest {
     /// Start matchmaker server
@@ -498,7 +494,7 @@ pub enum LanMatchmakerRequest {
     StopJoin,
 }
 
-/// A response that may come from the [`LAN_MATCHMAKER`].
+/// A response that may come from the `LAN_MATCHMAKER`.
 pub enum LanMatchmakerResponse {
     /// Server started
     ServerStarted,
