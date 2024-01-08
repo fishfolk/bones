@@ -874,6 +874,27 @@ impl AssetServer {
         ))
     }
 
+    /// Get handle of loaded asset from content id [`Cid`].
+    pub fn get_handle_from_cid<T>(&self, cid: &Cid) -> Handle<T> {
+        self.get_untyped_handle_from_cid(cid).typed()
+    }
+
+    /// Get untyped handle of loaded asset from content id [`Cid`].
+    pub fn get_untyped_handle_from_cid(&self, cid: &Cid) -> UntypedHandle {
+        self.try_get_untyped_handle_from_cid(cid).unwrap()
+    }
+
+    /// Try to get handle of loaded asset from content id [`Cid`].
+    pub fn try_get_handle_from_cid<T>(&self, cid: &Cid) -> Option<Handle<T>> {
+        Some(self.try_get_untyped_handle_from_cid(cid)?.typed())
+    }
+
+    /// Try to get untyped handle of loaded asset from content id [`Cid`].
+    pub fn try_get_untyped_handle_from_cid(&self, cid: &Cid) -> Option<UntypedHandle> {
+        let loaded_asset = self.store.assets.get(cid)?;
+        Some(*self.store.path_handles.get(&loaded_asset.loc)?)
+    }
+
     /// Mutably borrow a loaded asset.
     ///
     /// # Panics

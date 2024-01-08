@@ -10,7 +10,7 @@ use serde::{de::DeserializeSeed, Deserializer};
 /// Helper to export the same types in the crate root and in the prelude.
 macro_rules! pub_use {
     () => {
-        pub use crate::{asset::*, cid::*, handle::*, io::*, server::*};
+        pub use crate::{asset::*, cid::*, handle::*, io::*, network_handle::*, server::*};
         pub use anyhow;
         pub use bones_schema::prelude::*;
         pub use dashmap;
@@ -30,6 +30,7 @@ mod asset;
 mod cid;
 mod handle;
 mod io;
+mod network_handle;
 mod parse;
 mod server;
 
