@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["MatchmakerRequest","MatchmakerResponse","TargetClient"],"struct":["MatchInfo","RecvProxyMessage","SendProxyMessage"]};

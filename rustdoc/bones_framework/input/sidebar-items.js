@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["ButtonState"],"mod":["gamepad","keyboard","mouse","prelude","window"]};
+window.SIDEBAR_ITEMS = {"enum":["ButtonState"],"mod":["gamepad","keyboard","mouse","prelude","window"],"trait":["InputCollector","PlayerControls"]};

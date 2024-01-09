@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["NULL_FRAME"],"enum":["DesyncDetection","GGRSError","GGRSEvent","GGRSRequest","InputStatus","PlayerType","SessionState"],"struct":["GameStateCell","Message","NetworkStats","P2PSession","SessionBuilder","SpectatorSession","SyncTestSession","UdpNonBlockingSocket"],"trait":["Config","NonBlockingSocket"],"type":["Frame","PlayerHandle"]};

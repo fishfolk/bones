@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["bi_channel"],"struct":["BiChannelClient","BiChannelServer"]};
