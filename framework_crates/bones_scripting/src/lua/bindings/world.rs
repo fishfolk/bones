@@ -6,7 +6,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__tostring",
-            AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
+            Callback::from_fn(&ctx, |ctx, _fuel, mut stack| {
                 stack.push_front(
                     piccolo::String::from_static(&ctx, "World { resources, components, assets }")
                         .into(),
@@ -23,7 +23,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__index",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+            Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
                 let (world, key): (&WorldRef, lua::String) = stack.consume(ctx)?;
 
                 let singletons = ctx.singletons();
@@ -33,17 +33,17 @@ pub fn metatable(ctx: Context) -> Table {
 
                 match key.as_bytes() {
                     b"resources" => {
-                        let resources = AnyUserData::new_static(&ctx, world.clone());
+                        let resources = UserData::new_static(&ctx, world.clone());
                         resources.set_metatable(&ctx, Some(resources_metatable));
                         stack.push_front(resources.into());
                     }
                     b"components" => {
-                        let components = AnyUserData::new_static(&ctx, world.clone());
+                        let components = UserData::new_static(&ctx, world.clone());
                         components.set_metatable(&ctx, Some(components_metatable));
                         stack.push_front(components.into());
                     }
                     b"assets" => {
-                        let assets = AnyUserData::new_static(&ctx, world.clone());
+                        let assets = UserData::new_static(&ctx, world.clone());
                         assets.set_metatable(&ctx, Some(assets_metatable));
                         stack.push_front(assets.into());
                     }

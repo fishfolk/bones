@@ -4,8 +4,8 @@ use super::*;
 /// an `entities:iter_with()` lua call.
 pub(super) struct WithoutSchema(pub &'static Schema);
 
-pub fn schema_fn(ctx: Context) -> AnyCallback {
-    AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+pub fn schema_fn(ctx: Context) -> Callback {
+    Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
         let singletons = ctx.singletons();
         let schema_metatable = singletons.get(ctx, schema::metatable);
 
@@ -24,7 +24,7 @@ pub fn schema_fn(ctx: Context) -> AnyCallback {
             }
 
             // TODO: setup `toString` implementation so that printing schemas gives more information.
-            let schema = AnyUserData::new_static(&ctx, next_match);
+            let schema = UserData::new_static(&ctx, next_match);
             schema.set_metatable(&ctx, Some(schema_metatable));
             stack.push_front(schema.into());
         } else {
@@ -35,15 +35,15 @@ pub fn schema_fn(ctx: Context) -> AnyCallback {
     })
 }
 
-pub fn schema_of_fn(ctx: Context) -> AnyCallback {
-    AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+pub fn schema_of_fn(ctx: Context) -> Callback {
+    Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
         let singletons = ctx.singletons();
         let schema_metatable = singletons.get(ctx, schema::metatable);
 
         let ecsref: &EcsRef = stack.consume(ctx)?;
         let schema = ecsref.borrow().schema_ref()?.schema();
 
-        let schema = AnyUserData::new_static(&ctx, schema);
+        let schema = UserData::new_static(&ctx, schema);
         schema.set_metatable(&ctx, Some(schema_metatable));
         stack.replace(ctx, schema);
 
@@ -57,8 +57,8 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__tostring",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-                let this: AnyUserData = stack.consume(ctx)?;
+            Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+                let this: UserData = stack.consume(ctx)?;
                 let this = this.downcast_static::<&Schema>()?;
                 let s = piccolo::String::from_slice(&ctx, &format!("Schema({})", this.full_name));
 
@@ -69,8 +69,8 @@ pub fn metatable(ctx: Context) -> Table {
         .unwrap();
     let create_fn = ctx.registry().stash(
         &ctx,
-        AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-            let this: AnyUserData = stack.consume(ctx)?;
+        Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+            let this: UserData = stack.consume(ctx)?;
             let this = this.downcast_static::<&Schema>()?;
 
             let ecsref = EcsRef {
@@ -86,16 +86,16 @@ pub fn metatable(ctx: Context) -> Table {
 
     let without_fn = ctx.registry().stash(
         &ctx,
-        AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-            let this: AnyUserData = stack.consume(ctx)?;
+        Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+            let this: UserData = stack.consume(ctx)?;
             let this = this.downcast_static::<&Schema>()?;
-            stack.replace(ctx, AnyUserData::new_static(&ctx, WithoutSchema(this)));
+            stack.replace(ctx, UserData::new_static(&ctx, WithoutSchema(this)));
             Ok(CallbackReturn::Return)
         }),
     );
 
-    let eq_fn = AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-        let (this, other): (AnyUserData, AnyUserData) = stack.consume(ctx)?;
+    let eq_fn = Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+        let (this, other): (UserData, UserData) = stack.consume(ctx)?;
         let (this, other) = (
             this.downcast_static::<&Schema>()?,
             other.downcast_static::<&Schema>()?,
@@ -109,8 +109,8 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__index",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-                let (this, key): (AnyUserData, lua::String) = stack.consume(ctx)?;
+            Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+                let (this, key): (UserData, lua::String) = stack.consume(ctx)?;
                 let this = this.downcast_static::<&Schema>()?;
 
                 match key.as_bytes() {
