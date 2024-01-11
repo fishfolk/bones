@@ -1,7 +1,7 @@
 use bones_lib::prelude::*;
 use gc_arena_derive::Collect;
 use piccolo::{
-    self as lua, meta_ops, meta_ops::MetaResult, AnyCallback, AnySequence, CallbackReturn, Context,
+    self as lua, meta_ops, meta_ops::MetaResult, BoxSequence, Callback, CallbackReturn, Context,
     Error, Sequence, SequencePoll, Stack,
 };
 
@@ -25,8 +25,8 @@ pub fn register_lua_typedata() {
         .unwrap();
 }
 
-pub fn no_newindex(ctx: Context) -> AnyCallback {
-    AnyCallback::from_fn(&ctx, |_ctx, _fuel, _stack| {
+pub fn no_newindex(ctx: Context) -> Callback {
+    Callback::from_fn(&ctx, |_ctx, _fuel, _stack| {
         Err(anyhow::format_err!("Creating fields not allowed on this type").into())
     })
 }
@@ -56,14 +56,14 @@ pub fn env(ctx: Context) -> Table {
         ("Last", CoreStage::Last),
     ] {
         core_stage_table
-            .set(ctx, name, AnyUserData::new_static(&ctx, stage))
+            .set(ctx, name, UserData::new_static(&ctx, stage))
             .unwrap();
     }
     env.set(ctx, "CoreStage", core_stage_table).unwrap();
 
     macro_rules! add_log_fn {
         ($level:ident) => {
-            let $level = AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
+            let $level = Callback::from_fn(&ctx, |ctx, _fuel, mut stack| {
                 #[derive(Debug, Copy, Clone, Eq, PartialEq, Collect)]
                 #[collect(require_static)]
                 enum Mode {
@@ -109,7 +109,7 @@ pub fn env(ctx: Context) -> Table {
                     }
                 }
 
-                Ok(CallbackReturn::Sequence(AnySequence::new(
+                Ok(CallbackReturn::Sequence(BoxSequence::new(
                     &ctx,
                     PrintSeq {
                         mode: Mode::Init,
@@ -136,7 +136,7 @@ pub fn env(ctx: Context) -> Table {
         .set(
             ctx,
             "__newindex",
-            AnyCallback::from_fn(&ctx, |_ctx, _fuel, _stack| {
+            Callback::from_fn(&ctx, |_ctx, _fuel, _stack| {
                 Err(anyhow::format_err!(
                     "Cannot set global variables, you must use `world` \
                         to persist any state across frames."

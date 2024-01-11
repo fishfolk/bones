@@ -9,7 +9,7 @@ pub use piccolo;
 use piccolo::{
     compiler::{LineNumber, ParseError},
     registry::{Fetchable, Stashable},
-    AnyUserData, Closure, Context, Executor, FromValue, Lua, PrototypeError, StashedClosure, Table,
+    Closure, Context, Executor, FromValue, Lua, PrototypeError, StashedClosure, Table, UserData,
     Value,
 };
 use send_wrapper::SendWrapper;
@@ -140,8 +140,8 @@ impl<'gc> FromValue<'gc> for &'gc WorldRef {
 
 impl WorldRef {
     /// Convert this [`WorldRef`] into a Lua userdata.
-    pub fn into_userdata(self, ctx: Context<'_>) -> AnyUserData<'_> {
-        let data = AnyUserData::new_static(&ctx, self);
+    pub fn into_userdata(self, ctx: Context<'_>) -> UserData<'_> {
+        let data = UserData::new_static(&ctx, self);
         data.set_metatable(
             &ctx,
             Some(ctx.singletons().get(ctx, bindings::world::metatable)),
@@ -160,7 +160,7 @@ impl WorldRef {
             ("resources", bindings::resources::metatable),
             ("assets", bindings::assets::metatable),
         ] {
-            let data = AnyUserData::new_static(&ctx, self.clone());
+            let data = UserData::new_static(&ctx, self.clone());
             data.set_metatable(&ctx, Some(ctx.singletons().get(ctx, metatable)));
             env.set(ctx, name, data).unwrap();
         }
@@ -247,7 +247,7 @@ impl Default for EngineState {
             ctx.globals().set(
                 ctx,
                 "luasingletons",
-                AnyUserData::new_static(&ctx, LuaSingletons::default()),
+                UserData::new_static(&ctx, LuaSingletons::default()),
             )?;
             Ok(())
         })

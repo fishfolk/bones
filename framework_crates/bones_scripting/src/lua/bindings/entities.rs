@@ -10,7 +10,7 @@ pub fn entities_metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__tostring",
-            AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
+            Callback::from_fn(&ctx, |ctx, _fuel, mut stack| {
                 stack.push_front(
                     piccolo::String::from_static(&ctx, "Entities { create, kill, iter_with }")
                         .into(),
@@ -25,7 +25,7 @@ pub fn entities_metatable(ctx: Context) -> Table {
 
     let create_callback = ctx.registry().stash(
         &ctx,
-        AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+        Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
             let this: &EcsRef = stack.consume(ctx)?;
 
             let mut b = this.borrow_mut();
@@ -44,7 +44,7 @@ pub fn entities_metatable(ctx: Context) -> Table {
     );
     let kill_callback = ctx.registry().stash(
         &ctx,
-        AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+        Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
             let (this, entity_ecsref): (&EcsRef, &EcsRef) = stack.consume(ctx)?;
             let mut b = this.borrow_mut();
             let entities = b.schema_ref_mut()?.cast_into_mut::<Entities>();
@@ -58,8 +58,8 @@ pub fn entities_metatable(ctx: Context) -> Table {
     );
     let iter_with_callback = ctx.registry().stash(
         &ctx,
-        AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-            let (this, schema_args): (&EcsRef, Variadic<Vec<AnyUserData>>) = stack.consume(ctx)?;
+        Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+            let (this, schema_args): (&EcsRef, Variadic<Vec<UserData>>) = stack.consume(ctx)?;
             let mut b = this.borrow_mut();
             let entities = b.schema_ref_mut()?.cast_into_mut::<Entities>();
             let world = ctx
@@ -99,8 +99,8 @@ pub fn entities_metatable(ctx: Context) -> Table {
                 schemas: Vec<&'static Schema>,
             }
 
-            let iter_fn = AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
-                let state: AnyUserData = stack.consume(ctx)?;
+            let iter_fn = Callback::from_fn(&ctx, |ctx, _fuel, mut stack| {
+                let state: UserData = stack.consume(ctx)?;
                 let state = state.downcast_static::<AtomicCell<IteratorState>>()?;
                 let mut state = state.borrow_mut();
                 let next_ent = state.entities.next();
@@ -137,7 +137,7 @@ pub fn entities_metatable(ctx: Context) -> Table {
             });
 
             let iterator_state =
-                AnyUserData::new_static(&ctx, AtomicCell::new(IteratorState { entities, schemas }));
+                UserData::new_static(&ctx, AtomicCell::new(IteratorState { entities, schemas }));
 
             stack.replace(ctx, (iter_fn, iterator_state));
 
@@ -149,7 +149,7 @@ pub fn entities_metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__index",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+            Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
                 let (_this, key): (lua::Value, lua::String) = stack.consume(ctx)?;
 
                 #[allow(clippy::single_match)]

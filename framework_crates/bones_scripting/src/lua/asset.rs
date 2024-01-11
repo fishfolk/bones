@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use bevy_tasks::ThreadExecutor;
 use piccolo::{
-    AnyCallback, AnyUserData, CallbackReturn, Closure, Context, Executor, StashedClosure, Table,
+    Callback, CallbackReturn, Closure, Context, Executor, StashedClosure, Table, UserData,
 };
 use send_wrapper::SendWrapper;
 
@@ -95,7 +95,7 @@ impl LuaPlugin {
         let executor = lua.try_enter(|ctx| {
             let env = ctx.singletons().get(ctx, super::bindings::env);
 
-            let session_var = AnyUserData::new_static(&ctx, self.systems.clone());
+            let session_var = UserData::new_static(&ctx, self.systems.clone());
             session_var.set_metatable(&ctx, Some(ctx.singletons().get(ctx, session_metatable)));
             env.set(ctx, "session", session_var)?;
 
@@ -118,7 +118,7 @@ fn session_metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__tostring",
-            AnyCallback::from_fn(&ctx, |ctx, _fuel, mut stack| {
+            Callback::from_fn(&ctx, |ctx, _fuel, mut stack| {
                 stack.push_front(
                     piccolo::String::from_static(&ctx, "Session { add_system_to_stage }").into(),
                 );
@@ -136,8 +136,8 @@ fn session_metatable(ctx: Context) -> Table {
 
     let add_startup_system_callback = ctx.registry().stash(
         &ctx,
-        AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-            let (this, closure): (AnyUserData, Closure) = stack.consume(ctx)?;
+        Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+            let (this, closure): (UserData, Closure) = stack.consume(ctx)?;
             let this = this.downcast_static::<LuaPluginSystemsCell>()?;
 
             let mut systems = this.borrow_mut();
@@ -151,8 +151,8 @@ fn session_metatable(ctx: Context) -> Table {
     );
     let add_system_to_stage_callback = ctx.registry().stash(
         &ctx,
-        AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-            let (this, stage, closure): (AnyUserData, AnyUserData, Closure) = stack.consume(ctx)?;
+        Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+            let (this, stage, closure): (UserData, UserData, Closure) = stack.consume(ctx)?;
             let this = this.downcast_static::<LuaPluginSystemsCell>()?;
             let stage = stage.downcast_static::<CoreStage>()?;
 
@@ -170,7 +170,7 @@ fn session_metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__index",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+            Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
                 let (_this, key): (piccolo::Value, piccolo::String) = stack.consume(ctx)?;
 
                 #[allow(clippy::single_match)]

@@ -50,7 +50,7 @@ impl EcsRef {
     /// Convert into a lua value.
     pub fn into_value(self, ctx: Context) -> Value {
         let metatable = ctx.singletons().get(ctx, self.metatable_fn());
-        let ecsref = AnyUserData::new_static(&ctx, self);
+        let ecsref = UserData::new_static(&ctx, self);
         ecsref.set_metatable(&ctx, Some(metatable));
         ecsref.into()
     }
@@ -299,7 +299,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__tostring",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+            Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
                 let this: &EcsRef = stack.consume(ctx)?;
 
                 let b = this.borrow();
@@ -318,7 +318,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__index",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+            Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
                 let (this, key): (&EcsRef, lua::Value) = stack.consume(ctx)?;
 
                 let mut newref = this.clone();
@@ -359,7 +359,7 @@ pub fn metatable(ctx: Context) -> Table {
         .set(
             ctx,
             "__newindex",
-            AnyCallback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
+            Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
                 let (this, key, newvalue): (&EcsRef, lua::Value, lua::Value) =
                     stack.consume(ctx)?;
 
