@@ -89,7 +89,7 @@
         .set(
             ctx,
             <span class="string">&quot;__tostring&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 stack.push_front(piccolo::String::from_static(<span class="kw-2">&amp;</span>ctx, <span class="string">&quot;Assets { root, get }&quot;</span>).into());
                 <span class="prelude-val">Ok</span>(CallbackReturn::Return)
             }),
@@ -98,7 +98,7 @@
 
     <span class="kw">let </span>get_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
-        AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+        Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>(world, ecsref): (<span class="kw-2">&amp;</span>WorldRef, <span class="kw-2">&amp;</span>EcsRef) = stack.consume(ctx)<span class="question-mark">?</span>;
 
             <span class="kw">let </span>b = ecsref.borrow();
@@ -123,7 +123,7 @@
         .set(
             ctx,
             <span class="string">&quot;__index&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 <span class="kw">let </span>(world, key): (<span class="kw-2">&amp;</span>WorldRef, lua::Value) = stack.consume(ctx)<span class="question-mark">?</span>;
 
                 <span class="kw">if let </span>Value::String(key) = key {

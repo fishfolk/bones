@@ -136,7 +136,7 @@
         .set(
             ctx,
             <span class="string">&quot;__tostring&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 stack.push_front(
                     piccolo::String::from_static(<span class="kw-2">&amp;</span>ctx, <span class="string">&quot;Components { insert, remove, get }&quot;</span>).into(),
                 );
@@ -150,8 +150,8 @@
 
     <span class="kw">let </span>get_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
-        AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
-            <span class="kw">let </span>(world, entity_ecsref, schema): (<span class="kw-2">&amp;</span>WorldRef, <span class="kw-2">&amp;</span>EcsRef, AnyUserData) =
+        Callback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            <span class="kw">let </span>(world, entity_ecsref, schema): (<span class="kw-2">&amp;</span>WorldRef, <span class="kw-2">&amp;</span>EcsRef, UserData) =
                 stack.consume(ctx)<span class="question-mark">?</span>;
 
             <span class="kw">let </span>b = entity_ecsref.borrow();
@@ -183,7 +183,7 @@
     );
     <span class="kw">let </span>insert_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
-        AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
+        Callback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>(world, entity_ecsref, value_ecsref): (<span class="kw-2">&amp;</span>WorldRef, <span class="kw-2">&amp;</span>EcsRef, <span class="kw-2">&amp;</span>EcsRef) =
                 stack.consume(ctx)<span class="question-mark">?</span>;
 
@@ -208,8 +208,8 @@
     );
     <span class="kw">let </span>remove_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
-        AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
-            <span class="kw">let </span>(world, entity_ecsref, schema): (<span class="kw-2">&amp;</span>WorldRef, <span class="kw-2">&amp;</span>EcsRef, AnyUserData) =
+        Callback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            <span class="kw">let </span>(world, entity_ecsref, schema): (<span class="kw-2">&amp;</span>WorldRef, <span class="kw-2">&amp;</span>EcsRef, UserData) =
                 stack.consume(ctx)<span class="question-mark">?</span>;
 
             <span class="kw">let </span>b = entity_ecsref.borrow();
@@ -232,7 +232,7 @@
         .set(
             ctx,
             <span class="string">&quot;__index&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 <span class="kw">let </span>(_world, key): (<span class="kw-2">&amp;</span>WorldRef, lua::Value) = stack.consume(ctx)<span class="question-mark">?</span>;
 
                 <span class="kw">if let </span>Value::String(key) = key {

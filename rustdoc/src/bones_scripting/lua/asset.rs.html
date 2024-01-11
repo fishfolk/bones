@@ -264,7 +264,7 @@
 
 <span class="kw">use </span>bevy_tasks::ThreadExecutor;
 <span class="kw">use </span>piccolo::{
-    AnyCallback, AnyUserData, CallbackReturn, Closure, Context, Executor, StashedClosure, Table,
+    Callback, CallbackReturn, Closure, Context, Executor, StashedClosure, Table, UserData,
 };
 <span class="kw">use </span>send_wrapper::SendWrapper;
 
@@ -357,7 +357,7 @@
         <span class="kw">let </span>executor = lua.try_enter(|ctx| {
             <span class="kw">let </span>env = ctx.singletons().get(ctx, <span class="kw">super</span>::bindings::env);
 
-            <span class="kw">let </span>session_var = AnyUserData::new_static(<span class="kw-2">&amp;</span>ctx, <span class="self">self</span>.systems.clone());
+            <span class="kw">let </span>session_var = UserData::new_static(<span class="kw-2">&amp;</span>ctx, <span class="self">self</span>.systems.clone());
             session_var.set_metatable(<span class="kw-2">&amp;</span>ctx, <span class="prelude-val">Some</span>(ctx.singletons().get(ctx, session_metatable)));
             env.set(ctx, <span class="string">&quot;session&quot;</span>, session_var)<span class="question-mark">?</span>;
 
@@ -380,7 +380,7 @@
         .set(
             ctx,
             <span class="string">&quot;__tostring&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 stack.push_front(
                     piccolo::String::from_static(<span class="kw-2">&amp;</span>ctx, <span class="string">&quot;Session { add_system_to_stage }&quot;</span>).into(),
                 );
@@ -398,8 +398,8 @@
 
     <span class="kw">let </span>add_startup_system_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
-        AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
-            <span class="kw">let </span>(this, closure): (AnyUserData, Closure) = stack.consume(ctx)<span class="question-mark">?</span>;
+        Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            <span class="kw">let </span>(this, closure): (UserData, Closure) = stack.consume(ctx)<span class="question-mark">?</span>;
             <span class="kw">let </span>this = this.downcast_static::&lt;LuaPluginSystemsCell&gt;()<span class="question-mark">?</span>;
 
             <span class="kw">let </span><span class="kw-2">mut </span>systems = this.borrow_mut();
@@ -413,8 +413,8 @@
     );
     <span class="kw">let </span>add_system_to_stage_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
-        AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
-            <span class="kw">let </span>(this, stage, closure): (AnyUserData, AnyUserData, Closure) = stack.consume(ctx)<span class="question-mark">?</span>;
+        Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            <span class="kw">let </span>(this, stage, closure): (UserData, UserData, Closure) = stack.consume(ctx)<span class="question-mark">?</span>;
             <span class="kw">let </span>this = this.downcast_static::&lt;LuaPluginSystemsCell&gt;()<span class="question-mark">?</span>;
             <span class="kw">let </span>stage = stage.downcast_static::&lt;CoreStage&gt;()<span class="question-mark">?</span>;
 
@@ -432,7 +432,7 @@
         .set(
             ctx,
             <span class="string">&quot;__index&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 <span class="kw">let </span>(_this, key): (piccolo::Value, piccolo::String) = stack.consume(ctx)<span class="question-mark">?</span>;
 
                 <span class="attr">#[allow(clippy::single_match)]

@@ -185,7 +185,7 @@
         .set(
             ctx,
             <span class="string">&quot;__tostring&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 stack.push_front(
                     piccolo::String::from_static(<span class="kw-2">&amp;</span>ctx, <span class="string">&quot;Entities { create, kill, iter_with }&quot;</span>)
                         .into(),
@@ -200,7 +200,7 @@
 
     <span class="kw">let </span>create_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
-        AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+        Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>this: <span class="kw-2">&amp;</span>EcsRef = stack.consume(ctx)<span class="question-mark">?</span>;
 
             <span class="kw">let </span><span class="kw-2">mut </span>b = this.borrow_mut();
@@ -219,7 +219,7 @@
     );
     <span class="kw">let </span>kill_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
-        AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+        Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
             <span class="kw">let </span>(this, entity_ecsref): (<span class="kw-2">&amp;</span>EcsRef, <span class="kw-2">&amp;</span>EcsRef) = stack.consume(ctx)<span class="question-mark">?</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>b = this.borrow_mut();
             <span class="kw">let </span>entities = b.schema_ref_mut()<span class="question-mark">?</span>.cast_into_mut::&lt;Entities&gt;();
@@ -233,8 +233,8 @@
     );
     <span class="kw">let </span>iter_with_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
-        AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
-            <span class="kw">let </span>(this, schema_args): (<span class="kw-2">&amp;</span>EcsRef, Variadic&lt;Vec&lt;AnyUserData&gt;&gt;) = stack.consume(ctx)<span class="question-mark">?</span>;
+        Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            <span class="kw">let </span>(this, schema_args): (<span class="kw-2">&amp;</span>EcsRef, Variadic&lt;Vec&lt;UserData&gt;&gt;) = stack.consume(ctx)<span class="question-mark">?</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>b = this.borrow_mut();
             <span class="kw">let </span>entities = b.schema_ref_mut()<span class="question-mark">?</span>.cast_into_mut::&lt;Entities&gt;();
             <span class="kw">let </span>world = ctx
@@ -274,8 +274,8 @@
                 schemas: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt;,
             }
 
-            <span class="kw">let </span>iter_fn = AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
-                <span class="kw">let </span>state: AnyUserData = stack.consume(ctx)<span class="question-mark">?</span>;
+            <span class="kw">let </span>iter_fn = Callback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
+                <span class="kw">let </span>state: UserData = stack.consume(ctx)<span class="question-mark">?</span>;
                 <span class="kw">let </span>state = state.downcast_static::&lt;AtomicCell&lt;IteratorState&gt;&gt;()<span class="question-mark">?</span>;
                 <span class="kw">let </span><span class="kw-2">mut </span>state = state.borrow_mut();
                 <span class="kw">let </span>next_ent = state.entities.next();
@@ -312,7 +312,7 @@
             });
 
             <span class="kw">let </span>iterator_state =
-                AnyUserData::new_static(<span class="kw-2">&amp;</span>ctx, AtomicCell::new(IteratorState { entities, schemas }));
+                UserData::new_static(<span class="kw-2">&amp;</span>ctx, AtomicCell::new(IteratorState { entities, schemas }));
 
             stack.replace(ctx, (iter_fn, iterator_state));
 
@@ -324,7 +324,7 @@
         .set(
             ctx,
             <span class="string">&quot;__index&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 <span class="kw">let </span>(_this, key): (lua::Value, lua::String) = stack.consume(ctx)<span class="question-mark">?</span>;
 
                 <span class="attr">#[allow(clippy::single_match)]

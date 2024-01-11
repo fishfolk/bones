@@ -530,7 +530,7 @@
     <span class="doccomment">/// Convert into a lua value.
     </span><span class="kw">pub fn </span>into_value(<span class="self">self</span>, ctx: Context) -&gt; Value {
         <span class="kw">let </span>metatable = ctx.singletons().get(ctx, <span class="self">self</span>.metatable_fn());
-        <span class="kw">let </span>ecsref = AnyUserData::new_static(<span class="kw-2">&amp;</span>ctx, <span class="self">self</span>);
+        <span class="kw">let </span>ecsref = UserData::new_static(<span class="kw-2">&amp;</span>ctx, <span class="self">self</span>);
         ecsref.set_metatable(<span class="kw-2">&amp;</span>ctx, <span class="prelude-val">Some</span>(metatable));
         ecsref.into()
     }
@@ -779,7 +779,7 @@
         .set(
             ctx,
             <span class="string">&quot;__tostring&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 <span class="kw">let </span>this: <span class="kw-2">&amp;</span>EcsRef = stack.consume(ctx)<span class="question-mark">?</span>;
 
                 <span class="kw">let </span>b = this.borrow();
@@ -798,7 +798,7 @@
         .set(
             ctx,
             <span class="string">&quot;__index&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 <span class="kw">let </span>(this, key): (<span class="kw-2">&amp;</span>EcsRef, lua::Value) = stack.consume(ctx)<span class="question-mark">?</span>;
 
                 <span class="kw">let </span><span class="kw-2">mut </span>newref = this.clone();
@@ -839,7 +839,7 @@
         .set(
             ctx,
             <span class="string">&quot;__newindex&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 <span class="kw">let </span>(this, key, newvalue): (<span class="kw-2">&amp;</span>EcsRef, lua::Value, lua::Value) =
                     stack.consume(ctx)<span class="question-mark">?</span>;
 

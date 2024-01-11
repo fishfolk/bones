@@ -74,7 +74,7 @@
         .set(
             ctx,
             <span class="string">&quot;__tostring&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 stack.push_front(
                     piccolo::String::from_static(<span class="kw-2">&amp;</span>ctx, <span class="string">&quot;Resources { len, get }&quot;</span>).into(),
                 );
@@ -85,8 +85,8 @@
 
     <span class="kw">let </span>get_callback = ctx.registry().stash(
         <span class="kw-2">&amp;</span>ctx,
-        AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
-            <span class="kw">let </span>(world, schema): (<span class="kw-2">&amp;</span>WorldRef, AnyUserData) = stack.consume(ctx)<span class="question-mark">?</span>;
+        Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            <span class="kw">let </span>(world, schema): (<span class="kw-2">&amp;</span>WorldRef, UserData) = stack.consume(ctx)<span class="question-mark">?</span>;
 
             <span class="kw">let </span>schema = schema.downcast_static::&lt;<span class="kw-2">&amp;</span>Schema&gt;()<span class="question-mark">?</span>;
 
@@ -108,7 +108,7 @@
         .set(
             ctx,
             <span class="string">&quot;__index&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, <span class="kw">move </span>|ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 <span class="kw">let </span>(_world, key): (<span class="kw-2">&amp;</span>WorldRef, lua::String) = stack.consume(ctx)<span class="question-mark">?</span>;
 
                 <span class="attr">#[allow(clippy::single_match)]

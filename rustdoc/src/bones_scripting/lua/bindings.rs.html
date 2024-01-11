@@ -152,7 +152,7 @@
 </pre></div><pre class="rust"><code><span class="kw">use </span>bones_lib::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>gc_arena_derive::Collect;
 <span class="kw">use </span>piccolo::{
-    <span class="self">self </span><span class="kw">as </span>lua, meta_ops, meta_ops::MetaResult, AnyCallback, AnySequence, CallbackReturn, Context,
+    <span class="self">self </span><span class="kw">as </span>lua, meta_ops, meta_ops::MetaResult, BoxSequence, Callback, CallbackReturn, Context,
     Error, Sequence, SequencePoll, Stack,
 };
 
@@ -176,8 +176,8 @@
         .unwrap();
 }
 
-<span class="kw">pub fn </span>no_newindex(ctx: Context) -&gt; AnyCallback {
-    AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |_ctx, _fuel, _stack| {
+<span class="kw">pub fn </span>no_newindex(ctx: Context) -&gt; Callback {
+    Callback::from_fn(<span class="kw-2">&amp;</span>ctx, |_ctx, _fuel, _stack| {
         <span class="prelude-val">Err</span>(<span class="macro">anyhow::format_err!</span>(<span class="string">&quot;Creating fields not allowed on this type&quot;</span>).into())
     })
 }
@@ -207,14 +207,14 @@
         (<span class="string">&quot;Last&quot;</span>, CoreStage::Last),
     ] {
         core_stage_table
-            .set(ctx, name, AnyUserData::new_static(<span class="kw-2">&amp;</span>ctx, stage))
+            .set(ctx, name, UserData::new_static(<span class="kw-2">&amp;</span>ctx, stage))
             .unwrap();
     }
     env.set(ctx, <span class="string">&quot;CoreStage&quot;</span>, core_stage_table).unwrap();
 
     <span class="macro">macro_rules! </span>add_log_fn {
         (<span class="macro-nonterminal">$level</span>:ident) =&gt; {
-            <span class="kw">let </span><span class="macro-nonterminal">$level </span>= AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
+            <span class="kw">let </span><span class="macro-nonterminal">$level </span>= Callback::from_fn(<span class="kw-2">&amp;</span>ctx, |ctx, _fuel, <span class="kw-2">mut </span>stack| {
                 <span class="attr">#[derive(Debug, Copy, Clone, Eq, PartialEq, Collect)]
                 #[collect(require_static)]
                 </span><span class="kw">enum </span>Mode {
@@ -260,7 +260,7 @@
                     }
                 }
 
-                <span class="prelude-val">Ok</span>(CallbackReturn::Sequence(AnySequence::new(
+                <span class="prelude-val">Ok</span>(CallbackReturn::Sequence(BoxSequence::new(
                     <span class="kw-2">&amp;</span>ctx,
                     PrintSeq {
                         mode: Mode::Init,
@@ -287,7 +287,7 @@
         .set(
             ctx,
             <span class="string">&quot;__newindex&quot;</span>,
-            AnyCallback::from_fn(<span class="kw-2">&amp;</span>ctx, |_ctx, _fuel, _stack| {
+            Callback::from_fn(<span class="kw-2">&amp;</span>ctx, |_ctx, _fuel, _stack| {
                 <span class="prelude-val">Err</span>(<span class="macro">anyhow::format_err!</span>(
                     <span class="string">&quot;Cannot set global variables, you must use `world` \
                         to persist any state across frames.&quot;

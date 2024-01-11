@@ -382,7 +382,7 @@
 <span class="kw">use </span>piccolo::{
     compiler::{LineNumber, ParseError},
     registry::{Fetchable, Stashable},
-    AnyUserData, Closure, Context, Executor, FromValue, Lua, PrototypeError, StashedClosure, Table,
+    Closure, Context, Executor, FromValue, Lua, PrototypeError, StashedClosure, Table, UserData,
     Value,
 };
 <span class="kw">use </span>send_wrapper::SendWrapper;
@@ -513,8 +513,8 @@
 
 <span class="kw">impl </span>WorldRef {
     <span class="doccomment">/// Convert this [`WorldRef`] into a Lua userdata.
-    </span><span class="kw">pub fn </span>into_userdata(<span class="self">self</span>, ctx: Context&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; AnyUserData&lt;<span class="lifetime">&#39;_</span>&gt; {
-        <span class="kw">let </span>data = AnyUserData::new_static(<span class="kw-2">&amp;</span>ctx, <span class="self">self</span>);
+    </span><span class="kw">pub fn </span>into_userdata(<span class="self">self</span>, ctx: Context&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; UserData&lt;<span class="lifetime">&#39;_</span>&gt; {
+        <span class="kw">let </span>data = UserData::new_static(<span class="kw-2">&amp;</span>ctx, <span class="self">self</span>);
         data.set_metatable(
             <span class="kw-2">&amp;</span>ctx,
             <span class="prelude-val">Some</span>(ctx.singletons().get(ctx, bindings::world::metatable)),
@@ -533,7 +533,7 @@
             (<span class="string">&quot;resources&quot;</span>, bindings::resources::metatable),
             (<span class="string">&quot;assets&quot;</span>, bindings::assets::metatable),
         ] {
-            <span class="kw">let </span>data = AnyUserData::new_static(<span class="kw-2">&amp;</span>ctx, <span class="self">self</span>.clone());
+            <span class="kw">let </span>data = UserData::new_static(<span class="kw-2">&amp;</span>ctx, <span class="self">self</span>.clone());
             data.set_metatable(<span class="kw-2">&amp;</span>ctx, <span class="prelude-val">Some</span>(ctx.singletons().get(ctx, metatable)));
             env.set(ctx, name, data).unwrap();
         }
@@ -620,7 +620,7 @@
             </span>ctx.globals().set(
                 ctx,
                 <span class="string">&quot;luasingletons&quot;</span>,
-                AnyUserData::new_static(<span class="kw-2">&amp;</span>ctx, LuaSingletons::default()),
+                UserData::new_static(<span class="kw-2">&amp;</span>ctx, LuaSingletons::default()),
             )<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(())
         })
