@@ -32,7 +32,13 @@ impl From<Color> for egui::Color32 {
                 green,
                 blue,
                 alpha,
-            } => egui::Rgba::from_rgba_unmultiplied(red, green, blue, alpha).into(),
+            } => egui::Rgba::from_srgba_unmultiplied(
+                (red * 255.0) as u8,
+                (green * 255.0) as u8,
+                (blue * 255.0) as u8,
+                (alpha * 255.0) as u8,
+            )
+            .into(),
         }
     }
 }
