@@ -590,6 +590,12 @@
 <a href="#590" id="590">590</a>
 <a href="#591" id="591">591</a>
 <a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Color components.
 
 </span><span class="kw">use </span>glam::{Vec3, Vec4};
@@ -624,7 +630,13 @@
                 green,
                 blue,
                 alpha,
-            } =&gt; egui::Rgba::from_rgba_unmultiplied(red, green, blue, alpha).into(),
+            } =&gt; egui::Rgba::from_srgba_unmultiplied(
+                (red * <span class="number">255.0</span>) <span class="kw">as </span>u8,
+                (green * <span class="number">255.0</span>) <span class="kw">as </span>u8,
+                (blue * <span class="number">255.0</span>) <span class="kw">as </span>u8,
+                (alpha * <span class="number">255.0</span>) <span class="kw">as </span>u8,
+            )
+            .into(),
         }
     }
 }
