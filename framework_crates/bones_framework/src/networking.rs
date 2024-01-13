@@ -397,11 +397,9 @@ where
                         for request in requests {
                             match request {
                                 ggrs::GGRSRequest::SaveGameState { cell, frame } => {
-                                    info!("ggrs request: Save frame: {frame}");
                                     cell.save(frame, Some(world.clone()), None)
                                 }
                                 ggrs::GGRSRequest::LoadGameState { cell, .. } => {
-                                    info!("ggrs request: Load");
                                     *world = cell.load().unwrap_or_default();
                                 }
                                 ggrs::GGRSRequest::AdvanceFrame {
