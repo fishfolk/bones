@@ -18,7 +18,7 @@ use std::{
 use bevy_tasks::IoTaskPool;
 use bytes::Bytes;
 use futures_lite::{future, FutureExt};
-use mdns_sd::{ServiceDaemon, ServiceEvent, ServiceInfo};
+use mdns_sd::{ServiceDaemon, ServiceInfo};
 use smallvec::SmallVec;
 use tracing::warn;
 
@@ -34,6 +34,10 @@ pub struct ServerInfo {
     /// The ping in milliseconds
     pub ping: Option<u16>,
 }
+
+/// Receiver for LAN service discovery channel.
+#[derive(Clone)]
+pub struct ServiceDiscoveryReceiver(mdns_sd::Receiver<mdns_sd::ServiceEvent>);
 
 /// Channel used to do matchmaking over LAN.
 ///
@@ -66,8 +70,8 @@ static PINGER: Lazy<Pinger> = Lazy::new(|| {
 });
 
 /// Host a server.
-pub fn start_server(service_info: ServiceInfo, player_count: usize) {
-    MDNS.register(service_info)
+pub fn start_server(server: ServerInfo, player_count: usize) {
+    MDNS.register(server.service)
         .expect("Could not register MDNS service.");
     LAN_MATCHMAKER
         .try_send(LanMatchmakerRequest::StartServer { player_count })
@@ -75,9 +79,14 @@ pub fn start_server(service_info: ServiceInfo, player_count: usize) {
 }
 
 /// Stop hosting a server.
-pub fn stop_server(service_info: &ServiceInfo) {
+pub fn stop_server(server: &ServerInfo) {
+    stop_server_by_name(server.service.get_fullname())
+}
+
+/// Stop hosting a server specified by name. (Use [`ServiceInfo::get_fullname()`].)
+fn stop_server_by_name(name: &str) {
     loop {
-        match MDNS.unregister(service_info.get_fullname()) {
+        match MDNS.unregister(name) {
             Ok(_) => break,
             Err(mdns_sd::Error::Again) => (),
             Err(e) => {
@@ -88,7 +97,7 @@ pub fn stop_server(service_info: &ServiceInfo) {
 }
 
 /// Wait for players to join a hosted server.
-pub fn wait_players(joined_players: &mut usize, service_info: &ServiceInfo) -> Option<LanSocket> {
+pub fn wait_players(joined_players: &mut usize, server: &ServerInfo) -> Option<NetworkMatchSocket> {
     while let Ok(response) = LAN_MATCHMAKER.try_recv() {
         match response {
             LanMatchmakerResponse::ServerStarted => {}
@@ -102,13 +111,13 @@ pub fn wait_players(joined_players: &mut usize, service_info: &ServiceInfo) -> O
             } => {
                 info!(?player_idx, "Starting network game");
                 loop {
-                    match MDNS.unregister(service_info.get_fullname()) {
+                    match MDNS.unregister(server.service.get_fullname()) {
                         Ok(_) => break,
                         Err(mdns_sd::Error::Again) => (),
                         Err(e) => panic!("Error unregistering MDNS service: {e}"),
                     }
                 }
-                return Some(lan_socket);
+                return Some(NetworkMatchSocket(Arc::new(lan_socket)));
             }
         }
     }
@@ -133,7 +142,7 @@ pub fn leave_server() {
 }
 
 /// Wait for a joined game to start.
-pub fn wait_game_start() -> Option<LanSocket> {
+pub fn wait_game_start() -> Option<NetworkMatchSocket> {
     while let Ok(message) = LAN_MATCHMAKER.try_recv() {
         match message {
             LanMatchmakerResponse::ServerStarted | LanMatchmakerResponse::PlayerCount(_) => {}
@@ -143,7 +152,7 @@ pub fn wait_game_start() -> Option<LanSocket> {
                 player_count: _,
             } => {
                 info!(?player_idx, "Starting network game");
-                return Some(lan_socket);
+                return Some(NetworkMatchSocket(Arc::new(lan_socket)));
             }
         }
     }
@@ -153,7 +162,7 @@ pub fn wait_game_start() -> Option<LanSocket> {
 /// Update server pings and turn on service discovery.
 pub fn prepare_to_join(
     servers: &mut Vec<ServerInfo>,
-    service_discovery_recv: &mut Option<mdns_sd::Receiver<ServiceEvent>>,
+    service_discovery_recv: &mut Option<ServiceDiscoveryReceiver>,
     ping_update_timer: &Timer,
 ) {
     // Update server pings
@@ -178,16 +187,21 @@ pub fn prepare_to_join(
     }
 
     let events = service_discovery_recv.get_or_insert_with(|| {
-        MDNS.browse(MDNS_SERVICE_TYPE)
-            .expect("Couldn't start service discovery")
+        ServiceDiscoveryReceiver(
+            MDNS.browse(MDNS_SERVICE_TYPE)
+                .expect("Couldn't start service discovery"),
+        )
     });
 
-    while let Ok(event) = events.try_recv() {
+    while let Ok(event) = events.0.try_recv() {
         match event {
-            mdns_sd::ServiceEvent::ServiceResolved(info) => servers.push(lan::ServerInfo {
-                service: info,
-                ping: None,
-            }),
+            mdns_sd::ServiceEvent::ServiceResolved(info) => {
+                info!("Found lan service!");
+                servers.push(lan::ServerInfo {
+                    service: info,
+                    ping: None,
+                })
+            }
             mdns_sd::ServiceEvent::ServiceRemoved(_, full_name) => {
                 servers.retain(|server| server.service.get_fullname() != full_name);
             }
@@ -200,12 +214,13 @@ pub fn prepare_to_join(
 /// service but its `service_name` is different, the service is recreated and
 /// only then the returned `bool` is `true`.
 pub fn prepare_to_host<'a>(
-    host_info: &'a mut Option<ServiceInfo>,
+    host_info: &'a mut Option<ServerInfo>,
     service_name: &str,
-) -> (bool, &'a mut ServiceInfo) {
+) -> (bool, &'a mut ServerInfo) {
     let create_service_info = || {
+        info!("New service hosting");
         let port = NETWORK_ENDPOINT.local_addr().unwrap().port();
-        mdns_sd::ServiceInfo::new(
+        let service = mdns_sd::ServiceInfo::new(
             MDNS_SERVICE_TYPE,
             service_name,
             service_name,
@@ -214,14 +229,18 @@ pub fn prepare_to_host<'a>(
             None,
         )
         .unwrap()
-        .enable_addr_auto()
+        .enable_addr_auto();
+        ServerInfo {
+            service,
+            ping: None,
+        }
     };
 
     let service_info = host_info.get_or_insert_with(create_service_info);
 
     let mut is_recreated = false;
-    if service_info.get_hostname() != service_name {
-        stop_server(service_info);
+    if service_info.service.get_hostname() != service_name {
+        stop_server_by_name(service_info.service.get_fullname());
         is_recreated = true;
         *service_info = create_service_info();
     }
