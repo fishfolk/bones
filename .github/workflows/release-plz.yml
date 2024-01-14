@@ -18,7 +18,9 @@ jobs:
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
 
       - name: Echo rustup overrides
-        run: rustup override list
+        run: |
+          rustup override list
+          rustup toolchain install 1.73
 
       - name: Run release-plz
         uses: MarcoIeni/release-plz-action@v0.5
