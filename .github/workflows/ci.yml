@@ -16,15 +16,10 @@ jobs:
         uses: actions/checkout@v3
 
       - name: 🦀 Install Rustfmt
-        uses: actions-rs/toolchain@v1
-        with:
-          components: rustfmt
+        run: rustup component add rustfmt
 
       - name: 🔧 Check
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo fmt --all -- --check
 
   clippy_correctness_checks:
     runs-on: ubuntu-latest
@@ -48,16 +43,13 @@ jobs:
 
       - name: 🧰 Install WASM Target
         if: matrix.config.target == 'wasm32-unknown-unknown'
-        uses: actions-rs/toolchain@v1
-        with:
-          target: ${{ matrix.config.target }}
-          components: clippy
+        run: |
+          rustup target add ${{ matrix.config.target }}
+          rustup component add clippy
 
       - name: 🧰 Install Clippy
         if: matrix.config.target != 'wasm32-unknown-unknown'
-        uses: actions-rs/toolchain@v1
-        with:
-          components: clippy
+        run: rustup component add clippy
 
       - name: ♻️ Cache Cargo
         uses: actions/cache@v3
@@ -73,21 +65,15 @@ jobs:
             ci-${{ matrix.config.target }}-
 
       - name: 🔧 Check
-        uses: actions-rs/cargo@v1
         env:
           CARGO_TARGET_DIR: ${{ matrix.config.target_dir }}
-        with:
-          command: clippy
-          args: --target ${{ matrix.config.target }} -- -W clippy::correctness -D warnings
+        run: cargo clippy --target ${{ matrix.config.target }} -- -W clippy::correctness -D warnings
 
       - name: ⚙️ Test
         if: matrix.config.target != 'wasm32-unknown-unknown'
-        uses: actions-rs/cargo@v1
         env:
           CARGO_TARGET_DIR: ${{ matrix.config.target_dir }}
-        with:
-          command: test
-          args: --workspace
+        run: cargo test --workspace
 
   minimal_deps_check:
     runs-on: ubuntu-latest
@@ -104,9 +90,7 @@ jobs:
               libudev-dev
 
       - name: 🧰 Install Rust Nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
+        run: rustup toolchain install nightly
 
       - name: ♻️ Cache Cargo
         uses: actions/cache@v3
@@ -121,11 +105,7 @@ jobs:
             check-minimal-deps-
 
       - name: 🔧 Check
-        uses: actions-rs/cargo@v1
-        with:
-          toolchain: nightly
-          command: check
-          args: -Z direct-minimal-versions --workspace
+        run: cargo +nightly check -Z direct-minimal-versions --workspace
 
   cargo-deny:
     name: ©️ License and advisories check

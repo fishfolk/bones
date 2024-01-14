@@ -430,9 +430,7 @@ pub fn metatable(ctx: Context) -> Table {
                             *n = newi.try_into().unwrap()
                         }
                         (PrimitiveRefMut::I64(n), Value::Integer(newi)) => *n = newi,
-                        (PrimitiveRefMut::I128(n), Value::Integer(newi)) => {
-                            *n = newi.try_into().unwrap()
-                        }
+                        (PrimitiveRefMut::I128(n), Value::Integer(newi)) => *n = newi.into(),
                         (PrimitiveRefMut::F32(n), Value::Number(newf)) => *n = newf as f32,
                         (PrimitiveRefMut::F64(n), Value::Number(newf)) => *n = newf,
                         (PrimitiveRefMut::F32(n), Value::Integer(newi)) => *n = newi as f32,

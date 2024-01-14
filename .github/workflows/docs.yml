@@ -22,9 +22,6 @@ jobs:
               libasound2-dev \
               libudev-dev
 
-      - name: 🦀 Install Rust
-        uses: actions-rs/toolchain@v1
-
       - name: 📖 Install mdbook
         uses: peaceiris/actions-mdbook@v1
         with:
