@@ -2,10 +2,6 @@
 
 use crate::prelude::*;
 
-pub(crate) mod prelude {
-    pub use super::{AnimatedSprite, AnimationBankSprite};
-}
-
 /// Install animation utilities into the given [`SystemStages`].
 pub fn animation_plugin(core: &mut Session) {
     core.stages
