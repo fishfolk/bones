@@ -757,6 +757,25 @@
 <a href="#757" id="757">757</a>
 <a href="#758" id="758">758</a>
 <a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! LAN matchmaking and socket implementation.
 //!
 //! ## Matchmaking
@@ -777,7 +796,7 @@
 <span class="kw">use </span>bevy_tasks::IoTaskPool;
 <span class="kw">use </span>bytes::Bytes;
 <span class="kw">use </span>futures_lite::{future, FutureExt};
-<span class="kw">use </span>mdns_sd::{ServiceDaemon, ServiceEvent, ServiceInfo};
+<span class="kw">use </span>mdns_sd::{ServiceDaemon, ServiceInfo};
 <span class="kw">use </span>smallvec::SmallVec;
 <span class="kw">use </span>tracing::warn;
 
@@ -793,6 +812,10 @@
     <span class="doccomment">/// The ping in milliseconds
     </span><span class="kw">pub </span>ping: <span class="prelude-ty">Option</span>&lt;u16&gt;,
 }
+
+<span class="doccomment">/// Receiver for LAN service discovery channel.
+</span><span class="attr">#[derive(Clone)]
+</span><span class="kw">pub struct </span>ServiceDiscoveryReceiver(mdns_sd::Receiver&lt;mdns_sd::ServiceEvent&gt;);
 
 <span class="doccomment">/// Channel used to do matchmaking over LAN.
 ///
@@ -825,8 +848,8 @@
 });
 
 <span class="doccomment">/// Host a server.
-</span><span class="kw">pub fn </span>start_server(service_info: ServiceInfo, player_count: usize) {
-    MDNS.register(service_info)
+</span><span class="kw">pub fn </span>start_server(server: ServerInfo, player_count: usize) {
+    MDNS.register(server.service)
         .expect(<span class="string">&quot;Could not register MDNS service.&quot;</span>);
     LAN_MATCHMAKER
         .try_send(LanMatchmakerRequest::StartServer { player_count })
@@ -834,9 +857,14 @@
 }
 
 <span class="doccomment">/// Stop hosting a server.
-</span><span class="kw">pub fn </span>stop_server(service_info: <span class="kw-2">&amp;</span>ServiceInfo) {
+</span><span class="kw">pub fn </span>stop_server(server: <span class="kw-2">&amp;</span>ServerInfo) {
+    stop_server_by_name(server.service.get_fullname())
+}
+
+<span class="doccomment">/// Stop hosting a server specified by name. (Use [`ServiceInfo::get_fullname()`].)
+</span><span class="kw">fn </span>stop_server_by_name(name: <span class="kw-2">&amp;</span>str) {
     <span class="kw">loop </span>{
-        <span class="kw">match </span>MDNS.unregister(service_info.get_fullname()) {
+        <span class="kw">match </span>MDNS.unregister(name) {
             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="kw">break</span>,
             <span class="prelude-val">Err</span>(mdns_sd::Error::Again) =&gt; (),
             <span class="prelude-val">Err</span>(e) =&gt; {
@@ -847,7 +875,7 @@
 }
 
 <span class="doccomment">/// Wait for players to join a hosted server.
-</span><span class="kw">pub fn </span>wait_players(joined_players: <span class="kw-2">&amp;mut </span>usize, service_info: <span class="kw-2">&amp;</span>ServiceInfo) -&gt; <span class="prelude-ty">Option</span>&lt;LanSocket&gt; {
+</span><span class="kw">pub fn </span>wait_players(joined_players: <span class="kw-2">&amp;mut </span>usize, server: <span class="kw-2">&amp;</span>ServerInfo) -&gt; <span class="prelude-ty">Option</span>&lt;NetworkMatchSocket&gt; {
     <span class="kw">while let </span><span class="prelude-val">Ok</span>(response) = LAN_MATCHMAKER.try_recv() {
         <span class="kw">match </span>response {
             LanMatchmakerResponse::ServerStarted =&gt; {}
@@ -861,13 +889,13 @@
             } =&gt; {
                 <span class="macro">info!</span>(<span class="question-mark">?</span>player_idx, <span class="string">&quot;Starting network game&quot;</span>);
                 <span class="kw">loop </span>{
-                    <span class="kw">match </span>MDNS.unregister(service_info.get_fullname()) {
+                    <span class="kw">match </span>MDNS.unregister(server.service.get_fullname()) {
                         <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="kw">break</span>,
                         <span class="prelude-val">Err</span>(mdns_sd::Error::Again) =&gt; (),
                         <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Error unregistering MDNS service: {e}&quot;</span>),
                     }
                 }
-                <span class="kw">return </span><span class="prelude-val">Some</span>(lan_socket);
+                <span class="kw">return </span><span class="prelude-val">Some</span>(NetworkMatchSocket(Arc::new(lan_socket)));
             }
         }
     }
@@ -892,7 +920,7 @@
 }
 
 <span class="doccomment">/// Wait for a joined game to start.
-</span><span class="kw">pub fn </span>wait_game_start() -&gt; <span class="prelude-ty">Option</span>&lt;LanSocket&gt; {
+</span><span class="kw">pub fn </span>wait_game_start() -&gt; <span class="prelude-ty">Option</span>&lt;NetworkMatchSocket&gt; {
     <span class="kw">while let </span><span class="prelude-val">Ok</span>(message) = LAN_MATCHMAKER.try_recv() {
         <span class="kw">match </span>message {
             LanMatchmakerResponse::ServerStarted | LanMatchmakerResponse::PlayerCount(<span class="kw">_</span>) =&gt; {}
@@ -902,7 +930,7 @@
                 player_count: <span class="kw">_</span>,
             } =&gt; {
                 <span class="macro">info!</span>(<span class="question-mark">?</span>player_idx, <span class="string">&quot;Starting network game&quot;</span>);
-                <span class="kw">return </span><span class="prelude-val">Some</span>(lan_socket);
+                <span class="kw">return </span><span class="prelude-val">Some</span>(NetworkMatchSocket(Arc::new(lan_socket)));
             }
         }
     }
@@ -912,7 +940,7 @@
 <span class="doccomment">/// Update server pings and turn on service discovery.
 </span><span class="kw">pub fn </span>prepare_to_join(
     servers: <span class="kw-2">&amp;mut </span>Vec&lt;ServerInfo&gt;,
-    service_discovery_recv: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;mdns_sd::Receiver&lt;ServiceEvent&gt;&gt;,
+    service_discovery_recv: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;ServiceDiscoveryReceiver&gt;,
     ping_update_timer: <span class="kw-2">&amp;</span>Timer,
 ) {
     <span class="comment">// Update server pings
@@ -937,16 +965,21 @@
     }
 
     <span class="kw">let </span>events = service_discovery_recv.get_or_insert_with(|| {
-        MDNS.browse(MDNS_SERVICE_TYPE)
-            .expect(<span class="string">&quot;Couldn&#39;t start service discovery&quot;</span>)
+        ServiceDiscoveryReceiver(
+            MDNS.browse(MDNS_SERVICE_TYPE)
+                .expect(<span class="string">&quot;Couldn&#39;t start service discovery&quot;</span>),
+        )
     });
 
-    <span class="kw">while let </span><span class="prelude-val">Ok</span>(event) = events.try_recv() {
+    <span class="kw">while let </span><span class="prelude-val">Ok</span>(event) = events.<span class="number">0</span>.try_recv() {
         <span class="kw">match </span>event {
-            mdns_sd::ServiceEvent::ServiceResolved(info) =&gt; servers.push(lan::ServerInfo {
-                service: info,
-                ping: <span class="prelude-val">None</span>,
-            }),
+            mdns_sd::ServiceEvent::ServiceResolved(info) =&gt; {
+                <span class="macro">info!</span>(<span class="string">&quot;Found lan service!&quot;</span>);
+                servers.push(lan::ServerInfo {
+                    service: info,
+                    ping: <span class="prelude-val">None</span>,
+                })
+            }
             mdns_sd::ServiceEvent::ServiceRemoved(<span class="kw">_</span>, full_name) =&gt; {
                 servers.retain(|server| server.service.get_fullname() != full_name);
             }
@@ -959,12 +992,13 @@
 /// service but its `service_name` is different, the service is recreated and
 /// only then the returned `bool` is `true`.
 </span><span class="kw">pub fn </span>prepare_to_host&lt;<span class="lifetime">&#39;a</span>&gt;(
-    host_info: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="prelude-ty">Option</span>&lt;ServiceInfo&gt;,
+    host_info: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="prelude-ty">Option</span>&lt;ServerInfo&gt;,
     service_name: <span class="kw-2">&amp;</span>str,
-) -&gt; (bool, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>ServiceInfo) {
+) -&gt; (bool, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>ServerInfo) {
     <span class="kw">let </span>create_service_info = || {
+        <span class="macro">info!</span>(<span class="string">&quot;New service hosting&quot;</span>);
         <span class="kw">let </span>port = NETWORK_ENDPOINT.local_addr().unwrap().port();
-        mdns_sd::ServiceInfo::new(
+        <span class="kw">let </span>service = mdns_sd::ServiceInfo::new(
             MDNS_SERVICE_TYPE,
             service_name,
             service_name,
@@ -973,14 +1007,18 @@
             <span class="prelude-val">None</span>,
         )
         .unwrap()
-        .enable_addr_auto()
+        .enable_addr_auto();
+        ServerInfo {
+            service,
+            ping: <span class="prelude-val">None</span>,
+        }
     };
 
     <span class="kw">let </span>service_info = host_info.get_or_insert_with(create_service_info);
 
     <span class="kw">let </span><span class="kw-2">mut </span>is_recreated = <span class="bool-val">false</span>;
-    <span class="kw">if </span>service_info.get_hostname() != service_name {
-        stop_server(service_info);
+    <span class="kw">if </span>service_info.service.get_hostname() != service_name {
+        stop_server_by_name(service_info.service.get_fullname());
         is_recreated = <span class="bool-val">true</span>;
         <span class="kw-2">*</span>service_info = create_service_info();
     }
