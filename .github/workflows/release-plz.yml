@@ -1,4 +1,4 @@
-name: Continuous Deployment
+name: 🚀 Continuous Deployment
 
 on:
   push:
@@ -15,6 +15,11 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
+
+      - name: Force Stable Rust For Release Plz Test Builds
+        run:
+          rustup toolchain add stable
+          rustup override set --path /tmp stable
 
       - name: Run release-plz
         uses: MarcoIeni/release-plz-action@v0.5
