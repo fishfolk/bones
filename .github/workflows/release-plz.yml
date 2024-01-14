@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - test-release-plz
 
 jobs:
   release-plz:
@@ -15,6 +16,9 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
+
+      - name: Echo rustup overrides
+        run: rustup override list
 
       - name: Run release-plz
         uses: MarcoIeni/release-plz-action@v0.5
