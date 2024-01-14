@@ -17,11 +17,15 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
 
-      - name: Echo rustup overrides
-        run: rustup override list
+      - name: Force Rust Version For Release Plz Builds
+        run: |
+          rustup toolchain add stable
+          rustup override set --path /tmp stable
 
       - name: Run release-plz
         uses: MarcoIeni/release-plz-action@v0.5
+        with:
+          command: release-pr
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
