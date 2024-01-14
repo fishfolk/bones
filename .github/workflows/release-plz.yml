@@ -17,7 +17,7 @@ jobs:
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
 
       - name: Force Stable Rust For Release Plz Test Builds
-        run:
+        run: |
           rustup toolchain add stable
           rustup override set --path /tmp stable
 
