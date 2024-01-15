@@ -24,7 +24,7 @@ serde              = { version = "1.0", optional = true }
 maybe-owned        = "0.3"
 branches           = "0.1"
 ustr               = "0.10"
-futures-lite       = "1.13"
+futures-lite       = "2.2"
 turborand          = "0.10"
 instant            = { version = "0.1", features = ["wasm-bindgen"] }
 
