@@ -9,7 +9,7 @@ repository.workspace = true
 
 [dependencies]
 async-executor = "1.4"
-async-io       = "1.9"
+async-io       = "2.2"
 bevy_tasks     = "0.11"
 futures-lite   = "1.0"
 pin-project    = "1.0"
