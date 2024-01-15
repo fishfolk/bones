@@ -433,7 +433,7 @@ dependencies = [
  "bevy_derive",
  "bevy_ecs",
  "bevy_reflect",
- "bevy_tasks",
+ "bevy_tasks 0.11.3",
  "bevy_utils",
  "downcast-rs",
  "wasm-bindgen",
@@ -453,7 +453,7 @@ dependencies = [
  "bevy_ecs",
  "bevy_log",
  "bevy_reflect",
- "bevy_tasks",
+ "bevy_tasks 0.11.3",
  "bevy_utils",
  "bevy_winit",
  "crossbeam-channel",
@@ -478,7 +478,7 @@ dependencies = [
  "bevy_ecs",
  "bevy_math",
  "bevy_reflect",
- "bevy_tasks",
+ "bevy_tasks 0.11.3",
  "bevy_utils",
  "bytemuck",
 ]
@@ -540,7 +540,7 @@ dependencies = [
  "bevy_ecs_macros",
  "bevy_ptr",
  "bevy_reflect",
- "bevy_tasks",
+ "bevy_tasks 0.11.3",
  "bevy_utils",
  "downcast-rs",
  "event-listener 2.5.3",
@@ -676,7 +676,7 @@ dependencies = [
  "bevy_render",
  "bevy_scene",
  "bevy_sprite",
- "bevy_tasks",
+ "bevy_tasks 0.11.3",
  "bevy_time",
  "bevy_transform",
  "bevy_utils",
@@ -827,7 +827,7 @@ dependencies = [
  "bevy_mikktspace",
  "bevy_reflect",
  "bevy_render_macros",
- "bevy_tasks",
+ "bevy_tasks 0.11.3",
  "bevy_time",
  "bevy_transform",
  "bevy_utils",
@@ -929,6 +929,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_tasks"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4fefa7fe0da8923525f7500e274f1bd60dbd79918a25cf7d0dfa0a6ba15c1cf"
+dependencies = [
+ "async-channel",
+ "async-executor",
+ "async-task",
+ "concurrent-queue",
+ "futures-lite 1.13.0",
+ "wasm-bindgen-futures",
+]
+
+[[package]]
 name = "bevy_time"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1013,7 +1027,7 @@ dependencies = [
  "bevy_hierarchy",
  "bevy_input",
  "bevy_math",
- "bevy_tasks",
+ "bevy_tasks 0.11.3",
  "bevy_utils",
  "bevy_window",
  "crossbeam-channel",
@@ -1139,7 +1153,7 @@ dependencies = [
  "anyhow",
  "append-only-vec",
  "async-channel",
- "bevy_tasks",
+ "bevy_tasks 0.12.1",
  "bones_schema",
  "bones_utils",
  "bs58",
@@ -1200,7 +1214,7 @@ version = "0.3.0"
 dependencies = [
  "anyhow",
  "async-channel",
- "bevy_tasks",
+ "bevy_tasks 0.12.1",
  "bones_asset",
  "bones_lib",
  "bones_matchmaker_proto",
@@ -1256,7 +1270,7 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-io",
- "bevy_tasks",
+ "bevy_tasks 0.12.1",
  "bones_matchmaker_proto",
  "bytes",
  "clap",
@@ -1315,7 +1329,7 @@ name = "bones_scripting"
 version = "0.3.0"
 dependencies = [
  "async-channel",
- "bevy_tasks",
+ "bevy_tasks 0.12.1",
  "bones_asset",
  "bones_lib",
  "gc-arena",
@@ -4009,7 +4023,7 @@ version = "0.3.0"
 dependencies = [
  "async-executor",
  "async-io",
- "bevy_tasks",
+ "bevy_tasks 0.12.1",
  "futures-lite 1.13.0",
  "pin-project",
  "quinn",

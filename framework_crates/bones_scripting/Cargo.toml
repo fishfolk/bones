@@ -13,7 +13,7 @@ keywords.workspace      = true
 [dependencies]
 async-channel   = "1.9"
 tracing         = "0.1"
-bevy_tasks      = "0.11"
+bevy_tasks      = "0.12"
 bones_lib       = { version = "0.3", path = "../bones_lib" }
 bones_asset     = { version = "0.3", path = "../bones_asset" }
 piccolo         = { version = "0.3" }
