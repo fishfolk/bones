@@ -18,7 +18,7 @@ webgl2  = ["bevy/webgl2"]
 bones_framework = { version = "0.3", path = "../bones_framework" }
 
 bevy_egui           = "0.22"
-glam                = { version = "0.24", features = ["serde"] }
+glam                = { version = "0.25", features = ["serde"] }
 bevy_prototype_lyon = "0.9"
 serde_yaml          = "0.9"
 serde               = "1.0.188"

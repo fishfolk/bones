@@ -1148,7 +1148,7 @@ dependencies = [
  "elsa",
  "erased-serde",
  "event-listener 3.1.0",
- "glam 0.24.2",
+ "glam 0.25.0",
  "notify",
  "once_cell",
  "paste",
@@ -1173,7 +1173,7 @@ dependencies = [
  "bevy_prototype_lyon",
  "bones_framework",
  "directories",
- "glam 0.24.2",
+ "glam 0.25.0",
  "serde",
  "serde_yaml",
  "web-sys",
@@ -1188,7 +1188,7 @@ dependencies = [
  "bitset-core",
  "bones_schema",
  "bones_utils",
- "glam 0.24.2",
+ "glam 0.25.0",
  "once_map",
  "paste",
  "thiserror",
@@ -1216,7 +1216,7 @@ dependencies = [
  "fluent-langneg",
  "futures-lite 1.13.0",
  "ggrs",
- "glam 0.24.2",
+ "glam 0.25.0",
  "hex",
  "image",
  "instant",
@@ -1291,7 +1291,7 @@ dependencies = [
  "bones_schema_macros",
  "bones_utils",
  "erased-serde",
- "glam 0.24.2",
+ "glam 0.25.0",
  "humantime",
  "paste",
  "serde",
@@ -2524,6 +2524,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "151665d9be52f9bb40fc7966565d39666f2d1e69233571b71b87791c7e0528b3"
 dependencies = [
  "mint",
+ "serde",
 ]
 
 [[package]]
