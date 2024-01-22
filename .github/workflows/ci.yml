@@ -52,7 +52,7 @@ jobs:
         run: rustup component add clippy
 
       - name: ♻️ Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry/index/
@@ -93,7 +93,7 @@ jobs:
         run: rustup toolchain install nightly
 
       - name: ♻️ Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry/index/
@@ -142,7 +142,7 @@ jobs:
           rustup override set nightly
           cargo miri setup
       - name: ♻️ Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry/index/
