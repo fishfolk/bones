@@ -15,7 +15,7 @@ either                 = "1.8"
 futures-lite           = "1.12"
 once_cell              = "1.15"
 scc                    = "1.0"
-rcgen                  = "0.11"
+rcgen                  = "0.12"
 tracing                = "0.1"
 rand                   = "0.8"
 bones_matchmaker_proto = { version = "0.2", path = "../bones_matchmaker_proto" }

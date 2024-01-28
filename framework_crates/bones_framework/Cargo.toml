@@ -123,7 +123,7 @@ mdns-sd                = { version = "0.7", default-features = false }
 numquant               = "0.2"
 ping-rs                = "0.1"
 postcard               = { version = "1.0", features = ["alloc"] }
-rcgen                  = "0.10"
+rcgen                  = "0.12"
 rustls                 = { version = "0.21", features = ["dangerous_configuration", "quic"] }
 smallvec               = "1.10"
 quinn                  = { version = "0.10", default-features = false, features = ["native-certs", "tls-rustls"] }
