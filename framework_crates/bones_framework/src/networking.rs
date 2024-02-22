@@ -400,7 +400,20 @@ where
                                     cell.save(frame, Some(world.clone()), None)
                                 }
                                 ggrs::GGRSRequest::LoadGameState { cell, .. } => {
+                                    // Swap out sessions to preserve them after world save.
+                                    // Sessions clone makes empty copy, so saved snapshots do not include sessions.
+                                    // Sessions are borrowed from Game for execution of this session,
+                                    // they are not like other resources and should not be preserved.
+                                    let mut sessions = Sessions::default();
+                                    std::mem::swap(
+                                        &mut sessions,
+                                        &mut world.resource_mut::<Sessions>(),
+                                    );
                                     *world = cell.load().unwrap_or_default();
+                                    std::mem::swap(
+                                        &mut sessions,
+                                        &mut world.resource_mut::<Sessions>(),
+                                    );
                                 }
                                 ggrs::GGRSRequest::AdvanceFrame {
                                     inputs: network_inputs,
