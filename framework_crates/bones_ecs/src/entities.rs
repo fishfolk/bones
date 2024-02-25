@@ -367,7 +367,7 @@ impl Entities {
     /// # [`Optional`] Example
     ///
     /// ```
-    /// /// # use bones_ecs::prelude::*;
+    /// # use bones_ecs::prelude::*;
     /// # #[derive(HasSchema, Clone, Default)]
     /// # #[repr(C)]
     /// # struct Pos { x: f32, y: f32 };
