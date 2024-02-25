@@ -27,7 +27,9 @@ use bevy_egui::EguiContext;
 use glam::*;
 
 use bevy_prototype_lyon::prelude as lyon;
-use bones_framework::prelude::{self as bones, BitSet, SchemaBox, SCHEMA_REGISTRY};
+use bones_framework::prelude::{
+    self as bones, BitSet, ComponentIterBitset, SchemaBox, SCHEMA_REGISTRY,
+};
 use prelude::convert::{IntoBevy, IntoBones};
 use serde::{de::Visitor, Deserialize, Serialize};
 

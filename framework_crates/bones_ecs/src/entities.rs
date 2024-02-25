@@ -1,6 +1,6 @@
 //! [`Entity`] implementation, storage, and interation.
 
-use std::rc::Rc;
+use std::{marker::PhantomData, rc::Rc};
 
 use crate::prelude::*;
 
@@ -94,10 +94,32 @@ pub trait QueryItem {
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter;
 }
 
-// TODO: Implement optional component query iterators.
-// We don't have the ability to do `entities.iter_with(Option<&my_comp>)`, but we should
-// be able to implement a `QueryItem` for that so that you can iterate over entities that
-// _might_ have a component.
+/// Wrapper for the [`Comp`] [`SystemParam`] used as [`QueryItem`] to iterate
+/// over enities optionally retrieving components from [`ComponentStore`].
+/// Entities iterated over will not be filtered by [`Optional`] [`QueryItem`].
+///
+/// This example filters entities by `compC`, optionally retrieves `compA` as mutable, and
+/// `compB` as immutable.
+///
+/// `entities.iter_with(&mut Optional::from(compA), &Optional::from(compB), &compC)`
+///
+/// This will implement [`QueryItem`] as long as generic type implements [`std::ops::Deref`] for
+/// [`ComponentStore`], such as [`Comp`] and [`CompMut`]. Mutable reference to [`Optional`] works
+/// if type implements [`std::ops::DerefMut`].
+pub struct Optional<'a, T: HasSchema, S>(pub S, pub PhantomData<&'a T>);
+
+impl<'a, T: HasSchema> From<Comp<'a, T>> for Optional<'a, T, Comp<'a, T>> {
+    fn from(comp: Comp<'a, T>) -> Self {
+        Optional(comp, PhantomData::<&'a T>)
+    }
+}
+
+impl<'a, T: HasSchema> From<CompMut<'a, T>> for Optional<'a, T, CompMut<'a, T>> {
+    fn from(comp: CompMut<'a, T>) -> Self {
+        Optional(comp, PhantomData::<&'a T>)
+    }
+}
+
 impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
     type Iter = ComponentBitsetIterator<'a, T>;
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
@@ -108,6 +130,7 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
         ComponentStore::iter_with_bitset(&**self, bitset)
     }
 }
+
 impl<'a, 'q, T: HasSchema> QueryItem for &'a CompMut<'q, T> {
     type Iter = ComponentBitsetIterator<'a, T>;
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
@@ -118,6 +141,7 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a CompMut<'q, T> {
         ComponentStore::iter_with_bitset(&**self, bitset)
     }
 }
+
 impl<'a, 'q, T: HasSchema> QueryItem for &'a mut CompMut<'q, T> {
     type Iter = ComponentBitsetIteratorMut<'a, T>;
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
@@ -126,6 +150,43 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a mut CompMut<'q, T> {
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
         ComponentStore::iter_mut_with_bitset(self, bitset)
+    }
+}
+
+/// Immutably iterate over optional component with syntax: `&Optional::from(Comp<T>)` / `&Optional::from(CompMut<T>)`.
+/// (For mutable optional iteration we require `&mut Optional::from(CompMut<T>)`)
+impl<'a: 'b, 'b, T: HasSchema, S, C> QueryItem for &'a Optional<'a, T, S>
+where
+    C: ComponentIterBitset<'a, T> + 'a,
+    S: std::ops::Deref<Target = C> + 'a,
+{
+    type Iter = ComponentBitsetOptionalIterator<'a, T>;
+    fn apply_bitset(&self, bitset: &mut BitSetVec) {
+        // Use bit_or as we want to grow bitset if needed, but not
+        // modifiy, as this component is optional.
+        bitset.bit_or(self.0.bitset());
+    }
+
+    fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
+        self.0.iter_with_bitset_optional(bitset)
+    }
+}
+
+/// Mutably iterate over optional component with syntax: `&mut Optional::from(RefMut<ComponentStore<T>>)`
+impl<'a: 'b, 'b, T: HasSchema, S, C> QueryItem for &'a mut Optional<'a, T, S>
+where
+    C: ComponentIterBitset<'a, T> + 'a,
+    S: std::ops::DerefMut<Target = C> + 'a,
+{
+    type Iter = ComponentBitsetOptionalIteratorMut<'a, T>;
+    fn apply_bitset(&self, bitset: &mut BitSetVec) {
+        // Use bit_or as we want to grow bitset if needed, but not
+        // modifiy, as this component is optional.
+        bitset.bit_or(self.0.bitset());
+    }
+
+    fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
+        self.0.iter_mut_with_bitset_optional(bitset)
     }
 }
 
@@ -292,6 +353,43 @@ impl Entities {
     ///     for (entity, (pos, vel)) in entities.iter_with((&mut pos, &vel)) {
     ///         pos.x += vel.x;
     ///         pos.y += vel.y;
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// You may optionally iterate over components with `&Optional::from(comp)` or mutably with
+    /// `&mut Optional::from(comp_mut)`. This will not filter entities using [`Optional`] [`QueryItem`].
+    /// None is returned for these. If done with single Optional query item, all entities are iterated over.
+    ///
+    /// Syntax is `&Optional::from(comp)`, or `&mut Optional::from(comp)`, for now using a reference inside like
+    /// `&Optional::from(&comp)` will NOT work. See example below for usage.
+    ///
+    /// # [`Optional`] Example
+    ///
+    /// ```
+    /// /// # use bones_ecs::prelude::*;
+    /// # #[derive(HasSchema, Clone, Default)]
+    /// # #[repr(C)]
+    /// # struct Pos { x: f32, y: f32 };
+    /// # #[derive(HasSchema, Clone, Default)]
+    /// # #[repr(C)]
+    /// # struct Vel { x: f32, y: f32 };
+    /// # #[derive(HasSchema, Clone, Default)]
+    /// # #[repr(C)]
+    /// # struct PosMax { x: f32, y: f32 }
+    ///
+    /// fn my_system(entities: Res<Entities>, mut pos: CompMut<Pos>, vel: Comp<Vel>, pos_max: Comp<PosMax>) {
+    ///     for (entity, (pos, vel, pos_max)) in entities.iter_with((&mut pos, &vel, &Optional::from(pos_max))) {
+    ///         // Update pos from vel on all entities that have pos and vel components
+    ///         pos.x += vel.x;
+    ///         pos.y += vel.y;
+    ///
+    ///         // limit pos.x by pos_max.x if entity has PosMax component
+    ///         if let Some(pos_max) = pos_max {
+    ///             if pos.x > pos_max.x {
+    ///                 pos.x = pos_max.x
+    ///             }
+    ///         }
     ///     }
     /// }
     /// ```
