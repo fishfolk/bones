@@ -213,7 +213,7 @@ mod test {
             let comp_a = Ref::new(&components_a);
             let mut count_a = 0;
             let mut count = 0;
-            for (_, a) in entities.iter_with(&Optional::from(comp_a)) {
+            for (_, a) in entities.iter_with(&Optional(comp_a)) {
                 count += 1;
                 if a.is_some() {
                     count_a += 1;
@@ -227,7 +227,7 @@ mod test {
             let comp_a_mut = RefMut::new(&mut components_a);
             let mut count_a = 0;
             let mut count = 0;
-            for (_, a) in entities.iter_with(&mut Optional::from(comp_a_mut)) {
+            for (_, a) in entities.iter_with(&mut Optional(comp_a_mut)) {
                 count += 1;
                 if a.is_some() {
                     count_a += 1;
@@ -243,7 +243,7 @@ mod test {
             let comp_b = Ref::new(&components_b);
             let mut count_a = 0;
             let mut count = 0;
-            for (_, (a, _b)) in entities.iter_with((&Optional::from(comp_a), &comp_b)) {
+            for (_, (a, _b)) in entities.iter_with((&Optional(comp_a), &comp_b)) {
                 count += 1;
                 if a.is_some() {
                     count_a += 1;
@@ -258,7 +258,7 @@ mod test {
             let comp_a = Ref::new(&components_a);
             let comp_b = Ref::new(&components_b);
             let mut count = 0;
-            for (_, (_a, b)) in entities.iter_with((&comp_a, &Optional::from(comp_b))) {
+            for (_, (_a, b)) in entities.iter_with((&comp_a, &Optional(comp_b))) {
                 count += 1;
                 assert!(b.is_some());
             }

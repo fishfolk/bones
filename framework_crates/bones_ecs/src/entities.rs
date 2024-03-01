@@ -95,29 +95,31 @@ pub trait QueryItem {
 }
 
 /// Wrapper for the [`Comp`] [`SystemParam`] used as [`QueryItem`] to iterate
-/// over enities optionally retrieving components from [`ComponentStore`].
-/// Entities iterated over will not be filtered by [`Optional`] [`QueryItem`].
+/// over entities optionally retrieving components from [`ComponentStore`].
+/// Entities iterated over will not be filtered by [`OptionalQueryItem`].
+///
+/// See [`Optional`] helper func for constructing `OptionalQueryItem` and usage.
+pub struct OptionalQueryItem<'a, T: HasSchema, S>(pub S, pub PhantomData<&'a T>);
+
+/// Helper func to construct a [`OptionalQueryItem`] wrapping a [`Comp`] [`SystemParam`].
+/// Used to iterate over enities optionally retrieving components from [`ComponentStore`].
+/// Entities iterated over will not be filtered by this `QueryItem`.
 ///
 /// This example filters entities by `compC`, optionally retrieves `compA` as mutable, and
 /// `compB` as immutable.
 ///
-/// `entities.iter_with(&mut Optional::from(compA), &Optional::from(compB), &compC)`
+/// `entities.iter_with(&mut Optional(compA), &Optional(compB), &compC)`
 ///
 /// This will implement [`QueryItem`] as long as generic type implements [`std::ops::Deref`] for
-/// [`ComponentStore`], such as [`Comp`] and [`CompMut`]. Mutable reference to [`Optional`] works
-/// if type implements [`std::ops::DerefMut`].
-pub struct Optional<'a, T: HasSchema, S>(pub S, pub PhantomData<&'a T>);
-
-impl<'a, T: HasSchema> From<Comp<'a, T>> for Optional<'a, T, Comp<'a, T>> {
-    fn from(comp: Comp<'a, T>) -> Self {
-        Optional(comp, PhantomData::<&'a T>)
-    }
-}
-
-impl<'a, T: HasSchema> From<CompMut<'a, T>> for Optional<'a, T, CompMut<'a, T>> {
-    fn from(comp: CompMut<'a, T>) -> Self {
-        Optional(comp, PhantomData::<&'a T>)
-    }
+/// [`ComponentStore`], such as [`Comp`] and [`CompMut`]. Mutable reference to [`OptionalQueryItem`] works
+/// if type implements [`std::ops::DerefMut`]
+#[allow(non_snake_case)]
+pub fn Optional<'a, T: HasSchema, C, S>(component_ref: S) -> OptionalQueryItem<'a, T, S>
+where
+    C: ComponentIterBitset<'a, T> + 'a,
+    S: std::ops::Deref<Target = C> + 'a,
+{
+    OptionalQueryItem(component_ref, PhantomData)
 }
 
 impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
@@ -153,9 +155,9 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a mut CompMut<'q, T> {
     }
 }
 
-/// Immutably iterate over optional component with syntax: `&Optional::from(Comp<T>)` / `&Optional::from(CompMut<T>)`.
-/// (For mutable optional iteration we require `&mut Optional::from(CompMut<T>)`)
-impl<'a: 'b, 'b, T: HasSchema, S, C> QueryItem for &'a Optional<'a, T, S>
+/// Immutably iterate over optional component with syntax: `&Optional(Comp<T>)` / `&Optional(CompMut<T>)`.
+/// (For mutable optional iteration we require `&mut Optional(CompMut<T>)`)
+impl<'a: 'b, 'b, T: HasSchema, S, C> QueryItem for &'a OptionalQueryItem<'a, T, S>
 where
     C: ComponentIterBitset<'a, T> + 'a,
     S: std::ops::Deref<Target = C> + 'a,
@@ -172,8 +174,8 @@ where
     }
 }
 
-/// Mutably iterate over optional component with syntax: `&mut Optional::from(RefMut<ComponentStore<T>>)`
-impl<'a: 'b, 'b, T: HasSchema, S, C> QueryItem for &'a mut Optional<'a, T, S>
+/// Mutably iterate over optional component with syntax: `&mut Optional(RefMut<ComponentStore<T>>)`
+impl<'a: 'b, 'b, T: HasSchema, S, C> QueryItem for &'a mut OptionalQueryItem<'a, T, S>
 where
     C: ComponentIterBitset<'a, T> + 'a,
     S: std::ops::DerefMut<Target = C> + 'a,
