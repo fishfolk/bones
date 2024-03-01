@@ -359,12 +359,12 @@ impl Entities {
     /// }
     /// ```
     ///
-    /// You may optionally iterate over components with `&Optional::from(comp)` or mutably with
-    /// `&mut Optional::from(comp_mut)`. This will not filter entities using [`Optional`] [`QueryItem`].
+    /// You may optionally iterate over components with `&Optional(comp)` or mutably with
+    /// `&mut Optional(comp_mut)`. Entities are not filtered by component in [`OptionalQueryItem`].
     /// None is returned for these. If done with single Optional query item, all entities are iterated over.
     ///
-    /// Syntax is `&Optional::from(comp)`, or `&mut Optional::from(comp)`, for now using a reference inside like
-    /// `&Optional::from(&comp)` will NOT work. See example below for usage.
+    /// Syntax is `&Optional(comp)`, or `&mut Optional(comp)`, for now using a reference inside like
+    /// `&Optional(&comp)` will NOT work. See example below for usage.
     ///
     /// # [`Optional`] Example
     ///
@@ -381,7 +381,7 @@ impl Entities {
     /// # struct PosMax { x: f32, y: f32 }
     ///
     /// fn my_system(entities: Res<Entities>, mut pos: CompMut<Pos>, vel: Comp<Vel>, pos_max: Comp<PosMax>) {
-    ///     for (entity, (pos, vel, pos_max)) in entities.iter_with((&mut pos, &vel, &Optional::from(pos_max))) {
+    ///     for (entity, (pos, vel, pos_max)) in entities.iter_with((&mut pos, &vel, &Optional(pos_max))) {
     ///         // Update pos from vel on all entities that have pos and vel components
     ///         pos.x += vel.x;
     ///         pos.y += vel.y;
