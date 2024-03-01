@@ -157,7 +157,7 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a mut CompMut<'q, T> {
 
 /// Immutably iterate over optional component with syntax: `&Optional(Comp<T>)` / `&Optional(CompMut<T>)`.
 /// (For mutable optional iteration we require `&mut Optional(CompMut<T>)`)
-impl<'a: 'b, 'b, T: HasSchema, S, C> QueryItem for &'a OptionalQueryItem<'a, T, S>
+impl<'a, T: HasSchema, S, C> QueryItem for &'a OptionalQueryItem<'a, T, S>
 where
     C: ComponentIterBitset<'a, T> + 'a,
     S: std::ops::Deref<Target = C> + 'a,
@@ -175,7 +175,7 @@ where
 }
 
 /// Mutably iterate over optional component with syntax: `&mut Optional(RefMut<ComponentStore<T>>)`
-impl<'a: 'b, 'b, T: HasSchema, S, C> QueryItem for &'a mut OptionalQueryItem<'a, T, S>
+impl<'a, T: HasSchema, S, C> QueryItem for &'a mut OptionalQueryItem<'a, T, S>
 where
     C: ComponentIterBitset<'a, T> + 'a,
     S: std::ops::DerefMut<Target = C> + 'a,
