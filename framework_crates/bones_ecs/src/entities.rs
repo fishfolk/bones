@@ -163,10 +163,10 @@ where
     S: std::ops::Deref<Target = C> + 'a,
 {
     type Iter = ComponentBitsetOptionalIterator<'a, T>;
-    fn apply_bitset(&self, bitset: &mut BitSetVec) {
+    fn apply_bitset(&self, _bitset: &mut BitSetVec) {
         // Use bit_or as we want to grow bitset if needed, but not
         // modifiy, as this component is optional.
-        bitset.bit_or(self.0.bitset());
+        // bitset.bit_or(self.0.bitset());
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -181,10 +181,10 @@ where
     S: std::ops::DerefMut<Target = C> + 'a,
 {
     type Iter = ComponentBitsetOptionalIteratorMut<'a, T>;
-    fn apply_bitset(&self, bitset: &mut BitSetVec) {
+    fn apply_bitset(&self, _bitset: &mut BitSetVec) {
         // Use bit_or as we want to grow bitset if needed, but not
         // modifiy, as this component is optional.
-        bitset.bit_or(self.0.bitset());
+        // bitset.bit_or(self.0.bitset());
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {

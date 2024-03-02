@@ -264,5 +264,29 @@ mod test {
             }
             assert_eq!(count, 1);
         }
+
+        // Make sure that entities with only optional components are still filtered by others,
+        // and not included in query.
+        //
+        // Case: 4 entities, we query over A and Optionally C, where entities have comps: 0:[AB],1:[B],2:[C],3:[A]
+        // Filtered by A, should iterate over entities 0 and 3. Verify that entitiy 2 with C is not included.
+        {
+            let e3 = entities.create();
+            let e4 = entities.create();
+            let mut components_c = ComponentStore::<A>::default();
+            components_c.insert(e3, A);
+            components_a.insert(e4, A);
+            let comp_a = Ref::new(&components_a);
+            let comp_c = Ref::new(&components_c);
+
+            let mut count = 0;
+            for (_, (_, c)) in entities.iter_with((&comp_a, &Optional(comp_c))) {
+                count += 1;
+                // Should not iterate over entity with C, as it does not have A.
+                assert!(c.is_none());
+            }
+            // Expected two entities with A
+            assert_eq!(count, 2);
+        }
     }
 }
