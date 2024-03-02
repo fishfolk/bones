@@ -27,7 +27,7 @@ jobs:
         with:
           mdbook-version: "0.4.22"
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         name: ♻️ Cache Cargo
         with:
           path: |
