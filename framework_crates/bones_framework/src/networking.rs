@@ -2,20 +2,22 @@
 
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
-use ggrs::P2PSession;
+use ggrs::{NetworkStats, P2PSession, PlayerHandle};
 use instant::Duration;
 use once_cell::sync::Lazy;
 use tracing::{debug, error, info, warn};
 
 use crate::prelude::*;
 
-use self::input::{DenseInput, NetworkInputConfig, NetworkPlayerControl, NetworkPlayerControls};
+use self::{
+    debug::{NetworkDebugMessage, NETWORK_DEBUG_CHANNEL},
+    input::{DenseInput, NetworkInputConfig, NetworkPlayerControl, NetworkPlayerControls},
+};
 use crate::input::PlayerControls as PlayerControlsTrait;
 
 pub mod certs;
+pub mod debug;
 pub mod input;
-// TODO: network debug features
-// pub mod debug;
 pub mod lan;
 pub mod online;
 pub mod proto;
@@ -43,7 +45,7 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{certs, input, lan, online, proto};
+    pub use super::{certs, debug::prelude::*, input, lan, online, proto};
 }
 
 /// Muliplier for framerate that will be used when playing an online match.
@@ -324,6 +326,7 @@ where
             };
         }
 
+        let current_frame_original = self.session.current_frame();
         // Current frame before we start network update loop
         // let current_frame_original = self.session.current_frame();
         for event in self.session.events() {
@@ -350,13 +353,13 @@ where
                     );
                     skip_frames = skip_count;
 
-                    // NETWORK_DEBUG_CHANNEL
-                    //     .sender
-                    //     .try_send(NetworkDebugMessage::SkipFrame {
-                    //         frame: current_frame_original,
-                    //         count: skip_count,
-                    //     })
-                    //     .unwrap();
+                    NETWORK_DEBUG_CHANNEL
+                        .sender
+                        .try_send(NetworkDebugMessage::SkipFrame {
+                            frame: current_frame_original,
+                            count: skip_count,
+                        })
+                        .unwrap();
                 }
                 ggrs::GGRSEvent::DesyncDetected {
                     frame,
@@ -377,15 +380,15 @@ where
                     .add_local_input(self.local_player_idx, self.last_player_input)
                     .unwrap();
 
-                // let current_frame = self.session.current_frame();
-                // let confirmed_frame = self.session.confirmed_frame();
-                // NETWORK_DEBUG_CHANNEL
-                //     .sender
-                //     .try_send(NetworkDebugMessage::FrameUpdate {
-                //         current: current_frame,
-                //         last_confirmed: confirmed_frame,
-                //     })
-                //     .unwrap();
+                let current_frame = self.session.current_frame();
+                let confirmed_frame = self.session.confirmed_frame();
+                NETWORK_DEBUG_CHANNEL
+                    .sender
+                    .try_send(NetworkDebugMessage::FrameUpdate {
+                        current: current_frame,
+                        last_confirmed: confirmed_frame,
+                    })
+                    .unwrap();
 
                 if skip_frames > 0 {
                     skip_frames = skip_frames.saturating_sub(1);
@@ -452,12 +455,12 @@ where
                         }
                         ggrs::GGRSError::PredictionThreshold => {
                             warn!("Freezing game while waiting for network to catch-up.");
-                            // NETWORK_DEBUG_CHANNEL
-                            //     .sender
-                            //     .try_send(NetworkDebugMessage::FrameFroze {
-                            //         frame: self.session.current_frame(),
-                            //     })
-                            //     .unwrap();
+                            NETWORK_DEBUG_CHANNEL
+                                .sender
+                                .try_send(NetworkDebugMessage::FrameFroze {
+                                    frame: self.session.current_frame(),
+                                })
+                                .unwrap();
                         }
                         e => error!("Network protocol error: {e}"),
                     },
@@ -470,17 +473,17 @@ where
         self.last_run = Some(frame_start);
 
         // Fetch GGRS network stats of remote players and send to net debug tool
-        // let mut network_stats: Vec<(PlayerHandle, NetworkStats)> = vec![];
-        // for handle in self.session.remote_player_handles().iter() {
-        //     if let Ok(stats) = self.session.network_stats(*handle) {
-        //         network_stats.push((*handle, stats));
-        //     }
-        // }
-        // if !network_stats.is_empty() {
-        //     NETWORK_DEBUG_CHANNEL
-        //         .sender
-        //         .try_send(NetworkDebugMessage::NetworkStats { network_stats })
-        //         .unwrap();
-        // }
+        let mut network_stats: Vec<(PlayerHandle, NetworkStats)> = vec![];
+        for handle in self.session.remote_player_handles().iter() {
+            if let Ok(stats) = self.session.network_stats(*handle) {
+                network_stats.push((*handle, stats));
+            }
+        }
+        if !network_stats.is_empty() {
+            NETWORK_DEBUG_CHANNEL
+                .sender
+                .try_send(NetworkDebugMessage::NetworkStats { network_stats })
+                .unwrap();
+        }
     }
 }

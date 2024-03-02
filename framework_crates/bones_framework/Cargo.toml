@@ -99,6 +99,7 @@ image = { version = "0.24", default-features = false }
 
 # Gui
 egui       = { version = "0.23", optional = true }
+egui_plot  = "0.23"
 ttf-parser = { version = "0.20", default-features = false, optional = true }
 
 # Audio
