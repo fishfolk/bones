@@ -99,27 +99,55 @@ pub trait QueryItem {
 /// Entities iterated over will not be filtered by [`OptionalQueryItem`].
 ///
 /// See [`Optional`] helper func for constructing `OptionalQueryItem` and usage.
-pub struct OptionalQueryItem<'a, T: HasSchema, S>(pub S, pub PhantomData<&'a T>);
+pub struct OptionalQueryItem<'a, T: HasSchema, S>(pub &'a S, pub PhantomData<&'a T>);
+
+/// Wrapper for the [`CompMut`] [`SystemParam`] used as [`QueryItem`] to iterate
+/// over entities optionally and mutably retrieving components from [`ComponentStore`].
+/// Entities iterated over will not be filtered by [`OptionalQueryItemMut`].
+///
+/// See [`OptionalMut`] helper func for constructing `OptionalQueryItemMut` and usage
+pub struct OptionalQueryItemMut<'a, T: HasSchema, S>(pub &'a mut S, pub PhantomData<&'a T>);
 
 /// Helper func to construct a [`OptionalQueryItem`] wrapping a [`Comp`] [`SystemParam`].
 /// Used to iterate over enities optionally retrieving components from [`ComponentStore`].
 /// Entities iterated over will not be filtered by this `QueryItem`.
 ///
 /// This example filters entities by `compC`, optionally retrieves `compA` as mutable, and
-/// `compB` as immutable.
+/// `compB` as immutable. ([`OptionalMut`] is used for mutation).
 ///
-/// `entities.iter_with(&mut Optional(compA), &Optional(compB), &compC)`
+/// `entities.iter_with(&mut OptionalMut(&mut compA), &Optional(&compB), &compC)`
 ///
 /// This will implement [`QueryItem`] as long as generic type implements [`std::ops::Deref`] for
-/// [`ComponentStore`], such as [`Comp`] and [`CompMut`]. Mutable reference to [`OptionalQueryItem`] works
-/// if type implements [`std::ops::DerefMut`]
+/// [`ComponentStore`], such as [`Comp`] and [`CompMut`].
 #[allow(non_snake_case)]
-pub fn Optional<'a, T: HasSchema, C, S>(component_ref: S) -> OptionalQueryItem<'a, T, S>
+pub fn Optional<'a, T: HasSchema, C, S>(component_ref: &'a S) -> OptionalQueryItem<'a, T, S>
 where
     C: ComponentIterBitset<'a, T> + 'a,
     S: std::ops::Deref<Target = C> + 'a,
 {
     OptionalQueryItem(component_ref, PhantomData)
+}
+
+/// Helper func to construct a [`OptionalQueryItemMut`] wrapping a [`CompMut`] [`SystemParam`].
+/// Used to iterate over enities optionally and mutably retrieving components from [`ComponentStore`].
+/// Entities iterated over will not be filtered by this `QueryItem`.
+///
+/// This example filters entities by `compC`, optionally retrieves `compA` as mutable, and
+/// `compB` as immutable.
+///
+/// `entities.iter_with(&mut OptionalMut(&mut compA), &Optional(&compB), &compC)`
+///
+/// This will implement [`QueryItem`] as long as generic type implements [`std::ops::DerefMut`] for
+/// [`ComponentStore`], such as [`CompMut`].
+#[allow(non_snake_case)]
+pub fn OptionalMut<'a, T: HasSchema, C, S>(
+    component_ref: &'a mut S,
+) -> OptionalQueryItemMut<'a, T, S>
+where
+    C: ComponentIterBitset<'a, T> + 'a,
+    S: std::ops::DerefMut<Target = C> + 'a,
+{
+    OptionalQueryItemMut(component_ref, PhantomData)
 }
 
 impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
@@ -155,8 +183,8 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a mut CompMut<'q, T> {
     }
 }
 
-/// Immutably iterate over optional component with syntax: `&Optional(Comp<T>)` / `&Optional(CompMut<T>)`.
-/// (For mutable optional iteration we require `&mut Optional(CompMut<T>)`)
+/// Immutably iterate over optional component with syntax: `&Optional(&Comp<T>)` / `&Optional(&CompMut<T>)`.
+/// (For mutable optional iteration we require `&mut OptionalMut(&mut CompMut<T>)`)
 impl<'a, T: HasSchema, S, C> QueryItem for &'a OptionalQueryItem<'a, T, S>
 where
     C: ComponentIterBitset<'a, T> + 'a,
@@ -170,8 +198,8 @@ where
     }
 }
 
-/// Mutably iterate over optional component with syntax: `&mut Optional(RefMut<ComponentStore<T>>)`
-impl<'a, T: HasSchema, S, C> QueryItem for &'a mut OptionalQueryItem<'a, T, S>
+/// Mutably iterate over optional component with syntax: `&mut OptionalMut(&mut RefMut<ComponentStore<T>>)`
+impl<'a, T: HasSchema, S, C> QueryItem for &'a mut OptionalQueryItemMut<'a, T, S>
 where
     C: ComponentIterBitset<'a, T> + 'a,
     S: std::ops::DerefMut<Target = C> + 'a,
@@ -351,12 +379,12 @@ impl Entities {
     /// }
     /// ```
     ///
-    /// You may optionally iterate over components with `&Optional(comp)` or mutably with
-    /// `&mut Optional(comp_mut)`. Entities are not filtered by component in [`OptionalQueryItem`].
+    /// You may optionally iterate over components with `&Optional(&comp)` or mutably with
+    /// `&mut OptionalMut(&mut comp_mut)`. Entities are not filtered by component in [`OptionalQueryItem`].
     /// None is returned for these. If done with single Optional query item, all entities are iterated over.
     ///
-    /// Syntax is `&Optional(comp)`, or `&mut Optional(comp)`, for now using a reference inside like
-    /// `&Optional(&comp)` will NOT work. See example below for usage.
+    /// Syntax is `&Optional(&comp)`, or `&mut OptionalMut(&mut comp)`. Reference to comp and reference to Optional
+    /// is required for now.
     ///
     /// # [`Optional`] Example
     ///
@@ -373,7 +401,7 @@ impl Entities {
     /// # struct PosMax { x: f32, y: f32 }
     ///
     /// fn my_system(entities: Res<Entities>, mut pos: CompMut<Pos>, vel: Comp<Vel>, pos_max: Comp<PosMax>) {
-    ///     for (entity, (pos, vel, pos_max)) in entities.iter_with((&mut pos, &vel, &Optional(pos_max))) {
+    ///     for (entity, (pos, vel, pos_max)) in entities.iter_with((&mut pos, &vel, &Optional(&pos_max))) {
     ///         // Update pos from vel on all entities that have pos and vel components
     ///         pos.x += vel.x;
     ///         pos.y += vel.y;
