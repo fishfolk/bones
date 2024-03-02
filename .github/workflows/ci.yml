@@ -13,7 +13,7 @@ jobs:
     name: 🗒 Check Rust formatting
     steps:
       - name: ⬇️ Checkout Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 🦀 Install Rustfmt
         run: rustup component add rustfmt
@@ -32,7 +32,7 @@ jobs:
           - { target: "wasm32-unknown-unknown", target_dir: "web-target" }
     steps:
       - name: ⬇️ Checkout Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 🧰 Install dependencies
         run: |
@@ -80,7 +80,7 @@ jobs:
     name: 🔧 Check Minimal Dependency Versions
     steps:
       - name: ⬇️ Checkout Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 🧰 Install dependencies
         run: |
@@ -120,7 +120,7 @@ jobs:
     continue-on-error: ${{ matrix.checks == 'advisories' }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v1
         with:
           command: check ${{ matrix.checks }}
@@ -129,7 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     name: 📡 Miri tests
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: 🧰 Install dependencies
         run: |
           sudo apt-get update
