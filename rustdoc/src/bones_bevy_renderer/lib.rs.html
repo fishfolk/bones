@@ -1293,6 +1293,8 @@
 <a href="#1293" id="1293">1293</a>
 <a href="#1294" id="1294">1294</a>
 <a href="#1295" id="1295">1295</a>
+<a href="#1296" id="1296">1296</a>
+<a href="#1297" id="1297">1297</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -1322,7 +1324,9 @@
 <span class="kw">use </span>glam::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>bevy_prototype_lyon::prelude <span class="kw">as </span>lyon;
-<span class="kw">use </span>bones_framework::prelude::{<span class="self">self </span><span class="kw">as </span>bones, BitSet, SchemaBox, SCHEMA_REGISTRY};
+<span class="kw">use </span>bones_framework::prelude::{
+    <span class="self">self </span><span class="kw">as </span>bones, BitSet, ComponentIterBitset, SchemaBox, SCHEMA_REGISTRY,
+};
 <span class="kw">use </span>prelude::convert::{IntoBevy, IntoBones};
 <span class="kw">use </span>serde::{de::Visitor, Deserialize, Serialize};
 

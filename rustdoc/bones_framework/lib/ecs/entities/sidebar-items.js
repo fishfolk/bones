@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Entities","EntitiesIterWith","Entity","EntityIterator"],"trait":["QueryItem"]};
+window.SIDEBAR_ITEMS = {"fn":["Optional","OptionalMut"],"struct":["Entities","EntitiesIterWith","Entity","EntityIterator","OptionalQueryItem","OptionalQueryItemMut"],"trait":["QueryItem"]};
