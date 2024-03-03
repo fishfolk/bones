@@ -509,6 +509,19 @@ impl UntypedComponentStore {
         }
     }
 
+    /// Iterates immutably over the components of this type where `bitset` indicates the indices of
+    /// entities. Iterator provides Option, returning None if there is no component for entity in bitset.
+    pub fn iter_with_bitset_optional(
+        &self,
+        bitset: Rc<BitSetVec>,
+    ) -> UntypedComponentOptionalBitsetIterator {
+        UntypedComponentOptionalBitsetIterator(UntypedComponentBitsetIterator {
+            current_id: 0,
+            components: self,
+            bitset,
+        })
+    }
+
     /// Iterates mutable over the components of this type where `bitset` indicates the indices of
     /// entities.
     ///
@@ -522,6 +535,19 @@ impl UntypedComponentStore {
             components: self,
             bitset,
         }
+    }
+
+    /// Iterates mutably over the components of this type where `bitset` indicates the indices of
+    /// entities. Iterator provides Option, returning None if there is no component for entity in bitset.
+    pub fn iter_mut_with_bitset_optional(
+        &mut self,
+        bitset: Rc<BitSetVec>,
+    ) -> UntypedComponentOptionalBitsetIteratorMut {
+        UntypedComponentOptionalBitsetIteratorMut(UntypedComponentBitsetIteratorMut {
+            current_id: 0,
+            components: self,
+            bitset,
+        })
     }
 
     /// Returns the bitset indicating which entity indices have a component associated to them.
