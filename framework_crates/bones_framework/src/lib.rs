@@ -20,7 +20,7 @@ pub use glam;
 /// The prelude.
 pub mod prelude {
     pub use crate::{
-        animation::*, input::prelude::*, params::*, render::prelude::*, storage::*, time::*,
+        animation::*, debug, input::prelude::*, params::*, render::prelude::*, storage::*, time::*,
         utils::*, AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin,
     };
 
@@ -42,6 +42,7 @@ pub mod prelude {
 }
 
 pub mod animation;
+pub mod debug;
 pub mod input;
 pub mod params;
 pub mod render;

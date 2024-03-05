@@ -39,6 +39,7 @@ pub mod prelude {
 }
 
 mod convert;
+mod debug;
 
 /// Marker component for entities that are rendered in Bevy for bones.
 #[derive(Component)]
@@ -226,7 +227,11 @@ impl BonesBevyRenderer {
         }
 
         app.add_plugins(plugins)
-            .add_plugins((bevy_egui::EguiPlugin, lyon::ShapePlugin))
+            .add_plugins((
+                bevy_egui::EguiPlugin,
+                lyon::ShapePlugin,
+                debug::BevyDebugPlugin,
+            ))
             .insert_resource({
                 let mut egui_settings = bevy_egui::EguiSettings::default();
                 if self.pixel_art {
