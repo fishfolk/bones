@@ -1,6 +1,6 @@
 //! [`network_debug_session_plugin`] may be installed to open network diagnostics egui window:
 //! - Graphs player's predicted frames
-//! - Highlights freezes waiting for remote input (when reached [`super::NETWORK_MAX_PREDICTION_WINDOW`])
+//! - Highlights freezes waiting for remote input (when reached max prediction window)
 //! - Displays [`ggrs::NetworkStats`]
 //! - Displays last frame with skips and how many frames were skipped.
 //!
@@ -14,8 +14,6 @@ use ggrs::{NetworkStats, PlayerHandle};
 use once_cell::sync::Lazy;
 
 use crate::prelude::*;
-
-use super::NETWORK_MAX_PREDICTION_WINDOW;
 
 pub mod prelude {
     pub use super::NetworkDebugMenuState;
@@ -45,6 +43,8 @@ pub enum NetworkDebugMessage {
     NetworkStats {
         network_stats: Vec<(PlayerHandle, NetworkStats)>,
     },
+    /// Set the max prediction window for y axis of plot
+    SetMaxPrediction(usize),
 }
 
 /// Sender and receiver for [`NetworkDebugMessage`] for network diagnostics debug tool.
@@ -107,6 +107,10 @@ pub struct NetworkDebug {
 
     /// Network stats per connection to remote player
     pub network_stats: Vec<(PlayerHandle, NetworkStats)>,
+
+    /// Max Prediction Window set in ggrs session runner.
+    /// Cached here to determine max y on plot.
+    pub max_prediction_window: usize,
 }
 
 impl Default for NetworkDebug {
@@ -120,6 +124,7 @@ impl Default for NetworkDebug {
             frame_buffer_display_size: 64,
             paused: false,
             network_stats: vec![],
+            max_prediction_window: 0,
         }
     }
 }
@@ -192,6 +197,9 @@ pub fn network_debug_window(
                 NetworkDebugMessage::NetworkStats { network_stats } => {
                     diagnostics.network_stats = network_stats;
                 }
+                NetworkDebugMessage::SetMaxPrediction(max_preiction_window) => {
+                    diagnostics.max_prediction_window = max_preiction_window;
+                }
             }
         }
 
@@ -256,6 +264,8 @@ pub fn network_debug_window(
                     let min_display_frame =
                         max_display_frame - diagnostics.frame_buffer_display_size as i32;
 
+                    let max_prediction_window = diagnostics.max_prediction_window;
+
                     // Plot::new(localization.get("predicted-frames"))
                     Plot::new("Predicted Frames")
                         .allow_zoom(false)
@@ -264,10 +274,10 @@ pub fn network_debug_window(
                         .include_x(min_display_frame)
                         .include_x(max_display_frame)
                         .auto_bounds_y()
-                        .include_y(NETWORK_MAX_PREDICTION_WINDOW as f64)
+                        .include_y(max_prediction_window as f64)
                         .show_axes([false, true])
-                        .y_grid_spacer(|_grid_input| {
-                            (0..NETWORK_MAX_PREDICTION_WINDOW + 1)
+                        .y_grid_spacer(move |_grid_input| {
+                            (0..(max_prediction_window + 1))
                                 .map(|y| GridMark {
                                     step_size: 1.0,
                                     value: y as f64,
