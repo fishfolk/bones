@@ -783,7 +783,7 @@ dependencies = [
  "bevy_reflect_derive",
  "bevy_utils",
  "downcast-rs",
- "erased-serde",
+ "erased-serde 0.3.31",
  "glam 0.24.2",
  "once_cell",
  "parking_lot 0.12.1",
@@ -1146,7 +1146,7 @@ dependencies = [
  "dashmap",
  "ehttp",
  "elsa",
- "erased-serde",
+ "erased-serde 0.4.4",
  "event-listener 3.1.0",
  "glam 0.24.2",
  "notify",
@@ -1291,7 +1291,7 @@ dependencies = [
  "append-only-vec",
  "bones_schema_macros",
  "bones_utils",
- "erased-serde",
+ "erased-serde 0.4.4",
  "glam 0.24.2",
  "humantime",
  "paste",
@@ -2014,6 +2014,15 @@ name = "erased-serde"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c138974f9d5e7fe373eb04df7cae98833802ae4b11c24ac7039a21d5af4b26c"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "erased-serde"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b73807008a3c7f171cc40312f37d95ef0396e048b5848d775f54b1a4dd4a0d3"
 dependencies = [
  "serde",
 ]
