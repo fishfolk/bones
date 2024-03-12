@@ -1,8 +1,8 @@
 var srcIndex = JSON.parse('{\
 "bones_asset":["",[["server",[],["schema_loader.rs"]]],["asset.rs","cid.rs","handle.rs","io.rs","lib.rs","network_handle.rs","parse.rs","server.rs"]],\
-"bones_bevy_renderer":["",[],["convert.rs","lib.rs"]],\
+"bones_bevy_renderer":["",[],["convert.rs","debug.rs","lib.rs"]],\
 "bones_ecs":["",[["components",[],["iterator.rs","typed.rs","untyped.rs"]]],["bitset.rs","components.rs","entities.rs","lib.rs","resources.rs","stage.rs","system.rs","world.rs"]],\
-"bones_framework":["",[["input",[],["gamepad.rs","keyboard.rs","mouse.rs","window.rs"]],["networking",[],["certs.rs","debug.rs","input.rs","lan.rs","online.rs","proto.rs"]],["render",[["ui",[["widgets",[],["bordered_button.rs","bordered_frame.rs"]]],["widgets.rs"]]],["audio.rs","camera.rs","color.rs","line.rs","sprite.rs","tilemap.rs","transform.rs","ui.rs"]],["time",[],["stopwatch.rs","timer.rs"]]],["animation.rs","input.rs","lib.rs","localization.rs","networking.rs","params.rs","render.rs","storage.rs","time.rs","utils.rs"]],\
+"bones_framework":["",[["input",[],["gamepad.rs","keyboard.rs","mouse.rs","window.rs"]],["networking",[],["certs.rs","debug.rs","input.rs","lan.rs","online.rs","proto.rs"]],["render",[["ui",[["widgets",[],["bordered_button.rs","bordered_frame.rs"]]],["widgets.rs"]]],["audio.rs","camera.rs","color.rs","line.rs","sprite.rs","tilemap.rs","transform.rs","ui.rs"]],["time",[],["stopwatch.rs","timer.rs"]]],["animation.rs","debug.rs","input.rs","lib.rs","localization.rs","networking.rs","params.rs","render.rs","storage.rs","time.rs","utils.rs"]],\
 "bones_lib":["",[],["lib.rs","time.rs"]],\
 "bones_matchmaker":["",[],["certs.rs","cli.rs","lib.rs","matchmaker.rs","proxy.rs"]],\
 "bones_matchmaker_proto":["",[],["lib.rs"]],\

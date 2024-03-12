@@ -1295,6 +1295,11 @@
 <a href="#1295" id="1295">1295</a>
 <a href="#1296" id="1296">1296</a>
 <a href="#1297" id="1297">1297</a>
+<a href="#1298" id="1298">1298</a>
+<a href="#1299" id="1299">1299</a>
+<a href="#1300" id="1300">1300</a>
+<a href="#1301" id="1301">1301</a>
+<a href="#1302" id="1302">1302</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -1336,6 +1341,7 @@
 }
 
 <span class="kw">mod </span>convert;
+<span class="kw">mod </span>debug;
 
 <span class="doccomment">/// Marker component for entities that are rendered in Bevy for bones.
 </span><span class="attr">#[derive(Component)]
@@ -1523,7 +1529,11 @@
         }
 
         app.add_plugins(plugins)
-            .add_plugins((bevy_egui::EguiPlugin, lyon::ShapePlugin))
+            .add_plugins((
+                bevy_egui::EguiPlugin,
+                lyon::ShapePlugin,
+                debug::BevyDebugPlugin,
+            ))
             .insert_resource({
                 <span class="kw">let </span><span class="kw-2">mut </span>egui_settings = bevy_egui::EguiSettings::default();
                 <span class="kw">if </span><span class="self">self</span>.pixel_art {
