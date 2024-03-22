@@ -45,3 +45,17 @@ impl From<DenseMoveDirection> for u16 {
         x_bits | (y_bits << 6)
     }
 }
+
+impl From<u32> for DenseMoveDirection {
+    fn from(bits: u32) -> Self {
+        let bits_16 = bits as u16;
+        bits_16.into()
+    }
+}
+
+impl From<DenseMoveDirection> for u32 {
+    fn from(dir: DenseMoveDirection) -> Self {
+        let bits_16 = u16::from(dir);
+        bits_16 as u32
+    }
+}
