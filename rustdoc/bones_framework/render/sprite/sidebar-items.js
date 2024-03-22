@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Image"],"fn":["sprite_plugin"],"struct":["Atlas","AtlasSprite","Sprite"]};
+window.SIDEBAR_ITEMS = {"enum":["Image"],"fn":["sprite_plugin"],"struct":["Atlas","AtlasCollisionTile","AtlasSprite","Sprite"]};
