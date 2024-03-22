@@ -36,7 +36,7 @@ impl AssetLoader for ImageAssetLoader {
 }
 
 /// Atlas image component.
-#[derive(Copy, Clone, HasSchema, Debug, Default)]
+#[derive(Clone, HasSchema, Debug, Default)]
 #[repr(C)]
 #[type_data(metadata_asset("atlas"))]
 pub struct Atlas {
@@ -52,6 +52,10 @@ pub struct Atlas {
     pub padding: Vec2,
     /// The offset of the first tile from the top-left of the image.
     pub offset: Vec2,
+
+    /// Map tile indices to extra collision metadata. This is optional and
+    /// may not be specified for all tiles, or at all.
+    pub tile_collision: SMap<String, AtlasCollisionTile>,
 }
 
 impl Atlas {
@@ -65,6 +69,39 @@ impl Atlas {
     /// Get the size in pixels of the entire atlas image.
     pub fn size(&self) -> Vec2 {
         uvec2(self.columns, self.rows).as_vec2() * self.tile_size
+    }
+}
+
+/// Metadata to define collider an atlas's tile.
+#[derive(Copy, Clone, HasSchema, Debug, Default)]
+#[repr(C)]
+pub struct AtlasCollisionTile {
+    /// min point on AABB
+    pub min: Vec2,
+    /// max point on AABB
+    pub max: Vec2,
+}
+
+impl AtlasCollisionTile {
+    /// Clamp values between range (0,0) and (1,1).
+    ///
+    /// How collision metadata is used is implementation specific,
+    /// but if using normalized values to scale with tile size,
+    /// this is useful for enforcing metadata is valid.
+    pub fn clamped_values(&self) -> AtlasCollisionTile {
+        let zero = Vec2::ZERO;
+        let one = Vec2::new(1.0, 1.0);
+        AtlasCollisionTile {
+            min: self.min.clamp(zero, one),
+            max: self.max.clamp(zero, one),
+        }
+    }
+
+    /// Return true if both components of max are greater than min.
+    /// false if equal on either axis
+    pub fn has_area(&self) -> bool {
+        let extent = self.max - self.min;
+        extent.x > 0.0 && extent.y > 0.0
     }
 }
 
