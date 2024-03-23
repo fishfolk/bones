@@ -324,9 +324,19 @@
 <a href="#324" id="324">324</a>
 <a href="#325" id="325">325</a>
 <a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! [`network_debug_session_plugin`] may be installed to open network diagnostics egui window:
 //! - Graphs player&#39;s predicted frames
-//! - Highlights freezes waiting for remote input (when reached [`super::NETWORK_MAX_PREDICTION_WINDOW`])
+//! - Highlights freezes waiting for remote input (when reached max prediction window)
 //! - Displays [`ggrs::NetworkStats`]
 //! - Displays last frame with skips and how many frames were skipped.
 //!
@@ -340,8 +350,6 @@
 <span class="kw">use </span>once_cell::sync::Lazy;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-
-<span class="kw">use </span><span class="kw">super</span>::NETWORK_MAX_PREDICTION_WINDOW;
 
 <span class="kw">pub mod </span>prelude {
     <span class="kw">pub use </span><span class="kw">super</span>::NetworkDebugMenuState;
@@ -371,6 +379,8 @@
     </span>NetworkStats {
         network_stats: Vec&lt;(PlayerHandle, NetworkStats)&gt;,
     },
+    <span class="doccomment">/// Set the max prediction window for y axis of plot
+    </span>SetMaxPrediction(usize),
 }
 
 <span class="doccomment">/// Sender and receiver for [`NetworkDebugMessage`] for network diagnostics debug tool.
@@ -433,6 +443,10 @@
 
     <span class="doccomment">/// Network stats per connection to remote player
     </span><span class="kw">pub </span>network_stats: Vec&lt;(PlayerHandle, NetworkStats)&gt;,
+
+    <span class="doccomment">/// Max Prediction Window set in ggrs session runner.
+    /// Cached here to determine max y on plot.
+    </span><span class="kw">pub </span>max_prediction_window: usize,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>NetworkDebug {
@@ -446,6 +460,7 @@
             frame_buffer_display_size: <span class="number">64</span>,
             paused: <span class="bool-val">false</span>,
             network_stats: <span class="macro">vec!</span>[],
+            max_prediction_window: <span class="number">0</span>,
         }
     }
 }
@@ -518,6 +533,9 @@
                 NetworkDebugMessage::NetworkStats { network_stats } =&gt; {
                     diagnostics.network_stats = network_stats;
                 }
+                NetworkDebugMessage::SetMaxPrediction(max_preiction_window) =&gt; {
+                    diagnostics.max_prediction_window = max_preiction_window;
+                }
             }
         }
 
@@ -582,6 +600,8 @@
                     <span class="kw">let </span>min_display_frame =
                         max_display_frame - diagnostics.frame_buffer_display_size <span class="kw">as </span>i32;
 
+                    <span class="kw">let </span>max_prediction_window = diagnostics.max_prediction_window;
+
                     <span class="comment">// Plot::new(localization.get(&quot;predicted-frames&quot;))
                     </span>Plot::new(<span class="string">&quot;Predicted Frames&quot;</span>)
                         .allow_zoom(<span class="bool-val">false</span>)
@@ -590,10 +610,10 @@
                         .include_x(min_display_frame)
                         .include_x(max_display_frame)
                         .auto_bounds_y()
-                        .include_y(NETWORK_MAX_PREDICTION_WINDOW <span class="kw">as </span>f64)
+                        .include_y(max_prediction_window <span class="kw">as </span>f64)
                         .show_axes([<span class="bool-val">false</span>, <span class="bool-val">true</span>])
-                        .y_grid_spacer(|_grid_input| {
-                            (<span class="number">0</span>..NETWORK_MAX_PREDICTION_WINDOW + <span class="number">1</span>)
+                        .y_grid_spacer(<span class="kw">move </span>|_grid_input| {
+                            (<span class="number">0</span>..(max_prediction_window + <span class="number">1</span>))
                                 .map(|y| GridMark {
                                     step_size: <span class="number">1.0</span>,
                                     value: y <span class="kw">as </span>f64,
