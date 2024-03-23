@@ -58,13 +58,13 @@ pub mod prelude {
 pub const NETWORK_FRAME_RATE_FACTOR: f32 = 0.9;
 
 /// Number of frames client may predict beyond confirmed frame before freezing and waiting
-/// for inputs from other players.
-pub const NETWORK_MAX_PREDICTION_WINDOW: usize = 10;
+/// for inputs from other players. Default value if not specified in [`GgrsSessionRunnerInfo`].
+pub const NETWORK_MAX_PREDICTION_WINDOW_DEFAULT: usize = 7;
 
 // todo test as zero?
 
 /// Amount of frames GGRS will delay local input.
-pub const NETWORK_LOCAL_INPUT_DELAY: usize = 1;
+pub const NETWORK_LOCAL_INPUT_DELAY_DEFAULT: usize = 2;
 
 // TODO: Remove this limitation on max players, a variety of types use this for static arrays,
 // should either figure out how to make this a compile-time const value specified by game, or
@@ -217,14 +217,32 @@ pub struct GgrsSessionRunnerInfo {
     pub player_is_local: [bool; MAX_PLAYERS],
     /// the player count.
     pub player_count: usize,
+
+    /// Max prediction window (max number of frames client may predict ahead of last confirmed frame)
+    /// `None` will use Bone's default.
+    pub max_prediction_window: Option<usize>,
+
+    /// Local input delay (local inputs + remote inputs will be buffered and sampled this many frames later)
+    /// Increasing helps with mitigating pops when remote user changes input quickly, and reduces amount of frames
+    /// client will end up predicted ahead from others, helps with high latency.
+    ///
+    /// `None` will use Bone's default.
+    pub local_input_delay: Option<usize>,
 }
 
-impl From<&dyn NetworkSocket> for GgrsSessionRunnerInfo {
-    fn from(socket: &dyn NetworkSocket) -> Self {
+impl GgrsSessionRunnerInfo {
+    /// See [`GgrsSessionRunnerInfo`] fields for info on arguments.
+    pub fn new(
+        socket: &dyn NetworkSocket,
+        max_prediction_window: Option<usize>,
+        local_input_delay: Option<usize>,
+    ) -> Self {
         Self {
             socket: socket.ggrs_socket(),
             player_is_local: socket.player_is_local(),
             player_count: socket.player_count(),
+            max_prediction_window,
+            local_input_delay,
         }
     }
 }
@@ -246,10 +264,25 @@ where
             .min(std::usize::MAX as f64)
             .round() as usize;
 
+        // There may be value in dynamically negotitaing these values based on client's pings
+        // before starting the match.
+        let max_prediction = info
+            .max_prediction_window
+            .unwrap_or(NETWORK_MAX_PREDICTION_WINDOW_DEFAULT);
+        let local_input_delay = info
+            .local_input_delay
+            .unwrap_or(NETWORK_LOCAL_INPUT_DELAY_DEFAULT);
+
+        // Notify debugger of setting
+        NETWORK_DEBUG_CHANNEL
+            .sender
+            .try_send(NetworkDebugMessage::SetMaxPrediction(max_prediction))
+            .unwrap();
+
         let mut builder = ggrs::SessionBuilder::new()
             .with_num_players(info.player_count)
-            .with_max_prediction_window(NETWORK_MAX_PREDICTION_WINDOW)
-            .with_input_delay(NETWORK_LOCAL_INPUT_DELAY)
+            .with_max_prediction_window(max_prediction)
+            .with_input_delay(local_input_delay)
             .with_fps(network_fps)
             .unwrap();
 
