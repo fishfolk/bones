@@ -1272,12 +1272,33 @@ dependencies = [
  "anyhow",
  "atomicell",
  "bitset-core",
+ "bones_ecs_macros",
  "bones_schema",
  "bones_utils",
  "glam 0.24.2",
  "once_map",
  "paste",
  "thiserror",
+]
+
+[[package]]
+name = "bones_ecs_macros"
+version = "0.3.0"
+dependencies = [
+ "bevy_ecs",
+ "bones_ecs",
+ "bones_ecs_macros_core",
+ "bones_schema",
+ "proc-macro2",
+]
+
+[[package]]
+name = "bones_ecs_macros_core"
+version = "0.3.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.48",
 ]
 
 [[package]]
