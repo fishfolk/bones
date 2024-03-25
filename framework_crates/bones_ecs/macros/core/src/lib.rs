@@ -1,9 +1,6 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{
-    parse2, punctuated::Punctuated, token::Paren, Expr, ExprCall, ExprField, ExprPath,
-    ExprReference, FieldValue, Fields, GenericParam, Ident, Index, ItemStruct, Member, Path, Token,
-};
+use syn::{parse2, punctuated::Punctuated, Fields, GenericParam, Index, ItemStruct, Token};
 
 macro_rules! err {
     ($target:expr, $message:expr) => {
@@ -11,16 +8,6 @@ macro_rules! err {
             ::syn::spanned::Spanned::span(&$target),
             $message,
         ))
-    };
-}
-
-macro_rules! expr_path {
-    ($ident:literal, $span:expr) => {
-        ExprPath {
-            attrs: vec![],
-            qself: None,
-            path: Path::from(Ident::new($ident, $span)),
-        }
     };
 }
 
@@ -33,7 +20,6 @@ pub fn generate_system_param_impl(input: TokenStream) -> TokenStream {
 
 fn _generate_system_param_impl(input: TokenStream) -> syn::Result<TokenStream> {
     let item_struct: ItemStruct = parse2(input)?;
-    let span = Span::call_site();
 
     let Some(GenericParam::Lifetime(lifetime)) =
         get_single_punctuated(&item_struct.generics.params)
@@ -64,42 +50,16 @@ fn _generate_system_param_impl(input: TokenStream) -> syn::Result<TokenStream> {
             quote! { <#ty as ::bones_framework::prelude::SystemParam>::get_state(world) }
         }));
 
-    let borrow_param_fields: Punctuated<FieldValue, Token![,]> = fields
+    let borrow_param_fields: Punctuated<TokenStream, Token![,]> = fields
         .named
         .iter()
         .enumerate()
         .map(|(index, field)| {
-            let index = index as u32;
+            let ident = field.ident.as_ref().unwrap();
             let ty = &field.ty;
-            let borrow_path: ExprPath = parse2(quote! {
-                <#ty as ::bones_framework::prelude::SystemParam>::borrow
-            })
-            .unwrap();
-            let world_arg = expr_path!("world", span);
-            let state_arg = ExprReference {
-                attrs: vec![],
-                and_token: Token![&](span),
-                mutability: Some(Token![mut](span)),
-                expr: Box::new(Expr::Field(ExprField {
-                    attrs: vec![],
-                    base: Box::new(Expr::Path(expr_path!("state", span))),
-                    dot_token: Token![.](span),
-                    member: Member::Unnamed(Index { index, span }),
-                })),
-            };
-            FieldValue {
-                attrs: vec![],
-                member: field.ident.clone().unwrap().into(),
-                colon_token: Some(Token![:](span)),
-                expr: Expr::Call(ExprCall {
-                    attrs: vec![],
-                    func: Box::new(Expr::Path(borrow_path)),
-                    paren_token: Paren::default(),
-                    args: Punctuated::from_iter([
-                        Expr::Path(world_arg),
-                        Expr::Reference(state_arg),
-                    ]),
-                }),
+            let index = Index { index: index as u32, span: Span::call_site() };
+            quote! {
+                #ident: <#ty as ::bones_framework::prelude::SystemParam>::borrow(world, &mut state.#index)
             }
         })
         .collect();
