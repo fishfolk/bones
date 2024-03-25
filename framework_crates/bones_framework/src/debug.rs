@@ -59,7 +59,7 @@ pub fn frame_time_diagnostics_plugin(core: &mut Session) {
 /// Renders frame time diagnostic window in Egui if window is set to open in [`FrameTimeWindowState`]
 /// stored in [`EguiCtx`] state.
 pub fn frame_diagnostic_window(
-    mut state: ResMut<FrameDiagState>,
+    mut state: Option<ResMut<FrameDiagState>>,
     // localization: Res<Localization>,
     egui_ctx: ResMut<EguiCtx>,
 ) {
@@ -73,32 +73,39 @@ pub fn frame_diagnostic_window(
             .default_width(500.0)
             .open(window_open)
             .show(&egui_ctx, |ui| {
-                // if ui.button(&localization.get("reset-min-max")).clicked() {
-                if ui.button("Reset Min/Max").clicked() {
-                    state.reset();
-                }
+                if let Some(state) = state.as_mut() {
+                    // if ui.button(&localization.get("reset-min-max")).clicked() {
+                    if ui.button("Reset Min/Max").clicked() {
+                        state.reset();
+                    }
 
-                ui.monospace(&format!(
-                    "{label:20}: {fps:4.0}{suffix:3} ( {min:4.0}{suffix:3}, {avg:4.0}{suffix:3}, {max:4.0}{suffix:3} )",
-                    // label = localization.get("frames-per-second"),
-                    label = "Frames Per Second",
-                    fps = state.fps,
-                    // suffix = fps.suffix,
-                    suffix = "fps",
-                    min = state.min_fps,
-                    avg = state.fps_avg,
-                    max = state.max_fps,
-                ));
-                ui.monospace(&format!(
-                    "{label:20}: {fps:4.1}{suffix:3} ( {min:4.1}{suffix:3}, {avg:4.0}{suffix:3}, {max:4.1}{suffix:3} )",
-                    // label = localization.get("frame-time"),
-                    label = "Frame Time",
-                    fps = state.frame_time,
-                    suffix = "ms",
-                    min = state.min_frame_time,
-                    avg = state.frame_time_avg,
-                    max = state.max_frame_time,
-                ));
+                    ui.monospace(&format!(
+                        "{label:20}: {fps:4.0}{suffix:3} ( {min:4.0}{suffix:3}, {avg:4.0}{suffix:3}, {max:4.0}{suffix:3} )",
+                        // label = localization.get("frames-per-second"),
+                        label = "Frames Per Second",
+                        fps = state.fps,
+                        // suffix = fps.suffix,
+                        suffix = "fps",
+                        min = state.min_fps,
+                        avg = state.fps_avg,
+                        max = state.max_fps,
+                    ));
+                    ui.monospace(&format!(
+                        "{label:20}: {fps:4.1}{suffix:3} ( {min:4.1}{suffix:3}, {avg:4.0}{suffix:3}, {max:4.1}{suffix:3} )",
+                        // label = localization.get("frame-time"),
+                        label = "Frame Time",
+                        fps = state.frame_time,
+                        suffix = "ms",
+                        min = state.min_frame_time,
+                        avg = state.frame_time_avg,
+                        max = state.max_frame_time,
+                    ));
+                }
+                else {
+                    ui.monospace(
+                        "No frame time data from Bevy diagnostics.",
+                    );
+                }
             });
     }
 
