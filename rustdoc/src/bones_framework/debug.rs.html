@@ -104,6 +104,13 @@
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Implements bones egui debug windows and tools.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -165,7 +172,7 @@
 <span class="doccomment">/// Renders frame time diagnostic window in Egui if window is set to open in [`FrameTimeWindowState`]
 /// stored in [`EguiCtx`] state.
 </span><span class="kw">pub fn </span>frame_diagnostic_window(
-    <span class="kw-2">mut </span>state: ResMut&lt;FrameDiagState&gt;,
+    <span class="kw-2">mut </span>state: <span class="prelude-ty">Option</span>&lt;ResMut&lt;FrameDiagState&gt;&gt;,
     <span class="comment">// localization: Res&lt;Localization&gt;,
     </span>egui_ctx: ResMut&lt;EguiCtx&gt;,
 ) {
@@ -179,32 +186,39 @@
             .default_width(<span class="number">500.0</span>)
             .open(window_open)
             .show(<span class="kw-2">&amp;</span>egui_ctx, |ui| {
-                <span class="comment">// if ui.button(&amp;localization.get(&quot;reset-min-max&quot;)).clicked() {
-                </span><span class="kw">if </span>ui.button(<span class="string">&quot;Reset Min/Max&quot;</span>).clicked() {
-                    state.reset();
-                }
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(state) = state.as_mut() {
+                    <span class="comment">// if ui.button(&amp;localization.get(&quot;reset-min-max&quot;)).clicked() {
+                    </span><span class="kw">if </span>ui.button(<span class="string">&quot;Reset Min/Max&quot;</span>).clicked() {
+                        state.reset();
+                    }
 
-                ui.monospace(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                    <span class="string">&quot;{label:20}: {fps:4.0}{suffix:3} ( {min:4.0}{suffix:3}, {avg:4.0}{suffix:3}, {max:4.0}{suffix:3} )&quot;</span>,
-                    <span class="comment">// label = localization.get(&quot;frames-per-second&quot;),
-                    </span>label = <span class="string">&quot;Frames Per Second&quot;</span>,
-                    fps = state.fps,
-                    <span class="comment">// suffix = fps.suffix,
-                    </span>suffix = <span class="string">&quot;fps&quot;</span>,
-                    min = state.min_fps,
-                    avg = state.fps_avg,
-                    max = state.max_fps,
-                ));
-                ui.monospace(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                    <span class="string">&quot;{label:20}: {fps:4.1}{suffix:3} ( {min:4.1}{suffix:3}, {avg:4.0}{suffix:3}, {max:4.1}{suffix:3} )&quot;</span>,
-                    <span class="comment">// label = localization.get(&quot;frame-time&quot;),
-                    </span>label = <span class="string">&quot;Frame Time&quot;</span>,
-                    fps = state.frame_time,
-                    suffix = <span class="string">&quot;ms&quot;</span>,
-                    min = state.min_frame_time,
-                    avg = state.frame_time_avg,
-                    max = state.max_frame_time,
-                ));
+                    ui.monospace(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+                        <span class="string">&quot;{label:20}: {fps:4.0}{suffix:3} ( {min:4.0}{suffix:3}, {avg:4.0}{suffix:3}, {max:4.0}{suffix:3} )&quot;</span>,
+                        <span class="comment">// label = localization.get(&quot;frames-per-second&quot;),
+                        </span>label = <span class="string">&quot;Frames Per Second&quot;</span>,
+                        fps = state.fps,
+                        <span class="comment">// suffix = fps.suffix,
+                        </span>suffix = <span class="string">&quot;fps&quot;</span>,
+                        min = state.min_fps,
+                        avg = state.fps_avg,
+                        max = state.max_fps,
+                    ));
+                    ui.monospace(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+                        <span class="string">&quot;{label:20}: {fps:4.1}{suffix:3} ( {min:4.1}{suffix:3}, {avg:4.0}{suffix:3}, {max:4.1}{suffix:3} )&quot;</span>,
+                        <span class="comment">// label = localization.get(&quot;frame-time&quot;),
+                        </span>label = <span class="string">&quot;Frame Time&quot;</span>,
+                        fps = state.frame_time,
+                        suffix = <span class="string">&quot;ms&quot;</span>,
+                        min = state.min_frame_time,
+                        avg = state.frame_time_avg,
+                        max = state.max_frame_time,
+                    ));
+                }
+                <span class="kw">else </span>{
+                    ui.monospace(
+                        <span class="string">&quot;No frame time data from Bevy diagnostics.&quot;</span>,
+                    );
+                }
             });
     }
 
