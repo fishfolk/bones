@@ -351,6 +351,17 @@ impl<'a, I: Iterator> Iterator for EntitiesIterWith<'a, I> {
 }
 
 impl Entities {
+    /// Iterates over entities using the provided bitset.
+    pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> EntityIterator {
+        EntityIterator {
+            current_id: 0,
+            next_id: self.next_id,
+            entities: &self.alive,
+            generations: &self.generation,
+            bitset,
+        }
+    }
+
     /// Iterate over the entities and components in the given query.
     ///
     /// The [`QueryItem`] trait is automatically implemented for references to [`Comp`] and
@@ -504,17 +515,6 @@ impl Entities {
     /// Useful for joining over [`Entity`] and [`ComponentStore<T>`] at the same time.
     pub fn bitset(&self) -> &BitSetVec {
         &self.alive
-    }
-
-    /// Iterates over entities using the provided bitset.
-    pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> EntityIterator {
-        EntityIterator {
-            current_id: 0,
-            next_id: self.next_id,
-            entities: &self.alive,
-            generations: &self.generation,
-            bitset,
-        }
     }
 }
 
