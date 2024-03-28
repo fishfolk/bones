@@ -9,7 +9,7 @@ repository.workspace = true
 
 [dependencies]
 anyhow                 = "1.0"
-bevy_tasks             = "0.11"
+bevy_tasks             = "0.13"
 bytes                  = "1.2"
 either                 = "1.8"
 futures-lite           = "1.12"
