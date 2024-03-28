@@ -661,7 +661,7 @@ fn setup_egui(world: &mut World) {
             // Insert the bones egui textures
             ctx.data_mut(|map| {
                 map.insert_temp(
-                    bevy_egui::egui::Id::null(),
+                    bevy_egui::egui::Id::NULL,
                     bones_data.bones_egui_textures.clone(),
                 );
             });
@@ -695,19 +695,19 @@ fn get_bones_input(
     (
         bones::MouseInputs {
             movement: mouse_motion_events
-                .iter()
+                .read()
                 .last()
                 .map(|x| x.delta)
                 .unwrap_or_default(),
             wheel_events: mouse_wheel_events
-                .iter()
+                .read()
                 .map(|event| bones::MouseScrollEvent {
                     unit: event.unit.into_bones(),
                     movement: Vec2::new(event.x, event.y),
                 })
                 .collect(),
             button_events: mouse_button_input_events
-                .iter()
+                .read()
                 .map(|event| bones::MouseButtonEvent {
                     button: event.button.into_bones(),
                     state: event.state.into_bones(),
@@ -716,7 +716,7 @@ fn get_bones_input(
         },
         bones::KeyboardInputs {
             key_events: keyboard_events
-                .iter()
+                .read()
                 .map(|event| bones::KeyboardEvent {
                     scan_code: event.scan_code,
                     key_code: event.key_code.map(|x| x.into_bones()).into(),
@@ -726,7 +726,7 @@ fn get_bones_input(
         },
         bones::GamepadInputs {
             gamepad_events: gamepad_events
-                .iter()
+                .read()
                 .map(|event| match event {
                     GamepadEvent::Connection(c) => {
                         bones::GamepadEvent::Connection(bones::GamepadConnectionEvent {
@@ -805,7 +805,7 @@ fn step_bones_game(world: &mut World) {
 
     let BonesData { game, .. } = &mut data;
 
-    let bevy_time = world.resource::<Time>();
+    let bevy_time = world.resource::<Time<Real>>();
 
     // Reload assets if necessary
     if let Some(mut asset_server) = game.shared_resource_mut::<bones::AssetServer>() {
@@ -1023,23 +1023,26 @@ fn extract_bones_sprites(
                 please open an issue."
                 );
             };
-            extracted_sprites.sprites.push(ExtractedSprite {
-                entity: bones_renderable_entity.0,
-                transform: {
-                    let mut t: Transform = transform.into_bevy();
-                    // Add tiny z offset to enforce a consistent z-sort
-                    t.translation.z += z_offset;
-                    z_offset += 0.00001;
-                    t.into()
+            extracted_sprites.sprites.insert(
+                bones_renderable_entity.0,
+                ExtractedSprite {
+                    original_entity: Some(bones_renderable_entity.0),
+                    transform: {
+                        let mut t: Transform = transform.into_bevy();
+                        // Add tiny z offset to enforce a consistent z-sort
+                        t.translation.z += z_offset;
+                        z_offset += 0.00001;
+                        t.into()
+                    },
+                    color: sprite.color.into_bevy(),
+                    rect: None,
+                    custom_size: None,
+                    image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
+                    flip_x: sprite.flip_x,
+                    flip_y: sprite.flip_y,
+                    anchor: Anchor::Center.as_vec(),
                 },
-                color: sprite.color.into_bevy(),
-                rect: None,
-                custom_size: None,
-                image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
-                flip_x: sprite.flip_x,
-                flip_y: sprite.flip_y,
-                anchor: Anchor::Center.as_vec(),
-            })
+            );
         }
 
         // Extract atlas sprites
@@ -1065,17 +1068,20 @@ fn extract_bones_sprites(
                 min,
                 max: min + atlas.tile_size,
             };
-            extracted_sprites.sprites.push(ExtractedSprite {
-                entity: bones_renderable_entity.0,
-                transform: transform.into_bevy().into(),
-                color: atlas_sprite.color.into_bevy(),
-                rect: Some(rect),
-                custom_size: None,
-                image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
-                flip_x: atlas_sprite.flip_x,
-                flip_y: atlas_sprite.flip_y,
-                anchor: Anchor::Center.as_vec(),
-            })
+            extracted_sprites.sprites.insert(
+                bones_renderable_entity.0,
+                ExtractedSprite {
+                    original_entity: Some(bones_renderable_entity.0),
+                    transform: transform.into_bevy().into(),
+                    color: atlas_sprite.color.into_bevy(),
+                    rect: Some(rect),
+                    custom_size: None,
+                    image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
+                    flip_x: atlas_sprite.flip_x,
+                    flip_y: atlas_sprite.flip_y,
+                    anchor: Anchor::Center.as_vec(),
+                },
+            );
         }
     }
 }
@@ -1167,17 +1173,20 @@ fn extract_bones_tilemaps(
                 // create a proper tile renderer. That can render multiple tiles on one quad instead
                 // of using a separate quad for each tile.
                 transform.scale += Vec3::new(0.01, 0.01, 0.0);
-                extracted_sprites.sprites.push(ExtractedSprite {
-                    entity: bones_renderable_entity.0,
-                    transform: transform.into(),
-                    color: Color::WHITE,
-                    rect: Some(rect),
-                    custom_size: None,
-                    image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
-                    flip_x: tile.flip_x,
-                    flip_y: tile.flip_y,
-                    anchor: Anchor::BottomLeft.as_vec(),
-                })
+                extracted_sprites.sprites.insert(
+                    bones_renderable_entity.0,
+                    ExtractedSprite {
+                        original_entity: Some(bones_renderable_entity.0),
+                        transform: transform.into(),
+                        color: Color::WHITE,
+                        rect: Some(rect),
+                        custom_size: None,
+                        image_handle_id: bones_image_ids.get(&image_id).unwrap().id(),
+                        flip_x: tile.flip_x,
+                        flip_y: tile.flip_y,
+                        anchor: Anchor::BottomLeft.as_vec(),
+                    },
+                );
             }
         }
     }
@@ -1213,7 +1222,7 @@ fn sync_bones_path2ds(
                 new_components = Some((
                     bundle.path,
                     lyon::Stroke::new(Color::default(), 1.0),
-                    bundle.transform,
+                    Transform::default(),
                 ));
                 let (path, stroke, transform) = new_components.as_mut().unwrap();
                 (path, stroke, transform)
@@ -1244,11 +1253,8 @@ fn sync_bones_path2ds(
         // Spawn the shape if it doesn't already exist
         if let Some((path, stroke, transform)) = new_components {
             commands
-                .spawn(lyon::ShapeBundle {
-                    path,
-                    transform,
-                    ..default()
-                })
+                .spawn(lyon::ShapeBundle { path, ..default() })
+                .insert(transform)
                 .insert(stroke)
                 .insert(BevyBonesEntity);
         }

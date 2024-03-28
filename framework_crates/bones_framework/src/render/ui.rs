@@ -184,13 +184,13 @@ pub trait EguiContextExt {
 
 impl EguiContextExt for &egui::Context {
     fn clear_focus(self) {
-        self.memory_mut(|r| r.request_focus(egui::Id::null()));
+        self.memory_mut(|r| r.request_focus(egui::Id::NULL));
     }
     fn get_state<T: Clone + Default + Sync + Send + 'static>(self) -> T {
-        self.data_mut(|data| data.get_temp_mut_or_default::<T>(egui::Id::null()).clone())
+        self.data_mut(|data| data.get_temp_mut_or_default::<T>(egui::Id::NULL).clone())
     }
     fn set_state<T: Clone + Default + Sync + Send + 'static>(self, value: T) {
-        self.data_mut(|data| *data.get_temp_mut_or_default::<T>(egui::Id::null()) = value);
+        self.data_mut(|data| *data.get_temp_mut_or_default::<T>(egui::Id::NULL) = value);
     }
 }
 

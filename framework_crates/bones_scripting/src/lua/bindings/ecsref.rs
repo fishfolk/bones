@@ -227,13 +227,13 @@ impl EcsRefData {
     pub fn borrow(&self) -> EcsRefBorrowKind {
         match self {
             EcsRefData::Resource(resource) => {
-                let b = resource.borrow();
+                let b = resource.as_ref().borrow();
                 EcsRefBorrowKind::Resource(b)
             }
             EcsRefData::Component(componentref) => {
-                let b = componentref.store.borrow();
+                let b = componentref.store.as_ref();
                 EcsRefBorrowKind::Component(ComponentBorrow {
-                    borrow: b,
+                    borrow: b.borrow(),
                     entity: componentref.entity,
                 })
             }
@@ -242,8 +242,8 @@ impl EcsRefData {
                 EcsRefBorrowKind::Asset(b)
             }
             EcsRefData::Free(rc) => {
-                let b = rc.borrow();
-                EcsRefBorrowKind::Free(b)
+                let b = rc.as_ref();
+                EcsRefBorrowKind::Free(b.borrow())
             }
         }
     }

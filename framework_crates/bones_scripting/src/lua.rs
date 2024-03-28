@@ -264,7 +264,7 @@ impl Default for LuaEngine {
     /// Initialize the Lua engine.
     fn default() -> Self {
         // Make sure the compute task pool is initialized
-        ComputeTaskPool::init(TaskPool::new);
+        ComputeTaskPool::get_or_init(TaskPool::new);
 
         #[cfg(not(target_arch = "wasm32"))]
         let executor = {
@@ -276,7 +276,7 @@ impl Default for LuaEngine {
                 let executor = Arc::new(ThreadExecutor::new());
                 send.try_send(executor.clone()).unwrap();
 
-                let ticker = executor.ticker().unwrap();
+                let ticker = (*executor).ticker().unwrap();
                 loop {
                     ticker.tick().await;
                 }
