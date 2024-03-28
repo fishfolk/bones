@@ -14,11 +14,26 @@ use crate::prelude::*;
 // SIMD processes 256 bits/entities (32 bytes) at once when comparing bitsets.
 #[cfg(feature = "keysize16")]
 const BITSET_EXP: u32 = 16;
-#[cfg(feature = "keysize20")]
+#[cfg(all(
+    feature = "keysize20",
+    not(feature = "keysize16"),
+    not(feature = "keysize24"),
+    not(feature = "keysize32")
+))]
 const BITSET_EXP: u32 = 20;
-#[cfg(feature = "keysize24")]
+#[cfg(all(
+    feature = "keysize24",
+    not(feature = "keysize16"),
+    not(feature = "keysize20"),
+    not(feature = "keysize32")
+))]
 const BITSET_EXP: u32 = 24;
-#[cfg(feature = "keysize32")]
+#[cfg(all(
+    feature = "keysize32",
+    not(feature = "keysize16"),
+    not(feature = "keysize20"),
+    not(feature = "keysize24")
+))]
 const BITSET_EXP: u32 = 32;
 
 pub use bitset_core::*;
