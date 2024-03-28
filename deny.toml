@@ -31,6 +31,3 @@ github = ["fishfolk"]
 name          = "ring"
 expression    = "MIT AND ISC AND OpenSSL"
 license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
-
-[advisories]
-ignore = ["RUSTSEC-2019-0036", "RUSTSEC-2020-0036"]
