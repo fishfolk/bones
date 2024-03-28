@@ -23,7 +23,7 @@ bs58            = "0.5"
 anyhow          = "1.0"
 serde_yaml      = "0.9"
 serde_json      = "1.0"
-erased-serde    = "0.3"
+erased-serde    = "0.4"
 paste           = "1.0"
 ulid            = { version = "1.0" }
 semver          = { version = "1.0", features = ["serde"] }
