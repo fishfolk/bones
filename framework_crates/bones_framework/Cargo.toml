@@ -78,7 +78,7 @@ async-channel = "1.7"
 bevy_tasks    = { version = "0.12" }
 bytemuck      = "1.12"
 either        = "1.8"
-futures-lite  = "1.12"
+futures-lite  = "2.3"
 glam          = "0.24"
 hex           = "0.4"
 instant       = { version = "0.1", features = ["wasm-bindgen"] }
