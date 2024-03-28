@@ -11,7 +11,7 @@ categories.workspace    = true
 keywords.workspace      = true
 
 [dependencies]
-async-channel   = "1.9"
+async-channel   = "2.2"
 tracing         = "0.1"
 bevy_tasks      = { version = "0.12", features = ["multi-threaded"] }
 bones_lib       = { version = "0.3", path = "../bones_lib" }
