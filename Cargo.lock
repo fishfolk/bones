@@ -1224,7 +1224,7 @@ version = "0.3.0"
 dependencies = [
  "anyhow",
  "append-only-vec",
- "async-channel 2.2.0",
+ "async-channel 1.9.0",
  "bevy_tasks",
  "bones_schema",
  "bones_utils",
@@ -1285,7 +1285,7 @@ name = "bones_framework"
 version = "0.3.0"
 dependencies = [
  "anyhow",
- "async-channel 2.2.0",
+ "async-channel 1.9.0",
  "bevy_tasks",
  "bones_asset",
  "bones_lib",
@@ -1401,7 +1401,7 @@ dependencies = [
 name = "bones_scripting"
 version = "0.3.0"
 dependencies = [
- "async-channel 2.2.0",
+ "async-channel 1.9.0",
  "bevy_tasks",
  "bones_asset",
  "bones_lib",
