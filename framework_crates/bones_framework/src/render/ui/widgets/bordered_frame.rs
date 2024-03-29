@@ -266,7 +266,7 @@ impl BorderedFramePrepared {
         };
         if ui.is_rect_visible(paint_rect) {
             let texture = ui.data(|map| {
-                map.get_temp::<AtomicResource<EguiTextures>>(egui::Id::null())
+                map.get_temp::<AtomicResource<EguiTextures>>(egui::Id::NULL)
                     .unwrap()
                     .borrow()
                     .unwrap()

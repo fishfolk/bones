@@ -281,9 +281,10 @@ where
 
         let mut builder = ggrs::SessionBuilder::new()
             .with_num_players(info.player_count)
-            .with_max_prediction_window(max_prediction)
             .with_input_delay(local_input_delay)
             .with_fps(network_fps)
+            .unwrap()
+            .with_max_prediction_window(max_prediction)
             .unwrap();
 
         let mut local_player_idx: Option<usize> = None;
@@ -364,21 +365,21 @@ where
         // let current_frame_original = self.session.current_frame();
         for event in self.session.events() {
             match event {
-                ggrs::GGRSEvent::Synchronizing { addr, total, count } => {
+                ggrs::GgrsEvent::Synchronizing { addr, total, count } => {
                     info!(player=%addr, %total, progress=%count, "Syncing network player");
                 }
-                ggrs::GGRSEvent::Synchronized { addr } => {
+                ggrs::GgrsEvent::Synchronized { addr } => {
                     info!(player=%addr, "Syncrhonized network client");
                 }
                 // TODO
-                ggrs::GGRSEvent::Disconnected { .. } => {} //return Err(SessionError::Disconnected)},
-                ggrs::GGRSEvent::NetworkInterrupted { addr, .. } => {
+                ggrs::GgrsEvent::Disconnected { .. } => {} //return Err(SessionError::Disconnected)},
+                ggrs::GgrsEvent::NetworkInterrupted { addr, .. } => {
                     info!(player=%addr, "Network player interrupted");
                 }
-                ggrs::GGRSEvent::NetworkResumed { addr } => {
+                ggrs::GgrsEvent::NetworkResumed { addr } => {
                     info!(player=%addr, "Network player re-connected");
                 }
-                ggrs::GGRSEvent::WaitRecommendation {
+                ggrs::GgrsEvent::WaitRecommendation {
                     skip_frames: skip_count,
                 } => {
                     info!(
@@ -394,7 +395,7 @@ where
                         })
                         .unwrap();
                 }
-                ggrs::GGRSEvent::DesyncDetected {
+                ggrs::GgrsEvent::DesyncDetected {
                     frame,
                     local_checksum,
                     remote_checksum,
@@ -432,10 +433,10 @@ where
                     Ok(requests) => {
                         for request in requests {
                             match request {
-                                ggrs::GGRSRequest::SaveGameState { cell, frame } => {
+                                ggrs::GgrsRequest::SaveGameState { cell, frame } => {
                                     cell.save(frame, Some(world.clone()), None)
                                 }
-                                ggrs::GGRSRequest::LoadGameState { cell, .. } => {
+                                ggrs::GgrsRequest::LoadGameState { cell, .. } => {
                                     // Swap out sessions to preserve them after world save.
                                     // Sessions clone makes empty copy, so saved snapshots do not include sessions.
                                     // Sessions are borrowed from Game for execution of this session,
@@ -451,7 +452,7 @@ where
                                         &mut world.resource_mut::<Sessions>(),
                                     );
                                 }
-                                ggrs::GGRSRequest::AdvanceFrame {
+                                ggrs::GgrsRequest::AdvanceFrame {
                                     inputs: network_inputs,
                                 } => {
                                     // Input has been consumed, signal that we are in new input frame
@@ -483,10 +484,10 @@ where
                         }
                     }
                     Err(e) => match e {
-                        ggrs::GGRSError::NotSynchronized => {
+                        ggrs::GgrsError::NotSynchronized => {
                             debug!("Waiting for network clients to sync")
                         }
-                        ggrs::GGRSError::PredictionThreshold => {
+                        ggrs::GgrsError::PredictionThreshold => {
                             warn!("Freezing game while waiting for network to catch-up.");
                             NETWORK_DEBUG_CHANNEL
                                 .sender

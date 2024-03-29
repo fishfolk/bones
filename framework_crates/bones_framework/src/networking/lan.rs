@@ -11,7 +11,7 @@
 #![allow(missing_docs)]
 
 use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4},
+    net::{IpAddr, SocketAddr, SocketAddrV4},
     time::Duration,
 };
 
@@ -58,8 +58,8 @@ const MDNS_SERVICE_TYPE: &str = "_jumpy._udp.local.";
 #[derive(DerefMut, Deref)]
 struct Pinger(BiChannelClient<PingerRequest, PingerResponse>);
 
-type PingerRequest = SmallVec<[Ipv4Addr; 10]>;
-type PingerResponse = SmallVec<[(Ipv4Addr, Option<u16>); 10]>;
+type PingerRequest = SmallVec<[IpAddr; 10]>;
+type PingerResponse = SmallVec<[(IpAddr, Option<u16>); 10]>;
 
 static PINGER: Lazy<Pinger> = Lazy::new(|| {
     let (client, server) = bi_channel();
@@ -503,7 +503,7 @@ pub enum LanMatchmakerRequest {
     /// Join server
     JoinServer {
         /// Server address
-        ip: Ipv4Addr,
+        ip: IpAddr,
         /// Server port
         port: u16,
     },
@@ -755,12 +755,8 @@ fn pinger(server: BiChannelServer<PingerRequest, PingerResponse>) {
         let mut pings = SmallVec::new();
         for server in servers {
             let start = Instant::now();
-            let ping_result = ping_rs::send_ping(
-                &IpAddr::V4(server),
-                Duration::from_secs(2),
-                &[1, 2, 3, 4],
-                None,
-            );
+            let ping_result =
+                ping_rs::send_ping(&server, Duration::from_secs(2), &[1, 2, 3, 4], None);
 
             let ping = if let Err(e) = ping_result {
                 warn!("Error pinging {server}: {e:?}");

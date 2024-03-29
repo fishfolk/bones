@@ -149,7 +149,7 @@ fn main() -> anyhow::Result<()> {
 
     // Load assets
     let s = asset_server.clone();
-    IoTaskPool::init(TaskPool::default);
+    IoTaskPool::get_or_init(TaskPool::default);
     println!("Loading Assets...");
 
     // Spawn a task to load the assets
