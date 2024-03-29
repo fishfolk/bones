@@ -11,7 +11,8 @@ categories.workspace    = true
 keywords.workspace      = true
 
 [features]
-default = ["keysize16"]
+default = ["derive", "keysize16"]
+derive  = ["dep:bones_ecs_macros"]
 glam    = ["dep:glam", "dep:paste", "bones_schema/glam"]
 
 keysize16 = []
@@ -22,6 +23,9 @@ keysize32 = []
 [dependencies]
 bones_utils  = { version = "0.3", path = "../bones_utils" }
 bones_schema = { version = "0.3", path = "../bones_schema" }
+
+# Optional deps
+bones_ecs_macros = { version = "0.3", path = "./macros", optional = true }
 
 anyhow      = "1.0"
 atomicell   = "0.2"

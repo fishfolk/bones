@@ -40,6 +40,9 @@ pub mod prelude {
         FromWorld, UnwrapMany, World,
     };
 
+    #[cfg(feature = "derive")]
+    pub use bones_ecs_macros::*;
+
     // Make bones_schema available for derive macros
     pub use bones_schema;
 }

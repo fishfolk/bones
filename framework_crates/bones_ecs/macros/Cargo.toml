@@ -1,0 +1,23 @@
+[package]
+name                    = "bones_ecs_macros"
+description             = "Macros for the bones_ecs crate."
+version.workspace       = true
+authors.workspace       = true
+edition.workspace       = true
+license.workspace       = true
+repository.workspace    = true
+documentation.workspace = true
+categories.workspace    = true
+keywords.workspace      = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+bones_ecs_macros_core = { path = "./core" }
+proc-macro2           = "1"
+
+[dev-dependencies]
+bevy_ecs     = "0.12"
+bones_ecs    = { path = ".." }
+bones_schema = { path = "../../bones_schema", features = ["derive"] }

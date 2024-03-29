@@ -1,0 +1,19 @@
+[package]
+name                    = "bones_ecs_macros_core"
+description             = "The core of bones_ecs macros."
+version.workspace       = true
+authors.workspace       = true
+edition.workspace       = true
+license.workspace       = true
+repository.workspace    = true
+documentation.workspace = true
+categories.workspace    = true
+keywords.workspace      = true
+
+[dependencies]
+proc-macro2       = "1"
+quote             = "1"
+syn               = { version = "2", features = ["full"] }
+
+[dev-dependencies]
+pretty_assertions = "1.4"
