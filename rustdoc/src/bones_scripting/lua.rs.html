@@ -637,7 +637,7 @@
     <span class="doccomment">/// Initialize the Lua engine.
     </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="comment">// Make sure the compute task pool is initialized
-        </span>ComputeTaskPool::init(TaskPool::new);
+        </span>ComputeTaskPool::get_or_init(TaskPool::new);
 
         <span class="attr">#[cfg(not(target_arch = <span class="string">&quot;wasm32&quot;</span>))]
         </span><span class="kw">let </span>executor = {
@@ -649,7 +649,7 @@
                 <span class="kw">let </span>executor = Arc::new(ThreadExecutor::new());
                 send.try_send(executor.clone()).unwrap();
 
-                <span class="kw">let </span>ticker = executor.ticker().unwrap();
+                <span class="kw">let </span>ticker = (<span class="kw-2">*</span>executor).ticker().unwrap();
                 <span class="kw">loop </span>{
                     ticker.tick().<span class="kw">await</span>;
                 }

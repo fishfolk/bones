@@ -772,10 +772,6 @@
 <a href="#772" id="772">772</a>
 <a href="#773" id="773">773</a>
 <a href="#774" id="774">774</a>
-<a href="#775" id="775">775</a>
-<a href="#776" id="776">776</a>
-<a href="#777" id="777">777</a>
-<a href="#778" id="778">778</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! LAN matchmaking and socket implementation.
 //!
 //! ## Matchmaking
@@ -789,7 +785,7 @@
 </span><span class="attr">#![allow(missing_docs)]
 
 </span><span class="kw">use </span>std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4},
+    net::{IpAddr, SocketAddr, SocketAddrV4},
     time::Duration,
 };
 
@@ -836,8 +832,8 @@
 <span class="attr">#[derive(DerefMut, Deref)]
 </span><span class="kw">struct </span>Pinger(BiChannelClient&lt;PingerRequest, PingerResponse&gt;);
 
-<span class="kw">type </span>PingerRequest = SmallVec&lt;[Ipv4Addr; <span class="number">10</span>]&gt;;
-<span class="kw">type </span>PingerResponse = SmallVec&lt;[(Ipv4Addr, <span class="prelude-ty">Option</span>&lt;u16&gt;); <span class="number">10</span>]&gt;;
+<span class="kw">type </span>PingerRequest = SmallVec&lt;[IpAddr; <span class="number">10</span>]&gt;;
+<span class="kw">type </span>PingerResponse = SmallVec&lt;[(IpAddr, <span class="prelude-ty">Option</span>&lt;u16&gt;); <span class="number">10</span>]&gt;;
 
 <span class="kw">static </span>PINGER: Lazy&lt;Pinger&gt; = Lazy::new(|| {
     <span class="kw">let </span>(client, server) = bi_channel();
@@ -1281,7 +1277,7 @@
     <span class="doccomment">/// Join server
     </span>JoinServer {
         <span class="doccomment">/// Server address
-        </span>ip: Ipv4Addr,
+        </span>ip: IpAddr,
         <span class="doccomment">/// Server port
         </span>port: u16,
     },
@@ -1533,12 +1529,8 @@
         <span class="kw">let </span><span class="kw-2">mut </span>pings = SmallVec::new();
         <span class="kw">for </span>server <span class="kw">in </span>servers {
             <span class="kw">let </span>start = Instant::now();
-            <span class="kw">let </span>ping_result = ping_rs::send_ping(
-                <span class="kw-2">&amp;</span>IpAddr::V4(server),
-                Duration::from_secs(<span class="number">2</span>),
-                <span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
-                <span class="prelude-val">None</span>,
-            );
+            <span class="kw">let </span>ping_result =
+                ping_rs::send_ping(<span class="kw-2">&amp;</span>server, Duration::from_secs(<span class="number">2</span>), <span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="prelude-val">None</span>);
 
             <span class="kw">let </span>ping = <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = ping_result {
                 <span class="macro">warn!</span>(<span class="string">&quot;Error pinging {server}: {e:?}&quot;</span>);

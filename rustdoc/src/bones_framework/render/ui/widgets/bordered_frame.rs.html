@@ -547,7 +547,7 @@
         };
         <span class="kw">if </span>ui.is_rect_visible(paint_rect) {
             <span class="kw">let </span>texture = ui.data(|map| {
-                map.get_temp::&lt;AtomicResource&lt;EguiTextures&gt;&gt;(egui::Id::null())
+                map.get_temp::&lt;AtomicResource&lt;EguiTextures&gt;&gt;(egui::Id::NULL)
                     .unwrap()
                     .borrow()
                     .unwrap()

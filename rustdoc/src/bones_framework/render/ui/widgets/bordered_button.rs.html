@@ -416,7 +416,7 @@
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(border) = border {
                 <span class="kw">let </span>texture = ui.data(|map| {
-                    map.get_temp::&lt;AtomicResource&lt;EguiTextures&gt;&gt;(egui::Id::null())
+                    map.get_temp::&lt;AtomicResource&lt;EguiTextures&gt;&gt;(egui::Id::NULL)
                         .unwrap()
                         .borrow()
                         .unwrap()

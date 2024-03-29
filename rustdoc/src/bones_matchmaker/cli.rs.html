@@ -33,7 +33,7 @@
 <span class="kw">use </span>tracing::metadata::LevelFilter;
 
 <span class="kw">pub fn </span>start() {
-    IoTaskPool::init(TaskPool::new);
+    IoTaskPool::get_or_init(TaskPool::new);
     <span class="kw">let </span>task_pool = IoTaskPool::get();
     configure_logging();
 

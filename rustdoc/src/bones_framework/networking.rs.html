@@ -520,6 +520,7 @@
 <a href="#520" id="520">520</a>
 <a href="#521" id="521">521</a>
 <a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;./networking.md&quot;</span>)]
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
@@ -803,9 +804,10 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>builder = ggrs::SessionBuilder::new()
             .with_num_players(info.player_count)
-            .with_max_prediction_window(max_prediction)
             .with_input_delay(local_input_delay)
             .with_fps(network_fps)
+            .unwrap()
+            .with_max_prediction_window(max_prediction)
             .unwrap();
 
         <span class="kw">let </span><span class="kw-2">mut </span>local_player_idx: <span class="prelude-ty">Option</span>&lt;usize&gt; = <span class="prelude-val">None</span>;
@@ -886,21 +888,21 @@
         // let current_frame_original = self.session.current_frame();
         </span><span class="kw">for </span>event <span class="kw">in </span><span class="self">self</span>.session.events() {
             <span class="kw">match </span>event {
-                ggrs::GGRSEvent::Synchronizing { addr, total, count } =&gt; {
+                ggrs::GgrsEvent::Synchronizing { addr, total, count } =&gt; {
                     <span class="macro">info!</span>(player=%addr, %total, progress=%count, <span class="string">&quot;Syncing network player&quot;</span>);
                 }
-                ggrs::GGRSEvent::Synchronized { addr } =&gt; {
+                ggrs::GgrsEvent::Synchronized { addr } =&gt; {
                     <span class="macro">info!</span>(player=%addr, <span class="string">&quot;Syncrhonized network client&quot;</span>);
                 }
                 <span class="comment">// TODO
-                </span>ggrs::GGRSEvent::Disconnected { .. } =&gt; {} <span class="comment">//return Err(SessionError::Disconnected)},
-                </span>ggrs::GGRSEvent::NetworkInterrupted { addr, .. } =&gt; {
+                </span>ggrs::GgrsEvent::Disconnected { .. } =&gt; {} <span class="comment">//return Err(SessionError::Disconnected)},
+                </span>ggrs::GgrsEvent::NetworkInterrupted { addr, .. } =&gt; {
                     <span class="macro">info!</span>(player=%addr, <span class="string">&quot;Network player interrupted&quot;</span>);
                 }
-                ggrs::GGRSEvent::NetworkResumed { addr } =&gt; {
+                ggrs::GgrsEvent::NetworkResumed { addr } =&gt; {
                     <span class="macro">info!</span>(player=%addr, <span class="string">&quot;Network player re-connected&quot;</span>);
                 }
-                ggrs::GGRSEvent::WaitRecommendation {
+                ggrs::GgrsEvent::WaitRecommendation {
                     skip_frames: skip_count,
                 } =&gt; {
                     <span class="macro">info!</span>(
@@ -916,7 +918,7 @@
                         })
                         .unwrap();
                 }
-                ggrs::GGRSEvent::DesyncDetected {
+                ggrs::GgrsEvent::DesyncDetected {
                     frame,
                     local_checksum,
                     remote_checksum,
@@ -954,10 +956,10 @@
                     <span class="prelude-val">Ok</span>(requests) =&gt; {
                         <span class="kw">for </span>request <span class="kw">in </span>requests {
                             <span class="kw">match </span>request {
-                                ggrs::GGRSRequest::SaveGameState { cell, frame } =&gt; {
+                                ggrs::GgrsRequest::SaveGameState { cell, frame } =&gt; {
                                     cell.save(frame, <span class="prelude-val">Some</span>(world.clone()), <span class="prelude-val">None</span>)
                                 }
-                                ggrs::GGRSRequest::LoadGameState { cell, .. } =&gt; {
+                                ggrs::GgrsRequest::LoadGameState { cell, .. } =&gt; {
                                     <span class="comment">// Swap out sessions to preserve them after world save.
                                     // Sessions clone makes empty copy, so saved snapshots do not include sessions.
                                     // Sessions are borrowed from Game for execution of this session,
@@ -973,7 +975,7 @@
                                         <span class="kw-2">&amp;mut </span>world.resource_mut::&lt;Sessions&gt;(),
                                     );
                                 }
-                                ggrs::GGRSRequest::AdvanceFrame {
+                                ggrs::GgrsRequest::AdvanceFrame {
                                     inputs: network_inputs,
                                 } =&gt; {
                                     <span class="comment">// Input has been consumed, signal that we are in new input frame
@@ -1005,10 +1007,10 @@
                         }
                     }
                     <span class="prelude-val">Err</span>(e) =&gt; <span class="kw">match </span>e {
-                        ggrs::GGRSError::NotSynchronized =&gt; {
+                        ggrs::GgrsError::NotSynchronized =&gt; {
                             <span class="macro">debug!</span>(<span class="string">&quot;Waiting for network clients to sync&quot;</span>)
                         }
-                        ggrs::GGRSError::PredictionThreshold =&gt; {
+                        ggrs::GgrsError::PredictionThreshold =&gt; {
                             <span class="macro">warn!</span>(<span class="string">&quot;Freezing game while waiting for network to catch-up.&quot;</span>);
                             NETWORK_DEBUG_CHANNEL
                                 .sender
