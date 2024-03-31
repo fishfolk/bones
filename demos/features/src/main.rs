@@ -1,9 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 
-use bones_bevy_renderer::{
-    bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    BonesBevyRenderer,
-};
+use bones_bevy_renderer::{bevy::diagnostic::LogDiagnosticsPlugin, BonesBevyRenderer};
 use bones_framework::prelude::*;
 
 /// Create our root asset type.
@@ -103,7 +100,7 @@ fn main() {
     renderer
         .app()
         // We can add our own bevy plugins now
-        .add_plugins((FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin::default()))
+        .add_plugins(LogDiagnosticsPlugin::default())
         // And run the bevy app
         .run()
 }
