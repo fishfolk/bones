@@ -26,6 +26,7 @@ impl AssetLoader for ImageAssetLoader {
         _ctx: AssetLoadCtx,
         bytes: &[u8],
     ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+        tracing::info!(loc = %_ctx.loc.path.display(), size = bytes.len(), "load asset");
         let bytes = bytes.to_vec();
         Box::pin(async move {
             Ok(SchemaBox::new(Image::Data(image::load_from_memory(

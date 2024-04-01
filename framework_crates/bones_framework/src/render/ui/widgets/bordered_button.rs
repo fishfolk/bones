@@ -199,7 +199,7 @@ impl<'a> Widget for BorderedButton<'a> {
 
             if let Some(border) = border {
                 let texture = ui.data(|map| {
-                    map.get_temp::<AtomicResource<EguiTextures>>(egui::Id::NULL)
+                    map.get_temp::<AtomicResource<EguiTextures>>(egui::Id::null())
                         .unwrap()
                         .borrow()
                         .unwrap()
