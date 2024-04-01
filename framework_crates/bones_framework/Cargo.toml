@@ -75,7 +75,7 @@ bones_scripting = { version = "0.3", path = "../bones_scripting", optional = tru
 # Other
 anyhow        = "1.0"
 async-channel = "1.9"
-bevy_tasks    = { version = "0.12" }
+bevy_tasks    = { version = "0.13" }
 bytemuck      = "1.12"
 either        = "1.8"
 futures-lite  = "2.3"
