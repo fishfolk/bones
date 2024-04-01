@@ -14,7 +14,7 @@ jobs:
         with:
           fetch-depth: 2
       - name: 🔎 Lint Commit Message
-        uses: wagoid/commitlint-github-action@v5
+        uses: wagoid/commitlint-github-action@v6
         if: github.event_name == 'merge_group'
         with:
           commitDepth: 1
