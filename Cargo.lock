@@ -1233,7 +1233,7 @@ dependencies = [
  "ehttp",
  "elsa",
  "erased-serde 0.4.4",
- "event-listener 4.0.3",
+ "event-listener 5.2.0",
  "glam 0.24.2",
  "notify",
  "once_cell",

@@ -34,7 +34,7 @@ ehttp           = "0.3"
 tracing         = "0.1"
 bevy_tasks      = "0.12"
 dashmap         = "5.5"
-event-listener  = "4.0"
+event-listener  = "5.2"
 elsa            = "1.9"
 append-only-vec = "0.1.3"
 
