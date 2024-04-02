@@ -2554,15 +2554,14 @@ dependencies = [
 [[package]]
 name = "ggrs"
 version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5ab0bdf8c0046f369eba7011233f614b9f1d8646f86fdb5c0acfe039ab15836"
+source = "git+https://github.com/gschup/ggrs.git?rev=0af1a044b96465bd10398947b7fb5e0a34a75f70#0af1a044b96465bd10398947b7fb5e0a34a75f70"
 dependencies = [
  "bincode",
  "bitfield-rle",
  "bytemuck",
  "instant",
  "js-sys",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.1",
  "rand",
  "serde",
 ]

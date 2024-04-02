@@ -25,7 +25,7 @@ allow = [
 ]
 
 [sources.allow-org]
-github = ["fishfolk"]
+github = ["gschup"]
 
 [[licenses.clarify]]
 name          = "ring"
