@@ -1,4 +1,4 @@
-//! A simple crate containing the [`TypeUlid`] trait to allow associating [`Ulid`][ulid::Ulid]
+//! A simple crate containing the [`TypeUlid`] trait to allow associating [`Ulid`]
 //! identifiers with Rust types.
 //!
 //! # Example
