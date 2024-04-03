@@ -637,7 +637,7 @@
     <span class="doccomment">/// Initialize the Lua engine.
     </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="comment">// Make sure the compute task pool is initialized
-        </span>ComputeTaskPool::get_or_init(TaskPool::new);
+        </span>ComputeTaskPool::init(TaskPool::new);
 
         <span class="attr">#[cfg(not(target_arch = <span class="string">&quot;wasm32&quot;</span>))]
         </span><span class="kw">let </span>executor = {

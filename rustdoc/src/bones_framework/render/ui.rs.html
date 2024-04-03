@@ -397,13 +397,13 @@
 
 <span class="kw">impl </span>EguiContextExt <span class="kw">for </span><span class="kw-2">&amp;</span>egui::Context {
     <span class="kw">fn </span>clear_focus(<span class="self">self</span>) {
-        <span class="self">self</span>.memory_mut(|r| r.request_focus(egui::Id::NULL));
+        <span class="self">self</span>.memory_mut(|r| r.request_focus(egui::Id::null()));
     }
     <span class="kw">fn </span>get_state&lt;T: Clone + Default + Sync + Send + <span class="lifetime">&#39;static</span>&gt;(<span class="self">self</span>) -&gt; T {
-        <span class="self">self</span>.data_mut(|data| data.get_temp_mut_or_default::&lt;T&gt;(egui::Id::NULL).clone())
+        <span class="self">self</span>.data_mut(|data| data.get_temp_mut_or_default::&lt;T&gt;(egui::Id::null()).clone())
     }
     <span class="kw">fn </span>set_state&lt;T: Clone + Default + Sync + Send + <span class="lifetime">&#39;static</span>&gt;(<span class="self">self</span>, value: T) {
-        <span class="self">self</span>.data_mut(|data| <span class="kw-2">*</span>data.get_temp_mut_or_default::&lt;T&gt;(egui::Id::NULL) = value);
+        <span class="self">self</span>.data_mut(|data| <span class="kw-2">*</span>data.get_temp_mut_or_default::&lt;T&gt;(egui::Id::null()) = value);
     }
 }
 

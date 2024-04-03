@@ -1297,15 +1297,6 @@
 <a href="#1297" id="1297">1297</a>
 <a href="#1298" id="1298">1298</a>
 <a href="#1299" id="1299">1299</a>
-<a href="#1300" id="1300">1300</a>
-<a href="#1301" id="1301">1301</a>
-<a href="#1302" id="1302">1302</a>
-<a href="#1303" id="1303">1303</a>
-<a href="#1304" id="1304">1304</a>
-<a href="#1305" id="1305">1305</a>
-<a href="#1306" id="1306">1306</a>
-<a href="#1307" id="1307">1307</a>
-<a href="#1308" id="1308">1308</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -1969,7 +1960,7 @@
             <span class="comment">// Insert the bones egui textures
             </span>ctx.data_mut(|map| {
                 map.insert_temp(
-                    bevy_egui::egui::Id::NULL,
+                    bevy_egui::egui::Id::null(),
                     bones_data.bones_egui_textures.clone(),
                 );
             });
@@ -2003,19 +1994,19 @@
     </span>(
         bones::MouseInputs {
             movement: mouse_motion_events
-                .read()
+                .iter()
                 .last()
                 .map(|x| x.delta)
                 .unwrap_or_default(),
             wheel_events: mouse_wheel_events
-                .read()
+                .iter()
                 .map(|event| bones::MouseScrollEvent {
                     unit: event.unit.into_bones(),
                     movement: Vec2::new(event.x, event.y),
                 })
                 .collect(),
             button_events: mouse_button_input_events
-                .read()
+                .iter()
                 .map(|event| bones::MouseButtonEvent {
                     button: event.button.into_bones(),
                     state: event.state.into_bones(),
@@ -2024,7 +2015,7 @@
         },
         bones::KeyboardInputs {
             key_events: keyboard_events
-                .read()
+                .iter()
                 .map(|event| bones::KeyboardEvent {
                     scan_code: event.scan_code,
                     key_code: event.key_code.map(|x| x.into_bones()).into(),
@@ -2034,7 +2025,7 @@
         },
         bones::GamepadInputs {
             gamepad_events: gamepad_events
-                .read()
+                .iter()
                 .map(|event| <span class="kw">match </span>event {
                     GamepadEvent::Connection(c) =&gt; {
                         bones::GamepadEvent::Connection(bones::GamepadConnectionEvent {
@@ -2113,7 +2104,7 @@
 
     <span class="kw">let </span>BonesData { game, .. } = <span class="kw-2">&amp;mut </span>data;
 
-    <span class="kw">let </span>bevy_time = world.resource::&lt;Time&lt;Real&gt;&gt;();
+    <span class="kw">let </span>bevy_time = world.resource::&lt;Time&gt;();
 
     <span class="comment">// Reload assets if necessary
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = game.shared_resource_mut::&lt;bones::AssetServer&gt;() {
@@ -2331,26 +2322,23 @@
                 please open an issue.&quot;
                 </span>);
             };
-            extracted_sprites.sprites.insert(
-                bones_renderable_entity.<span class="number">0</span>,
-                ExtractedSprite {
-                    original_entity: <span class="prelude-val">Some</span>(bones_renderable_entity.<span class="number">0</span>),
-                    transform: {
-                        <span class="kw">let </span><span class="kw-2">mut </span>t: Transform = transform.into_bevy();
-                        <span class="comment">// Add tiny z offset to enforce a consistent z-sort
-                        </span>t.translation.z += z_offset;
-                        z_offset += <span class="number">0.00001</span>;
-                        t.into()
-                    },
-                    color: sprite.color.into_bevy(),
-                    rect: <span class="prelude-val">None</span>,
-                    custom_size: <span class="prelude-val">None</span>,
-                    image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
-                    flip_x: sprite.flip_x,
-                    flip_y: sprite.flip_y,
-                    anchor: Anchor::Center.as_vec(),
+            extracted_sprites.sprites.push(ExtractedSprite {
+                entity: bones_renderable_entity.<span class="number">0</span>,
+                transform: {
+                    <span class="kw">let </span><span class="kw-2">mut </span>t: Transform = transform.into_bevy();
+                    <span class="comment">// Add tiny z offset to enforce a consistent z-sort
+                    </span>t.translation.z += z_offset;
+                    z_offset += <span class="number">0.00001</span>;
+                    t.into()
                 },
-            );
+                color: sprite.color.into_bevy(),
+                rect: <span class="prelude-val">None</span>,
+                custom_size: <span class="prelude-val">None</span>,
+                image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
+                flip_x: sprite.flip_x,
+                flip_y: sprite.flip_y,
+                anchor: Anchor::Center.as_vec(),
+            });
         }
 
         <span class="comment">// Extract atlas sprites
@@ -2376,20 +2364,17 @@
                 min,
                 max: min + atlas.tile_size,
             };
-            extracted_sprites.sprites.insert(
-                bones_renderable_entity.<span class="number">0</span>,
-                ExtractedSprite {
-                    original_entity: <span class="prelude-val">Some</span>(bones_renderable_entity.<span class="number">0</span>),
-                    transform: transform.into_bevy().into(),
-                    color: atlas_sprite.color.into_bevy(),
-                    rect: <span class="prelude-val">Some</span>(rect),
-                    custom_size: <span class="prelude-val">None</span>,
-                    image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
-                    flip_x: atlas_sprite.flip_x,
-                    flip_y: atlas_sprite.flip_y,
-                    anchor: Anchor::Center.as_vec(),
-                },
-            );
+            extracted_sprites.sprites.push(ExtractedSprite {
+                entity: bones_renderable_entity.<span class="number">0</span>,
+                transform: transform.into_bevy().into(),
+                color: atlas_sprite.color.into_bevy(),
+                rect: <span class="prelude-val">Some</span>(rect),
+                custom_size: <span class="prelude-val">None</span>,
+                image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
+                flip_x: atlas_sprite.flip_x,
+                flip_y: atlas_sprite.flip_y,
+                anchor: Anchor::Center.as_vec(),
+            });
         }
     }
 }
@@ -2481,20 +2466,17 @@
                 // create a proper tile renderer. That can render multiple tiles on one quad instead
                 // of using a separate quad for each tile.
                 </span>transform.scale += Vec3::new(<span class="number">0.01</span>, <span class="number">0.01</span>, <span class="number">0.0</span>);
-                extracted_sprites.sprites.insert(
-                    bones_renderable_entity.<span class="number">0</span>,
-                    ExtractedSprite {
-                        original_entity: <span class="prelude-val">Some</span>(bones_renderable_entity.<span class="number">0</span>),
-                        transform: transform.into(),
-                        color: Color::WHITE,
-                        rect: <span class="prelude-val">Some</span>(rect),
-                        custom_size: <span class="prelude-val">None</span>,
-                        image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
-                        flip_x: tile.flip_x,
-                        flip_y: tile.flip_y,
-                        anchor: Anchor::BottomLeft.as_vec(),
-                    },
-                );
+                extracted_sprites.sprites.push(ExtractedSprite {
+                    entity: bones_renderable_entity.<span class="number">0</span>,
+                    transform: transform.into(),
+                    color: Color::WHITE,
+                    rect: <span class="prelude-val">Some</span>(rect),
+                    custom_size: <span class="prelude-val">None</span>,
+                    image_handle_id: bones_image_ids.get(<span class="kw-2">&amp;</span>image_id).unwrap().id(),
+                    flip_x: tile.flip_x,
+                    flip_y: tile.flip_y,
+                    anchor: Anchor::BottomLeft.as_vec(),
+                });
             }
         }
     }
