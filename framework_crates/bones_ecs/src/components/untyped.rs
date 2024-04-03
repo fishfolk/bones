@@ -296,12 +296,10 @@ impl UntypedComponentStore {
         entity: Entity,
         f: impl FnOnce() -> T,
     ) -> &mut T {
-        if self.bitset.bit_test(entity.index() as usize) {
-            return self.get_mut(entity).unwrap();
-        } else {
+        if !self.bitset.bit_test(entity.index() as usize) {
             self.insert(entity, f());
-            self.get_mut(entity).unwrap()
         }
+        self.get_mut(entity).unwrap()
     }
 
     /// Get a [`SchemaRefMut`] to the component for the given [`Entity`]
@@ -601,9 +599,8 @@ impl<'a> Iterator for UntypedComponentStoreIter<'a> {
                 if let Some(ptr) = self.store.get_idx(self.idx) {
                     self.idx += 1;
                     break Some(ptr);
-                } else {
-                    self.idx += 1;
                 }
+                self.idx += 1;
             } else {
                 break None;
             }
@@ -628,9 +625,8 @@ impl<'a> Iterator for UntypedComponentStoreIterMut<'a> {
                     break Some(unsafe {
                         SchemaRefMut::from_ptr_schema(ptr.as_ptr(), ptr.schema())
                     });
-                } else {
-                    self.idx += 1;
                 }
+                self.idx += 1;
             } else {
                 break None;
             }

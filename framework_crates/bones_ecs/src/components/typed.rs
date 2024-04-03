@@ -82,7 +82,7 @@ impl<T: HasSchema> ComponentStore<T> {
         self.untyped.get_mut_or_insert(entity, f)
     }
 
-    /// Get mutable references s to the component data for multiple entities at the same time.
+    /// Get mutable references to the component data for multiple entities at the same time.
     ///
     /// # Panics
     ///
@@ -206,7 +206,7 @@ impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
     #[inline]
     fn iter_mut_with_bitset(&mut self, bitset: Rc<BitSetVec>) -> ComponentBitsetIteratorMut<T> {
         // SOUND: we know the schema matches.
-        fn map<T>(r: SchemaRefMut<'_>) -> &mut T {
+        fn map<T>(r: SchemaRefMut) -> &mut T {
             unsafe { r.cast_into_mut_unchecked() }
         }
 
