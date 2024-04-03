@@ -109,6 +109,24 @@ impl<T: HasSchema> ComponentStore<T> {
         self.untyped.remove(entity)
     }
 
+    /// Gets an immutable reference to the component if there is exactly one instance of it.
+    #[inline]
+    pub fn get_single(&self) -> Option<&T> {
+        // SOUND: we know the schema matches.
+        self.untyped
+            .get_single()
+            .map(|x| unsafe { x.cast_into_unchecked() })
+    }
+
+    /// Gets a mutable reference to the component if there is exactly one instance of it.
+    #[inline]
+    pub fn get_single_mut(&mut self) -> Option<&mut T> {
+        // SOUND: we know the schema matches.
+        self.untyped
+            .get_single_mut()
+            .map(|x| unsafe { x.cast_into_mut_unchecked() })
+    }
+
     /// Iterates immutably over all components of this type.
     /// Very fast but doesn't allow joining with other component types.
     #[inline]
@@ -136,6 +154,12 @@ impl<T: HasSchema> ComponentStore<T> {
 ///
 /// Automatically implemented for [`ComponentStore`].
 pub trait ComponentIterBitset<'a, T: HasSchema> {
+    /// Gets an immutable reference to the component if there is exactly one instance of it.
+    fn get_single(&self) -> Option<&T>;
+
+    /// Gets a mutable reference to the component if there is exactly one instance of it.
+    fn get_single_mut(&mut self) -> Option<&mut T>;
+
     /// Iterates immutably over the components of this type where `bitset`
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
@@ -173,6 +197,24 @@ pub trait ComponentIterBitset<'a, T: HasSchema> {
 }
 
 impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
+    /// Gets an immutable reference to the component if there is exactly one instance of it.
+    fn get_single(&self) -> Option<&T> {
+        // SOUND: we know the schema matches.
+        fn map<T>(r: SchemaRef) -> &T {
+            unsafe { r.cast_into_unchecked() }
+        }
+        self.untyped.get_single().map(map)
+    }
+
+    /// Gets a mutable reference to the component if there is exactly one instance of it.
+    fn get_single_mut(&mut self) -> Option<&mut T> {
+        // SOUND: we know the schema matches.
+        fn map<T>(r: SchemaRefMut) -> &mut T {
+            unsafe { r.cast_into_mut_unchecked() }
+        }
+        self.untyped.get_single_mut().map(map)
+    }
+
     /// Iterates immutably over the components of this type where `bitset`
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.

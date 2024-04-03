@@ -91,6 +91,12 @@ pub trait QueryItem {
     type Iter: Iterator;
     /// Modify the iteration bitset
     fn apply_bitset(&self, bitset: &mut BitSetVec);
+    /// Return the item that matches the query within the given bitset if there is exactly one
+    /// entity that matches this query item.
+    fn get_single_with_bitset(
+        self,
+        bitset: Rc<BitSetVec>,
+    ) -> Option<<Self::Iter as Iterator>::Item>;
     /// Return an iterator over the provided bitset.
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter;
 }
@@ -164,8 +170,16 @@ impl<'a> QueryItem for &'a Ref<'a, UntypedComponentStore> {
 
 impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
     type Iter = ComponentBitsetIterator<'a, T>;
+
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
         bitset.bit_and(self.bitset());
+    }
+
+    fn get_single_with_bitset(
+        self,
+        _bitset: Rc<BitSetVec>,
+    ) -> Option<<Self::Iter as Iterator>::Item> {
+        ComponentStore::get_single(&**self)
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -175,8 +189,16 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
 
 impl<'a, 'q, T: HasSchema> QueryItem for &'a CompMut<'q, T> {
     type Iter = ComponentBitsetIterator<'a, T>;
+
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
         bitset.bit_and(self.bitset());
+    }
+
+    fn get_single_with_bitset(
+        self,
+        _bitset: Rc<BitSetVec>,
+    ) -> Option<<Self::Iter as Iterator>::Item> {
+        ComponentStore::get_single(&**self)
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -186,8 +208,16 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a CompMut<'q, T> {
 
 impl<'a, 'q, T: HasSchema> QueryItem for &'a mut CompMut<'q, T> {
     type Iter = ComponentBitsetIteratorMut<'a, T>;
+
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
         bitset.bit_and(self.bitset());
+    }
+
+    fn get_single_with_bitset(
+        self,
+        _bitset: Rc<BitSetVec>,
+    ) -> Option<<Self::Iter as Iterator>::Item> {
+        ComponentStore::get_single_mut(self)
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -203,7 +233,16 @@ where
     S: std::ops::Deref<Target = C> + 'a,
 {
     type Iter = ComponentBitsetOptionalIterator<'a, T>;
+
     fn apply_bitset(&self, _bitset: &mut BitSetVec) {}
+
+    fn get_single_with_bitset(
+        self,
+        _bitset: Rc<BitSetVec>,
+    ) -> Option<<Self::Iter as Iterator>::Item> {
+        // TODO: is `Option<Option<&T>>` the correct return type?
+        Some(self.0.get_single())
+    }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
         self.0.iter_with_bitset_optional(bitset)
@@ -217,7 +256,16 @@ where
     S: std::ops::DerefMut<Target = C> + 'a,
 {
     type Iter = ComponentBitsetOptionalIteratorMut<'a, T>;
+
     fn apply_bitset(&self, _bitset: &mut BitSetVec) {}
+
+    fn get_single_with_bitset(
+        self,
+        _bitset: Rc<BitSetVec>,
+    ) -> Option<<Self::Iter as Iterator>::Item> {
+        // TODO: is `Option<Option<&T>>` the correct return type?
+        Some(self.0.get_single_mut())
+    }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
         self.0.iter_mut_with_bitset_optional(bitset)
@@ -299,6 +347,31 @@ macro_rules! impl_query {
             }
 
             #[allow(non_snake_case)]
+            fn get_single_with_bitset(
+                self,
+                bitset: Rc<BitSetVec>,
+            ) -> Option<<Self::Iter as Iterator>::Item> {
+                let (
+                    $(
+                        $args,
+                    )*
+                ) = self;
+                let mut query = MultiQueryIter {
+                    data: (
+                        $(
+                            $args.iter_with_bitset(bitset.clone()),
+                        )*
+                    )
+                };
+                let first = query.next();
+                let has_second = query.next().is_some();
+                match (first, has_second) {
+                    (items @ Some(_), false) => items,
+                    _ => None,
+                }
+            }
+
+            #[allow(non_snake_case)]
             fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
                 let (
                     $(
@@ -363,6 +436,31 @@ impl<'a, I: Iterator> Iterator for EntitiesIterWith<'a, I> {
 }
 
 impl Entities {
+    /// Get a single entity and components in the given query if there is exactly one entity
+    /// matching the query.
+    pub fn get_single_with<Q: QueryItem>(
+        &self,
+        query: Q,
+    ) -> Option<(Entity, <<Q as QueryItem>::Iter as Iterator>::Item)> {
+        let mut bitset = self.bitset().clone();
+        query.apply_bitset(&mut bitset);
+
+        let entity = {
+            let mut ids = (0..self.next_id).filter(|&i| bitset.bit_test(i));
+            let id = ids.next()?;
+            if ids.next().is_some() {
+                return None;
+            }
+            Entity::new(id as u32, self.generation[id])
+        };
+
+        let bitset = Rc::new(bitset);
+
+        query
+            .get_single_with_bitset(bitset)
+            .map(|item| (entity, item))
+    }
+
     /// Iterates over entities using the provided bitset.
     pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> EntityIterator {
         EntityIterator {
