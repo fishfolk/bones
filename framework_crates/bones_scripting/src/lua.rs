@@ -264,7 +264,7 @@ impl Default for LuaEngine {
     /// Initialize the Lua engine.
     fn default() -> Self {
         // Make sure the compute task pool is initialized
-        ComputeTaskPool::get_or_init(TaskPool::new);
+        ComputeTaskPool::init(TaskPool::new);
 
         #[cfg(not(target_arch = "wasm32"))]
         let executor = {

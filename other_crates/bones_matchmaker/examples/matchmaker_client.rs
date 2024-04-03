@@ -59,7 +59,7 @@ fn configure_client() -> ClientConfig {
 }
 
 pub fn main() {
-    IoTaskPool::get_or_init(TaskPool::new);
+    IoTaskPool::init(TaskPool::new);
     let task_pool = IoTaskPool::get();
     futures_lite::future::block_on(task_pool.spawn(async move {
         if let Err(e) = client().await {

@@ -10,7 +10,7 @@ repository.workspace = true
 [dependencies]
 async-executor = "1.4"
 async-io       = "2.3"
-bevy_tasks     = "0.12"
+bevy_tasks     = "0.11"
 futures-lite   = "2.3"
 pin-project    = "1.0"
 quinn          = { version = "0.10", default-features = false, features = ["native-certs", "tls-rustls"] }

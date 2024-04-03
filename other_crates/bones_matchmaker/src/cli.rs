@@ -3,7 +3,7 @@ use clap::Parser;
 use tracing::metadata::LevelFilter;
 
 pub fn start() {
-    IoTaskPool::get_or_init(TaskPool::new);
+    IoTaskPool::init(TaskPool::new);
     let task_pool = IoTaskPool::get();
     configure_logging();
 

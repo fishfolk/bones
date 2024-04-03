@@ -75,7 +75,7 @@ bones_scripting = { version = "0.3", path = "../bones_scripting", optional = tru
 # Other
 anyhow        = "1.0"
 async-channel = "1.9"
-bevy_tasks    = { version = "0.12" }
+bevy_tasks    = "0.11"
 bytemuck      = "1.12"
 either        = "1.8"
 futures-lite  = "2.3"
@@ -98,8 +98,8 @@ serde      = { version = "1.0", features = ["derive"] }
 image = { version = "0.24", default-features = false }
 
 # Gui
-egui       = { version = "0.24", optional = true }
-egui_plot  = "0.24"
+egui       = { version = "0.23", optional = true }
+egui_plot  = "0.23"
 ttf-parser = { version = "0.20", default-features = false, optional = true }
 
 # Audio
@@ -117,7 +117,7 @@ document-features = { version = "0.2", optional = true }
 
 # Networking
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-ggrs                   = { version = "0.10", features = ["sync-send"] }
+ggrs                   = { git = "https://github.com/gschup/ggrs.git", rev = "0af1a044b96465bd10398947b7fb5e0a34a75f70", features = ["sync-send"] }
 bones_matchmaker_proto = { version = "0.2", path = "../../other_crates/bones_matchmaker_proto" }
 bytes                  = "1.4"
 mdns-sd                = { version = "0.10", default-features = false }
