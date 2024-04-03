@@ -491,6 +491,25 @@ impl UntypedComponentStore {
         }
     }
 
+    /// Get a reference to the component store if there is exactly one instance of the component.
+    pub fn get_single(&self) -> Option<SchemaRef> {
+        if self.bitset().bit_count() == 1 {
+            self.get_idx(0)
+        } else {
+            None
+        }
+    }
+
+    /// Get a mutable reference to the component store if there is exactly one instance of the
+    /// component.
+    pub fn get_single_mut(&mut self) -> Option<SchemaRefMut> {
+        if self.bitset().bit_count() == 1 {
+            self.get_idx_mut(0)
+        } else {
+            None
+        }
+    }
+
     /// Iterates immutably over all components of this type.
     ///
     /// Very fast but doesn't allow joining with other component types.
