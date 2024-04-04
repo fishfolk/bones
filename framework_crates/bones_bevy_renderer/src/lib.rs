@@ -28,7 +28,7 @@ use glam::*;
 
 use bevy_prototype_lyon::prelude as lyon;
 use bones_framework::prelude::{
-    self as bones, BitSet, ComponentIterBitset, SchemaBox, SCHEMA_REGISTRY,
+    self as bones, BitSet, ComponentIterBitset, EguiCtx, SchemaBox, SCHEMA_REGISTRY,
 };
 use prelude::convert::{IntoBevy, IntoBones};
 use serde::{de::Visitor, Deserialize, Serialize};
@@ -320,6 +320,8 @@ impl BonesBevyRenderer {
                 .map(|x| !x.load_progress.is_finished())
                 .unwrap_or(true)
         };
+        let egui_ctx_initialized =
+            |data: Res<BonesData>| data.game.shared_resource::<EguiCtx>().is_some();
 
         // Add the world sync systems
         app.add_systems(
@@ -350,7 +352,11 @@ impl BonesBevyRenderer {
                 ),
             )
                 .chain()
-                .run_if(assets_are_loaded),
+                // We should not run unless EguiCtx initialized, and assets loaded.
+                // setup_egui system already is gated by assets_are_loaded, so this should be fine
+                // with only checking EguiCtx.
+                // .run_if(assets_are_loaded)
+                .run_if(egui_ctx_initialized),
         );
 
         if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
