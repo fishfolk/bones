@@ -293,12 +293,12 @@ impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
 mod tests {
     use crate::prelude::*;
 
+    #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
+    #[repr(C)]
+    struct A(String);
+
     #[test]
     fn create_remove_components() {
-        #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
-        #[repr(C)]
-        struct A(String);
-
         let mut entities = Entities::default();
         let e1 = entities.create();
         let e2 = entities.create();
@@ -317,10 +317,6 @@ mod tests {
 
     #[test]
     fn get_mut_or_insert() {
-        #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
-        #[repr(C)]
-        struct A(String);
-
         let mut entities = Entities::default();
         let e1 = entities.create();
 
@@ -339,5 +335,45 @@ mod tests {
 
         // Test that existing component is retrieved
         assert_eq!(comp.0, "Test2");
+    }
+
+    #[test]
+    fn single_returns_none_when_empty() {
+        let storage = ComponentStore::<A>::default();
+
+        let maybe_comp = storage.get_single();
+
+        assert_eq!(maybe_comp, None);
+    }
+
+    #[test]
+    fn single_returns_some_single() {
+        let mut storage = ComponentStore::<A>::default();
+        let mut entities = Entities::default();
+
+        // Create some dummies so that the target entity isn't 0
+        (0..3).map(|_| entities.create()).count();
+
+        let e = entities.create();
+        let a = A("a".to_string());
+        storage.insert(e, a.clone());
+
+        let maybe_comp = storage.get_single();
+
+        assert_eq!(maybe_comp, Some(&a));
+    }
+
+    #[test]
+    fn single_returns_none_when_more_than_1() {
+        let mut entities = Entities::default();
+        let mut storage = ComponentStore::<A>::default();
+
+        (0..3)
+            .map(|i| storage.insert(entities.create(), A(i.to_string())))
+            .count();
+
+        let maybe_comp = storage.get_single();
+
+        assert_eq!(maybe_comp, None);
     }
 }
