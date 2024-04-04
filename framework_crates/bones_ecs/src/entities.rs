@@ -685,9 +685,17 @@ impl<'a> Iterator for EntityIterator<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::{collections::HashSet, sync::Arc};
 
     use crate::prelude::*;
+
+    #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
+    #[repr(C)]
+    struct A(String);
+
+    #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
+    #[repr(C)]
+    struct B(String);
 
     #[test]
     fn create_kill_entities() {
@@ -809,5 +817,70 @@ mod tests {
         // Join with an empty bitset
         let bitset = BitSetVec::default();
         assert_eq!(entities.iter_with_bitset(&bitset).count(), 0);
+    }
+
+    #[test]
+    fn get_single_with_one_component() {
+        let mut entities = Entities::default();
+        (0..3).map(|_| entities.create()).count();
+        let e = entities.create();
+        let a = A("a".to_string());
+
+        let mut storage = ComponentStore::<A>::default();
+        storage.insert(e, a.clone());
+
+        let world = World::default();
+        let mut state = Arc::new(AtomicCell::new(storage));
+        let comp = <Comp<A> as SystemParam>::borrow(&world, &mut state);
+
+        assert_eq!(entities.get_single_with(&comp), Some((e, &a)));
+    }
+
+    #[test]
+    fn get_single_with_two_components() {
+        let mut entities = Entities::default();
+
+        let mut storage_a = ComponentStore::<A>::default();
+        let mut storage_b = ComponentStore::<B>::default();
+
+        let _e1 = entities.create();
+
+        let e2 = entities.create();
+        storage_a.insert(e2, A("a2".to_string()));
+
+        let e3 = entities.create();
+        storage_b.insert(e3, B("b3".to_string()));
+
+        let e4 = entities.create();
+        let mut a4 = A("a4".to_string());
+        let mut b4 = B("b4".to_string());
+        storage_a.insert(e4, a4.clone());
+        storage_b.insert(e4, b4.clone());
+
+        let world = World::default();
+        let mut state_a = Arc::new(AtomicCell::new(storage_a));
+        let mut state_b = Arc::new(AtomicCell::new(storage_b));
+
+        {
+            let comp_a = <Comp<A> as SystemParam>::borrow(&world, &mut state_a);
+            let comp_b = <Comp<B> as SystemParam>::borrow(&world, &mut state_b);
+            assert_eq!(
+                entities.get_single_with((&comp_a, &comp_b)),
+                Some((e4, (&a4, &b4)))
+            );
+        }
+
+        {
+            let mut comp_a = <CompMut<A> as SystemParam>::borrow(&world, &mut state_a);
+            let mut comp_b = <CompMut<B> as SystemParam>::borrow(&world, &mut state_b);
+            assert_eq!(
+                entities.get_single_with((&comp_a, &comp_b)),
+                Some((e4, (&a4, &b4)))
+            );
+            assert_eq!(
+                entities.get_single_with((&mut comp_a, &mut comp_b)),
+                Some((e4, (&mut a4, &mut b4)))
+            );
+        }
     }
 }
