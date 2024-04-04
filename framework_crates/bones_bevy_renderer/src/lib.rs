@@ -312,7 +312,7 @@ impl BonesBevyRenderer {
             data.asset_server
                 .as_ref()
                 .map(|x| x.load_progress.is_finished())
-                .unwrap_or(true)
+                .unwrap_or(false)
         };
         let assets_not_loaded = |data: Res<BonesData>| {
             data.asset_server
