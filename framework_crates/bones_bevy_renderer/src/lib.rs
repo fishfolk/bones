@@ -352,10 +352,7 @@ impl BonesBevyRenderer {
                 ),
             )
                 .chain()
-                // We should not run unless EguiCtx initialized, and assets loaded.
-                // setup_egui system already is gated by assets_are_loaded, so this should be fine
-                // with only checking EguiCtx.
-                // .run_if(assets_are_loaded)
+                .run_if(assets_are_loaded)
                 .run_if(egui_ctx_initialized),
         );
 
