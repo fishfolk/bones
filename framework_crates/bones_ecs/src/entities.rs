@@ -248,7 +248,11 @@ where
         self,
         _bitset: Rc<BitSetVec>,
     ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
-        self.0.get_single().map(Some)
+        match self.0.get_single() {
+            Ok(single) => Ok(Some(single)),
+            Err(QueryItemError::NoEntities) => Ok(None),
+            Err(err) => Err(err),
+        }
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -270,8 +274,11 @@ where
         self,
         _bitset: Rc<BitSetVec>,
     ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
-        // TODO: is `Option<Option<&T>>` the correct return type?
-        self.0.get_single_mut().map(Some)
+        match self.0.get_single_mut() {
+            Ok(x) => Ok(Some(x)),
+            Err(QueryItemError::NoEntities) => Ok(None),
+            Err(err) => Err(err),
+        }
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -888,6 +895,82 @@ mod tests {
                 entities.get_single_with((&mut comp_a, &mut comp_b)),
                 Ok((e4, (&mut a4, &mut b4)))
             );
+        }
+    }
+
+    #[test]
+    fn get_single_with_optional_component() {
+        let mut entities = Entities::default();
+
+        let world = World::default();
+        let mut state_a = Arc::new(AtomicCell::new(ComponentStore::<A>::default()));
+
+        {
+            let e = entities.create();
+
+            let comp_a = <Comp<A> as SystemParam>::borrow(&world, &mut state_a);
+
+            assert_eq!(entities.get_single_with(&Optional(&comp_a)), Ok((e, None)));
+
+            entities.kill(e);
+        }
+
+        {
+            let e = entities.create();
+            let a = A("a".to_string());
+            state_a.borrow_mut().insert(e, a.clone());
+
+            let comp_a = <Comp<A> as SystemParam>::borrow(&world, &mut state_a);
+
+            assert_eq!(
+                entities.get_single_with(&Optional(&comp_a)),
+                Ok((e, Some(&a)))
+            );
+
+            entities.kill(e);
+        }
+    }
+
+    #[test]
+    fn get_single_with_optional_and_non_optional_components() {
+        let mut entities = Entities::default();
+
+        let world = World::default();
+        let mut state_a = Arc::new(AtomicCell::new(ComponentStore::<A>::default()));
+        let mut state_b = Arc::new(AtomicCell::new(ComponentStore::<B>::default()));
+
+        {
+            let e = entities.create();
+            let a = A("a".to_string());
+            state_a.borrow_mut().insert(e, a.clone());
+
+            let comp_a = <Comp<A> as SystemParam>::borrow(&world, &mut state_a);
+            let comp_b = <Comp<B> as SystemParam>::borrow(&world, &mut state_b);
+
+            assert_eq!(
+                entities.get_single_with((&comp_a, &Optional(&comp_b))),
+                Ok((e, (&a, None)))
+            );
+
+            entities.kill(e);
+        }
+
+        {
+            let e = entities.create();
+            let a = A("a".to_string());
+            let b = B("b".to_string());
+            state_a.borrow_mut().insert(e, a.clone());
+            state_b.borrow_mut().insert(e, b.clone());
+
+            let comp_a = <Comp<A> as SystemParam>::borrow(&world, &mut state_a);
+            let comp_b = <Comp<B> as SystemParam>::borrow(&world, &mut state_b);
+
+            assert_eq!(
+                entities.get_single_with((&comp_a, &Optional(&comp_b))),
+                Ok((e, (&a, Some(&b))))
+            );
+
+            entities.kill(e);
         }
     }
 }
