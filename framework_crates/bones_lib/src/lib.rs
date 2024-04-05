@@ -11,17 +11,29 @@ pub use bones_ecs as ecs;
 /// Bones lib prelude
 pub mod prelude {
     pub use crate::{
-        ecs::prelude::*, instant::Instant, time::*, Game, GamePlugin, Session, SessionOptions,
-        SessionPlugin, SessionRunner, Sessions,
+        ecs::prelude::*, instant::Instant, time::*, Game, GamePlugin, Session, SessionCommands,
+        SessionOptions, SessionPlugin, SessionRunner, Sessions,
     };
 }
 
 pub use instant;
 pub mod time;
 
-use std::{fmt::Debug, sync::Arc};
+use std::{collections::VecDeque, fmt::Debug, sync::Arc};
 
 use crate::prelude::*;
+
+/// Commands that operate on [`Sessions`], called after all sessions update.
+/// These may be used to add/delete/modify sessions.
+///
+/// `SessionCommands` must be installed as a shared resource to take effect.
+/// This may be achieved while installing a [`GamePlugin`].
+///
+/// `SessionCommands` is useful in a situation where you want to remove / recreate
+/// a session from within it's own system. You cannot do this while the `Session` is running
+#[derive(HasSchema, Default, Deref, DerefMut)]
+#[schema(no_clone)]
+pub struct SessionCommands(VecDeque<Box<dyn FnOnce(&mut Sessions) + Sync + Send>>);
 
 /// A bones game. This includes all of the game worlds, and systems.
 #[derive(Deref, DerefMut)]
@@ -398,6 +410,18 @@ impl Game {
 
                 // Insert the current session back into the session list
                 self.sessions.map.insert(session_name, current_session);
+            }
+
+            // Extract `SessionCommands` from optional shared resource
+            // (Swap to avoid double borrow of self)
+            let mut session_commands = SessionCommands::default();
+            if let Some(mut new_commands) = self.shared_resource_mut::<SessionCommands>() {
+                std::mem::swap(&mut session_commands.0, &mut new_commands.0);
+            }
+
+            // Execute Session Commands
+            for command in session_commands.0.drain(..) {
+                command(&mut self.sessions);
             }
 
             // Run any after session game systems
