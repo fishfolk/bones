@@ -309,6 +309,7 @@ impl BonesBevyRenderer {
         .init_resource::<BonesGameEntity>();
 
         let assets_are_loaded = |data: Res<BonesData>| {
+            // Game is not required to have AssetServer, so default to true.
             data.asset_server
                 .as_ref()
                 .map(|x| x.load_progress.is_finished())
