@@ -28,7 +28,7 @@ use glam::*;
 
 use bevy_prototype_lyon::prelude as lyon;
 use bones_framework::prelude::{
-    self as bones, BitSet, ComponentIterBitset, SchemaBox, SCHEMA_REGISTRY,
+    self as bones, BitSet, ComponentIterBitset, EguiCtx, SchemaBox, SCHEMA_REGISTRY,
 };
 use prelude::convert::{IntoBevy, IntoBones};
 use serde::{de::Visitor, Deserialize, Serialize};
@@ -309,6 +309,7 @@ impl BonesBevyRenderer {
         .init_resource::<BonesGameEntity>();
 
         let assets_are_loaded = |data: Res<BonesData>| {
+            // Game is not required to have AssetServer, so default to true.
             data.asset_server
                 .as_ref()
                 .map(|x| x.load_progress.is_finished())
@@ -320,6 +321,8 @@ impl BonesBevyRenderer {
                 .map(|x| !x.load_progress.is_finished())
                 .unwrap_or(true)
         };
+        let egui_ctx_initialized =
+            |data: Res<BonesData>| data.game.shared_resource::<EguiCtx>().is_some();
 
         // Add the world sync systems
         app.add_systems(
@@ -350,7 +353,8 @@ impl BonesBevyRenderer {
                 ),
             )
                 .chain()
-                .run_if(assets_are_loaded),
+                .run_if(assets_are_loaded)
+                .run_if(egui_ctx_initialized),
         );
 
         if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
