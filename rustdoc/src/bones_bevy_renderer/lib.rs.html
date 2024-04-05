@@ -1297,6 +1297,10 @@
 <a href="#1297" id="1297">1297</a>
 <a href="#1298" id="1298">1298</a>
 <a href="#1299" id="1299">1299</a>
+<a href="#1300" id="1300">1300</a>
+<a href="#1301" id="1301">1301</a>
+<a href="#1302" id="1302">1302</a>
+<a href="#1303" id="1303">1303</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -1327,7 +1331,7 @@
 
 <span class="kw">use </span>bevy_prototype_lyon::prelude <span class="kw">as </span>lyon;
 <span class="kw">use </span>bones_framework::prelude::{
-    <span class="self">self </span><span class="kw">as </span>bones, BitSet, ComponentIterBitset, SchemaBox, SCHEMA_REGISTRY,
+    <span class="self">self </span><span class="kw">as </span>bones, BitSet, ComponentIterBitset, EguiCtx, SchemaBox, SCHEMA_REGISTRY,
 };
 <span class="kw">use </span>prelude::convert::{IntoBevy, IntoBones};
 <span class="kw">use </span>serde::{de::Visitor, Deserialize, Serialize};
@@ -1608,7 +1612,8 @@
         .init_resource::&lt;BonesGameEntity&gt;();
 
         <span class="kw">let </span>assets_are_loaded = |data: Res&lt;BonesData&gt;| {
-            data.asset_server
+            <span class="comment">// Game is not required to have AssetServer, so default to true.
+            </span>data.asset_server
                 .as_ref()
                 .map(|x| x.load_progress.is_finished())
                 .unwrap_or(<span class="bool-val">true</span>)
@@ -1619,6 +1624,8 @@
                 .map(|x| !x.load_progress.is_finished())
                 .unwrap_or(<span class="bool-val">true</span>)
         };
+        <span class="kw">let </span>egui_ctx_initialized =
+            |data: Res&lt;BonesData&gt;| data.game.shared_resource::&lt;EguiCtx&gt;().is_some();
 
         <span class="comment">// Add the world sync systems
         </span>app.add_systems(
@@ -1649,7 +1656,8 @@
                 ),
             )
                 .chain()
-                .run_if(assets_are_loaded),
+                .run_if(assets_are_loaded)
+                .run_if(egui_ctx_initialized),
         );
 
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(render_app) = app.get_sub_app_mut(RenderApp) {
