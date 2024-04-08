@@ -469,6 +469,11 @@ where
                                         for (player_idx, (input, status)) in
                                             network_inputs.into_iter().enumerate()
                                         {
+                                            debug!(
+                                                "Net player({player_idx}) local: {}, status: {status:?}, input: {:?}",
+                                                self.local_player_idx == player_idx,
+                                                input
+                                            );
                                             player_inputs.network_update(
                                                 player_idx,
                                                 &input,
