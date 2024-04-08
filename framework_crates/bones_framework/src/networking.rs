@@ -5,7 +5,7 @@ use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 use ggrs::{NetworkStats, P2PSession, PlayerHandle};
 use instant::Duration;
 use once_cell::sync::Lazy;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::prelude::*;
 
