@@ -5,7 +5,7 @@ use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 use ggrs::{NetworkStats, P2PSession, PlayerHandle};
 use instant::Duration;
 use once_cell::sync::Lazy;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::prelude::*;
 
@@ -469,6 +469,11 @@ where
                                         for (player_idx, (input, status)) in
                                             network_inputs.into_iter().enumerate()
                                         {
+                                            trace!(
+                                                "Net player({player_idx}) local: {}, status: {status:?}, input: {:?}",
+                                                self.local_player_idx == player_idx,
+                                                input
+                                            );
                                             player_inputs.network_update(
                                                 player_idx,
                                                 &input,
