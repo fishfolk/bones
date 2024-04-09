@@ -96,9 +96,17 @@ pub trait QueryItem {
     fn get_single_with_bitset(
         self,
         bitset: Rc<BitSetVec>,
-    ) -> Option<<Self::Iter as Iterator>::Item>;
+    ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError>;
     /// Return an iterator over the provided bitset.
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter;
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum QueryItemError {
+    /// No entity matches the query.
+    NoEntities,
+    /// More than one entity matches the query.
+    MultipleEntities,
 }
 
 /// Wrapper for the [`Comp`] [`SystemParam`] used as [`QueryItem`] to iterate
@@ -178,7 +186,7 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
     fn get_single_with_bitset(
         self,
         _bitset: Rc<BitSetVec>,
-    ) -> Option<<Self::Iter as Iterator>::Item> {
+    ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
         ComponentStore::get_single(&**self)
     }
 
@@ -197,7 +205,7 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a CompMut<'q, T> {
     fn get_single_with_bitset(
         self,
         _bitset: Rc<BitSetVec>,
-    ) -> Option<<Self::Iter as Iterator>::Item> {
+    ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
         ComponentStore::get_single(&**self)
     }
 
@@ -216,7 +224,7 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a mut CompMut<'q, T> {
     fn get_single_with_bitset(
         self,
         _bitset: Rc<BitSetVec>,
-    ) -> Option<<Self::Iter as Iterator>::Item> {
+    ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
         ComponentStore::get_single_mut(self)
     }
 
@@ -239,9 +247,8 @@ where
     fn get_single_with_bitset(
         self,
         _bitset: Rc<BitSetVec>,
-    ) -> Option<<Self::Iter as Iterator>::Item> {
-        // TODO: is `Option<Option<&T>>` the correct return type?
-        Some(self.0.get_single())
+    ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
+        self.0.get_single().map(Some)
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -262,9 +269,9 @@ where
     fn get_single_with_bitset(
         self,
         _bitset: Rc<BitSetVec>,
-    ) -> Option<<Self::Iter as Iterator>::Item> {
+    ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
         // TODO: is `Option<Option<&T>>` the correct return type?
-        Some(self.0.get_single_mut())
+        self.0.get_single_mut().map(Some)
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -350,7 +357,7 @@ macro_rules! impl_query {
             fn get_single_with_bitset(
                 self,
                 bitset: Rc<BitSetVec>,
-            ) -> Option<<Self::Iter as Iterator>::Item> {
+            ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
                 let (
                     $(
                         $args,
@@ -366,8 +373,8 @@ macro_rules! impl_query {
                 let first = query.next();
                 let has_second = query.next().is_some();
                 match (first, has_second) {
-                    (items @ Some(_), false) => items,
-                    _ => None,
+                    (Some(items), false) => Ok(items),
+                    _ => Err(QueryItemError::MultipleEntities),
                 }
             }
 
@@ -441,15 +448,15 @@ impl Entities {
     pub fn get_single_with<Q: QueryItem>(
         &self,
         query: Q,
-    ) -> Option<(Entity, <<Q as QueryItem>::Iter as Iterator>::Item)> {
+    ) -> Result<(Entity, <<Q as QueryItem>::Iter as Iterator>::Item), QueryItemError> {
         let mut bitset = self.bitset().clone();
         query.apply_bitset(&mut bitset);
 
         let entity = {
             let mut ids = (0..self.next_id).filter(|&i| bitset.bit_test(i));
-            let id = ids.next()?;
+            let id = ids.next().ok_or(QueryItemError::NoEntities)?;
             if ids.next().is_some() {
-                return None;
+                return Err(QueryItemError::MultipleEntities);
             }
             Entity::new(id as u32, self.generation[id])
         };
@@ -833,7 +840,7 @@ mod tests {
         let mut state = Arc::new(AtomicCell::new(storage));
         let comp = <Comp<A> as SystemParam>::borrow(&world, &mut state);
 
-        assert_eq!(entities.get_single_with(&comp), Some((e, &a)));
+        assert_eq!(entities.get_single_with(&comp), Ok((e, &a)));
     }
 
     #[test]
@@ -866,7 +873,7 @@ mod tests {
             let comp_b = <Comp<B> as SystemParam>::borrow(&world, &mut state_b);
             assert_eq!(
                 entities.get_single_with((&comp_a, &comp_b)),
-                Some((e4, (&a4, &b4)))
+                Ok((e4, (&a4, &b4)))
             );
         }
 
@@ -875,11 +882,11 @@ mod tests {
             let mut comp_b = <CompMut<B> as SystemParam>::borrow(&world, &mut state_b);
             assert_eq!(
                 entities.get_single_with((&comp_a, &comp_b)),
-                Some((e4, (&a4, &b4)))
+                Ok((e4, (&a4, &b4)))
             );
             assert_eq!(
                 entities.get_single_with((&mut comp_a, &mut comp_b)),
-                Some((e4, (&mut a4, &mut b4)))
+                Ok((e4, (&mut a4, &mut b4)))
             );
         }
     }
