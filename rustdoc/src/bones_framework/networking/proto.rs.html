@@ -59,6 +59,42 @@
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Serializable data types for network messages used by the game.
 
 </span><span class="comment">// use bevy::reflect::Reflect;
@@ -72,24 +108,35 @@
 </span><span class="kw">pub struct </span>DenseMoveDirection(<span class="kw">pub </span>Vec2);
 
 <span class="doccomment">/// This is the specific [`Quantized`] type that we use to represent movement directions in
-/// [`DenseMoveDirection`].
-</span><span class="kw">type </span>MoveDirQuant = Quantized&lt;IntRange&lt;u16, <span class="number">0b111111</span>, -<span class="number">1</span>, <span class="number">1</span>&gt;&gt;;
+/// [`DenseMoveDirection`]. This encodes magnitude of direction, but sign is encoded separately.
+</span><span class="kw">type </span>MoveDirQuant = Quantized&lt;IntRange&lt;u16, <span class="number">0b11111</span>, <span class="number">0</span>, <span class="number">1</span>&gt;&gt;;
 
 <span class="kw">impl </span>From&lt;u16&gt; <span class="kw">for </span>DenseMoveDirection {
     <span class="kw">fn </span>from(bits: u16) -&gt; <span class="self">Self </span>{
         <span class="comment">// maximum movement value representable, we use 6 bits to represent each movement direction.
-        </span><span class="kw">let </span>max = <span class="number">0b111111</span>;
+        // Most significant is sign, and other 5 encode float value between 0 and
+        </span><span class="kw">let </span>bit_length = <span class="number">6</span>;
+        <span class="kw">let </span>quantized = <span class="number">0b011111</span>;
+        <span class="kw">let </span>sign = <span class="number">0b100000</span>;
         <span class="comment">// The first six bits represent the x movement
-        </span><span class="kw">let </span>x_move_bits = bits &amp; max;
+        </span><span class="kw">let </span>x_move_bits = bits &amp; quantized;
+        <span class="kw">let </span>x_move_sign = <span class="kw">if </span>bits &amp; sign == <span class="number">0 </span>{ <span class="number">1.0 </span>} <span class="kw">else </span>{ -<span class="number">1.0 </span>};
         <span class="comment">// The second six bits represents the y movement
-        </span><span class="kw">let </span>y_move_bits = (bits &gt;&gt; <span class="number">6</span>) &amp; max;
+        </span><span class="kw">let </span>y_move_bits = (bits &gt;&gt; bit_length) &amp; quantized;
+        <span class="kw">let </span>y_move_sign = <span class="kw">if </span>(bits &gt;&gt; bit_length) &amp; sign == <span class="number">0 </span>{
+            <span class="number">1.0
+        </span>} <span class="kw">else </span>{
+            -<span class="number">1.0
+        </span>};
 
         <span class="comment">// Round near-zero values to zero
         </span><span class="kw">let </span><span class="kw-2">mut </span>x = MoveDirQuant::from_raw(x_move_bits).to_f32();
+        x <span class="kw-2">*</span>= x_move_sign;
         <span class="kw">if </span>x.abs() &lt; <span class="number">0.02 </span>{
             x = <span class="number">0.0</span>;
         }
         <span class="kw">let </span><span class="kw-2">mut </span>y = MoveDirQuant::from_raw(y_move_bits).to_f32();
+        y <span class="kw-2">*</span>= y_move_sign;
         <span class="kw">if </span>y.abs() &lt; <span class="number">0.02 </span>{
             y = <span class="number">0.0</span>;
         }
@@ -100,10 +147,20 @@
 
 <span class="kw">impl </span>From&lt;DenseMoveDirection&gt; <span class="kw">for </span>u16 {
     <span class="kw">fn </span>from(dir: DenseMoveDirection) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>x_bits = MoveDirQuant::from_f32(dir.x).raw();
-        <span class="kw">let </span>y_bits = MoveDirQuant::from_f32(dir.y).raw();
+        <span class="kw">let </span>x_bits = MoveDirQuant::from_f32(dir.x.abs()).raw();
+        <span class="kw">let </span>y_bits = MoveDirQuant::from_f32(dir.y.abs()).raw();
+        <span class="kw">let </span>x_sign_bit = <span class="kw">if </span>dir.x.is_sign_positive() {
+            <span class="number">0
+        </span>} <span class="kw">else </span>{
+            <span class="number">0b100000
+        </span>};
+        <span class="kw">let </span>y_sign_bit = <span class="kw">if </span>dir.y.is_sign_positive() {
+            <span class="number">0
+        </span>} <span class="kw">else </span>{
+            <span class="number">0b100000
+        </span>};
 
-        x_bits | (y_bits &lt;&lt; <span class="number">6</span>)
+        (x_bits | x_sign_bit) | ((y_bits | y_sign_bit) &lt;&lt; <span class="number">6</span>)
     }
 }
 
@@ -118,6 +175,21 @@
     <span class="kw">fn </span>from(dir: DenseMoveDirection) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>bits_16 = u16::from(dir);
         bits_16 <span class="kw">as </span>u32
+    }
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span><span class="kw">crate</span>::prelude::proto::DenseMoveDirection;
+
+    <span class="attr">#[test]
+    </span><span class="doccomment">/// GGRS currently uses zero&#39;d player input as prediction on first frame,
+    /// so ensure our move direction representation is no input when built from
+    /// 0 bits.
+    </span><span class="kw">pub fn </span>zeroed_dense_move_dir() {
+        <span class="kw">let </span>bits: u16 = <span class="number">0</span>;
+        <span class="kw">let </span>dense_move_dir = DenseMoveDirection::from(bits);
+        <span class="macro">assert_eq!</span>(dense_move_dir.<span class="number">0</span>, glam::Vec2::ZERO);
     }
 }
 </code></pre></div></section></main></body></html>
