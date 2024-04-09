@@ -111,7 +111,7 @@ impl<T: HasSchema> ComponentStore<T> {
 
     /// Gets an immutable reference to the component if there is exactly one instance of it.
     #[inline]
-    pub fn get_single(&self) -> Option<&T> {
+    pub fn get_single(&self) -> Result<&T, QueryItemError> {
         // SOUND: we know the schema matches.
         self.untyped
             .get_single()
@@ -120,7 +120,7 @@ impl<T: HasSchema> ComponentStore<T> {
 
     /// Gets a mutable reference to the component if there is exactly one instance of it.
     #[inline]
-    pub fn get_single_mut(&mut self) -> Option<&mut T> {
+    pub fn get_single_mut(&mut self) -> Result<&mut T, QueryItemError> {
         // SOUND: we know the schema matches.
         self.untyped
             .get_single_mut()
@@ -155,10 +155,10 @@ impl<T: HasSchema> ComponentStore<T> {
 /// Automatically implemented for [`ComponentStore`].
 pub trait ComponentIterBitset<'a, T: HasSchema> {
     /// Gets an immutable reference to the component if there is exactly one instance of it.
-    fn get_single(&self) -> Option<&T>;
+    fn get_single(&self) -> Result<&T, QueryItemError>;
 
     /// Gets a mutable reference to the component if there is exactly one instance of it.
-    fn get_single_mut(&mut self) -> Option<&mut T>;
+    fn get_single_mut(&mut self) -> Result<&mut T, QueryItemError>;
 
     /// Iterates immutably over the components of this type where `bitset`
     /// indicates the indices of entities.
@@ -198,7 +198,7 @@ pub trait ComponentIterBitset<'a, T: HasSchema> {
 
 impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
     /// Gets an immutable reference to the component if there is exactly one instance of it.
-    fn get_single(&self) -> Option<&T> {
+    fn get_single(&self) -> Result<&T, QueryItemError> {
         // SOUND: we know the schema matches.
         fn map<T>(r: SchemaRef) -> &T {
             unsafe { r.cast_into_unchecked() }
@@ -207,7 +207,7 @@ impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
     }
 
     /// Gets a mutable reference to the component if there is exactly one instance of it.
-    fn get_single_mut(&mut self) -> Option<&mut T> {
+    fn get_single_mut(&mut self) -> Result<&mut T, QueryItemError> {
         // SOUND: we know the schema matches.
         fn map<T>(r: SchemaRefMut) -> &mut T {
             unsafe { r.cast_into_mut_unchecked() }
@@ -343,7 +343,7 @@ mod tests {
 
         let maybe_comp = storage.get_single();
 
-        assert_eq!(maybe_comp, None);
+        assert_eq!(maybe_comp, Err(QueryItemError::NoEntities));
     }
 
     #[test]
@@ -360,7 +360,7 @@ mod tests {
 
         let maybe_comp = storage.get_single();
 
-        assert_eq!(maybe_comp, Some(&a));
+        assert_eq!(maybe_comp, Ok(&a));
     }
 
     #[test]
@@ -374,6 +374,6 @@ mod tests {
 
         let maybe_comp = storage.get_single();
 
-        assert_eq!(maybe_comp, None);
+        assert_eq!(maybe_comp, Err(QueryItemError::MultipleEntities));
     }
 }
