@@ -583,6 +583,31 @@
 <a href="#583" id="583">583</a>
 <a href="#584" id="584">584</a>
 <a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -596,18 +621,17 @@
 <span class="doccomment">/// Bones lib prelude
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use crate</span>::{
-        ecs::prelude::<span class="kw-2">*</span>, instant::Instant, time::<span class="kw-2">*</span>, Game, GamePlugin, Session, SessionOptions,
-        SessionPlugin, SessionRunner, Sessions,
+        ecs::prelude::<span class="kw-2">*</span>, instant::Instant, time::<span class="kw-2">*</span>, Game, GamePlugin, Session, SessionCommand,
+        SessionOptions, SessionPlugin, SessionRunner, Sessions,
     };
 }
 
 <span class="kw">pub use </span>instant;
 <span class="kw">pub mod </span>time;
 
-<span class="kw">use </span>std::{fmt::Debug, sync::Arc};
+<span class="kw">use </span>std::{collections::VecDeque, fmt::Debug, sync::Arc};
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-
 <span class="doccomment">/// A bones game. This includes all of the game worlds, and systems.
 </span><span class="attr">#[derive(Deref, DerefMut)]
 </span><span class="kw">pub struct </span>Session {
@@ -993,6 +1017,15 @@
             }
         }
 
+        <span class="comment">// Execute Session Commands
+        </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>session_commands: VecDeque&lt;Box&lt;SessionCommand&gt;&gt; = default();
+            std::mem::swap(<span class="kw-2">&amp;mut </span>session_commands, <span class="kw-2">&amp;mut </span><span class="self">self</span>.sessions.commands);
+            <span class="kw">for </span>command <span class="kw">in </span>session_commands.drain(..) {
+                command(<span class="kw-2">&amp;mut </span><span class="self">self</span>.sessions);
+            }
+        }
+
         <span class="comment">// Run after systems
         </span><span class="kw">for </span>system <span class="kw">in </span><span class="kw-2">&amp;mut </span>game_systems.after {
             system(<span class="self">self</span>)
@@ -1081,12 +1114,24 @@
     </span>}
 }
 
+<span class="doccomment">/// Type of session command
+</span><span class="kw">pub type </span>SessionCommand = <span class="kw">dyn </span>FnOnce(<span class="kw-2">&amp;mut </span>Sessions) + Sync + Send;
+
 <span class="doccomment">/// Container for multiple game sessions.
 ///
 /// Each session shares the same [`Entities`].
-</span><span class="attr">#[derive(HasSchema, Default, Debug)]
+</span><span class="attr">#[derive(HasSchema, Default)]
 </span><span class="kw">pub struct </span>Sessions {
     map: UstrMap&lt;Session&gt;,
+
+    <span class="doccomment">/// Commands that operate on [`Sessions`], called after all sessions update.
+    /// These may be used to add/delete/modify sessions.
+    ///
+    /// Commands are useful in a situation where you want to remove / recreate
+    /// a session from within it&#39;s own system. You cannot do this while the `Session` is running.
+    ///
+    /// Commands added inside a session command will not be executed until next frame.
+    </span>commands: VecDeque&lt;Box&lt;SessionCommand&gt;&gt;,
 }
 
 <span class="doccomment">/// Resource that allows you to configure the current session.
@@ -1157,6 +1202,11 @@
     <span class="doccomment">/// Iterate over sessions.
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::collections::hash_map::Iter&lt;Ustr, Session&gt; {
         <span class="self">self</span>.map.iter()
+    }
+
+    <span class="doccomment">/// Add a [`SessionCommand`] to queue.
+    </span><span class="kw">pub fn </span>add_command(<span class="kw-2">&amp;mut </span><span class="self">self</span>, command: Box&lt;SessionCommand&gt;) {
+        <span class="self">self</span>.commands.push_back(command);
     }
 }
 
