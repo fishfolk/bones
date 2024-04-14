@@ -140,6 +140,7 @@ pub trait SessionRunner: Sync + Send + 'static {
     ///     world.resource_mut::<Time>().update_with_instant(now);
     ///     stages.run(world);
     /// }
+    /// fn restart_session(&mut self) {}
     /// # }
     /// ```
     fn step(&mut self, now: Instant, world: &mut World, stages: &mut SystemStages);
