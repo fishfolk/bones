@@ -72,10 +72,10 @@ impl SessionPlugin for LuaPluginLoaderSessionPlugin {
                             });
 
                             for plugin_handle in lua_plugins.iter() {
-                                let Some(plugin) = asset_server.try_get(*plugin_handle).unwrap()
-                                else {
+                                let Some(plugin) = asset_server.try_get(*plugin_handle) else {
                                     return;
                                 };
+                                let plugin = plugin.unwrap();
 
                                 // Load the plugin if necessary
                                 if !plugin.has_loaded() {

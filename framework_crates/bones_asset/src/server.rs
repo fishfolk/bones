@@ -833,32 +833,35 @@ impl AssetServer {
 
     /// Borrow a loaded asset.
     ///
-    /// Returns Some(None) if asset not found or [`SchemaMismatchError`] if type cast fails.
+    /// Returns None if asset not found and Some([`SchemaMismatchError`]) if type cast fails.
     pub fn try_get<T: HasSchema>(
         &self,
         handle: Handle<T>,
-    ) -> Result<
-        Option<MappedMapRef<'_, Cid, LoadedAsset, T, std::collections::hash_map::RandomState>>,
-        SchemaMismatchError,
+    ) -> Option<
+        Result<
+            MappedMapRef<'_, Cid, LoadedAsset, T, std::collections::hash_map::RandomState>,
+            SchemaMismatchError,
+        >,
     > {
         let cid = match self.store.asset_ids.get(&handle.untyped()) {
             Some(cid) => cid,
-            None => return Ok(None),
+            None => return None,
         };
-        MapRef::try_map(self.store.assets.get(&cid).unwrap(), |x| {
-            let asset = &x.data;
+        Some(
+            MapRef::try_map(self.store.assets.get(&cid).unwrap(), |x| {
+                let asset = &x.data;
 
-            // If this is a handle to a schema box, then return the schema box directly without casting
-            if T::schema() == <SchemaBox as HasSchema>::schema() {
-                // SOUND: the above comparison verifies that T is concretely a SchemaBox so &Schemabox
-                // is the same as &T.
-                Some(unsafe { std::mem::transmute(asset) })
-            } else {
-                asset.try_cast_ref().ok()
-            }
-        })
-        .map_err(|_| SchemaMismatchError)
-        .map(Some)
+                // If this is a handle to a schema box, then return the schema box directly without casting
+                if T::schema() == <SchemaBox as HasSchema>::schema() {
+                    // SOUND: the above comparison verifies that T is concretely a SchemaBox so &Schemabox
+                    // is the same as &T.
+                    Some(unsafe { std::mem::transmute(asset) })
+                } else {
+                    asset.try_cast_ref().ok()
+                }
+            })
+            .map_err(|_| SchemaMismatchError),
+        )
     }
 
     /// Borrow a loaded asset.
