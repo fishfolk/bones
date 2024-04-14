@@ -139,9 +139,16 @@ pub trait SessionRunner: Sync + Send + 'static {
     ///     world.resource_mut::<Time>().update_with_instant(now);
     ///     stages.run(world);
     /// }
+    /// fn restart_session(&mut self) {}
     /// # }
     /// ```
     fn step(&mut self, now: Instant, world: &mut World, stages: &mut SystemStages);
+
+    /// Restart Session Runner. This should reset accumulated time, inputs, etc.
+    ///
+    /// The expectation is that current players using it may continue to, so something like a network
+    /// socket or player info should persist.
+    fn restart_session(&mut self);
 }
 
 /// The default [`SessionRunner`], which just runs the systems once every time it is run.
@@ -151,6 +158,12 @@ impl SessionRunner for DefaultSessionRunner {
     fn step(&mut self, now: instant::Instant, world: &mut World, stages: &mut SystemStages) {
         world.resource_mut::<Time>().update_with_instant(now);
         stages.run(world)
+    }
+
+    // This is a no-op as no state, but implemented this way in case that changes later.
+    #[allow(clippy::default_constructed_unit_structs)]
+    fn restart_session(&mut self) {
+        *self = DefaultSessionRunner::default();
     }
 }
 

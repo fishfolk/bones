@@ -45,7 +45,7 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{certs, debug::prelude::*, input, lan, online, proto};
+    pub use super::{certs, debug::prelude::*, input, lan, online, proto, NetworkInfo};
 }
 
 /// Muliplier for framerate that will be used when playing an online match.
@@ -138,7 +138,27 @@ pub struct NetworkMatchSocket(Arc<dyn NetworkSocket>);
 /// A type-erased [`ggrs::NonBlockingSocket`]
 /// implementation.
 #[derive(Deref, DerefMut)]
-pub struct BoxedNonBlockingSocket(Box<dyn ggrs::NonBlockingSocket<usize> + 'static>);
+pub struct BoxedNonBlockingSocket(Box<dyn GgrsSocket>);
+
+impl Clone for BoxedNonBlockingSocket {
+    fn clone(&self) -> Self {
+        self.ggrs_socket()
+    }
+}
+
+/// Wraps [`ggrs::Message`] with included `match_id`, used to determine if message received
+/// from current match.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GameMessage {
+    /// Socket match id
+    pub match_id: u8,
+    /// Wrapped message
+    pub message: ggrs::Message,
+}
+
+/// Automatically implemented for [`NetworkSocket`] + [`ggrs::NonBlockingSocket<usize>`].
+pub trait GgrsSocket: NetworkSocket + ggrs::NonBlockingSocket<usize> {}
+impl<T> GgrsSocket for T where T: NetworkSocket + ggrs::NonBlockingSocket<usize> {}
 
 impl ggrs::NonBlockingSocket<usize> for BoxedNonBlockingSocket {
     fn send_to(&mut self, msg: &ggrs::Message, addr: &usize) {
@@ -170,6 +190,10 @@ pub trait NetworkSocket: Sync + Send {
     fn player_is_local(&self) -> [bool; MAX_PLAYERS];
     /// Get the player count for this network match.
     fn player_count(&self) -> usize;
+
+    /// Increment match id so messages from previous match that are still in flight
+    /// will be filtered out. Used when starting new session with existing socket.
+    fn increment_match_id(&mut self);
 }
 
 /// The destination for a reliable network message.
@@ -178,6 +202,17 @@ pub enum SocketTarget {
     Player(usize),
     /// Broadcast to all players.
     All,
+}
+
+/// Resource updated each frame exposing current frame and last confirmed of online session.
+#[derive(HasSchema, Copy, Clone, Default)]
+pub struct NetworkInfo {
+    /// Current frame of simulation step
+    pub current_frame: i32,
+
+    /// Last confirmed frame by all clients.
+    /// Anything that occurred on this frame is agreed upon by all clients.
+    pub last_confirmed_frame: i32,
 }
 
 /// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
@@ -207,11 +242,18 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
 
     /// Session runner's input collector.
     pub input_collector: InputTypes::InputCollector,
+
+    /// Store copy of socket to be able to restart session runner with existing socket.
+    socket: BoxedNonBlockingSocket,
+
+    /// Local input delay ggrs session was initialized with
+    local_input_delay: usize,
 }
 
 /// The info required to create a [`GgrsSessionRunner`].
+#[derive(Clone)]
 pub struct GgrsSessionRunnerInfo {
-    /// The GGRS socket implementation to use.
+    /// The socket that will be converted into GGRS socket implementation.
     pub socket: BoxedNonBlockingSocket,
     /// The list of local players.
     pub player_is_local: [bool; MAX_PLAYERS],
@@ -233,14 +275,16 @@ pub struct GgrsSessionRunnerInfo {
 impl GgrsSessionRunnerInfo {
     /// See [`GgrsSessionRunnerInfo`] fields for info on arguments.
     pub fn new(
-        socket: &dyn NetworkSocket,
+        socket: BoxedNonBlockingSocket,
         max_prediction_window: Option<usize>,
         local_input_delay: Option<usize>,
     ) -> Self {
+        let player_is_local = socket.0.player_is_local();
+        let player_count = socket.0.player_count();
         Self {
-            socket: socket.ggrs_socket(),
-            player_is_local: socket.player_is_local(),
-            player_count: socket.player_count(),
+            socket,
+            player_is_local,
+            player_count,
             max_prediction_window,
             local_input_delay,
         }
@@ -299,7 +343,7 @@ where
         let local_player_idx =
             local_player_idx.expect("Networking player_is_local array has no local players.");
 
-        let session = builder.start_p2p_session(info.socket).unwrap();
+        let session = builder.start_p2p_session(info.socket.clone()).unwrap();
 
         Self {
             last_player_input: InputTypes::Dense::default(),
@@ -310,6 +354,8 @@ where
             last_run: None,
             network_fps: network_fps as f64,
             input_collector: InputTypes::InputCollector::default(),
+            socket: info.socket.clone(),
+            local_input_delay,
         }
     }
 }
@@ -458,6 +504,11 @@ where
                                     // Input has been consumed, signal that we are in new input frame
                                     self.input_collector.advance_frame();
 
+                                    world.insert_resource(NetworkInfo {
+                                        current_frame: self.session.current_frame(),
+                                        last_confirmed_frame: self.session.confirmed_frame(),
+                                    });
+
                                     {
                                         world
                                             .resource_mut::<Time>()
@@ -524,5 +575,22 @@ where
                 .try_send(NetworkDebugMessage::NetworkStats { network_stats })
                 .unwrap();
         }
+    }
+
+    fn restart_session(&mut self) {
+        // Rebuild session info from runner + create new runner
+
+        // Increment match id so messages from previous match that are still in flight
+        // will be filtered out.
+        self.socket.0.increment_match_id();
+
+        let runner_info = GgrsSessionRunnerInfo {
+            socket: self.socket.clone(),
+            player_is_local: self.player_is_local,
+            player_count: self.session.num_players(),
+            max_prediction_window: Some(self.session.max_prediction()),
+            local_input_delay: Some(self.local_input_delay),
+        };
+        *self = GgrsSessionRunner::new(self.network_fps as f32, runner_info);
     }
 }

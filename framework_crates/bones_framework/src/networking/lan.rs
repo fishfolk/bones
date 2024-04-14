@@ -535,10 +535,12 @@ pub enum LanMatchmakerResponse {
 pub struct LanSocket {
     ///
     pub connections: [Option<quinn::Connection>; MAX_PLAYERS],
-    pub ggrs_receiver: async_channel::Receiver<(usize, ggrs::Message)>,
+    pub ggrs_receiver: async_channel::Receiver<(usize, GameMessage)>,
     pub reliable_receiver: async_channel::Receiver<(usize, Vec<u8>)>,
     pub player_idx: usize,
     pub player_count: usize,
+    /// ID for current match, messages received that do not match ID are dropped.
+    pub match_id: u8,
 }
 
 impl LanSocket {
@@ -578,7 +580,7 @@ impl LanSocket {
                             }
                             either::Either::Right(datagram_result) => match datagram_result {
                                 Ok(data) => {
-                                    let message: ggrs::Message = postcard::from_bytes(&data)
+                                    let message: GameMessage = postcard::from_bytes(&data)
                                         .expect("Could not deserialize net message");
 
                                     // Debugging code to introduce artificial latency
@@ -662,26 +664,8 @@ impl LanSocket {
             connections,
             ggrs_receiver,
             reliable_receiver,
+            match_id: 0,
         }
-    }
-}
-
-impl ggrs::NonBlockingSocket<usize> for LanSocket {
-    fn send_to(&mut self, msg: &ggrs::Message, addr: &usize) {
-        let conn = self.connections[*addr].as_ref().unwrap();
-
-        // TODO: determine a reasonable size for this buffer.
-        let msg_bytes = postcard::to_allocvec(msg).unwrap();
-        conn.send_datagram(Bytes::copy_from_slice(&msg_bytes[..]))
-            .ok();
-    }
-
-    fn receive_all_messages(&mut self) -> Vec<(usize, ggrs::Message)> {
-        let mut messages = Vec::new();
-        while let Ok(message) = self.ggrs_receiver.try_recv() {
-            messages.push(message);
-        }
-        messages
     }
 }
 
@@ -747,6 +731,38 @@ impl NetworkSocket for LanSocket {
 
     fn player_is_local(&self) -> [bool; MAX_PLAYERS] {
         std::array::from_fn(|i| self.connections[i].is_none() && i < self.player_count)
+    }
+
+    fn increment_match_id(&mut self) {
+        self.match_id = self.match_id.wrapping_add(1);
+    }
+}
+
+impl ggrs::NonBlockingSocket<usize> for LanSocket {
+    fn send_to(&mut self, msg: &ggrs::Message, addr: &usize) {
+        let msg = GameMessage {
+            // Consider a way we can send message by reference and avoid clone?
+            message: msg.clone(),
+            match_id: self.match_id,
+        };
+        let conn = self.connections[*addr].as_ref().unwrap();
+        let message = bones_matchmaker_proto::SendProxyMessage {
+            target_client: bones_matchmaker_proto::TargetClient::One(*addr as u8),
+            message: postcard::to_allocvec(&msg).unwrap(),
+        };
+        let msg_bytes = postcard::to_allocvec(&message).unwrap();
+        conn.send_datagram(Bytes::copy_from_slice(&msg_bytes[..]))
+            .ok();
+    }
+
+    fn receive_all_messages(&mut self) -> Vec<(usize, ggrs::Message)> {
+        let mut messages = Vec::new();
+        while let Ok(message) = self.ggrs_receiver.try_recv() {
+            if message.1.match_id == self.match_id {
+                messages.push((message.0, message.1.message));
+            }
+        }
+        messages
     }
 }
 
