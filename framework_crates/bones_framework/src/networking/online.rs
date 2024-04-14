@@ -17,7 +17,9 @@ use tracing::{info, warn};
 
 use crate::{networking::NetworkMatchSocket, prelude::*};
 
-use super::{BoxedNonBlockingSocket, NetworkSocket, SocketTarget, MAX_PLAYERS, NETWORK_ENDPOINT};
+use super::{
+    BoxedNonBlockingSocket, GameMessage, NetworkSocket, SocketTarget, MAX_PLAYERS, NETWORK_ENDPOINT,
+};
 
 #[derive(Default, PartialEq, Eq, Clone, Copy)]
 pub enum SearchState {
@@ -198,10 +200,12 @@ fn resolve_addr_blocking(addr: &str) -> anyhow::Result<SocketAddr> {
 #[derive(Debug, Clone)]
 pub struct OnlineSocket {
     pub conn: Connection,
-    pub ggrs_receiver: async_channel::Receiver<(usize, ggrs::Message)>,
+    pub ggrs_receiver: async_channel::Receiver<(usize, GameMessage)>,
     pub reliable_receiver: async_channel::Receiver<(usize, Vec<u8>)>,
     pub player_idx: usize,
     pub player_count: usize,
+    /// ID for current match, messages received that do not match ID are dropped.
+    pub match_id: u8,
 }
 
 impl OnlineSocket {
@@ -292,11 +296,11 @@ impl OnlineSocket {
             reliable_receiver,
             player_idx,
             player_count,
+            match_id: 0,
         }
     }
 }
 
-// TODO see zig's PR
 impl NetworkSocket for OnlineSocket {
     fn ggrs_socket(&self) -> BoxedNonBlockingSocket {
         BoxedNonBlockingSocket(Box::new(self.clone()))
@@ -349,13 +353,22 @@ impl NetworkSocket for OnlineSocket {
     fn player_count(&self) -> usize {
         self.player_count
     }
+
+    fn increment_match_id(&mut self) {
+        // This is wrapping addition
+        self.match_id = self.match_id.wrapping_add(1);
+    }
 }
 
 impl ggrs::NonBlockingSocket<usize> for OnlineSocket {
     fn send_to(&mut self, msg: &ggrs::Message, addr: &usize) {
+        let msg = GameMessage {
+            message: msg.clone(),
+            match_id: self.match_id,
+        };
         let message = bones_matchmaker_proto::SendProxyMessage {
             target_client: bones_matchmaker_proto::TargetClient::One(*addr as u8),
-            message: postcard::to_allocvec(msg).unwrap(),
+            message: postcard::to_allocvec(&msg).unwrap(),
         };
         let msg_bytes = postcard::to_allocvec(&message).unwrap();
         self.conn
@@ -366,7 +379,9 @@ impl ggrs::NonBlockingSocket<usize> for OnlineSocket {
     fn receive_all_messages(&mut self) -> Vec<(usize, ggrs::Message)> {
         let mut messages = Vec::new();
         while let Ok(message) = self.ggrs_receiver.try_recv() {
-            messages.push(message);
+            if message.1.match_id == self.match_id {
+                messages.push((message.0, message.1.message));
+            }
         }
         messages
     }

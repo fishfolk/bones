@@ -138,7 +138,27 @@ pub struct NetworkMatchSocket(Arc<dyn NetworkSocket>);
 /// A type-erased [`ggrs::NonBlockingSocket`]
 /// implementation.
 #[derive(Deref, DerefMut)]
-pub struct BoxedNonBlockingSocket(Box<dyn ggrs::NonBlockingSocket<usize> + 'static>);
+pub struct BoxedNonBlockingSocket(Box<dyn GgrsSocket>);
+
+impl Clone for BoxedNonBlockingSocket {
+    fn clone(&self) -> Self {
+        self.ggrs_socket()
+    }
+}
+
+/// Wraps [`ggrs::Message`] with included `match_id`, used to determine if message received
+/// from current match.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GameMessage {
+    /// Socket match id
+    pub match_id: u8,
+    /// Wrapped message
+    pub message: ggrs::Message,
+}
+
+/// Automatically implemented for [`NetworkSocket`] + [`ggrs::NonBlockingSocket<usize>`].
+pub trait GgrsSocket: NetworkSocket + ggrs::NonBlockingSocket<usize> {}
+impl<T> GgrsSocket for T where T: NetworkSocket + ggrs::NonBlockingSocket<usize> {}
 
 impl ggrs::NonBlockingSocket<usize> for BoxedNonBlockingSocket {
     fn send_to(&mut self, msg: &ggrs::Message, addr: &usize) {
@@ -170,6 +190,10 @@ pub trait NetworkSocket: Sync + Send {
     fn player_is_local(&self) -> [bool; MAX_PLAYERS];
     /// Get the player count for this network match.
     fn player_count(&self) -> usize;
+
+    /// Increment match id so messages from previous match that are still in flight
+    /// will be filtered out. Used when starting new session with existing socket.
+    fn increment_match_id(&mut self);
 }
 
 /// The destination for a reliable network message.
@@ -218,11 +242,18 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
 
     /// Session runner's input collector.
     pub input_collector: InputTypes::InputCollector,
+
+    /// Store copy of socket to be able to restart session runner with existing socket.
+    socket: BoxedNonBlockingSocket,
+
+    /// Local input delay ggrs session was initialized with
+    local_input_delay: usize,
 }
 
 /// The info required to create a [`GgrsSessionRunner`].
+#[derive(Clone)]
 pub struct GgrsSessionRunnerInfo {
-    /// The GGRS socket implementation to use.
+    /// The socket that will be converted into GGRS socket implementation.
     pub socket: BoxedNonBlockingSocket,
     /// The list of local players.
     pub player_is_local: [bool; MAX_PLAYERS],
@@ -244,14 +275,16 @@ pub struct GgrsSessionRunnerInfo {
 impl GgrsSessionRunnerInfo {
     /// See [`GgrsSessionRunnerInfo`] fields for info on arguments.
     pub fn new(
-        socket: &dyn NetworkSocket,
+        socket: BoxedNonBlockingSocket,
         max_prediction_window: Option<usize>,
         local_input_delay: Option<usize>,
     ) -> Self {
+        let player_is_local = socket.0.player_is_local();
+        let player_count = socket.0.player_count();
         Self {
-            socket: socket.ggrs_socket(),
-            player_is_local: socket.player_is_local(),
-            player_count: socket.player_count(),
+            socket,
+            player_is_local,
+            player_count,
             max_prediction_window,
             local_input_delay,
         }
@@ -310,7 +343,7 @@ where
         let local_player_idx =
             local_player_idx.expect("Networking player_is_local array has no local players.");
 
-        let session = builder.start_p2p_session(info.socket).unwrap();
+        let session = builder.start_p2p_session(info.socket.clone()).unwrap();
 
         Self {
             last_player_input: InputTypes::Dense::default(),
@@ -321,6 +354,8 @@ where
             last_run: None,
             network_fps: network_fps as f64,
             input_collector: InputTypes::InputCollector::default(),
+            socket: info.socket.clone(),
+            local_input_delay,
         }
     }
 }
