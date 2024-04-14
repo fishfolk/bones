@@ -1015,7 +1015,7 @@ fn extract_bones_sprites(
         // Extract normal sprites
         let mut z_offset = 0.0;
         for (_, (sprite, transform)) in entities.iter_with((&sprites, &transforms)) {
-            let Some(sprite_image) = bones_assets.try_get(sprite.image) else {
+            let Some(sprite_image) = bones_assets.try_get(sprite.image).unwrap() else {
                 warn!("Sprite not loaded: {:?}", sprite.image);
                 continue;
             };

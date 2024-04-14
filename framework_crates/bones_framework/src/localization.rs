@@ -206,7 +206,7 @@ impl AssetLoader for FluentBundleLoader {
                     .unwrap();
                 let resource_handle = ctx.load_asset(&normalized)?.typed::<FluentResourceAsset>();
                 let resource = loop {
-                    if let Some(resource) = ctx.asset_server.try_get(resource_handle) {
+                    if let Some(resource) = ctx.asset_server.try_get(resource_handle).unwrap() {
                         break resource;
                     }
                     ctx.asset_server.load_progress.listen().await;
@@ -248,7 +248,7 @@ impl AssetLoader for LocalizationLoader {
                     .unwrap();
                 let bundle_handle = ctx.load_asset(&normalized)?.typed::<FluentBundleAsset>();
                 let bundle = loop {
-                    if let Some(bundle) = ctx.asset_server.try_get(bundle_handle) {
+                    if let Some(bundle) = ctx.asset_server.try_get(bundle_handle).unwrap() {
                         break bundle;
                     }
                     ctx.asset_server.load_progress.listen().await;
