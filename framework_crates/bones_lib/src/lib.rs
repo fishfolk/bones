@@ -11,18 +11,17 @@ pub use bones_ecs as ecs;
 /// Bones lib prelude
 pub mod prelude {
     pub use crate::{
-        ecs::prelude::*, instant::Instant, time::*, Game, GamePlugin, Session, SessionOptions,
-        SessionPlugin, SessionRunner, Sessions,
+        ecs::prelude::*, instant::Instant, time::*, Game, GamePlugin, Session, SessionCommand,
+        SessionOptions, SessionPlugin, SessionRunner, Sessions,
     };
 }
 
 pub use instant;
 pub mod time;
 
-use std::{fmt::Debug, sync::Arc};
+use std::{collections::VecDeque, fmt::Debug, sync::Arc};
 
 use crate::prelude::*;
-
 /// A bones game. This includes all of the game worlds, and systems.
 #[derive(Deref, DerefMut)]
 pub struct Session {
@@ -408,6 +407,15 @@ impl Game {
             }
         }
 
+        // Execute Session Commands
+        {
+            let mut session_commands: VecDeque<Box<SessionCommand>> = default();
+            std::mem::swap(&mut session_commands, &mut self.sessions.commands);
+            for command in session_commands.drain(..) {
+                command(&mut self.sessions);
+            }
+        }
+
         // Run after systems
         for system in &mut game_systems.after {
             system(self)
@@ -496,12 +504,24 @@ impl GameSystems {
     }
 }
 
+/// Type of session command
+pub type SessionCommand = dyn FnOnce(&mut Sessions) + Sync + Send;
+
 /// Container for multiple game sessions.
 ///
 /// Each session shares the same [`Entities`].
-#[derive(HasSchema, Default, Debug)]
+#[derive(HasSchema, Default)]
 pub struct Sessions {
     map: UstrMap<Session>,
+
+    /// Commands that operate on [`Sessions`], called after all sessions update.
+    /// These may be used to add/delete/modify sessions.
+    ///
+    /// Commands are useful in a situation where you want to remove / recreate
+    /// a session from within it's own system. You cannot do this while the `Session` is running.
+    ///
+    /// Commands added inside a session command will not be executed until next frame.
+    commands: VecDeque<Box<SessionCommand>>,
 }
 
 /// Resource that allows you to configure the current session.
@@ -572,6 +592,11 @@ impl Sessions {
     /// Iterate over sessions.
     pub fn iter(&self) -> std::collections::hash_map::Iter<Ustr, Session> {
         self.map.iter()
+    }
+
+    /// Add a [`SessionCommand`] to queue.
+    pub fn add_command(&mut self, command: Box<SessionCommand>) {
+        self.commands.push_back(command);
     }
 }
 
