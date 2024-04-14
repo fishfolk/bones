@@ -45,7 +45,7 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{certs, debug::prelude::*, input, lan, online, proto};
+    pub use super::{certs, debug::prelude::*, input, lan, online, proto, NetworkInfo};
 }
 
 /// Muliplier for framerate that will be used when playing an online match.
@@ -178,6 +178,17 @@ pub enum SocketTarget {
     Player(usize),
     /// Broadcast to all players.
     All,
+}
+
+/// Resource updated each frame exposing current frame and last confirmed of online session.
+#[derive(HasSchema, Copy, Clone, Default)]
+pub struct NetworkInfo {
+    /// Current frame of simulation step
+    pub current_frame: i32,
+
+    /// Last confirmed frame by all clients.
+    /// Anything that occurred on this frame is agreed upon by all clients.
+    pub last_confirmed_frame: i32,
 }
 
 /// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
@@ -457,6 +468,11 @@ where
                                 } => {
                                     // Input has been consumed, signal that we are in new input frame
                                     self.input_collector.advance_frame();
+
+                                    world.insert_resource(NetworkInfo {
+                                        current_frame: self.session.current_frame(),
+                                        last_confirmed_frame: self.session.confirmed_frame(),
+                                    });
 
                                     {
                                         world
