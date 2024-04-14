@@ -576,4 +576,21 @@ where
                 .unwrap();
         }
     }
+
+    fn restart_session(&mut self) {
+        // Rebuild session info from runner + create new runner
+
+        // Increment match id so messages from previous match that are still in flight
+        // will be filtered out.
+        self.socket.0.increment_match_id();
+
+        let runner_info = GgrsSessionRunnerInfo {
+            socket: self.socket.clone(),
+            player_is_local: self.player_is_local,
+            player_count: self.session.num_players(),
+            max_prediction_window: Some(self.session.max_prediction()),
+            local_input_delay: Some(self.local_input_delay),
+        };
+        *self = GgrsSessionRunner::new(self.network_fps as f32, runner_info);
+    }
 }
