@@ -608,6 +608,19 @@
 <a href="#608" id="608">608</a>
 <a href="#609" id="609">609</a>
 <a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -749,9 +762,16 @@
     ///     world.resource_mut::&lt;Time&gt;().update_with_instant(now);
     ///     stages.run(world);
     /// }
+    /// fn restart_session(&amp;mut self) {}
     /// # }
     /// ```
     </span><span class="kw">fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>, now: Instant, world: <span class="kw-2">&amp;mut </span>World, stages: <span class="kw-2">&amp;mut </span>SystemStages);
+
+    <span class="doccomment">/// Restart Session Runner. This should reset accumulated time, inputs, etc.
+    ///
+    /// The expectation is that current players using it may continue to, so something like a network
+    /// socket or player info should persist.
+    </span><span class="kw">fn </span>restart_session(<span class="kw-2">&amp;mut </span><span class="self">self</span>);
 }
 
 <span class="doccomment">/// The default [`SessionRunner`], which just runs the systems once every time it is run.
@@ -761,6 +781,12 @@
     <span class="kw">fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>, now: instant::Instant, world: <span class="kw-2">&amp;mut </span>World, stages: <span class="kw-2">&amp;mut </span>SystemStages) {
         world.resource_mut::&lt;Time&gt;().update_with_instant(now);
         stages.run(world)
+    }
+
+    <span class="comment">// This is a no-op as no state, but implemented this way in case that changes later.
+    </span><span class="attr">#[allow(clippy::default_constructed_unit_structs)]
+    </span><span class="kw">fn </span>restart_session(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw-2">*</span><span class="self">self </span>= DefaultSessionRunner::default();
     }
 }
 

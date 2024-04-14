@@ -414,6 +414,21 @@
 <a href="#414" id="414">414</a>
 <a href="#415" id="415">415</a>
 <a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;./online.md&quot;</span>)]
 </span><span class="comment">// TODO
 </span><span class="attr">#![allow(missing_docs)]
@@ -433,7 +448,9 @@
 
 <span class="kw">use crate</span>::{networking::NetworkMatchSocket, prelude::<span class="kw-2">*</span>};
 
-<span class="kw">use super</span>::{BoxedNonBlockingSocket, NetworkSocket, SocketTarget, MAX_PLAYERS, NETWORK_ENDPOINT};
+<span class="kw">use super</span>::{
+    BoxedNonBlockingSocket, GameMessage, NetworkSocket, SocketTarget, MAX_PLAYERS, NETWORK_ENDPOINT,
+};
 
 <span class="attr">#[derive(Default, PartialEq, Eq, Clone, Copy)]
 </span><span class="kw">pub enum </span>SearchState {
@@ -614,10 +631,12 @@
 <span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>OnlineSocket {
     <span class="kw">pub </span>conn: Connection,
-    <span class="kw">pub </span>ggrs_receiver: async_channel::Receiver&lt;(usize, ggrs::Message)&gt;,
+    <span class="kw">pub </span>ggrs_receiver: async_channel::Receiver&lt;(usize, GameMessage)&gt;,
     <span class="kw">pub </span>reliable_receiver: async_channel::Receiver&lt;(usize, Vec&lt;u8&gt;)&gt;,
     <span class="kw">pub </span>player_idx: usize,
     <span class="kw">pub </span>player_count: usize,
+    <span class="doccomment">/// ID for current match, messages received that do not match ID are dropped.
+    </span><span class="kw">pub </span>match_id: u8,
 }
 
 <span class="kw">impl </span>OnlineSocket {
@@ -708,12 +727,12 @@
             reliable_receiver,
             player_idx,
             player_count,
+            match_id: <span class="number">0</span>,
         }
     }
 }
 
-<span class="comment">// TODO see zig&#39;s PR
-</span><span class="kw">impl </span>NetworkSocket <span class="kw">for </span>OnlineSocket {
+<span class="kw">impl </span>NetworkSocket <span class="kw">for </span>OnlineSocket {
     <span class="kw">fn </span>ggrs_socket(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxedNonBlockingSocket {
         BoxedNonBlockingSocket(Box::new(<span class="self">self</span>.clone()))
     }
@@ -765,13 +784,22 @@
     <span class="kw">fn </span>player_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.player_count
     }
+
+    <span class="kw">fn </span>increment_match_id(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="comment">// This is wrapping addition
+        </span><span class="self">self</span>.match_id = <span class="self">self</span>.match_id.wrapping_add(<span class="number">1</span>);
+    }
 }
 
 <span class="kw">impl </span>ggrs::NonBlockingSocket&lt;usize&gt; <span class="kw">for </span>OnlineSocket {
     <span class="kw">fn </span>send_to(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: <span class="kw-2">&amp;</span>ggrs::Message, addr: <span class="kw-2">&amp;</span>usize) {
+        <span class="kw">let </span>msg = GameMessage {
+            message: msg.clone(),
+            match_id: <span class="self">self</span>.match_id,
+        };
         <span class="kw">let </span>message = bones_matchmaker_proto::SendProxyMessage {
             target_client: bones_matchmaker_proto::TargetClient::One(<span class="kw-2">*</span>addr <span class="kw">as </span>u8),
-            message: postcard::to_allocvec(msg).unwrap(),
+            message: postcard::to_allocvec(<span class="kw-2">&amp;</span>msg).unwrap(),
         };
         <span class="kw">let </span>msg_bytes = postcard::to_allocvec(<span class="kw-2">&amp;</span>message).unwrap();
         <span class="self">self</span>.conn
@@ -782,7 +810,9 @@
     <span class="kw">fn </span>receive_all_messages(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Vec&lt;(usize, ggrs::Message)&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>messages = Vec::new();
         <span class="kw">while let </span><span class="prelude-val">Ok</span>(message) = <span class="self">self</span>.ggrs_receiver.try_recv() {
-            messages.push(message);
+            <span class="kw">if </span>message.<span class="number">1</span>.match_id == <span class="self">self</span>.match_id {
+                messages.push((message.<span class="number">0</span>, message.<span class="number">1</span>.message));
+            }
         }
         messages
     }

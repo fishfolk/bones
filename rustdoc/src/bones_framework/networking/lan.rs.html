@@ -772,6 +772,22 @@
 <a href="#772" id="772">772</a>
 <a href="#773" id="773">773</a>
 <a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! LAN matchmaking and socket implementation.
 //!
 //! ## Matchmaking
@@ -1309,10 +1325,12 @@
 </span><span class="kw">pub struct </span>LanSocket {
     <span class="doccomment">///
     </span><span class="kw">pub </span>connections: [<span class="prelude-ty">Option</span>&lt;quinn::Connection&gt;; MAX_PLAYERS],
-    <span class="kw">pub </span>ggrs_receiver: async_channel::Receiver&lt;(usize, ggrs::Message)&gt;,
+    <span class="kw">pub </span>ggrs_receiver: async_channel::Receiver&lt;(usize, GameMessage)&gt;,
     <span class="kw">pub </span>reliable_receiver: async_channel::Receiver&lt;(usize, Vec&lt;u8&gt;)&gt;,
     <span class="kw">pub </span>player_idx: usize,
     <span class="kw">pub </span>player_count: usize,
+    <span class="doccomment">/// ID for current match, messages received that do not match ID are dropped.
+    </span><span class="kw">pub </span>match_id: u8,
 }
 
 <span class="kw">impl </span>LanSocket {
@@ -1352,7 +1370,7 @@
                             }
                             either::Either::Right(datagram_result) =&gt; <span class="kw">match </span>datagram_result {
                                 <span class="prelude-val">Ok</span>(data) =&gt; {
-                                    <span class="kw">let </span>message: ggrs::Message = postcard::from_bytes(<span class="kw-2">&amp;</span>data)
+                                    <span class="kw">let </span>message: GameMessage = postcard::from_bytes(<span class="kw-2">&amp;</span>data)
                                         .expect(<span class="string">&quot;Could not deserialize net message&quot;</span>);
 
                                     <span class="comment">// Debugging code to introduce artificial latency
@@ -1436,26 +1454,8 @@
             connections,
             ggrs_receiver,
             reliable_receiver,
+            match_id: <span class="number">0</span>,
         }
-    }
-}
-
-<span class="kw">impl </span>ggrs::NonBlockingSocket&lt;usize&gt; <span class="kw">for </span>LanSocket {
-    <span class="kw">fn </span>send_to(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: <span class="kw-2">&amp;</span>ggrs::Message, addr: <span class="kw-2">&amp;</span>usize) {
-        <span class="kw">let </span>conn = <span class="self">self</span>.connections[<span class="kw-2">*</span>addr].as_ref().unwrap();
-
-        <span class="comment">// TODO: determine a reasonable size for this buffer.
-        </span><span class="kw">let </span>msg_bytes = postcard::to_allocvec(msg).unwrap();
-        conn.send_datagram(Bytes::copy_from_slice(<span class="kw-2">&amp;</span>msg_bytes[..]))
-            .ok();
-    }
-
-    <span class="kw">fn </span>receive_all_messages(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Vec&lt;(usize, ggrs::Message)&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>messages = Vec::new();
-        <span class="kw">while let </span><span class="prelude-val">Ok</span>(message) = <span class="self">self</span>.ggrs_receiver.try_recv() {
-            messages.push(message);
-        }
-        messages
     }
 }
 
@@ -1521,6 +1521,38 @@
 
     <span class="kw">fn </span>player_is_local(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; [bool; MAX_PLAYERS] {
         std::array::from_fn(|i| <span class="self">self</span>.connections[i].is_none() &amp;&amp; i &lt; <span class="self">self</span>.player_count)
+    }
+
+    <span class="kw">fn </span>increment_match_id(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.match_id = <span class="self">self</span>.match_id.wrapping_add(<span class="number">1</span>);
+    }
+}
+
+<span class="kw">impl </span>ggrs::NonBlockingSocket&lt;usize&gt; <span class="kw">for </span>LanSocket {
+    <span class="kw">fn </span>send_to(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: <span class="kw-2">&amp;</span>ggrs::Message, addr: <span class="kw-2">&amp;</span>usize) {
+        <span class="kw">let </span>msg = GameMessage {
+            <span class="comment">// Consider a way we can send message by reference and avoid clone?
+            </span>message: msg.clone(),
+            match_id: <span class="self">self</span>.match_id,
+        };
+        <span class="kw">let </span>conn = <span class="self">self</span>.connections[<span class="kw-2">*</span>addr].as_ref().unwrap();
+        <span class="kw">let </span>message = bones_matchmaker_proto::SendProxyMessage {
+            target_client: bones_matchmaker_proto::TargetClient::One(<span class="kw-2">*</span>addr <span class="kw">as </span>u8),
+            message: postcard::to_allocvec(<span class="kw-2">&amp;</span>msg).unwrap(),
+        };
+        <span class="kw">let </span>msg_bytes = postcard::to_allocvec(<span class="kw-2">&amp;</span>message).unwrap();
+        conn.send_datagram(Bytes::copy_from_slice(<span class="kw-2">&amp;</span>msg_bytes[..]))
+            .ok();
+    }
+
+    <span class="kw">fn </span>receive_all_messages(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Vec&lt;(usize, ggrs::Message)&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>messages = Vec::new();
+        <span class="kw">while let </span><span class="prelude-val">Ok</span>(message) = <span class="self">self</span>.ggrs_receiver.try_recv() {
+            <span class="kw">if </span>message.<span class="number">1</span>.match_id == <span class="self">self</span>.match_id {
+                messages.push((message.<span class="number">0</span>, message.<span class="number">1</span>.message));
+            }
+        }
+        messages
     }
 }
 

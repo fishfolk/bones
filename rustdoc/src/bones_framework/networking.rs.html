@@ -526,6 +526,74 @@
 <a href="#526" id="526">526</a>
 <a href="#527" id="527">527</a>
 <a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;./networking.md&quot;</span>)]
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
@@ -573,7 +641,7 @@
 
 <span class="doccomment">/// Module prelude.
 </span><span class="kw">pub mod </span>prelude {
-    <span class="kw">pub use super</span>::{certs, debug::prelude::<span class="kw-2">*</span>, input, lan, online, proto};
+    <span class="kw">pub use super</span>::{certs, debug::prelude::<span class="kw-2">*</span>, input, lan, online, proto, NetworkInfo};
 }
 
 <span class="doccomment">/// Muliplier for framerate that will be used when playing an online match.
@@ -666,7 +734,27 @@
 <span class="doccomment">/// A type-erased [`ggrs::NonBlockingSocket`]
 /// implementation.
 </span><span class="attr">#[derive(Deref, DerefMut)]
-</span><span class="kw">pub struct </span>BoxedNonBlockingSocket(Box&lt;<span class="kw">dyn </span>ggrs::NonBlockingSocket&lt;usize&gt; + <span class="lifetime">&#39;static</span>&gt;);
+</span><span class="kw">pub struct </span>BoxedNonBlockingSocket(Box&lt;<span class="kw">dyn </span>GgrsSocket&gt;);
+
+<span class="kw">impl </span>Clone <span class="kw">for </span>BoxedNonBlockingSocket {
+    <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.ggrs_socket()
+    }
+}
+
+<span class="doccomment">/// Wraps [`ggrs::Message`] with included `match_id`, used to determine if message received
+/// from current match.
+</span><span class="attr">#[derive(Serialize, Deserialize, Debug, Clone)]
+</span><span class="kw">pub struct </span>GameMessage {
+    <span class="doccomment">/// Socket match id
+    </span><span class="kw">pub </span>match_id: u8,
+    <span class="doccomment">/// Wrapped message
+    </span><span class="kw">pub </span>message: ggrs::Message,
+}
+
+<span class="doccomment">/// Automatically implemented for [`NetworkSocket`] + [`ggrs::NonBlockingSocket&lt;usize&gt;`].
+</span><span class="kw">pub trait </span>GgrsSocket: NetworkSocket + ggrs::NonBlockingSocket&lt;usize&gt; {}
+<span class="kw">impl</span>&lt;T&gt; GgrsSocket <span class="kw">for </span>T <span class="kw">where </span>T: NetworkSocket + ggrs::NonBlockingSocket&lt;usize&gt; {}
 
 <span class="kw">impl </span>ggrs::NonBlockingSocket&lt;usize&gt; <span class="kw">for </span>BoxedNonBlockingSocket {
     <span class="kw">fn </span>send_to(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: <span class="kw-2">&amp;</span>ggrs::Message, addr: <span class="kw-2">&amp;</span>usize) {
@@ -698,6 +786,10 @@
     </span><span class="kw">fn </span>player_is_local(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; [bool; MAX_PLAYERS];
     <span class="doccomment">/// Get the player count for this network match.
     </span><span class="kw">fn </span>player_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
+
+    <span class="doccomment">/// Increment match id so messages from previous match that are still in flight
+    /// will be filtered out. Used when starting new session with existing socket.
+    </span><span class="kw">fn </span>increment_match_id(<span class="kw-2">&amp;mut </span><span class="self">self</span>);
 }
 
 <span class="doccomment">/// The destination for a reliable network message.
@@ -706,6 +798,17 @@
     </span>Player(usize),
     <span class="doccomment">/// Broadcast to all players.
     </span>All,
+}
+
+<span class="doccomment">/// Resource updated each frame exposing current frame and last confirmed of online session.
+</span><span class="attr">#[derive(HasSchema, Copy, Clone, Default)]
+</span><span class="kw">pub struct </span>NetworkInfo {
+    <span class="doccomment">/// Current frame of simulation step
+    </span><span class="kw">pub </span>current_frame: i32,
+
+    <span class="doccomment">/// Last confirmed frame by all clients.
+    /// Anything that occurred on this frame is agreed upon by all clients.
+    </span><span class="kw">pub </span>last_confirmed_frame: i32,
 }
 
 <span class="doccomment">/// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
@@ -735,11 +838,18 @@
 
     <span class="doccomment">/// Session runner&#39;s input collector.
     </span><span class="kw">pub </span>input_collector: InputTypes::InputCollector,
+
+    <span class="doccomment">/// Store copy of socket to be able to restart session runner with existing socket.
+    </span>socket: BoxedNonBlockingSocket,
+
+    <span class="doccomment">/// Local input delay ggrs session was initialized with
+    </span>local_input_delay: usize,
 }
 
 <span class="doccomment">/// The info required to create a [`GgrsSessionRunner`].
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>GgrsSessionRunnerInfo {
-    <span class="doccomment">/// The GGRS socket implementation to use.
+    <span class="doccomment">/// The socket that will be converted into GGRS socket implementation.
     </span><span class="kw">pub </span>socket: BoxedNonBlockingSocket,
     <span class="doccomment">/// The list of local players.
     </span><span class="kw">pub </span>player_is_local: [bool; MAX_PLAYERS],
@@ -761,14 +871,16 @@
 <span class="kw">impl </span>GgrsSessionRunnerInfo {
     <span class="doccomment">/// See [`GgrsSessionRunnerInfo`] fields for info on arguments.
     </span><span class="kw">pub fn </span>new(
-        socket: <span class="kw-2">&amp;</span><span class="kw">dyn </span>NetworkSocket,
+        socket: BoxedNonBlockingSocket,
         max_prediction_window: <span class="prelude-ty">Option</span>&lt;usize&gt;,
         local_input_delay: <span class="prelude-ty">Option</span>&lt;usize&gt;,
     ) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>player_is_local = socket.<span class="number">0</span>.player_is_local();
+        <span class="kw">let </span>player_count = socket.<span class="number">0</span>.player_count();
         <span class="self">Self </span>{
-            socket: socket.ggrs_socket(),
-            player_is_local: socket.player_is_local(),
-            player_count: socket.player_count(),
+            socket,
+            player_is_local,
+            player_count,
             max_prediction_window,
             local_input_delay,
         }
@@ -827,7 +939,7 @@
         <span class="kw">let </span>local_player_idx =
             local_player_idx.expect(<span class="string">&quot;Networking player_is_local array has no local players.&quot;</span>);
 
-        <span class="kw">let </span>session = builder.start_p2p_session(info.socket).unwrap();
+        <span class="kw">let </span>session = builder.start_p2p_session(info.socket.clone()).unwrap();
 
         <span class="self">Self </span>{
             last_player_input: InputTypes::Dense::default(),
@@ -838,6 +950,8 @@
             last_run: <span class="prelude-val">None</span>,
             network_fps: network_fps <span class="kw">as </span>f64,
             input_collector: InputTypes::InputCollector::default(),
+            socket: info.socket.clone(),
+            local_input_delay,
         }
     }
 }
@@ -986,6 +1100,11 @@
                                     <span class="comment">// Input has been consumed, signal that we are in new input frame
                                     </span><span class="self">self</span>.input_collector.advance_frame();
 
+                                    world.insert_resource(NetworkInfo {
+                                        current_frame: <span class="self">self</span>.session.current_frame(),
+                                        last_confirmed_frame: <span class="self">self</span>.session.confirmed_frame(),
+                                    });
+
                                     {
                                         world
                                             .resource_mut::&lt;Time&gt;()
@@ -1052,6 +1171,23 @@
                 .try_send(NetworkDebugMessage::NetworkStats { network_stats })
                 .unwrap();
         }
+    }
+
+    <span class="kw">fn </span>restart_session(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="comment">// Rebuild session info from runner + create new runner
+
+        // Increment match id so messages from previous match that are still in flight
+        // will be filtered out.
+        </span><span class="self">self</span>.socket.<span class="number">0</span>.increment_match_id();
+
+        <span class="kw">let </span>runner_info = GgrsSessionRunnerInfo {
+            socket: <span class="self">self</span>.socket.clone(),
+            player_is_local: <span class="self">self</span>.player_is_local,
+            player_count: <span class="self">self</span>.session.num_players(),
+            max_prediction_window: <span class="prelude-val">Some</span>(<span class="self">self</span>.session.max_prediction()),
+            local_input_delay: <span class="prelude-val">Some</span>(<span class="self">self</span>.local_input_delay),
+        };
+        <span class="kw-2">*</span><span class="self">self </span>= GgrsSessionRunner::new(<span class="self">self</span>.network_fps <span class="kw">as </span>f32, runner_info);
     }
 }
 </code></pre></div></section></main></body></html>
