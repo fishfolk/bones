@@ -38,13 +38,13 @@ impl<'a> Iterator for UntypedComponentBitsetIterator<'a> {
     type Item = SchemaRef<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         let max_id = self.components.max_id;
-        while !(self.bitset.bit_test(self.current_id)
-            && self.components.bitset.bit_test(self.current_id))
-            && self.current_id <= max_id
+        while self.current_id < max_id
+            && !(self.bitset.bit_test(self.current_id)
+                && self.components.bitset.bit_test(self.current_id))
         {
             self.current_id += 1;
         }
-        let ret = if self.current_id <= max_id {
+        let ret = if self.current_id < max_id {
             // SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
             Some(unsafe {
                 SchemaRef::from_ptr_schema(
@@ -71,11 +71,11 @@ impl<'a> Iterator for UntypedComponentOptionalBitsetIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         // We stop iterating at bitset length, not component store length, as we want to iterate over
         // whole bitset and return None for entities that don't have this optional component.
-        let max_id = self.bitset.bit_len() - 1;
-        while !self.bitset.bit_test(self.current_id) && self.current_id <= max_id {
+        let max_id = self.bitset.bit_len();
+        while self.current_id < max_id && !self.bitset.bit_test(self.current_id) {
             self.current_id += 1;
         }
-        let ret = if self.current_id <= max_id {
+        let ret = if self.current_id < max_id {
             // SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
             if self.components.bitset.bit_test(self.current_id) {
                 Some(Some(unsafe {
@@ -110,13 +110,13 @@ impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
     type Item = SchemaRefMut<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         let max_id = self.components.max_id;
-        while !(self.bitset.bit_test(self.current_id)
-            && self.components.bitset.bit_test(self.current_id))
-            && self.current_id <= max_id
+        while self.current_id < max_id
+            && !(self.bitset.bit_test(self.current_id)
+                && self.components.bitset.bit_test(self.current_id))
         {
             self.current_id += 1;
         }
-        let ret = if self.current_id <= max_id {
+        let ret = if self.current_id < max_id {
             // SAFE: We know that the index is within bounds, and we know that the pointer will be
             // valid for the new lifetime.
             Some(unsafe {
@@ -144,11 +144,11 @@ impl<'a> Iterator for UntypedComponentOptionalBitsetIteratorMut<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         // We do not stop iterating at component store length, as we want to iterate over
         // whole bitset and return None for entities that don't have this optional component.
-        let max_id = self.bitset.bit_len() - 1;
-        while !self.bitset.bit_test(self.current_id) && self.current_id <= max_id {
+        let max_id = self.bitset.bit_len();
+        while self.current_id < max_id && !self.bitset.bit_test(self.current_id) {
             self.current_id += 1;
         }
-        let ret = if self.current_id <= max_id {
+        let ret = if self.current_id < max_id {
             // SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
             if self.components.bitset.bit_test(self.current_id) {
                 Some(Some(unsafe {

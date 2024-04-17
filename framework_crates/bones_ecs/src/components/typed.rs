@@ -291,6 +291,8 @@ impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
+
     use crate::prelude::*;
 
     #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
@@ -375,5 +377,80 @@ mod tests {
         let maybe_comp = storage.get_single();
 
         assert_eq!(maybe_comp, Err(QueryItemError::MultipleEntities));
+    }
+
+    #[test]
+    fn iter_with_bitset() {
+        let mut entities = Entities::default();
+        let mut storage = ComponentStore::<A>::default();
+
+        {
+            let bitset = Rc::new(entities.bitset().clone());
+
+            let mut comp_iter = storage.iter_with_bitset(bitset.clone());
+            assert_eq!(comp_iter.next(), None);
+
+            let mut comp_mut_iter = storage.iter_mut_with_bitset(bitset);
+            assert_eq!(comp_mut_iter.next(), None);
+        }
+
+        {
+            let e = entities.create();
+            let mut a = A("e".to_string());
+            storage.insert(e, a.clone());
+            let bitset = Rc::new(entities.bitset().clone());
+
+            let mut comp_iter = storage.iter_with_bitset(bitset.clone());
+            assert_eq!(comp_iter.next(), Some(&a));
+
+            let mut comp_mut_iter = storage.iter_mut_with_bitset(bitset);
+            assert_eq!(comp_mut_iter.next(), Some(&mut a));
+
+            entities.kill(e);
+        }
+    }
+
+    #[test]
+    fn iter_with_bitset_optional() {
+        let mut entities = Entities::default();
+        let mut storage = ComponentStore::<A>::default();
+
+        {
+            let bitset = Rc::new(entities.bitset().clone());
+
+            let mut comp_iter = storage.iter_with_bitset_optional(bitset.clone());
+            assert_eq!(comp_iter.next(), None);
+
+            let mut comp_mut_iter = storage.iter_mut_with_bitset_optional(bitset);
+            assert_eq!(comp_mut_iter.next(), None);
+        }
+
+        {
+            let e = entities.create();
+            let bitset = Rc::new(entities.bitset().clone());
+
+            let mut comp_iter = storage.iter_with_bitset_optional(bitset.clone());
+            assert_eq!(comp_iter.next(), Some(None));
+
+            let mut comp_mut_iter = storage.iter_mut_with_bitset_optional(bitset);
+            assert_eq!(comp_mut_iter.next(), Some(None));
+
+            entities.kill(e);
+        }
+
+        {
+            let e = entities.create();
+            let mut a = A("e".to_string());
+            storage.insert(e, a.clone());
+            let bitset = Rc::new(entities.bitset().clone());
+
+            let mut comp_iter = storage.iter_with_bitset_optional(bitset.clone());
+            assert_eq!(comp_iter.next(), Some(Some(&a)));
+
+            let mut comp_mut_iter = storage.iter_mut_with_bitset_optional(bitset);
+            assert_eq!(comp_mut_iter.next(), Some(Some(&mut a)));
+
+            entities.kill(e);
+        }
     }
 }
