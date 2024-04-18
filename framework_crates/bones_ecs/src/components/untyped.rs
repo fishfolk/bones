@@ -492,28 +492,28 @@ impl UntypedComponentStore {
     }
 
     /// Get a reference to the component store if there is exactly one instance of the component.
-    pub fn get_single(&self) -> Result<SchemaRef, QueryItemError> {
+    pub fn get_single(&self) -> Result<SchemaRef, QuerySingleError> {
         let len = self.bitset().bit_len();
         let mut iter = (0..len).filter(|&i| self.bitset().bit_test(i));
-        let i = iter.next().ok_or(QueryItemError::NoEntities)?;
+        let i = iter.next().ok_or(QuerySingleError::NoEntities)?;
         if iter.next().is_some() {
-            return Err(QueryItemError::MultipleEntities);
+            return Err(QuerySingleError::MultipleEntities);
         }
         // TODO: add unchecked variant to avoid redundant validation
-        self.get_idx(i).ok_or(QueryItemError::NoEntities)
+        self.get_idx(i).ok_or(QuerySingleError::NoEntities)
     }
 
     /// Get a mutable reference to the component store if there is exactly one instance of the
     /// component.
-    pub fn get_single_mut(&mut self) -> Result<SchemaRefMut, QueryItemError> {
+    pub fn get_single_mut(&mut self) -> Result<SchemaRefMut, QuerySingleError> {
         let len = self.bitset().bit_len();
         let mut iter = (0..len).filter(|&i| self.bitset().bit_test(i));
-        let i = iter.next().ok_or(QueryItemError::NoEntities)?;
+        let i = iter.next().ok_or(QuerySingleError::NoEntities)?;
         if iter.next().is_some() {
-            return Err(QueryItemError::MultipleEntities);
+            return Err(QuerySingleError::MultipleEntities);
         }
         // TODO: add unchecked variant to avoid redundant validation
-        self.get_idx_mut(i).ok_or(QueryItemError::NoEntities)
+        self.get_idx_mut(i).ok_or(QuerySingleError::NoEntities)
     }
 
     /// Iterates immutably over all components of this type.
