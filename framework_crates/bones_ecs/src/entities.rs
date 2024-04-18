@@ -491,6 +491,40 @@ impl Entities {
             .map(|item| (entity, item))
     }
 
+    /// Get the first entity in the given bitset.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if there are no entities in the bitset.
+    pub fn first_with_bitset(&self, bitset: &BitSetVec) -> Entity {
+        self.get_first_with_bitset(bitset).unwrap()
+    }
+
+    /// Get the first entity in the given bitset.
+    pub fn get_first_with_bitset(&self, bitset: &BitSetVec) -> Option<Entity> {
+        self.iter_with_bitset(bitset).next()
+    }
+
+    /// Get the first entity and components in the given query.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if there are no entities that match the query.
+    pub fn first_with<Q: QueryItem>(
+        &self,
+        query: Q,
+    ) -> (Entity, <<Q as QueryItem>::Iter as Iterator>::Item) {
+        self.get_first_with(query).unwrap()
+    }
+
+    /// Get the first entity and components in the given query.
+    pub fn get_first_with<Q: QueryItem>(
+        &self,
+        query: Q,
+    ) -> Option<(Entity, <<Q as QueryItem>::Iter as Iterator>::Item)> {
+        self.iter_with(query).next()
+    }
+
     /// Iterates over entities using the provided bitset.
     pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> EntityIterator {
         EntityIterator {
