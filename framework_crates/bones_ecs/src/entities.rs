@@ -95,13 +95,16 @@ pub trait QueryItem {
     fn get_single_with_bitset(
         self,
         bitset: Rc<BitSetVec>,
-    ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError>;
+    ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError>;
     /// Return an iterator over the provided bitset.
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter;
 }
 
+/// An error that may occur when querying for a single entity. For example, via
+/// [`Entities::get_single_with`], or more directly with [`ComponentStore::get_single`] or
+/// [`ComponentStore::get_single_mut`].
 #[derive(Debug, PartialEq, Eq)]
-pub enum QueryItemError {
+pub enum QuerySingleError {
     /// No entity matches the query.
     NoEntities,
     /// More than one entity matches the query.
@@ -174,7 +177,7 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
     fn get_single_with_bitset(
         self,
         _bitset: Rc<BitSetVec>,
-    ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
+    ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
         ComponentStore::get_single(&**self)
     }
 
@@ -193,7 +196,7 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a CompMut<'q, T> {
     fn get_single_with_bitset(
         self,
         _bitset: Rc<BitSetVec>,
-    ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
+    ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
         ComponentStore::get_single(&**self)
     }
 
@@ -212,7 +215,7 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a mut CompMut<'q, T> {
     fn get_single_with_bitset(
         self,
         _bitset: Rc<BitSetVec>,
-    ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
+    ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
         ComponentStore::get_single_mut(self)
     }
 
@@ -235,10 +238,10 @@ where
     fn get_single_with_bitset(
         self,
         _bitset: Rc<BitSetVec>,
-    ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
+    ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
         match self.0.get_single() {
             Ok(single) => Ok(Some(single)),
-            Err(QueryItemError::NoEntities) => Ok(None),
+            Err(QuerySingleError::NoEntities) => Ok(None),
             Err(err) => Err(err),
         }
     }
@@ -261,10 +264,10 @@ where
     fn get_single_with_bitset(
         self,
         _bitset: Rc<BitSetVec>,
-    ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
+    ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
         match self.0.get_single_mut() {
             Ok(x) => Ok(Some(x)),
-            Err(QueryItemError::NoEntities) => Ok(None),
+            Err(QuerySingleError::NoEntities) => Ok(None),
             Err(err) => Err(err),
         }
     }
@@ -352,7 +355,7 @@ macro_rules! impl_query {
             fn get_single_with_bitset(
                 self,
                 bitset: Rc<BitSetVec>,
-            ) -> Result<<Self::Iter as Iterator>::Item, QueryItemError> {
+            ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
                 let (
                     $(
                         $args,
@@ -369,7 +372,7 @@ macro_rules! impl_query {
                 let has_second = query.next().is_some();
                 match (first, has_second) {
                     (Some(items), false) => Ok(items),
-                    _ => Err(QueryItemError::MultipleEntities),
+                    _ => Err(QuerySingleError::MultipleEntities),
                 }
             }
 
@@ -443,15 +446,15 @@ impl Entities {
     pub fn get_single_with<Q: QueryItem>(
         &self,
         query: Q,
-    ) -> Result<(Entity, <<Q as QueryItem>::Iter as Iterator>::Item), QueryItemError> {
+    ) -> Result<(Entity, <<Q as QueryItem>::Iter as Iterator>::Item), QuerySingleError> {
         let mut bitset = self.bitset().clone();
         query.apply_bitset(&mut bitset);
 
         let entity = {
             let mut ids = (0..self.next_id).filter(|&i| bitset.bit_test(i));
-            let id = ids.next().ok_or(QueryItemError::NoEntities)?;
+            let id = ids.next().ok_or(QuerySingleError::NoEntities)?;
             if ids.next().is_some() {
-                return Err(QueryItemError::MultipleEntities);
+                return Err(QuerySingleError::MultipleEntities);
             }
             Entity::new(id as u32, self.generation[id])
         };
