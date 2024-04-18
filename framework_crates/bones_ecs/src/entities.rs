@@ -443,6 +443,19 @@ impl<'a, I: Iterator> Iterator for EntitiesIterWith<'a, I> {
 impl Entities {
     /// Get a single entity and components in the given query if there is exactly one entity
     /// matching the query.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if the number of matching entities is not *exactly one*.
+    pub fn single_with<Q: QueryItem>(
+        &self,
+        query: Q,
+    ) -> (Entity, <<Q as QueryItem>::Iter as Iterator>::Item) {
+        self.get_single_with(query).unwrap()
+    }
+
+    /// Get a single entity and components in the given query if there is exactly one entity
+    /// matching the query.
     pub fn get_single_with<Q: QueryItem>(
         &self,
         query: Q,
