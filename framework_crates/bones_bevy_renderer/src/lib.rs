@@ -1015,10 +1015,18 @@ fn extract_bones_sprites(
         // Extract normal sprites
         let mut z_offset = 0.0;
         for (_, (sprite, transform)) in entities.iter_with((&sprites, &transforms)) {
-            let Some(sprite_image) = bones_assets.try_get(sprite.image) else {
-                warn!("Sprite not loaded: {:?}", sprite.image);
-                continue;
+            let sprite_image = match bones_assets.try_get(sprite.image) {
+                Some(Ok(image)) => image,
+                Some(Err(err)) => {
+                    warn!("Sprite {:?} has invalid handle: {err:?}", sprite.image);
+                    continue;
+                }
+                None => {
+                    warn!("Sprite not loaded: {:?}", sprite.image);
+                    continue;
+                }
             };
+
             let image_id = if let bones::Image::External(id) = &*sprite_image {
                 *id
             } else {

@@ -75,6 +75,7 @@ impl SessionPlugin for LuaPluginLoaderSessionPlugin {
                                 let Some(plugin) = asset_server.try_get(*plugin_handle) else {
                                     return;
                                 };
+                                let plugin = plugin.unwrap();
 
                                 // Load the plugin if necessary
                                 if !plugin.has_loaded() {
