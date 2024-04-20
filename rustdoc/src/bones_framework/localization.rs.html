@@ -497,7 +497,7 @@
                 <span class="kw">let </span>resource_handle = ctx.load_asset(<span class="kw-2">&amp;</span>normalized)<span class="question-mark">?</span>.typed::&lt;FluentResourceAsset&gt;();
                 <span class="kw">let </span>resource = <span class="kw">loop </span>{
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(resource) = ctx.asset_server.try_get(resource_handle) {
-                        <span class="kw">break </span>resource;
+                        <span class="kw">break </span>resource.context(<span class="string">&quot;FluentBundle resource `{normalized:?}` handle could not be cast to `FluentResourceAsset`&quot;</span>)<span class="question-mark">?</span>;
                     }
                     ctx.asset_server.load_progress.listen().<span class="kw">await</span>;
                 };
@@ -539,7 +539,7 @@
                 <span class="kw">let </span>bundle_handle = ctx.load_asset(<span class="kw-2">&amp;</span>normalized)<span class="question-mark">?</span>.typed::&lt;FluentBundleAsset&gt;();
                 <span class="kw">let </span>bundle = <span class="kw">loop </span>{
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(bundle) = ctx.asset_server.try_get(bundle_handle) {
-                        <span class="kw">break </span>bundle;
+                        <span class="kw">break </span>bundle.context(<span class="string">&quot;Localization resource `{normalized:?}` loaded handle could not be cast to `FluentBundleAsset`&quot;</span>)<span class="question-mark">?</span>;
                     }
                     ctx.asset_server.load_progress.listen().<span class="kw">await</span>;
                 };

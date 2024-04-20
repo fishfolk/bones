@@ -1450,6 +1450,19 @@
 <a href="#1450" id="1450">1450</a>
 <a href="#1451" id="1451">1451</a>
 <a href="#1452" id="1452">1452</a>
+<a href="#1453" id="1453">1453</a>
+<a href="#1454" id="1454">1454</a>
+<a href="#1455" id="1455">1455</a>
+<a href="#1456" id="1456">1456</a>
+<a href="#1457" id="1457">1457</a>
+<a href="#1458" id="1458">1458</a>
+<a href="#1459" id="1459">1459</a>
+<a href="#1460" id="1460">1460</a>
+<a href="#1461" id="1461">1461</a>
+<a href="#1462" id="1462">1462</a>
+<a href="#1463" id="1463">1463</a>
+<a href="#1464" id="1464">1464</a>
+<a href="#1465" id="1465">1465</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -2257,7 +2270,7 @@
     /// schema matching `T`.
     </span><span class="attr">#[track_caller]
     </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, handle: Handle&lt;T&gt;) -&gt; MappedMapRef&lt;Cid, LoadedAsset, T&gt; {
-        <span class="self">self</span>.try_get(handle).unwrap()
+        <span class="self">self</span>.try_get(handle).unwrap().unwrap()
     }
 
     <span class="doccomment">/// Borrow a loaded asset.
@@ -2284,23 +2297,36 @@
     }
 
     <span class="doccomment">/// Borrow a loaded asset.
+    ///
+    /// Returns None if asset not found and Some([`SchemaMismatchError`]) if type cast fails.
     </span><span class="kw">pub fn </span>try_get&lt;T: HasSchema&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         handle: Handle&lt;T&gt;,
-    ) -&gt; <span class="prelude-ty">Option</span>&lt;MappedMapRef&lt;Cid, LoadedAsset, T&gt;&gt; {
-        <span class="kw">let </span>cid = <span class="self">self</span>.store.asset_ids.get(<span class="kw-2">&amp;</span>handle.untyped())<span class="question-mark">?</span>;
-        <span class="prelude-val">Some</span>(MapRef::map(<span class="self">self</span>.store.assets.get(<span class="kw-2">&amp;</span>cid).unwrap(), |x| {
-            <span class="kw">let </span>asset = <span class="kw-2">&amp;</span>x.data;
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;
+        <span class="prelude-ty">Result</span>&lt;
+            MappedMapRef&lt;<span class="lifetime">&#39;_</span>, Cid, LoadedAsset, T, std::collections::hash_map::RandomState&gt;,
+            SchemaMismatchError,
+        &gt;,
+    &gt; {
+        <span class="kw">let </span>cid = <span class="kw">match </span><span class="self">self</span>.store.asset_ids.get(<span class="kw-2">&amp;</span>handle.untyped()) {
+            <span class="prelude-val">Some</span>(cid) =&gt; cid,
+            <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">None</span>,
+        };
+        <span class="prelude-val">Some</span>(
+            MapRef::try_map(<span class="self">self</span>.store.assets.get(<span class="kw-2">&amp;</span>cid).unwrap(), |x| {
+                <span class="kw">let </span>asset = <span class="kw-2">&amp;</span>x.data;
 
-            <span class="comment">// If this is a handle to a schema box, then return the schema box directly without casting
-            </span><span class="kw">if </span>T::schema() == &lt;SchemaBox <span class="kw">as </span>HasSchema&gt;::schema() {
-                <span class="comment">// SOUND: the above comparison verifies that T is concretely a SchemaBox so &amp;Schemabox
-                // is the same as &amp;T.
-                </span><span class="kw">unsafe </span>{ std::mem::transmute(asset) }
-            } <span class="kw">else </span>{
-                asset.cast_ref()
-            }
-        }))
+                <span class="comment">// If this is a handle to a schema box, then return the schema box directly without casting
+                </span><span class="kw">if </span>T::schema() == &lt;SchemaBox <span class="kw">as </span>HasSchema&gt;::schema() {
+                    <span class="comment">// SOUND: the above comparison verifies that T is concretely a SchemaBox so &amp;Schemabox
+                    // is the same as &amp;T.
+                    </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ std::mem::transmute(asset) })
+                } <span class="kw">else </span>{
+                    asset.try_cast_ref().ok()
+                }
+            })
+            .map_err(|<span class="kw">_</span>| SchemaMismatchError),
+        )
     }
 
     <span class="doccomment">/// Borrow a loaded asset.

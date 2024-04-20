@@ -371,6 +371,7 @@
 <a href="#371" id="371">371</a>
 <a href="#372" id="372">372</a>
 <a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>bevy_tasks::{ComputeTaskPool, TaskPool, ThreadExecutor};
@@ -448,6 +449,7 @@
                                 <span class="kw">let </span><span class="prelude-val">Some</span>(plugin) = asset_server.try_get(<span class="kw-2">*</span>plugin_handle) <span class="kw">else </span>{
                                     <span class="kw">return</span>;
                                 };
+                                <span class="kw">let </span>plugin = plugin.unwrap();
 
                                 <span class="comment">// Load the plugin if necessary
                                 </span><span class="kw">if </span>!plugin.has_loaded() {

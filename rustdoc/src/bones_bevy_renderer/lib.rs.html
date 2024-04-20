@@ -1301,6 +1301,14 @@
 <a href="#1301" id="1301">1301</a>
 <a href="#1302" id="1302">1302</a>
 <a href="#1303" id="1303">1303</a>
+<a href="#1304" id="1304">1304</a>
+<a href="#1305" id="1305">1305</a>
+<a href="#1306" id="1306">1306</a>
+<a href="#1307" id="1307">1307</a>
+<a href="#1308" id="1308">1308</a>
+<a href="#1309" id="1309">1309</a>
+<a href="#1310" id="1310">1310</a>
+<a href="#1311" id="1311">1311</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -2318,10 +2326,18 @@
         <span class="comment">// Extract normal sprites
         </span><span class="kw">let </span><span class="kw-2">mut </span>z_offset = <span class="number">0.0</span>;
         <span class="kw">for </span>(<span class="kw">_</span>, (sprite, transform)) <span class="kw">in </span>entities.iter_with((<span class="kw-2">&amp;</span>sprites, <span class="kw-2">&amp;</span>transforms)) {
-            <span class="kw">let </span><span class="prelude-val">Some</span>(sprite_image) = bones_assets.try_get(sprite.image) <span class="kw">else </span>{
-                <span class="macro">warn!</span>(<span class="string">&quot;Sprite not loaded: {:?}&quot;</span>, sprite.image);
-                <span class="kw">continue</span>;
+            <span class="kw">let </span>sprite_image = <span class="kw">match </span>bones_assets.try_get(sprite.image) {
+                <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(image)) =&gt; image,
+                <span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(err)) =&gt; {
+                    <span class="macro">warn!</span>(<span class="string">&quot;Sprite {:?} has invalid handle: {err:?}&quot;</span>, sprite.image);
+                    <span class="kw">continue</span>;
+                }
+                <span class="prelude-val">None </span>=&gt; {
+                    <span class="macro">warn!</span>(<span class="string">&quot;Sprite not loaded: {:?}&quot;</span>, sprite.image);
+                    <span class="kw">continue</span>;
+                }
             };
+
             <span class="kw">let </span>image_id = <span class="kw">if let </span>bones::Image::External(id) = <span class="kw-2">&amp;*</span>sprite_image {
                 <span class="kw-2">*</span>id
             } <span class="kw">else </span>{
