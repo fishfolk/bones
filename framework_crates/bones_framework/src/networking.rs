@@ -205,7 +205,8 @@ pub enum SocketTarget {
 }
 
 /// Resource updated each frame exposing current frame and last confirmed of online session.
-#[derive(HasSchema, Copy, Clone, Default)]
+#[derive(HasSchema, Clone)]
+#[schema(no_default)]
 pub struct NetworkInfo {
     /// Current frame of simulation step
     pub current_frame: i32,
@@ -213,6 +214,9 @@ pub struct NetworkInfo {
     /// Last confirmed frame by all clients.
     /// Anything that occurred on this frame is agreed upon by all clients.
     pub last_confirmed_frame: i32,
+
+    /// Socket
+    pub socket: BoxedNonBlockingSocket,
 }
 
 /// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
@@ -511,6 +515,7 @@ where
                                     world.insert_resource(NetworkInfo {
                                         current_frame: self.session.current_frame(),
                                         last_confirmed_frame: self.session.confirmed_frame(),
+                                        socket: self.socket.clone(),
                                     });
 
                                     {
