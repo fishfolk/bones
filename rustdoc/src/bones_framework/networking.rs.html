@@ -594,6 +594,10 @@
 <a href="#594" id="594">594</a>
 <a href="#595" id="595">595</a>
 <a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;./networking.md&quot;</span>)]
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
@@ -836,6 +840,9 @@
     <span class="doccomment">/// FPS from game adjusted with constant network factor (may be slightly slower)
     </span><span class="kw">pub </span>network_fps: f64,
 
+    <span class="doccomment">/// FPS from game not adjusted with network factor.
+    </span><span class="kw">pub </span>original_fps: f64,
+
     <span class="doccomment">/// Session runner&#39;s input collector.
     </span><span class="kw">pub </span>input_collector: InputTypes::InputCollector,
 
@@ -949,6 +956,7 @@
             accumulator: default(),
             last_run: <span class="prelude-val">None</span>,
             network_fps: network_fps <span class="kw">as </span>f64,
+            original_fps: simulation_fps <span class="kw">as </span>f64,
             input_collector: InputTypes::InputCollector::default(),
             socket: info.socket.clone(),
             local_input_delay,
@@ -1187,7 +1195,7 @@
             max_prediction_window: <span class="prelude-val">Some</span>(<span class="self">self</span>.session.max_prediction()),
             local_input_delay: <span class="prelude-val">Some</span>(<span class="self">self</span>.local_input_delay),
         };
-        <span class="kw-2">*</span><span class="self">self </span>= GgrsSessionRunner::new(<span class="self">self</span>.network_fps <span class="kw">as </span>f32, runner_info);
+        <span class="kw-2">*</span><span class="self">self </span>= GgrsSessionRunner::new(<span class="self">self</span>.original_fps <span class="kw">as </span>f32, runner_info);
     }
 }
 </code></pre></div></section></main></body></html>
