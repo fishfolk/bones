@@ -240,6 +240,9 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
     /// FPS from game adjusted with constant network factor (may be slightly slower)
     pub network_fps: f64,
 
+    /// FPS from game not adjusted with network factor.
+    pub original_fps: f64,
+
     /// Session runner's input collector.
     pub input_collector: InputTypes::InputCollector,
 
@@ -353,6 +356,7 @@ where
             accumulator: default(),
             last_run: None,
             network_fps: network_fps as f64,
+            original_fps: simulation_fps as f64,
             input_collector: InputTypes::InputCollector::default(),
             socket: info.socket.clone(),
             local_input_delay,
@@ -591,6 +595,6 @@ where
             max_prediction_window: Some(self.session.max_prediction()),
             local_input_delay: Some(self.local_input_delay),
         };
-        *self = GgrsSessionRunner::new(self.network_fps as f32, runner_info);
+        *self = GgrsSessionRunner::new(self.original_fps as f32, runner_info);
     }
 }
