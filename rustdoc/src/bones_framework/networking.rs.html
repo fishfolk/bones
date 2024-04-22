@@ -598,6 +598,11 @@
 <a href="#598" id="598">598</a>
 <a href="#599" id="599">599</a>
 <a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;./networking.md&quot;</span>)]
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
@@ -805,7 +810,8 @@
 }
 
 <span class="doccomment">/// Resource updated each frame exposing current frame and last confirmed of online session.
-</span><span class="attr">#[derive(HasSchema, Copy, Clone, Default)]
+</span><span class="attr">#[derive(HasSchema, Clone)]
+#[schema(no_default)]
 </span><span class="kw">pub struct </span>NetworkInfo {
     <span class="doccomment">/// Current frame of simulation step
     </span><span class="kw">pub </span>current_frame: i32,
@@ -813,6 +819,9 @@
     <span class="doccomment">/// Last confirmed frame by all clients.
     /// Anything that occurred on this frame is agreed upon by all clients.
     </span><span class="kw">pub </span>last_confirmed_frame: i32,
+
+    <span class="doccomment">/// Socket
+    </span><span class="kw">pub </span>socket: BoxedNonBlockingSocket,
 }
 
 <span class="doccomment">/// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
@@ -1111,6 +1120,7 @@
                                     world.insert_resource(NetworkInfo {
                                         current_frame: <span class="self">self</span>.session.current_frame(),
                                         last_confirmed_frame: <span class="self">self</span>.session.confirmed_frame(),
+                                        socket: <span class="self">self</span>.socket.clone(),
                                     });
 
                                     {
