@@ -383,8 +383,9 @@ macro_rules! impl_query {
                 let first = query.next();
                 let has_second = query.next().is_some();
                 match (first, has_second) {
+                    (None, _) => Err(QuerySingleError::NoEntities),
                     (Some(items), false) => Ok(items),
-                    _ => Err(QuerySingleError::MultipleEntities),
+                    (Some(_), true) => Err(QuerySingleError::MultipleEntities),
                 }
             }
 
