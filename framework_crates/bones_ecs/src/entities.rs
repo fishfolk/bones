@@ -715,7 +715,7 @@ impl<'a> Iterator for EntityIterator<'a> {
 mod tests {
     #![allow(non_snake_case)]
 
-    use std::collections::HashSet;
+    use std::{collections::HashSet, rc::Rc};
 
     use crate::prelude::*;
 
@@ -726,6 +726,119 @@ mod tests {
     #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
     #[repr(C)]
     struct B(String);
+
+    #[test]
+    fn query_item__get_single_with_one_required() {
+        let mut entities = Entities::default();
+        let state = AtomicCell::new(ComponentStore::<A>::default());
+
+        {
+            let comp = state.borrow_mut();
+            let query = &comp;
+
+            let mut bitset = entities.bitset().clone();
+            query.apply_bitset(&mut bitset);
+
+            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
+
+            assert_eq!(maybe_comps, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let mut comp = state.borrow_mut();
+
+            let e = entities.create();
+            let a = A("e".to_string());
+            comp.insert(e, a.clone());
+
+            let query = &comp;
+            let mut bitset = entities.bitset().clone();
+            query.apply_bitset(&mut bitset);
+
+            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
+
+            assert_eq!(maybe_comps, Ok(&a));
+
+            entities.kill(e);
+        }
+
+        {
+            let mut comp = state.borrow_mut();
+
+            let e1 = entities.create();
+            comp.insert(e1, A("e1".to_string()));
+
+            let e2 = entities.create();
+            comp.insert(e2, A("e2".to_string()));
+
+            let query = &comp;
+            let mut bitset = entities.bitset().clone();
+            query.apply_bitset(&mut bitset);
+
+            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
+
+            assert_eq!(maybe_comps, Err(QuerySingleError::MultipleEntities));
+
+            entities.kill(e1);
+            entities.kill(e2);
+        }
+    }
+
+    #[test]
+    fn query_item__get_single_with_multiple_required() {
+        let mut entities = Entities::default();
+        let state_a = AtomicCell::new(ComponentStore::<A>::default());
+        let state_b = AtomicCell::new(ComponentStore::<B>::default());
+
+        {
+            let query = (&state_a.borrow(), &state_b.borrow());
+            let mut bitset = entities.bitset().clone();
+            query.apply_bitset(&mut bitset);
+
+            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
+
+            assert_eq!(maybe_comps, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let e = entities.create();
+            let a = A("e".to_string());
+            let b = B("e".to_string());
+            state_a.borrow_mut().insert(e, a.clone());
+            state_b.borrow_mut().insert(e, b.clone());
+
+            let query = (&state_a.borrow(), &state_b.borrow());
+            let mut bitset = entities.bitset().clone();
+            query.apply_bitset(&mut bitset);
+
+            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
+
+            assert_eq!(maybe_comps, Ok((&a, &b)));
+
+            entities.kill(e);
+        }
+
+        {
+            let e1 = entities.create();
+            state_a.borrow_mut().insert(e1, A("e1".to_string()));
+            state_b.borrow_mut().insert(e1, B("e1".to_string()));
+
+            let e2 = entities.create();
+            state_a.borrow_mut().insert(e2, A("e2".to_string()));
+            state_b.borrow_mut().insert(e2, B("e2".to_string()));
+
+            let query = (&state_a.borrow(), &state_b.borrow());
+            let mut bitset = entities.bitset().clone();
+            query.apply_bitset(&mut bitset);
+
+            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
+
+            assert_eq!(maybe_comps, Err(QuerySingleError::MultipleEntities));
+
+            entities.kill(e1);
+            entities.kill(e2);
+        }
+    }
 
     #[test]
     fn entities__create_kill() {
