@@ -749,7 +749,7 @@ impl<'a> Iterator for EntityIterator<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashSet, sync::Arc};
+    use std::collections::HashSet;
 
     use crate::prelude::*;
 
@@ -890,12 +890,10 @@ mod tests {
         let e = entities.create();
         let a = A("a".to_string());
 
-        let mut storage = ComponentStore::<A>::default();
-        storage.insert(e, a.clone());
+        let state = AtomicCell::new(ComponentStore::<A>::default());
+        state.borrow_mut().insert(e, a.clone());
 
-        let world = World::default();
-        let mut state = Arc::new(AtomicCell::new(storage));
-        let comp = <Comp<A> as SystemParam>::borrow(&world, &mut state);
+        let comp = state.borrow();
 
         assert_eq!(entities.get_single_with(&comp), Ok((e, &a)));
     }
@@ -904,77 +902,66 @@ mod tests {
     fn get_single_with_two_components() {
         let mut entities = Entities::default();
 
-        let mut storage_a = ComponentStore::<A>::default();
-        let mut storage_b = ComponentStore::<B>::default();
+        let state_a = AtomicCell::new(ComponentStore::<A>::default());
+        let state_b = AtomicCell::new(ComponentStore::<B>::default());
 
         let _e1 = entities.create();
 
         let e2 = entities.create();
-        storage_a.insert(e2, A("a2".to_string()));
+        state_a.borrow_mut().insert(e2, A("a2".to_string()));
 
         let e3 = entities.create();
-        storage_b.insert(e3, B("b3".to_string()));
+        state_b.borrow_mut().insert(e3, B("b3".to_string()));
 
         let e4 = entities.create();
-        let mut a4 = A("a4".to_string());
-        let mut b4 = B("b4".to_string());
-        storage_a.insert(e4, a4.clone());
-        storage_b.insert(e4, b4.clone());
+        let a4 = A("a4".to_string());
+        let b4 = B("b4".to_string());
+        state_a.borrow_mut().insert(e4, a4.clone());
+        state_b.borrow_mut().insert(e4, b4.clone());
 
-        let world = World::default();
-        let mut state_a = Arc::new(AtomicCell::new(storage_a));
-        let mut state_b = Arc::new(AtomicCell::new(storage_b));
-
-        {
-            let comp_a = <Comp<A> as SystemParam>::borrow(&world, &mut state_a);
-            let comp_b = <Comp<B> as SystemParam>::borrow(&world, &mut state_b);
-            assert_eq!(
-                entities.get_single_with((&comp_a, &comp_b)),
-                Ok((e4, (&a4, &b4)))
-            );
-        }
-
-        {
-            let mut comp_a = <CompMut<A> as SystemParam>::borrow(&world, &mut state_a);
-            let mut comp_b = <CompMut<B> as SystemParam>::borrow(&world, &mut state_b);
-            assert_eq!(
-                entities.get_single_with((&comp_a, &comp_b)),
-                Ok((e4, (&a4, &b4)))
-            );
-            assert_eq!(
-                entities.get_single_with((&mut comp_a, &mut comp_b)),
-                Ok((e4, (&mut a4, &mut b4)))
-            );
-        }
+        let comp_a = state_a.borrow();
+        let comp_b = state_b.borrow();
+        assert_eq!(
+            entities.get_single_with((&comp_a, &comp_b)),
+            Ok((e4, (&a4, &b4)))
+        );
     }
 
     #[test]
     fn get_single_with_optional_component() {
         let mut entities = Entities::default();
-
-        let world = World::default();
-        let mut state_a = Arc::new(AtomicCell::new(ComponentStore::<A>::default()));
+        let state = AtomicCell::new(ComponentStore::<A>::default());
 
         {
             let e = entities.create();
 
-            let comp_a = <Comp<A> as SystemParam>::borrow(&world, &mut state_a);
+            let mut comp = state.borrow_mut();
 
-            assert_eq!(entities.get_single_with(&Optional(&comp_a)), Ok((e, None)));
+            assert_eq!(entities.get_single_with(&Optional(&comp)), Ok((e, None)));
+
+            assert_eq!(
+                entities.get_single_with(&mut OptionalMut(&mut comp)),
+                Ok((e, None))
+            );
 
             entities.kill(e);
         }
 
         {
             let e = entities.create();
-            let a = A("a".to_string());
-            state_a.borrow_mut().insert(e, a.clone());
+            let mut a = A("a".to_string());
+            state.borrow_mut().insert(e, a.clone());
 
-            let comp_a = <Comp<A> as SystemParam>::borrow(&world, &mut state_a);
+            let mut comp = state.borrow_mut();
 
             assert_eq!(
-                entities.get_single_with(&Optional(&comp_a)),
+                entities.get_single_with(&Optional(&comp)),
                 Ok((e, Some(&a)))
+            );
+
+            assert_eq!(
+                entities.get_single_with(&mut OptionalMut(&mut comp)),
+                Ok((e, Some(&mut a)))
             );
 
             entities.kill(e);
@@ -984,21 +971,24 @@ mod tests {
     #[test]
     fn get_single_with_optional_and_non_optional_components() {
         let mut entities = Entities::default();
-
-        let world = World::default();
-        let mut state_a = Arc::new(AtomicCell::new(ComponentStore::<A>::default()));
-        let mut state_b = Arc::new(AtomicCell::new(ComponentStore::<B>::default()));
+        let state_a = AtomicCell::new(ComponentStore::<A>::default());
+        let state_b = AtomicCell::new(ComponentStore::<B>::default());
 
         {
             let e = entities.create();
             let a = A("a".to_string());
             state_a.borrow_mut().insert(e, a.clone());
 
-            let comp_a = <Comp<A> as SystemParam>::borrow(&world, &mut state_a);
-            let comp_b = <Comp<B> as SystemParam>::borrow(&world, &mut state_b);
+            let comp_a = state_a.borrow();
+            let mut comp_b = state_b.borrow_mut();
 
             assert_eq!(
                 entities.get_single_with((&comp_a, &Optional(&comp_b))),
+                Ok((e, (&a, None)))
+            );
+
+            assert_eq!(
+                entities.get_single_with((&comp_a, &mut OptionalMut(&mut comp_b))),
                 Ok((e, (&a, None)))
             );
 
@@ -1008,16 +998,21 @@ mod tests {
         {
             let e = entities.create();
             let a = A("a".to_string());
-            let b = B("b".to_string());
+            let mut b = B("b".to_string());
             state_a.borrow_mut().insert(e, a.clone());
             state_b.borrow_mut().insert(e, b.clone());
 
-            let comp_a = <Comp<A> as SystemParam>::borrow(&world, &mut state_a);
-            let comp_b = <Comp<B> as SystemParam>::borrow(&world, &mut state_b);
+            let comp_a = state_a.borrow();
+            let mut comp_b = state_b.borrow_mut();
 
             assert_eq!(
                 entities.get_single_with((&comp_a, &Optional(&comp_b))),
                 Ok((e, (&a, Some(&b))))
+            );
+
+            assert_eq!(
+                entities.get_single_with((&comp_a, &mut OptionalMut(&mut comp_b))),
+                Ok((e, (&a, Some(&mut b))))
             );
 
             entities.kill(e);
