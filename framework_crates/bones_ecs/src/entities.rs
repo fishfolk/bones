@@ -713,6 +713,8 @@ impl<'a> Iterator for EntityIterator<'a> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(non_snake_case)]
+
     use std::collections::HashSet;
 
     use crate::prelude::*;
@@ -726,7 +728,7 @@ mod tests {
     struct B(String);
 
     #[test]
-    fn create_kill_entities() {
+    fn entities__create_kill() {
         let mut entities = Entities::default();
         let e1 = entities.create();
         let e2 = entities.create();
@@ -754,7 +756,7 @@ mod tests {
     }
 
     #[test]
-    fn test_interleaved_create_kill() {
+    fn entities__interleaved_create_kill() {
         let mut entities = Entities::default();
 
         let e1 = entities.create();
@@ -778,7 +780,7 @@ mod tests {
 
     #[test]
     /// Exercise basic operations on entities to increase code coverage
-    fn clone_debug_hash() {
+    fn entities__clone_debug_hash() {
         let mut entities = Entities::default();
         let e1 = entities.create();
         // Clone
@@ -795,7 +797,7 @@ mod tests {
     ///
     /// Exercises a code path not tested according to code coverage.
     #[test]
-    fn force_generate_next_section() {
+    fn entities__force_generate_next_section() {
         let mut entities = Entities::default();
         // Create enough entities to fil up the first section of the bitset
         for _ in 0..256 {
@@ -812,7 +814,7 @@ mod tests {
     #[cfg(not(miri))] // This test is very slow on miri and not critical to test for.
     #[test]
     #[should_panic(expected = "Exceeded maximum amount")]
-    fn force_max_entity_panic() {
+    fn entities__force_max_entity_panic() {
         let mut entities = Entities::default();
         for _ in 0..(BITSET_SIZE + 1) {
             entities.create();
@@ -822,7 +824,7 @@ mod tests {
     #[cfg(not(miri))] // This test is very slow on miri and not critical to test for.
     #[test]
     #[should_panic(expected = "Exceeded maximum amount")]
-    fn force_max_entity_panic2() {
+    fn entities__force_max_entity_panic2() {
         let mut entities = Entities::default();
         let mut e = None;
         for _ in 0..BITSET_SIZE {
@@ -835,7 +837,7 @@ mod tests {
     }
 
     #[test]
-    fn iter_with_empty_bitset() {
+    fn entities__iter_with_empty_bitset() {
         let mut entities = Entities::default();
 
         // Create a couple entities
@@ -848,7 +850,7 @@ mod tests {
     }
 
     #[test]
-    fn get_single_with_one_component() {
+    fn entities__get_single__with_one_required() {
         let mut entities = Entities::default();
         (0..3).map(|_| entities.create()).count();
         let e = entities.create();
@@ -863,7 +865,7 @@ mod tests {
     }
 
     #[test]
-    fn get_single_with_two_components() {
+    fn entities__get_single__with_multiple_required() {
         let mut entities = Entities::default();
 
         let state_a = AtomicCell::new(ComponentStore::<A>::default());
@@ -892,7 +894,7 @@ mod tests {
     }
 
     #[test]
-    fn get_single_with_optional_component() {
+    fn entities__get_single__with_one_optional() {
         let mut entities = Entities::default();
         let state = AtomicCell::new(ComponentStore::<A>::default());
 
@@ -933,7 +935,7 @@ mod tests {
     }
 
     #[test]
-    fn get_single_with_optional_and_non_optional_components() {
+    fn entities__get_single__with_required_and_optional() {
         let mut entities = Entities::default();
         let state_a = AtomicCell::new(ComponentStore::<A>::default());
         let state_b = AtomicCell::new(ComponentStore::<B>::default());
