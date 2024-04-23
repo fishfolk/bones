@@ -101,8 +101,9 @@ pub trait QueryItem {
 }
 
 /// An error that may occur when querying for a single entity. For example, via
-/// [`Entities::get_single_with`], or more directly with [`ComponentStore::get_single`] or
-/// [`ComponentStore::get_single_mut`].
+/// [`Entities::get_single_with`], or more directly with
+/// [`ComponentStore::get_single_with_bitset`] or
+/// [`ComponentStore::get_single_mut_with_bitset`].
 #[derive(Debug, PartialEq, Eq)]
 pub enum QuerySingleError {
     /// No entity matches the query.
