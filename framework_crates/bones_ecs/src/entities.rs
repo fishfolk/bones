@@ -188,9 +188,9 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
 
     fn get_single_with_bitset(
         self,
-        _bitset: Rc<BitSetVec>,
+        bitset: Rc<BitSetVec>,
     ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
-        ComponentStore::get_single(&**self)
+        ComponentStore::get_single_with_bitset(&**self, bitset)
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -207,9 +207,9 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a CompMut<'q, T> {
 
     fn get_single_with_bitset(
         self,
-        _bitset: Rc<BitSetVec>,
+        bitset: Rc<BitSetVec>,
     ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
-        ComponentStore::get_single(&**self)
+        ComponentStore::get_single_with_bitset(&**self, bitset)
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -226,9 +226,9 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a mut CompMut<'q, T> {
 
     fn get_single_with_bitset(
         self,
-        _bitset: Rc<BitSetVec>,
+        bitset: Rc<BitSetVec>,
     ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
-        ComponentStore::get_single_mut(self)
+        ComponentStore::get_single_with_bitset_mut(self, bitset)
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -249,9 +249,9 @@ where
 
     fn get_single_with_bitset(
         self,
-        _bitset: Rc<BitSetVec>,
+        bitset: Rc<BitSetVec>,
     ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
-        match self.0.get_single() {
+        match self.0.get_single_with_bitset(bitset) {
             Ok(single) => Ok(Some(single)),
             Err(QuerySingleError::NoEntities) => Ok(None),
             Err(err) => Err(err),
@@ -275,9 +275,9 @@ where
 
     fn get_single_with_bitset(
         self,
-        _bitset: Rc<BitSetVec>,
+        bitset: Rc<BitSetVec>,
     ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
-        match self.0.get_single_mut() {
+        match self.0.get_single_with_bitset_mut(bitset) {
             Ok(x) => Ok(Some(x)),
             Err(QuerySingleError::NoEntities) => Ok(None),
             Err(err) => Err(err),
@@ -875,6 +875,26 @@ mod tests {
             entities.kill(e1);
             entities.kill(e2);
         }
+    }
+
+    #[test]
+    fn query_item__get_single_with_bitset__uses_bitset() {
+        let mut entities = Entities::default();
+        let state = AtomicCell::new(ComponentStore::<A>::default());
+
+        let e = entities.create();
+        state.borrow_mut().insert(e, A("unexpected".to_string()));
+
+        let query = &state.borrow();
+        let bitset = Rc::new({
+            let mut bitset = BitSetVec::default();
+            bitset.bit_set(99);
+            bitset
+        });
+
+        let maybe_comp = query.get_single_with_bitset(bitset);
+
+        assert_eq!(maybe_comp, Err(QuerySingleError::NoEntities));
     }
 
     #[test]
