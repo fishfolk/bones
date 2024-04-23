@@ -111,19 +111,22 @@ impl<T: HasSchema> ComponentStore<T> {
 
     /// Gets an immutable reference to the component if there is exactly one instance of it.
     #[inline]
-    pub fn get_single(&self) -> Result<&T, QuerySingleError> {
+    pub fn get_single_with_bitset(&self, bitset: Rc<BitSetVec>) -> Result<&T, QuerySingleError> {
         // SOUND: we know the schema matches.
         self.untyped
-            .get_single()
+            .get_single_with_bitset(bitset)
             .map(|x| unsafe { x.cast_into_unchecked() })
     }
 
     /// Gets a mutable reference to the component if there is exactly one instance of it.
     #[inline]
-    pub fn get_single_mut(&mut self) -> Result<&mut T, QuerySingleError> {
+    pub fn get_single_with_bitset_mut(
+        &mut self,
+        bitset: Rc<BitSetVec>,
+    ) -> Result<&mut T, QuerySingleError> {
         // SOUND: we know the schema matches.
         self.untyped
-            .get_single_mut()
+            .get_single_with_bitset_mut(bitset)
             .map(|x| unsafe { x.cast_into_mut_unchecked() })
     }
 
@@ -155,10 +158,13 @@ impl<T: HasSchema> ComponentStore<T> {
 /// Automatically implemented for [`ComponentStore`].
 pub trait ComponentIterBitset<'a, T: HasSchema> {
     /// Gets an immutable reference to the component if there is exactly one instance of it.
-    fn get_single(&self) -> Result<&T, QuerySingleError>;
+    fn get_single_with_bitset(&self, bitset: Rc<BitSetVec>) -> Result<&T, QuerySingleError>;
 
     /// Gets a mutable reference to the component if there is exactly one instance of it.
-    fn get_single_mut(&mut self) -> Result<&mut T, QuerySingleError>;
+    fn get_single_with_bitset_mut(
+        &mut self,
+        bitset: Rc<BitSetVec>,
+    ) -> Result<&mut T, QuerySingleError>;
 
     /// Iterates immutably over the components of this type where `bitset`
     /// indicates the indices of entities.
@@ -198,21 +204,24 @@ pub trait ComponentIterBitset<'a, T: HasSchema> {
 
 impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
     /// Gets an immutable reference to the component if there is exactly one instance of it.
-    fn get_single(&self) -> Result<&T, QuerySingleError> {
+    fn get_single_with_bitset(&self, bitset: Rc<BitSetVec>) -> Result<&T, QuerySingleError> {
         // SOUND: we know the schema matches.
         fn map<T>(r: SchemaRef) -> &T {
             unsafe { r.cast_into_unchecked() }
         }
-        self.untyped.get_single().map(map)
+        self.untyped.get_single_with_bitset(bitset).map(map)
     }
 
     /// Gets a mutable reference to the component if there is exactly one instance of it.
-    fn get_single_mut(&mut self) -> Result<&mut T, QuerySingleError> {
+    fn get_single_with_bitset_mut(
+        &mut self,
+        bitset: Rc<BitSetVec>,
+    ) -> Result<&mut T, QuerySingleError> {
         // SOUND: we know the schema matches.
         fn map<T>(r: SchemaRefMut) -> &mut T {
             unsafe { r.cast_into_mut_unchecked() }
         }
-        self.untyped.get_single_mut().map(map)
+        self.untyped.get_single_with_bitset_mut(bitset).map(map)
     }
 
     /// Iterates immutably over the components of this type where `bitset`
@@ -342,8 +351,13 @@ mod tests {
     #[test]
     fn single_returns_none_when_empty() {
         let storage = ComponentStore::<A>::default();
+        let bitset = Rc::new({
+            let mut entities = Entities::default();
+            entities.create();
+            entities.bitset().clone()
+        });
 
-        let maybe_comp = storage.get_single();
+        let maybe_comp = storage.get_single_with_bitset(bitset);
 
         assert_eq!(maybe_comp, Err(QuerySingleError::NoEntities));
     }
@@ -360,7 +374,9 @@ mod tests {
         let a = A("a".to_string());
         storage.insert(e, a.clone());
 
-        let maybe_comp = storage.get_single();
+        let bitset = Rc::new(entities.bitset().clone());
+
+        let maybe_comp = storage.get_single_with_bitset(bitset);
 
         assert_eq!(maybe_comp, Ok(&a));
     }
@@ -374,7 +390,9 @@ mod tests {
             .map(|i| storage.insert(entities.create(), A(i.to_string())))
             .count();
 
-        let maybe_comp = storage.get_single();
+        let bitset = Rc::new(entities.bitset().clone());
+
+        let maybe_comp = storage.get_single_with_bitset(bitset);
 
         assert_eq!(maybe_comp, Err(QuerySingleError::MultipleEntities));
     }
@@ -398,6 +416,7 @@ mod tests {
             let e = entities.create();
             let mut a = A("e".to_string());
             storage.insert(e, a.clone());
+
             let bitset = Rc::new(entities.bitset().clone());
 
             let mut comp_iter = storage.iter_with_bitset(bitset.clone());

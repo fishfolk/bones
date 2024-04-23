@@ -492,9 +492,12 @@ impl UntypedComponentStore {
     }
 
     /// Get a reference to the component store if there is exactly one instance of the component.
-    pub fn get_single(&self) -> Result<SchemaRef, QuerySingleError> {
+    pub fn get_single_with_bitset(
+        &self,
+        bitset: Rc<BitSetVec>,
+    ) -> Result<SchemaRef, QuerySingleError> {
         let len = self.bitset().bit_len();
-        let mut iter = (0..len).filter(|&i| self.bitset().bit_test(i));
+        let mut iter = (0..len).filter(|&i| bitset.bit_test(i) && self.bitset().bit_test(i));
         let i = iter.next().ok_or(QuerySingleError::NoEntities)?;
         if iter.next().is_some() {
             return Err(QuerySingleError::MultipleEntities);
@@ -505,9 +508,12 @@ impl UntypedComponentStore {
 
     /// Get a mutable reference to the component store if there is exactly one instance of the
     /// component.
-    pub fn get_single_mut(&mut self) -> Result<SchemaRefMut, QuerySingleError> {
+    pub fn get_single_with_bitset_mut(
+        &mut self,
+        bitset: Rc<BitSetVec>,
+    ) -> Result<SchemaRefMut, QuerySingleError> {
         let len = self.bitset().bit_len();
-        let mut iter = (0..len).filter(|&i| self.bitset().bit_test(i));
+        let mut iter = (0..len).filter(|&i| bitset.bit_test(i) && self.bitset().bit_test(i));
         let i = iter.next().ok_or(QuerySingleError::NoEntities)?;
         if iter.next().is_some() {
             return Err(QuerySingleError::MultipleEntities);
