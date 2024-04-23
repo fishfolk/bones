@@ -790,17 +790,17 @@ fn step_bones_game(world: &mut World) {
         None => {
             data.game.insert_shared_resource(bones::Window {
                 size: vec2(window.width(), window.height()),
-                fullscreen: matches!(&window.mode, WindowMode::Fullscreen),
+                fullscreen: matches!(&window.mode, WindowMode::BorderlessFullscreen),
             });
             data.game.shared_resource_cell().unwrap()
         }
     };
     let bones_window = bones_window.borrow_mut().unwrap();
 
-    let is_fullscreen = matches!(&window.mode, WindowMode::Fullscreen);
+    let is_fullscreen = matches!(&window.mode, WindowMode::BorderlessFullscreen);
     if is_fullscreen != bones_window.fullscreen {
         window.mode = if bones_window.fullscreen {
-            WindowMode::Fullscreen
+            WindowMode::BorderlessFullscreen
         } else {
             WindowMode::Windowed
         };
