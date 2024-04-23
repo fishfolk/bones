@@ -277,7 +277,7 @@ where
         self,
         bitset: Rc<BitSetVec>,
     ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
-        match self.0.get_single_with_bitset_mut(bitset) {
+        match self.0.get_single_mut_with_bitset(bitset) {
             Ok(x) => Ok(Some(x)),
             Err(QuerySingleError::NoEntities) => Ok(None),
             Err(err) => Err(err),

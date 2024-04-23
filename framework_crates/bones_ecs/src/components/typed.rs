@@ -161,7 +161,7 @@ pub trait ComponentIterBitset<'a, T: HasSchema> {
     fn get_single_with_bitset(&self, bitset: Rc<BitSetVec>) -> Result<&T, QuerySingleError>;
 
     /// Gets a mutable reference to the component if there is exactly one instance of it.
-    fn get_single_with_bitset_mut(
+    fn get_single_mut_with_bitset(
         &mut self,
         bitset: Rc<BitSetVec>,
     ) -> Result<&mut T, QuerySingleError>;
@@ -213,7 +213,7 @@ impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
     }
 
     /// Gets a mutable reference to the component if there is exactly one instance of it.
-    fn get_single_with_bitset_mut(
+    fn get_single_mut_with_bitset(
         &mut self,
         bitset: Rc<BitSetVec>,
     ) -> Result<&mut T, QuerySingleError> {
