@@ -2101,17 +2101,17 @@
         <span class="prelude-val">None </span>=&gt; {
             data.game.insert_shared_resource(bones::Window {
                 size: vec2(window.width(), window.height()),
-                fullscreen: <span class="macro">matches!</span>(<span class="kw-2">&amp;</span>window.mode, WindowMode::Fullscreen),
+                fullscreen: <span class="macro">matches!</span>(<span class="kw-2">&amp;</span>window.mode, WindowMode::BorderlessFullscreen),
             });
             data.game.shared_resource_cell().unwrap()
         }
     };
     <span class="kw">let </span>bones_window = bones_window.borrow_mut().unwrap();
 
-    <span class="kw">let </span>is_fullscreen = <span class="macro">matches!</span>(<span class="kw-2">&amp;</span>window.mode, WindowMode::Fullscreen);
+    <span class="kw">let </span>is_fullscreen = <span class="macro">matches!</span>(<span class="kw-2">&amp;</span>window.mode, WindowMode::BorderlessFullscreen);
     <span class="kw">if </span>is_fullscreen != bones_window.fullscreen {
         window.mode = <span class="kw">if </span>bones_window.fullscreen {
-            WindowMode::Fullscreen
+            WindowMode::BorderlessFullscreen
         } <span class="kw">else </span>{
             WindowMode::Windowed
         };
