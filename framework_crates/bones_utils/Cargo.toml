@@ -18,7 +18,7 @@ bones_utils_macros = { version = "0.3", path = "./macros" }
 smallvec           = "1.11"
 fxhash             = "0.2"
 hashbrown          = { version = "0.14" }
-ulid               = "1.0"
+ulid               = "1.1"
 parking_lot        = "0.12"
 serde              = { version = "1.0", optional = true }
 maybe-owned        = "0.3"
