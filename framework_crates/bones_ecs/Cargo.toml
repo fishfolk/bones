@@ -33,7 +33,7 @@ bitset-core = "0.1"
 thiserror   = "1.0"
 glam        = { version = "0.24", optional = true }
 paste       = { version = "1.0", optional = true }
-once_map    = "0.4.12"
+once_map    = "0.4.17"
 
 [dev-dependencies]
 glam = "0.24"
