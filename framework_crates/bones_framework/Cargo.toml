@@ -103,7 +103,7 @@ egui_plot  = "0.23"
 ttf-parser = { version = "0.20", default-features = false, optional = true }
 
 # Audio
-kira = { version = "0.8.6", features = ["cpal"], default-features = false, optional = true }
+kira = { version = "0.8.7", features = ["cpal"], default-features = false, optional = true }
 
 # Localization
 fluent         = { version = "0.15", optional = true }
