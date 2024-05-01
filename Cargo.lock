@@ -257,7 +257,7 @@ dependencies = [
  "objc",
  "objc-foundation",
  "objc_id",
- "parking_lot 0.12.1",
+ "parking_lot 0.12.2",
  "thiserror",
  "winapi",
  "x11rb",
@@ -444,7 +444,7 @@ dependencies = [
  "downcast-rs",
  "fastrand 1.9.0",
  "js-sys",
- "parking_lot 0.12.1",
+ "parking_lot 0.12.2",
  "serde",
  "thiserror",
  "wasm-bindgen",
@@ -822,7 +822,7 @@ dependencies = [
  "erased-serde 0.3.31",
  "glam 0.24.2",
  "once_cell",
- "parking_lot 0.12.1",
+ "parking_lot 0.12.2",
  "serde",
  "smallvec",
  "smol_str",
@@ -907,7 +907,7 @@ dependencies = [
  "js-sys",
  "naga",
  "naga_oil",
- "parking_lot 0.12.1",
+ "parking_lot 0.12.2",
  "regex",
  "serde",
  "smallvec",
@@ -1468,7 +1468,7 @@ dependencies = [
  "hashbrown 0.14.3",
  "instant",
  "maybe-owned",
- "parking_lot 0.12.1",
+ "parking_lot 0.12.2",
  "serde",
  "smallvec",
  "turborand",
@@ -1798,7 +1798,7 @@ dependencies = [
  "ndk-context",
  "oboe",
  "once_cell",
- "parking_lot 0.12.1",
+ "parking_lot 0.12.2",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -2135,7 +2135,7 @@ dependencies = [
  "ecolor",
  "emath",
  "nohash-hasher",
- "parking_lot 0.12.1",
+ "parking_lot 0.12.2",
 ]
 
 [[package]]
@@ -2561,7 +2561,7 @@ dependencies = [
  "bytemuck",
  "instant",
  "js-sys",
- "parking_lot 0.12.1",
+ "parking_lot 0.12.2",
  "rand",
  "serde",
 ]
@@ -3698,7 +3698,7 @@ checksum = "8f2d1d09016ea926b4a8c89938674322fca80bc139d605b21a574c0ce1000a19"
 dependencies = [
  "ahash",
  "hashbrown 0.14.3",
- "parking_lot 0.12.1",
+ "parking_lot 0.12.2",
  "stable_deref_trait",
 ]
 
@@ -3757,9 +3757,9 @@ dependencies = [
 
 [[package]]
 name = "parking_lot"
-version = "0.12.1"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3742b2c103b9f06bc9fff0a37ff4912935851bee6d36f3c02bcc755bcfec228f"
+checksum = "7e4af0ca4f6caed20e900d564c242b8e5d4903fdacf31d3daf527b66fe6f42fb"
 dependencies = [
  "lock_api",
  "parking_lot_core 0.9.9",
@@ -5291,7 +5291,7 @@ dependencies = [
  "ahash",
  "byteorder",
  "lazy_static",
- "parking_lot 0.12.1",
+ "parking_lot 0.12.2",
  "serde",
 ]
 
