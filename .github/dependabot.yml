@@ -1,15 +1,17 @@
-# version: 2
-# updates:
-#   # Maintain dependencies for Cargo
-#   - package-ecosystem: cargo
-#     directory: "/"
-#     schedule:
-#       interval: monthly
-#     open-pull-requests-limit: 10
+version: 2
+updates:
+  # Maintain dependencies for Cargo
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: monthly
+    # disabled
+    open-pull-requests-limit: 0
 
-#   # Maintain dependencies for GitHub Actions
-#   - package-ecosystem: github-actions
-#     directory: "/"
-#     schedule:
-#       interval: monthly
-#     open-pull-requests-limit: 10
+  # Maintain dependencies for GitHub Actions
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    # Disabled
+    open-pull-requests-limit: 0
