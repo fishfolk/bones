@@ -1,5 +1,4 @@
 use anyhow::format_err;
-use bevy_tasks::IoTaskPool;
 use bones_matchmaker_proto::{MatchInfo, RecvProxyMessage, SendProxyMessage};
 use bytes::Bytes;
 use quinn::Connection;
@@ -14,8 +13,6 @@ pub async fn start_proxy(match_info: MatchInfo, clients: Vec<Connection>) {
 }
 
 async fn impl_proxy(match_info: MatchInfo, clients: Vec<Connection>) -> anyhow::Result<()> {
-    let task_pool = IoTaskPool::get();
-
     // For each connected client
     for (i, conn) in clients.iter().enumerate() {
         // Get the client connection
@@ -27,114 +24,110 @@ async fn impl_proxy(match_info: MatchInfo, clients: Vec<Connection>) -> anyhow::
         // Spawn a task for handling this client's reliable connections
         let conn_ = conn.clone();
         let peers_ = peers.clone();
-        task_pool
-            .spawn(async move {
-                let result = async {
-                    loop {
-                        // Wait for an incomming connection
-                        let mut accept = conn_.accept_uni().await?;
+        tokio::task::spawn(async move {
+            let result = async {
+                loop {
+                    // Wait for an incomming connection
+                    let mut accept = conn_.accept_uni().await?;
 
-                        // Parse the message
-                        let message = accept.read_to_end(1024).await?;
-                        let message = postcard::from_bytes::<SendProxyMessage>(&message)?;
-                        let target_client = message.target_client;
-                        let message = message.message;
+                    // Parse the message
+                    let message = accept.read_to_end(1024).await?;
+                    let message = postcard::from_bytes::<SendProxyMessage>(&message)?;
+                    let target_client = message.target_client;
+                    let message = message.message;
 
-                        let targets = match target_client {
-                            bones_matchmaker_proto::TargetClient::All => peers_.clone(),
-                            bones_matchmaker_proto::TargetClient::One(i) => vec![peers_
-                                .get(i as usize)
-                                .cloned()
-                                .ok_or_else(|| format_err!("Invalid target client: {i}"))?],
-                        };
+                    let targets = match target_client {
+                        bones_matchmaker_proto::TargetClient::All => peers_.clone(),
+                        bones_matchmaker_proto::TargetClient::One(i) => vec![peers_
+                            .get(i as usize)
+                            .cloned()
+                            .ok_or_else(|| format_err!("Invalid target client: {i}"))?],
+                    };
 
-                        // Send message to all target clients
-                        let mut send_tasks = Vec::with_capacity(targets.len());
-                        for target_client in targets {
-                            let message_ = message.clone();
-                            let task = task_pool.spawn(async move {
-                                // Send the message to the target client
-                                let mut send = target_client.open_uni().await?;
-                                let send_message = RecvProxyMessage {
-                                    from_client: i as u8,
-                                    message: message_,
-                                };
-                                let send_message = postcard::to_allocvec(&send_message)?;
-                                send.write_all(&send_message).await?;
-                                send.finish().await?;
+                    // Send message to all target clients
+                    let mut send_tasks = Vec::with_capacity(targets.len());
+                    for target_client in targets {
+                        let message_ = message.clone();
+                        let task = tokio::task::spawn(async move {
+                            // Send the message to the target client
+                            let mut send = target_client.open_uni().await?;
+                            let send_message = RecvProxyMessage {
+                                from_client: i as u8,
+                                message: message_,
+                            };
+                            let send_message = postcard::to_allocvec(&send_message)?;
+                            send.write_all(&send_message).await?;
+                            send.finish().await?;
 
-                                Ok::<_, anyhow::Error>(())
-                            });
+                            Ok::<_, anyhow::Error>(())
+                        });
 
-                            send_tasks.push(task);
-                        }
-                        futures::future::try_join_all(send_tasks).await?;
+                        send_tasks.push(task);
                     }
-
-                    #[allow(unreachable_code)]
-                    Ok::<_, anyhow::Error>(())
-                };
-
-                if let Err(e) = result.await {
-                    warn!("Error in client connection: {e:?}");
+                    futures::future::try_join_all(send_tasks).await?;
                 }
-            })
-            .detach();
+
+                #[allow(unreachable_code)]
+                Ok::<_, anyhow::Error>(())
+            };
+
+            if let Err(e) = result.await {
+                warn!("Error in client connection: {e:?}");
+            }
+        });
 
         // Spawn task for handling the client's unreliable messages
         // TODO: De-duplicate matchmaker proxy code if possible.
         // These two task pool spawns have very similar code. It could be good to de-duplicate
         // it if possible.
-        task_pool
-            .spawn(async move {
-                let result = async {
-                    loop {
-                        // Wait for an incomming connection
-                        let bytes = conn.read_datagram().await?;
+        tokio::task::spawn(async move {
+            let result = async {
+                loop {
+                    // Wait for an incomming connection
+                    let bytes = conn.read_datagram().await?;
 
-                        // Parse the message
-                        let message = postcard::from_bytes::<SendProxyMessage>(&bytes)?;
-                        let target_client = message.target_client;
-                        let message = message.message;
+                    // Parse the message
+                    let message = postcard::from_bytes::<SendProxyMessage>(&bytes)?;
+                    let target_client = message.target_client;
+                    let message = message.message;
 
-                        let targets = match target_client {
-                            bones_matchmaker_proto::TargetClient::All => peers.clone(),
-                            bones_matchmaker_proto::TargetClient::One(i) => vec![peers
-                                .get(i as usize)
-                                .cloned()
-                                .ok_or_else(|| format_err!("Invalid target client: {i}"))?],
-                        };
+                    let targets = match target_client {
+                        bones_matchmaker_proto::TargetClient::All => peers.clone(),
+                        bones_matchmaker_proto::TargetClient::One(i) => vec![peers
+                            .get(i as usize)
+                            .cloned()
+                            .ok_or_else(|| format_err!("Invalid target client: {i}"))?],
+                    };
 
-                        // Send message to all target clients
-                        let mut send_tasks = Vec::with_capacity(targets.len());
-                        // Send the message to the target client
-                        let send_message = RecvProxyMessage {
-                            from_client: i as u8,
-                            message,
-                        };
-                        let send_message = Bytes::from(postcard::to_allocvec(&send_message)?);
-                        for target_client in targets {
-                            let send_message = send_message.clone();
-                            let task = task_pool.spawn(async move {
-                                target_client.send_datagram(send_message)?;
+                    // Send message to all target clients
+                    let mut send_tasks = Vec::with_capacity(targets.len());
+                    // Send the message to the target client
+                    let send_message = RecvProxyMessage {
+                        from_client: i as u8,
+                        message,
+                    };
+                    let send_message = Bytes::from(postcard::to_allocvec(&send_message)?);
+                    for target_client in targets {
+                        let send_message = send_message.clone();
+                        let task = tokio::task::spawn(async move {
+                            target_client.send_datagram(send_message)?;
 
-                                Ok::<_, anyhow::Error>(())
-                            });
+                            Ok::<_, anyhow::Error>(())
+                        });
 
-                            send_tasks.push(task);
-                        }
-                        futures::future::try_join_all(send_tasks).await?;
+                        send_tasks.push(task);
                     }
-
-                    #[allow(unreachable_code)]
-                    Ok::<_, anyhow::Error>(())
-                };
-
-                if let Err(e) = result.await {
-                    warn!("Error in client connection: {e:?}");
+                    futures::future::try_join_all(send_tasks).await?;
                 }
-            })
-            .detach();
+
+                #[allow(unreachable_code)]
+                Ok::<_, anyhow::Error>(())
+            };
+
+            if let Err(e) = result.await {
+                warn!("Error in client connection: {e:?}");
+            }
+        });
     }
 
     info!(?match_info, "Match finished");

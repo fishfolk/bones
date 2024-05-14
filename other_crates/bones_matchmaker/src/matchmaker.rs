@@ -1,4 +1,3 @@
-use bevy_tasks::IoTaskPool;
 use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse};
 use futures_lite::future;
 use once_cell::sync::Lazy;
@@ -93,48 +92,46 @@ async fn impl_matchmaker(conn: Connection) -> anyhow::Result<()> {
                                 // Spawn task to wait for connction to close and remove it from the room if it does
                                 let conn = conn.clone();
                                 let info = match_info.clone();
-                                IoTaskPool::get()
-                                    .spawn(async move {
-                                        conn.closed().await;
-                                        let members = STATE
-                                            .rooms
-                                            .update_async(&info, |_, members| {
-                                                let mut was_removed = false;
-                                                members.retain(|x| {
-                                                    if x.stable_id() != conn.stable_id() {
-                                                        true
-                                                    } else {
-                                                        was_removed = true;
-                                                        false
-                                                    }
-                                                });
-
-                                                if was_removed {
-                                                    Some(members.clone())
+                                tokio::task::spawn(async move {
+                                    conn.closed().await;
+                                    let members = STATE
+                                        .rooms
+                                        .update_async(&info, |_, members| {
+                                            let mut was_removed = false;
+                                            members.retain(|x| {
+                                                if x.stable_id() != conn.stable_id() {
+                                                    true
                                                 } else {
-                                                    None
+                                                    was_removed = true;
+                                                    false
                                                 }
-                                            })
-                                            .await
-                                            .flatten();
-                                        if let Some(members) = members {
-                                            let result = async {
-                                                let message = postcard::to_allocvec(
-                                                    &MatchmakerResponse::ClientCount(
-                                                        members.len() as u8
-                                                    ),
-                                                )?;
-                                                for conn in members {
-                                                    let mut send = conn.open_uni().await?;
-                                                    send.write_all(&message).await?;
-                                                    send.finish().await?;
-                                                }
-                                                Ok::<(), anyhow::Error>(())
-                                            };
-                                            result.await.ok();
-                                        }
-                                    })
-                                    .detach();
+                                            });
+
+                                            if was_removed {
+                                                Some(members.clone())
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .await
+                                        .flatten();
+                                    if let Some(members) = members {
+                                        let result = async {
+                                            let message = postcard::to_allocvec(
+                                                &MatchmakerResponse::ClientCount(
+                                                    members.len() as u8
+                                                ),
+                                            )?;
+                                            for conn in members {
+                                                let mut send = conn.open_uni().await?;
+                                                send.write_all(&message).await?;
+                                                send.finish().await?;
+                                            }
+                                            Ok::<(), anyhow::Error>(())
+                                        };
+                                        result.await.ok();
+                                    }
+                                });
 
                                 let member_count = members.len();
 
