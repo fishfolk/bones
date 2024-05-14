@@ -7,6 +7,8 @@ extern crate tracing;
 
 use std::net::SocketAddr;
 
+use bones_matchmaker_proto::ALPN;
+
 pub mod cli;
 
 mod matchmaker;
@@ -19,8 +21,6 @@ struct Config {
     #[clap(short, long = "listen", default_value = "0.0.0.0:8943")]
     listen_addr: SocketAddr,
 }
-
-pub const ALPN: &[u8] = b"/bones/match/0";
 
 async fn server(args: Config) -> anyhow::Result<()> {
     let port = args.listen_addr.port();

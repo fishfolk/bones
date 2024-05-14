@@ -2,6 +2,7 @@
 
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
+use bones_matchmaker_proto::ALPN;
 use ggrs::{NetworkStats, P2PSession, PlayerHandle};
 use instant::Duration;
 use once_cell::sync::Lazy;
@@ -93,37 +94,27 @@ impl<T: DenseInput + Debug> ggrs::Config for GgrsConfig<T> {
 }
 
 /// The network endpoint used for all QUIC network communications.
-pub static NETWORK_ENDPOINT: Lazy<quinn::Endpoint> = Lazy::new(|| {
-    // Generate certificate
-    let (cert, key) = certs::generate_self_signed_cert().unwrap();
+pub static NETWORK_ENDPOINT: Lazy<iroh_net::MagicEndpoint> = Lazy::new(|| {
+    let secret_key = iroh_net::key::SecretKey::generate();
 
-    let mut transport_config = quinn::TransportConfig::default();
-    transport_config.keep_alive_interval(Some(std::time::Duration::from_secs(5)));
-
-    let mut server_config = quinn::ServerConfig::with_single_cert([cert].to_vec(), key).unwrap();
-    server_config.transport = Arc::new(transport_config);
-
-    // Open Socket and create endpoint
-    let port = THREAD_RNG.with(|rng| rng.u16(10000..=11000));
-    info!(port, "Started network endpoint");
-    let socket = std::net::UdpSocket::bind(("0.0.0.0", port)).unwrap();
-
-    let client_config = rustls::ClientConfig::builder()
-        .with_safe_defaults()
-        .with_custom_certificate_verifier(certs::SkipServerVerification::new())
-        .with_no_client_auth();
-    let client_config = quinn::ClientConfig::new(Arc::new(client_config));
-
-    let mut endpoint = quinn::Endpoint::new(
-        quinn::EndpointConfig::default(),
-        Some(server_config),
-        socket,
-        Arc::new(quinn_runtime_bevy::BevyIoTaskPoolExecutor),
-    )
-    .unwrap();
-
-    endpoint.set_default_client_config(client_config);
-
+    // TODO: this won't work, need an actual runtime here
+    let endpoint = tokio::runtime::Handle::current()
+        .block_on(async move {
+            iroh_net::MagicEndpoint::builder()
+                .alpns(vec![ALPN.to_vec(), lan::ALPN.to_vec()])
+                .discovery(Box::new(
+                    iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
+                        Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
+                        Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
+                            secret_key.clone(),
+                        )),
+                    ]),
+                ))
+                .secret_key(secret_key)
+                .bind(0)
+                .await
+        })
+        .unwrap();
     endpoint
 });
 

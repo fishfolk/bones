@@ -8,11 +8,12 @@ use std::{
 };
 
 use bevy_tasks::IoTaskPool;
-use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse};
+use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse, ALPN};
 use bytes::Bytes;
 use futures_lite::future;
+use iroh_net::NodeId;
+use iroh_quinn::Connection;
 use once_cell::sync::Lazy;
-use quinn::Connection;
 use tracing::{info, warn};
 
 use crate::{networking::NetworkMatchSocket, prelude::*};
@@ -45,7 +46,7 @@ pub struct OnlineMatchmaker(BiChannelClient<OnlineMatchmakerRequest, OnlineMatch
 /// Online matchmaker request
 #[derive(Debug)]
 pub enum OnlineMatchmakerRequest {
-    SearchForGame { addr: String, player_count: usize },
+    SearchForGame { id: NodeId, player_count: usize },
     StopSearch,
 }
 
@@ -66,14 +67,9 @@ async fn online_matchmaker(
 ) {
     while let Ok(message) = matchmaker_channel.recv().await {
         match message {
-            OnlineMatchmakerRequest::SearchForGame { addr, player_count } => {
+            OnlineMatchmakerRequest::SearchForGame { id, player_count } => {
                 info!("Connecting to online matchmaker");
-                let addr = resolve_addr_blocking(&addr).unwrap();
-                let conn = NETWORK_ENDPOINT
-                    .connect(addr, "matchmaker")
-                    .unwrap()
-                    .await
-                    .unwrap();
+                let conn = NETWORK_ENDPOINT.connect(id.into(), ALPN).await.unwrap();
                 info!("Connected to online matchmaker");
 
                 matchmaker_channel
@@ -388,12 +384,12 @@ impl ggrs::NonBlockingSocket<usize> for OnlineSocket {
 }
 
 /// Search for game with `matchmaking_server` and `player_count`
-pub fn start_search_for_game(matchmaking_server: String, player_count: usize) {
+pub fn start_search_for_game(matchmaking_server: NodeId, player_count: usize) {
     // TODO remove
     info!("Starting search for online game with player count {player_count}");
     ONLINE_MATCHMAKER
         .try_send(OnlineMatchmakerRequest::SearchForGame {
-            addr: matchmaking_server.clone(),
+            id: matchmaking_server,
             player_count,
         })
         .unwrap()

@@ -10,14 +10,12 @@
 // TODO
 #![allow(missing_docs)]
 
-use std::{
-    net::{IpAddr, SocketAddr, SocketAddrV4},
-    time::Duration,
-};
+use std::{net::IpAddr, time::Duration};
 
 use bevy_tasks::IoTaskPool;
 use bytes::Bytes;
 use futures_lite::{future, FutureExt};
+use iroh_net::{magic_endpoint::get_remote_node_id, NodeAddr, NodeId};
 use mdns_sd::{ServiceDaemon, ServiceInfo};
 use smallvec::SmallVec;
 use tracing::warn;
@@ -38,6 +36,8 @@ pub struct ServerInfo {
 /// Receiver for LAN service discovery channel.
 #[derive(Clone)]
 pub struct ServiceDiscoveryReceiver(mdns_sd::Receiver<mdns_sd::ServiceEvent>);
+
+pub const ALPN: &[u8] = b"/bones/lan/0";
 
 /// Channel used to do matchmaking over LAN.
 ///
@@ -126,11 +126,15 @@ pub fn wait_players(joined_players: &mut usize, server: &ServerInfo) -> Option<N
 
 /// Join a server hosted by someone else.
 pub fn join_server(server: &ServerInfo) {
+    let id: NodeId = server
+        .service
+        .get_properties()
+        .get_property_val_str("node-id")
+        .unwrap()
+        .parse()
+        .unwrap();
     LAN_MATCHMAKER
-        .try_send(lan::LanMatchmakerRequest::JoinServer {
-            ip: *server.service.get_addresses().iter().next().unwrap(),
-            port: server.service.get_port(),
-        })
+        .try_send(lan::LanMatchmakerRequest::JoinServer { id })
         .unwrap();
 }
 
@@ -219,14 +223,18 @@ pub fn prepare_to_host<'a>(
 ) -> (bool, &'a mut ServerInfo) {
     let create_service_info = || {
         info!("New service hosting");
-        let port = NETWORK_ENDPOINT.local_addr().unwrap().port();
+        // TODO: send NodeId
+        let node_id = NETWORK_ENDPOINT.node_id();
+        let port = NETWORK_ENDPOINT.local_addr().0.port();
+        let mut props = std::collections::HashMap::default();
+        props.insert("node-id".to_string(), node_id.to_string());
         let service = mdns_sd::ServiceInfo::new(
             MDNS_SERVICE_TYPE,
             service_name,
             service_name,
             "",
             port,
-            None,
+            props,
         )
         .unwrap()
         .enable_addr_auto();
@@ -258,7 +266,7 @@ async fn lan_matchmaker(
     enum MatchmakerNetMsg {
         MatchReady {
             /// The peers they have for the match, with the index in the array being the player index of the peer.
-            peers: [Option<SocketAddrV4>; MAX_PLAYERS],
+            peers: [Option<NodeId>; MAX_PLAYERS],
             /// The player index of the player getting the message.
             player_idx: usize,
             player_count: usize,
@@ -343,8 +351,8 @@ async fn lan_matchmaker(
                                 .enumerate()
                                 .filter(|x| x.0 != i)
                                 .for_each(|(i, conn)| {
-                                    if let SocketAddr::V4(addr) = conn.remote_address() {
-                                        peers[i + 1] = Some(addr);
+                                    if let Ok(id) = get_remote_node_id(conn) {
+                                        peers[i + 1] = Some(id);
                                     } else {
                                         unreachable!("IPV6 not supported in LAN matchmaking");
                                     };
@@ -402,10 +410,9 @@ async fn lan_matchmaker(
             LanMatchmakerRequest::StopJoin => (),
 
             // Join a hosted match
-            LanMatchmakerRequest::JoinServer { ip, port } => {
+            LanMatchmakerRequest::JoinServer { id } => {
                 let conn = NETWORK_ENDPOINT
-                    .connect((ip, port).into(), "jumpy-host")
-                    .unwrap()
+                    .connect(NodeAddr::new(id), ALPN)
                     .await
                     .expect("Could not connect to server");
 
@@ -458,8 +465,7 @@ async fn lan_matchmaker(
                         for i in range {
                             let addr = peer_addrs[i].unwrap();
                             let conn = NETWORK_ENDPOINT
-                                .connect(addr.into(), "jumpy-peer")
-                                .unwrap()
+                                .connect(addr.into(), ALPN)
                                 .await
                                 .expect("Could not connect to peer");
 
@@ -502,10 +508,8 @@ pub enum LanMatchmakerRequest {
     },
     /// Join server
     JoinServer {
-        /// Server address
-        ip: IpAddr,
-        /// Server port
-        port: u16,
+        /// Node Id
+        id: NodeId,
     },
     /// Stop matchmaking server
     StopServer,
@@ -534,7 +538,7 @@ pub enum LanMatchmakerResponse {
 #[derive(Debug, Clone)]
 pub struct LanSocket {
     ///
-    pub connections: [Option<quinn::Connection>; MAX_PLAYERS],
+    pub connections: [Option<iroh_quinn::Connection>; MAX_PLAYERS],
     pub ggrs_receiver: async_channel::Receiver<(usize, GameMessage)>,
     pub reliable_receiver: async_channel::Receiver<(usize, Vec<u8>)>,
     pub player_idx: usize,
@@ -544,7 +548,10 @@ pub struct LanSocket {
 }
 
 impl LanSocket {
-    pub fn new(player_idx: usize, connections: [Option<quinn::Connection>; MAX_PLAYERS]) -> Self {
+    pub fn new(
+        player_idx: usize,
+        connections: [Option<iroh_quinn::Connection>; MAX_PLAYERS],
+    ) -> Self {
         let (ggrs_sender, ggrs_receiver) = async_channel::unbounded();
         let (reliable_sender, reliable_receiver) = async_channel::unbounded();
 

@@ -5,6 +5,9 @@
 
 use serde::{Deserialize, Serialize};
 
+/// ALPN used for the matchmaking protocol.
+pub const ALPN: &[u8] = b"/bones/match/0";
+
 //
 // === Matchmaking Mode ===
 //
