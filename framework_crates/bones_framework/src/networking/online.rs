@@ -2,10 +2,7 @@
 // TODO
 #![allow(missing_docs)]
 
-use std::{
-    net::{SocketAddr, ToSocketAddrs},
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use bevy_tasks::IoTaskPool;
 use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse, ALPN};

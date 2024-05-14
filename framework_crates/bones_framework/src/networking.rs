@@ -97,8 +97,8 @@ impl<T: DenseInput + Debug> ggrs::Config for GgrsConfig<T> {
 pub static NETWORK_ENDPOINT: Lazy<iroh_net::MagicEndpoint> = Lazy::new(|| {
     let secret_key = iroh_net::key::SecretKey::generate();
 
-    // TODO: this won't work, need an actual runtime here
-    let endpoint = tokio::runtime::Handle::current()
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let endpoint = rt
         .block_on(async move {
             iroh_net::MagicEndpoint::builder()
                 .alpns(vec![ALPN.to_vec(), lan::ALPN.to_vec()])
@@ -592,5 +592,16 @@ where
             local_input_delay: Some(self.local_input_delay),
         };
         *self = GgrsSessionRunner::new(self.original_fps as f32, runner_info);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_network_endpoint() {
+        let node_id = NETWORK_ENDPOINT.node_id();
+        println!("it works: {}", node_id);
     }
 }
