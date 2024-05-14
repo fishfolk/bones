@@ -1547,8 +1547,6 @@ dependencies = [
  "once_cell",
  "ping-rs",
  "postcard",
- "quinn",
- "quinn_runtime_bevy",
  "rcgen 0.12.1",
  "rustls",
  "serde",

@@ -129,8 +129,6 @@ postcard               = { version = "1.0", features = ["alloc"] }
 rcgen                  = "0.12"
 rustls                 = { version = "0.21", features = ["dangerous_configuration", "quic"] }
 smallvec               = "1.10"
-quinn                  = { version = "0.10", default-features = false, features = ["native-certs", "tls-rustls"] }
-quinn_runtime_bevy     = { version = "0.3", path = "../../other_crates/quinn_runtime_bevy" }
 iroh-quinn             = { version = "0.10" }
 iroh-net               = { version = "0.16" }
 tokio                  = { version = "1", features = ["full"] }

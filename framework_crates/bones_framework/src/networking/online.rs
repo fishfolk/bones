@@ -169,30 +169,6 @@ async fn online_matchmaker(
     }
 }
 
-/// Resolve a server address.
-///
-/// Note: This may block the thread
-fn resolve_addr_blocking(addr: &str) -> anyhow::Result<SocketAddr> {
-    let formatting_err =
-        || anyhow::format_err!("Matchmaking server must be in the format `host:port`");
-
-    let mut iter = addr.split(':');
-    let host = iter.next().ok_or_else(formatting_err)?;
-    let port = iter.next().ok_or_else(formatting_err)?;
-    let port: u16 = port.parse().context("Couldn't parse port number")?;
-    if iter.next().is_some() {
-        return Err(formatting_err());
-    }
-
-    let addr = (host, port)
-        .to_socket_addrs()
-        .context("Couldn't resolve matchmaker address")?
-        .find(|x| x.is_ipv4()) // For now, only support IpV4. I don't think IpV6 works right.
-        .ok_or_else(|| anyhow::format_err!("Couldn't resolve matchmaker address"))?;
-
-    Ok(addr)
-}
-
 #[derive(Debug, Clone)]
 pub struct OnlineSocket {
     pub conn: Connection,
