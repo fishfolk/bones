@@ -12,7 +12,6 @@ use bones_matchmaker_proto::MATCH_ALPN;
 pub mod cli;
 
 mod matchmaker;
-mod proxy;
 
 #[derive(clap::Parser, Debug)]
 #[command(author, version, about, long_about = None)]
