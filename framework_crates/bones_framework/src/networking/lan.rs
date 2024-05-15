@@ -12,7 +12,6 @@
 
 use std::{net::IpAddr, time::Duration};
 
-use bevy_tasks::IoTaskPool;
 use bytes::Bytes;
 use futures_lite::{future, FutureExt};
 use iroh_net::{magic_endpoint::get_remote_node_id, NodeAddr, NodeId};
@@ -45,8 +44,7 @@ pub const ALPN: &[u8] = b"/bones/lan/0";
 static LAN_MATCHMAKER: Lazy<LanMatchmaker> = Lazy::new(|| {
     let (client, server) = bi_channel();
 
-    IoTaskPool::get().spawn(lan_matchmaker(server)).detach();
-
+    RUNTIME.spawn(lan_matchmaker(server));
     LanMatchmaker(client)
 });
 
@@ -555,8 +553,6 @@ impl LanSocket {
         let (ggrs_sender, ggrs_receiver) = async_channel::unbounded();
         let (reliable_sender, reliable_receiver) = async_channel::unbounded();
 
-        let pool = bevy_tasks::IoTaskPool::get();
-
         // Spawn tasks to receive network messages from each peer
         #[allow(clippy::needless_range_loop)]
         for i in 0..MAX_PLAYERS {
@@ -565,7 +561,7 @@ impl LanSocket {
 
                 // Unreliable message receiver
                 let conn_ = conn.clone();
-                pool.spawn(async move {
+                RUNTIME.spawn(async move {
                     let conn = conn_;
 
                     #[cfg(feature = "debug-network-slowdown")]
@@ -611,12 +607,11 @@ impl LanSocket {
                             },
                         }
                     }
-                })
-                .detach();
+                });
 
                 // Reliable message receiver
                 let reliable_sender = reliable_sender.clone();
-                pool.spawn(async move {
+                RUNTIME.spawn(async move {
                     #[cfg(feature = "debug-network-slowdown")]
                     use turborand::prelude::*;
                     #[cfg(feature = "debug-network-slowdown")]
@@ -660,8 +655,7 @@ impl LanSocket {
                             },
                         }
                     }
-                })
-                .detach();
+                });
             }
         }
 
@@ -678,32 +672,27 @@ impl LanSocket {
 
 impl NetworkSocket for LanSocket {
     fn send_reliable(&self, target: SocketTarget, message: &[u8]) {
-        let task_pool = IoTaskPool::get();
         let message = Bytes::copy_from_slice(message);
 
         match target {
             SocketTarget::Player(i) => {
                 let conn = self.connections[i].as_ref().unwrap().clone();
 
-                task_pool
-                    .spawn(async move {
-                        let mut stream = conn.open_uni().await.unwrap();
-                        stream.write_chunk(message).await.unwrap();
-                        stream.finish().await.unwrap();
-                    })
-                    .detach();
+                RUNTIME.spawn(async move {
+                    let mut stream = conn.open_uni().await.unwrap();
+                    stream.write_chunk(message).await.unwrap();
+                    stream.finish().await.unwrap();
+                });
             }
             SocketTarget::All => {
                 for conn in &self.connections {
                     if let Some(conn) = conn.clone() {
                         let message = message.clone();
-                        task_pool
-                            .spawn(async move {
-                                let mut stream = conn.open_uni().await.unwrap();
-                                stream.write_chunk(message).await.unwrap();
-                                stream.finish().await.unwrap();
-                            })
-                            .detach();
+                        RUNTIME.spawn(async move {
+                            let mut stream = conn.open_uni().await.unwrap();
+                            stream.write_chunk(message).await.unwrap();
+                            stream.finish().await.unwrap();
+                        });
                     }
                 }
             }

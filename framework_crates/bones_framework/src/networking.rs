@@ -16,12 +16,15 @@ use self::{
 };
 use crate::input::PlayerControls as PlayerControlsTrait;
 
-pub mod certs;
 pub mod debug;
 pub mod input;
 pub mod lan;
 pub mod online;
 pub mod proto;
+
+/// Runtime, needed to execute network related calls.
+pub static RUNTIME: Lazy<tokio::runtime::Runtime> =
+    Lazy::new(|| tokio::runtime::Runtime::new().expect("unable to crate tokio runtime"));
 
 /// Indicates if input from networking is confirmed, predicted, or if player is disconnected.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -46,7 +49,7 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{certs, debug::prelude::*, input, lan, online, proto, NetworkInfo};
+    pub use super::{debug::prelude::*, input, lan, online, proto, NetworkInfo, RUNTIME};
 }
 
 /// Muliplier for framerate that will be used when playing an online match.
@@ -96,26 +99,22 @@ impl<T: DenseInput + Debug> ggrs::Config for GgrsConfig<T> {
 /// The network endpoint used for all QUIC network communications.
 pub static NETWORK_ENDPOINT: Lazy<iroh_net::MagicEndpoint> = Lazy::new(|| {
     let secret_key = iroh_net::key::SecretKey::generate();
-
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let endpoint = rt
-        .block_on(async move {
-            iroh_net::MagicEndpoint::builder()
-                .alpns(vec![ALPN.to_vec(), lan::ALPN.to_vec()])
-                .discovery(Box::new(
-                    iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
-                        Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
-                        Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
-                            secret_key.clone(),
-                        )),
-                    ]),
-                ))
-                .secret_key(secret_key)
-                .bind(0)
-                .await
-        })
-        .unwrap();
-    endpoint
+    RUNTIME.block_on(async move {
+        iroh_net::MagicEndpoint::builder()
+            .alpns(vec![ALPN.to_vec(), lan::ALPN.to_vec()])
+            .discovery(Box::new(
+                iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
+                    Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
+                    Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
+                        secret_key.clone(),
+                    )),
+                ]),
+            ))
+            .secret_key(secret_key)
+            .bind(0)
+            .await
+            .unwrap()
+    })
 });
 
 /// Resource containing the [`NetworkSocket`] implementation while there is a connection to a

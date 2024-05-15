@@ -4,7 +4,6 @@
 
 use std::sync::Arc;
 
-use bevy_tasks::IoTaskPool;
 use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse, ALPN};
 use bytes::Bytes;
 use futures_lite::future;
@@ -16,7 +15,8 @@ use tracing::{info, warn};
 use crate::{networking::NetworkMatchSocket, prelude::*};
 
 use super::{
-    BoxedNonBlockingSocket, GameMessage, NetworkSocket, SocketTarget, MAX_PLAYERS, NETWORK_ENDPOINT,
+    BoxedNonBlockingSocket, GameMessage, NetworkSocket, SocketTarget, MAX_PLAYERS,
+    NETWORK_ENDPOINT, RUNTIME,
 };
 
 #[derive(Default, PartialEq, Eq, Clone, Copy)]
@@ -31,7 +31,7 @@ pub enum SearchState {
 pub static ONLINE_MATCHMAKER: Lazy<OnlineMatchmaker> = Lazy::new(|| {
     let (client, server) = bi_channel();
 
-    IoTaskPool::get().spawn(online_matchmaker(server)).detach();
+    RUNTIME.spawn(online_matchmaker(server));
 
     OnlineMatchmaker(client)
 });
@@ -182,82 +182,75 @@ impl OnlineSocket {
         let (ggrs_sender, ggrs_receiver) = async_channel::unbounded();
         let (reliable_sender, reliable_receiver) = async_channel::unbounded();
 
-        let task_pool = IoTaskPool::get();
+        let conn_ = conn.clone();
+        RUNTIME.spawn(async move {
+            let conn = conn_;
+            loop {
+                let event = future::or(async { either::Left(conn.closed().await) }, async {
+                    either::Right(conn.read_datagram().await)
+                })
+                .await;
+
+                match event {
+                    either::Either::Left(closed) => {
+                        warn!("Connection error: {closed}");
+                        break;
+                    }
+                    either::Either::Right(datagram_result) => match datagram_result {
+                        Ok(data) => {
+                            let message: bones_matchmaker_proto::RecvProxyMessage =
+                                postcard::from_bytes(&data)
+                                    .expect("Could not deserialize net message");
+                            let player = message.from_client;
+                            let message = postcard::from_bytes(&message.message).unwrap();
+
+                            if ggrs_sender.send((player as _, message)).await.is_err() {
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            warn!("Connection error: {e}");
+                        }
+                    },
+                }
+            }
+        });
 
         let conn_ = conn.clone();
-        task_pool
-            .spawn(async move {
-                let conn = conn_;
-                loop {
-                    let event = future::or(async { either::Left(conn.closed().await) }, async {
-                        either::Right(conn.read_datagram().await)
-                    })
-                    .await;
+        RUNTIME.spawn(async move {
+            let conn = conn_;
+            loop {
+                let event = future::or(async { either::Left(conn.closed().await) }, async {
+                    either::Right(conn.accept_uni().await)
+                })
+                .await;
 
-                    match event {
-                        either::Either::Left(closed) => {
-                            warn!("Connection error: {closed}");
-                            break;
-                        }
-                        either::Either::Right(datagram_result) => match datagram_result {
-                            Ok(data) => {
-                                let message: bones_matchmaker_proto::RecvProxyMessage =
-                                    postcard::from_bytes(&data)
-                                        .expect("Could not deserialize net message");
-                                let player = message.from_client;
-                                let message = postcard::from_bytes(&message.message).unwrap();
-
-                                if ggrs_sender.send((player as _, message)).await.is_err() {
-                                    break;
-                                }
-                            }
-                            Err(e) => {
-                                warn!("Connection error: {e}");
-                            }
-                        },
+                match event {
+                    either::Either::Left(closed) => {
+                        warn!("Connection error: {closed}");
+                        break;
                     }
-                }
-            })
-            .detach();
+                    either::Either::Right(result) => match result {
+                        Ok(mut stream) => {
+                            let data = stream.read_to_end(4096).await.expect("Network read error");
+                            let message: bones_matchmaker_proto::RecvProxyMessage =
+                                postcard::from_bytes(&data).unwrap();
 
-        let conn_ = conn.clone();
-        task_pool
-            .spawn(async move {
-                let conn = conn_;
-                loop {
-                    let event = future::or(async { either::Left(conn.closed().await) }, async {
-                        either::Right(conn.accept_uni().await)
-                    })
-                    .await;
-
-                    match event {
-                        either::Either::Left(closed) => {
-                            warn!("Connection error: {closed}");
-                            break;
+                            if reliable_sender
+                                .send((message.from_client as usize, message.message))
+                                .await
+                                .is_err()
+                            {
+                                break;
+                            }
                         }
-                        either::Either::Right(result) => match result {
-                            Ok(mut stream) => {
-                                let data =
-                                    stream.read_to_end(4096).await.expect("Network read error");
-                                let message: bones_matchmaker_proto::RecvProxyMessage =
-                                    postcard::from_bytes(&data).unwrap();
-
-                                if reliable_sender
-                                    .send((message.from_client as usize, message.message))
-                                    .await
-                                    .is_err()
-                                {
-                                    break;
-                                }
-                            }
-                            Err(e) => {
-                                warn!("Connection error: {e}");
-                            }
-                        },
-                    }
+                        Err(e) => {
+                            warn!("Connection error: {e}");
+                        }
+                    },
                 }
-            })
-            .detach();
+            }
+        });
 
         Self {
             conn,
@@ -276,7 +269,6 @@ impl NetworkSocket for OnlineSocket {
     }
 
     fn send_reliable(&self, target: SocketTarget, message: &[u8]) {
-        let task_pool = IoTaskPool::get();
         let target_client = match target {
             SocketTarget::Player(player) => bones_matchmaker_proto::TargetClient::One(player as _),
             SocketTarget::All => bones_matchmaker_proto::TargetClient::All,
@@ -287,16 +279,14 @@ impl NetworkSocket for OnlineSocket {
         };
 
         let conn = self.conn.clone();
-        task_pool
-            .spawn(async move {
-                let mut send = conn.open_uni().await.unwrap();
+        RUNTIME.spawn(async move {
+            let mut send = conn.open_uni().await.unwrap();
 
-                send.write_all(&postcard::to_allocvec(&message).unwrap())
-                    .await
-                    .unwrap();
-                send.finish().await.unwrap();
-            })
-            .detach();
+            send.write_all(&postcard::to_allocvec(&message).unwrap())
+                .await
+                .unwrap();
+            send.finish().await.unwrap();
+        });
     }
 
     fn recv_reliable(&self) -> Vec<(usize, Vec<u8>)> {
