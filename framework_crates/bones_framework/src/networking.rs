@@ -2,7 +2,7 @@
 
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
-use bones_matchmaker_proto::ALPN;
+use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
 use ggrs::{NetworkStats, P2PSession, PlayerHandle};
 use instant::Duration;
 use once_cell::sync::Lazy;
@@ -21,6 +21,7 @@ pub mod input;
 pub mod lan;
 pub mod online;
 pub mod proto;
+pub mod socket;
 
 /// Runtime, needed to execute network related calls.
 pub static RUNTIME: Lazy<tokio::runtime::Runtime> =
@@ -70,12 +71,8 @@ pub const NETWORK_MAX_PREDICTION_WINDOW_DEFAULT: usize = 7;
 /// Amount of frames GGRS will delay local input.
 pub const NETWORK_LOCAL_INPUT_DELAY_DEFAULT: usize = 2;
 
-// TODO: Remove this limitation on max players, a variety of types use this for static arrays,
-// should either figure out how to make this a compile-time const value specified by game, or
-// use dynamic arrays.
-//
-/// Max players in networked game
-pub const MAX_PLAYERS: usize = 4;
+#[doc(inline)]
+pub use bones_matchmaker_proto::MAX_PLAYERS;
 
 /// Possible errors returned by network loop.
 pub enum NetworkError {
@@ -106,7 +103,7 @@ pub async fn get_network_endpoint() -> &'static iroh_net::MagicEndpoint {
         .get_or_init(|| async move {
             let secret_key = iroh_net::key::SecretKey::generate();
             iroh_net::MagicEndpoint::builder()
-                .alpns(vec![ALPN.to_vec(), lan::ALPN.to_vec()])
+                .alpns(vec![MATCH_ALPN.to_vec(), PLAY_ALPN.to_vec()])
                 .discovery(Box::new(
                     iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
                         Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),

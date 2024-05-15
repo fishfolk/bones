@@ -4,22 +4,17 @@
 
 use std::sync::Arc;
 
-use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse, ALPN};
-use bytes::Bytes;
-use futures_lite::future;
+use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse, MATCH_ALPN};
 use iroh_net::NodeId;
-use iroh_quinn::Connection;
 use once_cell::sync::Lazy;
 use tracing::{info, warn};
 
 use crate::{
-    networking::{get_network_endpoint, NetworkMatchSocket},
+    networking::{get_network_endpoint, socket::establish_peer_connections, NetworkMatchSocket},
     prelude::*,
 };
 
-use super::{
-    BoxedNonBlockingSocket, GameMessage, NetworkSocket, SocketTarget, MAX_PLAYERS, RUNTIME,
-};
+use super::socket::Socket;
 
 #[derive(Default, PartialEq, Eq, Clone, Copy)]
 pub enum SearchState {
@@ -55,7 +50,7 @@ pub enum OnlineMatchmakerResponse {
     Searching,
     PlayerCount(usize),
     GameStarting {
-        online_socket: OnlineSocket,
+        socket: Socket,
         player_idx: usize,
         player_count: usize,
     },
@@ -70,7 +65,7 @@ async fn online_matchmaker(
                 info!("Connecting to online matchmaker");
                 let conn = get_network_endpoint()
                     .await
-                    .connect(id.into(), ALPN)
+                    .connect(id.into(), MATCH_ALPN)
                     .await
                     .unwrap();
                 info!("Connected to online matchmaker");
@@ -144,17 +139,23 @@ async fn online_matchmaker(
                                     random_seed,
                                     player_idx,
                                     client_count,
+                                    player_ids,
                                 } => {
                                     info!(%random_seed, %player_idx, player_count=%client_count, "Online match complete");
-                                    let online_socket = OnlineSocket::new(
+
+                                    let peer_connections = establish_peer_connections(
                                         player_idx as usize,
                                         client_count as usize,
-                                        conn,
-                                    );
+                                        player_ids,
+                                        None,
+                                    )
+                                    .await;
+
+                                    let socket = Socket::new(player_idx as usize, peer_connections);
 
                                     matchmaker_channel
                                         .try_send(OnlineMatchmakerResponse::GameStarting {
-                                            online_socket,
+                                            socket,
                                             player_idx: player_idx as _,
                                             player_count: client_count as _,
                                         })
@@ -169,186 +170,6 @@ async fn online_matchmaker(
             }
             OnlineMatchmakerRequest::StopSearch => (), // Not searching, don't do anything
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct OnlineSocket {
-    pub conn: Connection,
-    pub ggrs_receiver: async_channel::Receiver<(usize, GameMessage)>,
-    pub reliable_receiver: async_channel::Receiver<(usize, Vec<u8>)>,
-    pub player_idx: usize,
-    pub player_count: usize,
-    /// ID for current match, messages received that do not match ID are dropped.
-    pub match_id: u8,
-}
-
-impl OnlineSocket {
-    pub fn new(player_idx: usize, player_count: usize, conn: Connection) -> Self {
-        let (ggrs_sender, ggrs_receiver) = async_channel::unbounded();
-        let (reliable_sender, reliable_receiver) = async_channel::unbounded();
-
-        let conn_ = conn.clone();
-        RUNTIME.spawn(async move {
-            let conn = conn_;
-            loop {
-                let event = future::or(async { either::Left(conn.closed().await) }, async {
-                    either::Right(conn.read_datagram().await)
-                })
-                .await;
-
-                match event {
-                    either::Either::Left(closed) => {
-                        warn!("Connection error: {closed}");
-                        break;
-                    }
-                    either::Either::Right(datagram_result) => match datagram_result {
-                        Ok(data) => {
-                            let message: bones_matchmaker_proto::RecvProxyMessage =
-                                postcard::from_bytes(&data)
-                                    .expect("Could not deserialize net message");
-                            let player = message.from_client;
-                            let message = postcard::from_bytes(&message.message).unwrap();
-
-                            if ggrs_sender.send((player as _, message)).await.is_err() {
-                                break;
-                            }
-                        }
-                        Err(e) => {
-                            warn!("Connection error: {e}");
-                        }
-                    },
-                }
-            }
-        });
-
-        let conn_ = conn.clone();
-        RUNTIME.spawn(async move {
-            let conn = conn_;
-            loop {
-                let event = future::or(async { either::Left(conn.closed().await) }, async {
-                    either::Right(conn.accept_uni().await)
-                })
-                .await;
-
-                match event {
-                    either::Either::Left(closed) => {
-                        warn!("Connection error: {closed}");
-                        break;
-                    }
-                    either::Either::Right(result) => match result {
-                        Ok(mut stream) => {
-                            let data = stream.read_to_end(4096).await.expect("Network read error");
-                            let message: bones_matchmaker_proto::RecvProxyMessage =
-                                postcard::from_bytes(&data).unwrap();
-
-                            if reliable_sender
-                                .send((message.from_client as usize, message.message))
-                                .await
-                                .is_err()
-                            {
-                                break;
-                            }
-                        }
-                        Err(e) => {
-                            warn!("Connection error: {e}");
-                        }
-                    },
-                }
-            }
-        });
-
-        Self {
-            conn,
-            ggrs_receiver,
-            reliable_receiver,
-            player_idx,
-            player_count,
-            match_id: 0,
-        }
-    }
-}
-
-impl NetworkSocket for OnlineSocket {
-    fn ggrs_socket(&self) -> BoxedNonBlockingSocket {
-        BoxedNonBlockingSocket(Box::new(self.clone()))
-    }
-
-    fn send_reliable(&self, target: SocketTarget, message: &[u8]) {
-        let target_client = match target {
-            SocketTarget::Player(player) => bones_matchmaker_proto::TargetClient::One(player as _),
-            SocketTarget::All => bones_matchmaker_proto::TargetClient::All,
-        };
-        let message = bones_matchmaker_proto::SendProxyMessage {
-            target_client,
-            message: message.into(),
-        };
-
-        let conn = self.conn.clone();
-        RUNTIME.spawn(async move {
-            let mut send = conn.open_uni().await.unwrap();
-
-            send.write_all(&postcard::to_allocvec(&message).unwrap())
-                .await
-                .unwrap();
-            send.finish().await.unwrap();
-        });
-    }
-
-    fn recv_reliable(&self) -> Vec<(usize, Vec<u8>)> {
-        let mut messages = Vec::new();
-        while let Ok(message) = self.reliable_receiver.try_recv() {
-            messages.push(message);
-        }
-        messages
-    }
-
-    fn close(&self) {
-        self.conn.close(0u8.into(), &[]);
-    }
-
-    fn player_idx(&self) -> usize {
-        self.player_idx
-    }
-
-    fn player_is_local(&self) -> [bool; MAX_PLAYERS] {
-        std::array::from_fn(|i| i == self.player_idx)
-    }
-
-    fn player_count(&self) -> usize {
-        self.player_count
-    }
-
-    fn increment_match_id(&mut self) {
-        // This is wrapping addition
-        self.match_id = self.match_id.wrapping_add(1);
-    }
-}
-
-impl ggrs::NonBlockingSocket<usize> for OnlineSocket {
-    fn send_to(&mut self, msg: &ggrs::Message, addr: &usize) {
-        let msg = GameMessage {
-            message: msg.clone(),
-            match_id: self.match_id,
-        };
-        let message = bones_matchmaker_proto::SendProxyMessage {
-            target_client: bones_matchmaker_proto::TargetClient::One(*addr as u8),
-            message: postcard::to_allocvec(&msg).unwrap(),
-        };
-        let msg_bytes = postcard::to_allocvec(&message).unwrap();
-        self.conn
-            .send_datagram(Bytes::copy_from_slice(&msg_bytes[..]))
-            .ok();
-    }
-
-    fn receive_all_messages(&mut self) -> Vec<(usize, ggrs::Message)> {
-        let mut messages = Vec::new();
-        while let Ok(message) = self.ggrs_receiver.try_recv() {
-            if message.1.match_id == self.match_id {
-                messages.push((message.0, message.1.message));
-            }
-        }
-        messages
     }
 }
 
@@ -379,7 +200,7 @@ pub fn update_search_for_game(search_state: &mut SearchState) -> Option<NetworkM
                 *search_state = SearchState::WaitingForPlayers(count)
             }
             OnlineMatchmakerResponse::GameStarting {
-                online_socket,
+                socket,
                 player_idx,
                 player_count: _,
             } => {
@@ -387,7 +208,7 @@ pub fn update_search_for_game(search_state: &mut SearchState) -> Option<NetworkM
 
                 *search_state = default();
 
-                return Some(NetworkMatchSocket(Arc::new(online_socket)));
+                return Some(NetworkMatchSocket(Arc::new(socket)));
             }
         }
     }

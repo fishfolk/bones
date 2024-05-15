@@ -12,15 +12,16 @@
 
 use std::{net::IpAddr, time::Duration};
 
-use bytes::Bytes;
-use futures_lite::{future, FutureExt};
-use iroh_net::{magic_endpoint::get_remote_node_id, NodeAddr, NodeId};
+use futures_lite::FutureExt;
+use iroh_net::{magic_endpoint::get_remote_node_id, NodeAddr};
 use mdns_sd::{ServiceDaemon, ServiceInfo};
 use smallvec::SmallVec;
 use tracing::warn;
 
+use crate::networking::socket::establish_peer_connections;
 use crate::utils::BiChannelServer;
 
+use super::socket::Socket;
 use super::*;
 
 /// Service discover info and ping.
@@ -35,8 +36,6 @@ pub struct ServerInfo {
 /// Receiver for LAN service discovery channel.
 #[derive(Clone)]
 pub struct ServiceDiscoveryReceiver(mdns_sd::Receiver<mdns_sd::ServiceEvent>);
-
-pub const ALPN: &[u8] = b"/bones/lan/0";
 
 /// Channel used to do matchmaking over LAN.
 ///
@@ -103,7 +102,7 @@ pub fn wait_players(joined_players: &mut usize, server: &ServerInfo) -> Option<N
                 *joined_players = count;
             }
             LanMatchmakerResponse::GameStarting {
-                lan_socket,
+                socket,
                 player_idx,
                 player_count: _,
             } => {
@@ -115,7 +114,7 @@ pub fn wait_players(joined_players: &mut usize, server: &ServerInfo) -> Option<N
                         Err(e) => panic!("Error unregistering MDNS service: {e}"),
                     }
                 }
-                return Some(NetworkMatchSocket(Arc::new(lan_socket)));
+                return Some(NetworkMatchSocket(Arc::new(socket)));
             }
         }
     }
@@ -124,15 +123,15 @@ pub fn wait_players(joined_players: &mut usize, server: &ServerInfo) -> Option<N
 
 /// Join a server hosted by someone else.
 pub fn join_server(server: &ServerInfo) {
-    let id: NodeId = server
+    let addr_raw = server
         .service
         .get_properties()
-        .get_property_val_str("node-id")
-        .unwrap()
-        .parse()
+        .get_property_val_str("node-addr")
         .unwrap();
+    let addr_raw = hex::decode(addr_raw).unwrap();
+    let addr: NodeAddr = postcard::from_bytes(&addr_raw).unwrap();
     LAN_MATCHMAKER
-        .try_send(lan::LanMatchmakerRequest::JoinServer { id })
+        .try_send(lan::LanMatchmakerRequest::JoinServer { addr })
         .unwrap();
 }
 
@@ -149,12 +148,12 @@ pub fn wait_game_start() -> Option<NetworkMatchSocket> {
         match message {
             LanMatchmakerResponse::ServerStarted | LanMatchmakerResponse::PlayerCount(_) => {}
             LanMatchmakerResponse::GameStarting {
-                lan_socket,
+                socket,
                 player_idx,
                 player_count: _,
             } => {
                 info!(?player_idx, "Starting network game");
-                return Some(NetworkMatchSocket(Arc::new(lan_socket)));
+                return Some(NetworkMatchSocket(Arc::new(socket)));
             }
         }
     }
@@ -222,10 +221,11 @@ pub async fn prepare_to_host<'a>(
     let create_service_info = || async {
         info!("New service hosting");
         let ep = get_network_endpoint().await;
-        let node_id = ep.node_id();
+        let my_addr = ep.my_addr().await.expect("network endpoint dead");
         let port = ep.local_addr().0.port();
         let mut props = std::collections::HashMap::default();
-        props.insert("node-id".to_string(), node_id.to_string());
+        let addr_encoded = hex::encode(&postcard::to_stdvec(&my_addr).unwrap());
+        props.insert("node-addr".to_string(), addr_encoded);
         let service = mdns_sd::ServiceInfo::new(
             MDNS_SERVICE_TYPE,
             service_name,
@@ -242,9 +242,11 @@ pub async fn prepare_to_host<'a>(
         }
     };
 
-    // FIXME: avoid if already available
-    let info = create_service_info().await;
-    let service_info = host_info.get_or_insert(info);
+    if host_info.is_none() {
+        let info = create_service_info().await;
+        host_info.replace(info);
+    }
+    let service_info = host_info.as_mut().unwrap();
 
     let mut is_recreated = false;
     if service_info.service.get_hostname() != service_name {
@@ -266,7 +268,7 @@ async fn lan_matchmaker(
     enum MatchmakerNetMsg {
         MatchReady {
             /// The peers they have for the match, with the index in the array being the player index of the peer.
-            peers: [Option<NodeId>; MAX_PLAYERS],
+            peers: [Option<NodeAddr>; MAX_PLAYERS],
             /// The player index of the player getting the message.
             player_idx: usize,
             player_count: usize,
@@ -315,7 +317,14 @@ async fn lan_matchmaker(
                         }
 
                         // Handle new connections
-                        either::Either::Right(Some(new_connection)) => {
+                        either::Either::Right(Some(mut new_connection)) => {
+                            let Ok(alpn) = new_connection.alpn().await else {
+                                continue;
+                            };
+                            if alpn.as_bytes() != PLAY_ALPN {
+                                warn!("unexpected ALPN: {alpn}");
+                                continue;
+                            }
                             let Some(conn) = new_connection.await.ok() else {
                                 continue;
                             };
@@ -344,19 +353,28 @@ async fn lan_matchmaker(
                     if connections.len() == player_count - 1 {
                         info!("All players joined.");
 
+                        let endpoint = get_network_endpoint().await;
+
                         // Tell all clients we're ready
                         for (i, conn) in connections.iter().enumerate() {
-                            let mut peers = [None; MAX_PLAYERS];
+                            let mut peers = std::array::from_fn(|_| None);
                             connections
                                 .iter()
                                 .enumerate()
                                 .filter(|x| x.0 != i)
                                 .for_each(|(i, conn)| {
-                                    if let Ok(id) = get_remote_node_id(conn) {
-                                        peers[i + 1] = Some(id);
-                                    } else {
-                                        unreachable!("IPV6 not supported in LAN matchmaking");
-                                    };
+                                    let id = get_remote_node_id(&conn).expect("invalid connection");
+                                    let mut addr = NodeAddr::new(id);
+                                    if let Some(info) = endpoint.connection_info(id) {
+                                        if let Some(relay_url) = info.relay_url {
+                                            addr = addr.with_relay_url(relay_url.relay_url);
+                                        }
+                                        addr = addr.with_direct_addresses(
+                                            info.addrs.into_iter().map(|addr| addr.addr),
+                                        );
+                                    }
+
+                                    peers[i + 1] = Some(addr);
                                 });
 
                             let mut uni = conn.open_uni().await.unwrap();
@@ -385,7 +403,7 @@ async fn lan_matchmaker(
                         // Send the connections to the game so that it can start the network match.
                         matchmaker_channel
                             .try_send(LanMatchmakerResponse::GameStarting {
-                                lan_socket: LanSocket::new(0, connections),
+                                socket: Socket::new(0, connections),
                                 player_idx: 0,
                                 player_count,
                             })
@@ -411,10 +429,10 @@ async fn lan_matchmaker(
             LanMatchmakerRequest::StopJoin => (),
 
             // Join a hosted match
-            LanMatchmakerRequest::JoinServer { id } => {
+            LanMatchmakerRequest::JoinServer { addr } => {
                 let conn = get_network_endpoint()
                     .await
-                    .connect(NodeAddr::new(id), ALPN)
+                    .connect(addr, PLAY_ALPN)
                     .await
                     .expect("Could not connect to server");
 
@@ -430,63 +448,21 @@ async fn lan_matchmaker(
                         player_count,
                     } => {
                         info!(%player_count, %player_idx, ?peer_addrs, "Matchmaking finished");
-                        let mut peer_connections = std::array::from_fn(|_| None);
 
-                        // Set the connection to the matchmaker for player 0
-                        peer_connections[0] = Some(conn.clone());
+                        let peer_connections = establish_peer_connections(
+                            player_idx,
+                            player_count,
+                            peer_addrs,
+                            Some(conn),
+                        )
+                        .await;
 
-                        // For every peer with a player index that is higher than ours, wait for
-                        // them to connect to us.
-                        let range = (player_idx + 1)..player_count;
-                        info!(players=?range, "Waiting for {} peer connections", range.len());
-                        for _ in range {
-                            // Wait for connection
-                            let conn = get_network_endpoint()
-                                .await
-                                .accept()
-                                .await
-                                .unwrap()
-                                .await
-                                .expect("Could not accept incomming connection");
-
-                            // Receive the player index
-                            let idx = {
-                                let mut buf = [0; 1];
-                                let mut channel = conn.accept_uni().await.unwrap();
-                                channel.read_exact(&mut buf).await.unwrap();
-
-                                buf[0] as usize
-                            };
-                            assert!(idx < MAX_PLAYERS, "Invalid player index");
-
-                            peer_connections[idx] = Some(conn);
-                        }
-
-                        // For every peer with a player index lower than ours, connect to them.
-                        let range = 1..player_idx;
-                        info!(players=?range, "Connecting to {} peers", range.len());
-                        for i in range {
-                            let addr = peer_addrs[i].unwrap();
-                            let conn = get_network_endpoint()
-                                .await
-                                .connect(addr.into(), ALPN)
-                                .await
-                                .expect("Could not connect to peer");
-
-                            // Send player index
-                            let mut channel = conn.open_uni().await.unwrap();
-                            channel.write(&[player_idx as u8]).await.unwrap();
-                            channel.finish().await.unwrap();
-
-                            peer_connections[i] = Some(conn);
-                        }
-
-                        let lan_socket = LanSocket::new(player_idx, peer_connections);
+                        let socket = Socket::new(player_idx, peer_connections);
                         info!("Connections established.");
 
                         matchmaker_channel
                             .try_send(LanMatchmakerResponse::GameStarting {
-                                lan_socket,
+                                socket,
                                 player_idx,
                                 player_count,
                             })
@@ -512,8 +488,8 @@ pub enum LanMatchmakerRequest {
     },
     /// Join server
     JoinServer {
-        /// Node Id
-        id: NodeId,
+        /// Node Addr
+        addr: NodeAddr,
     },
     /// Stop matchmaking server
     StopServer,
@@ -530,242 +506,12 @@ pub enum LanMatchmakerResponse {
     /// Game is starting
     GameStarting {
         /// Lan socket to game
-        lan_socket: LanSocket,
+        socket: Socket,
         /// Local player index
         player_idx: usize,
         /// Game player count
         player_count: usize,
     },
-}
-
-/// The LAN [`NetworkSocket`] implementation.
-#[derive(Debug, Clone)]
-pub struct LanSocket {
-    ///
-    pub connections: [Option<iroh_quinn::Connection>; MAX_PLAYERS],
-    pub ggrs_receiver: async_channel::Receiver<(usize, GameMessage)>,
-    pub reliable_receiver: async_channel::Receiver<(usize, Vec<u8>)>,
-    pub player_idx: usize,
-    pub player_count: usize,
-    /// ID for current match, messages received that do not match ID are dropped.
-    pub match_id: u8,
-}
-
-impl LanSocket {
-    pub fn new(
-        player_idx: usize,
-        connections: [Option<iroh_quinn::Connection>; MAX_PLAYERS],
-    ) -> Self {
-        let (ggrs_sender, ggrs_receiver) = async_channel::unbounded();
-        let (reliable_sender, reliable_receiver) = async_channel::unbounded();
-
-        // Spawn tasks to receive network messages from each peer
-        #[allow(clippy::needless_range_loop)]
-        for i in 0..MAX_PLAYERS {
-            if let Some(conn) = connections[i].clone() {
-                let ggrs_sender = ggrs_sender.clone();
-
-                // Unreliable message receiver
-                let conn_ = conn.clone();
-                RUNTIME.spawn(async move {
-                    let conn = conn_;
-
-                    #[cfg(feature = "debug-network-slowdown")]
-                    use turborand::prelude::*;
-                    #[cfg(feature = "debug-network-slowdown")]
-                    let rng = AtomicRng::new();
-
-                    loop {
-                        let event =
-                            future::or(async { either::Left(conn.closed().await) }, async {
-                                either::Right(conn.read_datagram().await)
-                            })
-                            .await;
-
-                        match event {
-                            either::Either::Left(closed) => {
-                                warn!("Connection error: {closed}");
-                                break;
-                            }
-                            either::Either::Right(datagram_result) => match datagram_result {
-                                Ok(data) => {
-                                    let message: GameMessage = postcard::from_bytes(&data)
-                                        .expect("Could not deserialize net message");
-
-                                    // Debugging code to introduce artificial latency
-                                    #[cfg(feature = "debug-network-slowdown")]
-                                    {
-                                        use async_timer::Oneshot;
-                                        async_timer::oneshot::Timer::new(
-                                            std::time::Duration::from_millis(
-                                                (rng.f32_normalized() * 100.0) as u64 + 1,
-                                            ),
-                                        )
-                                        .await;
-                                    }
-                                    if ggrs_sender.send((i, message)).await.is_err() {
-                                        break;
-                                    }
-                                }
-                                Err(e) => {
-                                    warn!("Connection error: {e}");
-                                }
-                            },
-                        }
-                    }
-                });
-
-                // Reliable message receiver
-                let reliable_sender = reliable_sender.clone();
-                RUNTIME.spawn(async move {
-                    #[cfg(feature = "debug-network-slowdown")]
-                    use turborand::prelude::*;
-                    #[cfg(feature = "debug-network-slowdown")]
-                    let rng = AtomicRng::new();
-
-                    loop {
-                        let event =
-                            future::or(async { either::Left(conn.closed().await) }, async {
-                                either::Right(conn.accept_uni().await)
-                            })
-                            .await;
-
-                        match event {
-                            either::Either::Left(closed) => {
-                                warn!("Connection error: {closed}");
-                                break;
-                            }
-                            either::Either::Right(result) => match result {
-                                Ok(mut stream) => {
-                                    let data =
-                                        stream.read_to_end(4096).await.expect("Network read error");
-
-                                    // Debugging code to introduce artificial latency
-                                    #[cfg(feature = "debug-network-slowdown")]
-                                    {
-                                        use async_timer::Oneshot;
-                                        async_timer::oneshot::Timer::new(
-                                            std::time::Duration::from_millis(
-                                                (rng.f32_normalized() * 100.0) as u64 + 1,
-                                            ),
-                                        )
-                                        .await;
-                                    }
-                                    if reliable_sender.send((i, data)).await.is_err() {
-                                        break;
-                                    }
-                                }
-                                Err(e) => {
-                                    warn!("Connection error: {e}");
-                                }
-                            },
-                        }
-                    }
-                });
-            }
-        }
-
-        Self {
-            player_idx,
-            player_count: connections.iter().flatten().count() + 1,
-            connections,
-            ggrs_receiver,
-            reliable_receiver,
-            match_id: 0,
-        }
-    }
-}
-
-impl NetworkSocket for LanSocket {
-    fn send_reliable(&self, target: SocketTarget, message: &[u8]) {
-        let message = Bytes::copy_from_slice(message);
-
-        match target {
-            SocketTarget::Player(i) => {
-                let conn = self.connections[i].as_ref().unwrap().clone();
-
-                RUNTIME.spawn(async move {
-                    let mut stream = conn.open_uni().await.unwrap();
-                    stream.write_chunk(message).await.unwrap();
-                    stream.finish().await.unwrap();
-                });
-            }
-            SocketTarget::All => {
-                for conn in &self.connections {
-                    if let Some(conn) = conn.clone() {
-                        let message = message.clone();
-                        RUNTIME.spawn(async move {
-                            let mut stream = conn.open_uni().await.unwrap();
-                            stream.write_chunk(message).await.unwrap();
-                            stream.finish().await.unwrap();
-                        });
-                    }
-                }
-            }
-        }
-    }
-
-    fn recv_reliable(&self) -> Vec<(usize, Vec<u8>)> {
-        let mut messages = Vec::new();
-        while let Ok(message) = self.reliable_receiver.try_recv() {
-            messages.push(message);
-        }
-        messages
-    }
-
-    fn ggrs_socket(&self) -> BoxedNonBlockingSocket {
-        BoxedNonBlockingSocket(Box::new(self.clone()))
-    }
-
-    fn close(&self) {
-        for conn in self.connections.iter().flatten() {
-            conn.close(0u8.into(), &[]);
-        }
-    }
-
-    fn player_idx(&self) -> usize {
-        self.player_idx
-    }
-
-    fn player_count(&self) -> usize {
-        self.player_count
-    }
-
-    fn player_is_local(&self) -> [bool; MAX_PLAYERS] {
-        std::array::from_fn(|i| self.connections[i].is_none() && i < self.player_count)
-    }
-
-    fn increment_match_id(&mut self) {
-        self.match_id = self.match_id.wrapping_add(1);
-    }
-}
-
-impl ggrs::NonBlockingSocket<usize> for LanSocket {
-    fn send_to(&mut self, msg: &ggrs::Message, addr: &usize) {
-        let msg = GameMessage {
-            // Consider a way we can send message by reference and avoid clone?
-            message: msg.clone(),
-            match_id: self.match_id,
-        };
-        let conn = self.connections[*addr].as_ref().unwrap();
-        let message = bones_matchmaker_proto::SendProxyMessage {
-            target_client: bones_matchmaker_proto::TargetClient::One(*addr as u8),
-            message: postcard::to_allocvec(&msg).unwrap(),
-        };
-        let msg_bytes = postcard::to_allocvec(&message).unwrap();
-        conn.send_datagram(Bytes::copy_from_slice(&msg_bytes[..]))
-            .ok();
-    }
-
-    fn receive_all_messages(&mut self) -> Vec<(usize, ggrs::Message)> {
-        let mut messages = Vec::new();
-        while let Ok(message) = self.ggrs_receiver.try_recv() {
-            if message.1.match_id == self.match_id {
-                messages.push((message.0, message.1.message));
-            }
-        }
-        messages
-    }
 }
 
 fn pinger(server: BiChannelServer<PingerRequest, PingerResponse>) {

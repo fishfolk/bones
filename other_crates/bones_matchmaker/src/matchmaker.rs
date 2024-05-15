@@ -162,10 +162,10 @@ async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyho
 
                         if !members_to_join.is_empty() {
                             // Send the match ID to all of the clients in the room
-                            let mut player_ids = Vec::with_capacity(player_count as usize);
+                            let mut player_ids = std::array::from_fn(|_| None);
                             let random_seed = rand::random();
 
-                            for conn in &members_to_join {
+                            for (idx, conn) in members_to_join.iter().enumerate() {
                                 let id = get_remote_node_id(&conn)?;
                                 let mut addr = NodeAddr::new(id);
                                 if let Some(info) = ep.connection_info(id) {
@@ -177,7 +177,7 @@ async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyho
                                     );
                                 }
 
-                                player_ids.push(addr);
+                                player_ids[idx] = Some(addr);
                             }
 
                             for (player_idx, conn) in members_to_join.into_iter().enumerate() {
@@ -196,6 +196,9 @@ async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyho
                                 // Close connection, we are done here
                                 conn.close(0u32.into(), b"done");
                             }
+
+                            // cleanup
+                            STATE.rooms.remove_async(&match_info).await;
                         }
                     }
                 }
