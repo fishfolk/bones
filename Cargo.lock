@@ -1596,6 +1596,7 @@ dependencies = [
 name = "bones_matchmaker_proto"
 version = "0.2.0"
 dependencies = [
+ "iroh-net",
  "serde",
 ]
 

@@ -7,7 +7,7 @@ extern crate tracing;
 
 use std::net::SocketAddr;
 
-use bones_matchmaker_proto::ALPN;
+use bones_matchmaker_proto::MATCH_ALPN;
 
 pub mod cli;
 
@@ -27,7 +27,7 @@ async fn server(args: Config) -> anyhow::Result<()> {
 
     let secret_key = iroh_net::key::SecretKey::generate();
     let endpoint = iroh_net::MagicEndpoint::builder()
-        .alpns(vec![ALPN.to_vec()])
+        .alpns(vec![MATCH_ALPN.to_vec()])
         .discovery(Box::new(
             iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
                 Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
@@ -58,7 +58,7 @@ async fn server(args: Config) -> anyhow::Result<()> {
                 );
 
                 // Spawn a task to handle the new connection
-                tokio::task::spawn(matchmaker::handle_connection(conn));
+                tokio::task::spawn(matchmaker::handle_connection(endpoint.clone(), conn));
             }
             Err(e) => error!("Error opening client connection: {e:?}"),
         }

@@ -6,7 +6,10 @@
 use serde::{Deserialize, Serialize};
 
 /// ALPN used for the matchmaking protocol.
-pub const ALPN: &[u8] = b"/bones/match/0";
+pub const MATCH_ALPN: &[u8] = b"/bones/match/0";
+
+/// ALPN used for the direct connections between players.
+pub const PLAY_ALPN: &[u8] = b"/bones/play/0";
 
 //
 // === Matchmaking Mode ===
@@ -50,6 +53,8 @@ pub enum MatchmakerResponse {
         player_idx: u8,
         /// The number of connected clients in the match
         client_count: u8,
+        /// The node ids of all players.
+        player_ids: Vec<iroh_net::NodeAddr>,
     },
 }
 
