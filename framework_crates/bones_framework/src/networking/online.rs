@@ -12,11 +12,11 @@ use iroh_quinn::Connection;
 use once_cell::sync::Lazy;
 use tracing::{info, warn};
 
-use crate::{networking::NetworkMatchSocket, prelude::*};
+use crate::{networking::{NetworkMatchSocket, get_network_endpoint}, prelude::*};
 
 use super::{
     BoxedNonBlockingSocket, GameMessage, NetworkSocket, SocketTarget, MAX_PLAYERS,
-    NETWORK_ENDPOINT, RUNTIME,
+    RUNTIME,
 };
 
 #[derive(Default, PartialEq, Eq, Clone, Copy)]
@@ -66,7 +66,7 @@ async fn online_matchmaker(
         match message {
             OnlineMatchmakerRequest::SearchForGame { id, player_count } => {
                 info!("Connecting to online matchmaker");
-                let conn = NETWORK_ENDPOINT.connect(id.into(), ALPN).await.unwrap();
+                let conn = get_network_endpoint().await.connect(id.into(), ALPN).await.unwrap();
                 info!("Connected to online matchmaker");
 
                 matchmaker_channel

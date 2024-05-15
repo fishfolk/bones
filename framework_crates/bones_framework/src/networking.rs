@@ -96,10 +96,13 @@ impl<T: DenseInput + Debug> ggrs::Config for GgrsConfig<T> {
     type Address = usize;
 }
 
-/// The network endpoint used for all QUIC network communications.
-pub static NETWORK_ENDPOINT: Lazy<iroh_net::MagicEndpoint> = Lazy::new(|| {
-    let secret_key = iroh_net::key::SecretKey::generate();
-    RUNTIME.block_on(async move {
+/// The network endpoint used for all network communications.
+static NETWORK_ENDPOINT: tokio::sync::OnceCell<iroh_net::MagicEndpoint> = tokio::sync::OnceCell::const_new();
+
+/// Get the network endpoint used for all communications.
+pub async fn get_network_endpoint() -> &'static iroh_net::MagicEndpoint {
+    NETWORK_ENDPOINT.get_or_init(|| async move {
+        let secret_key = iroh_net::key::SecretKey::generate();
         iroh_net::MagicEndpoint::builder()
             .alpns(vec![ALPN.to_vec(), lan::ALPN.to_vec()])
             .discovery(Box::new(
@@ -114,8 +117,8 @@ pub static NETWORK_ENDPOINT: Lazy<iroh_net::MagicEndpoint> = Lazy::new(|| {
             .bind(0)
             .await
             .unwrap()
-    })
-});
+    }).await
+}
 
 /// Resource containing the [`NetworkSocket`] implementation while there is a connection to a
 /// network game.
@@ -591,16 +594,5 @@ where
             local_input_delay: Some(self.local_input_delay),
         };
         *self = GgrsSessionRunner::new(self.original_fps as f32, runner_info);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_network_endpoint() {
-        let node_id = NETWORK_ENDPOINT.node_id();
-        println!("it works: {}", node_id);
     }
 }

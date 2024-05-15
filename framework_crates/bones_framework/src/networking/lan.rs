@@ -215,15 +215,15 @@ pub fn prepare_to_join(
 /// Get the current host info or create a new one. When there's an existing
 /// service but its `service_name` is different, the service is recreated and
 /// only then the returned `bool` is `true`.
-pub fn prepare_to_host<'a>(
+pub async fn prepare_to_host<'a>(
     host_info: &'a mut Option<ServerInfo>,
     service_name: &str,
 ) -> (bool, &'a mut ServerInfo) {
-    let create_service_info = || {
+    let create_service_info = || async {
         info!("New service hosting");
-        // TODO: send NodeId
-        let node_id = NETWORK_ENDPOINT.node_id();
-        let port = NETWORK_ENDPOINT.local_addr().0.port();
+        let ep = get_network_endpoint().await;
+        let node_id = ep.node_id();
+        let port = ep.local_addr().0.port();
         let mut props = std::collections::HashMap::default();
         props.insert("node-id".to_string(), node_id.to_string());
         let service = mdns_sd::ServiceInfo::new(
@@ -242,13 +242,15 @@ pub fn prepare_to_host<'a>(
         }
     };
 
-    let service_info = host_info.get_or_insert_with(create_service_info);
+    // FIXME: avoid if already available
+    let info = create_service_info().await;
+    let service_info = host_info.get_or_insert(info);
 
     let mut is_recreated = false;
     if service_info.service.get_hostname() != service_name {
         stop_server_by_name(service_info.service.get_fullname());
         is_recreated = true;
-        *service_info = create_service_info();
+        *service_info = create_service_info().await;
     }
     (is_recreated, service_info)
 }
@@ -285,7 +287,7 @@ async fn lan_matchmaker(
 
                 loop {
                     let next_request = async { either::Left(matchmaker_channel.recv().await) };
-                    let next_conn = async { either::Right(NETWORK_ENDPOINT.accept().await) };
+                    let next_conn = async { either::Right(get_network_endpoint().await.accept().await) };
 
                     match next_request.or(next_conn).await {
                         // Handle more matchmaker requests
@@ -409,7 +411,7 @@ async fn lan_matchmaker(
 
             // Join a hosted match
             LanMatchmakerRequest::JoinServer { id } => {
-                let conn = NETWORK_ENDPOINT
+                let conn = get_network_endpoint().await
                     .connect(NodeAddr::new(id), ALPN)
                     .await
                     .expect("Could not connect to server");
@@ -437,7 +439,7 @@ async fn lan_matchmaker(
                         info!(players=?range, "Waiting for {} peer connections", range.len());
                         for _ in range {
                             // Wait for connection
-                            let conn = NETWORK_ENDPOINT
+                            let conn = get_network_endpoint().await
                                 .accept()
                                 .await
                                 .unwrap()
@@ -462,7 +464,7 @@ async fn lan_matchmaker(
                         info!(players=?range, "Connecting to {} peers", range.len());
                         for i in range {
                             let addr = peer_addrs[i].unwrap();
-                            let conn = NETWORK_ENDPOINT
+                            let conn = get_network_endpoint().await
                                 .connect(addr.into(), ALPN)
                                 .await
                                 .expect("Could not connect to peer");
