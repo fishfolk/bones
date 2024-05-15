@@ -124,7 +124,7 @@ async fn online_matchmaker(
                         // Matchmaker message
                         either::Either::Right(recv) => {
                             let mut recv = recv.unwrap();
-                            let message = recv.read_to_end(256).await.unwrap();
+                            let message = recv.read_to_end(5 * 1024).await.unwrap();
                             let message: MatchmakerResponse =
                                 postcard::from_bytes(&message).unwrap();
 
