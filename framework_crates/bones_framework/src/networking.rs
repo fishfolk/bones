@@ -97,27 +97,30 @@ impl<T: DenseInput + Debug> ggrs::Config for GgrsConfig<T> {
 }
 
 /// The network endpoint used for all network communications.
-static NETWORK_ENDPOINT: tokio::sync::OnceCell<iroh_net::MagicEndpoint> = tokio::sync::OnceCell::const_new();
+static NETWORK_ENDPOINT: tokio::sync::OnceCell<iroh_net::MagicEndpoint> =
+    tokio::sync::OnceCell::const_new();
 
 /// Get the network endpoint used for all communications.
 pub async fn get_network_endpoint() -> &'static iroh_net::MagicEndpoint {
-    NETWORK_ENDPOINT.get_or_init(|| async move {
-        let secret_key = iroh_net::key::SecretKey::generate();
-        iroh_net::MagicEndpoint::builder()
-            .alpns(vec![ALPN.to_vec(), lan::ALPN.to_vec()])
-            .discovery(Box::new(
-                iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
-                    Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
-                    Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
-                        secret_key.clone(),
-                    )),
-                ]),
-            ))
-            .secret_key(secret_key)
-            .bind(0)
-            .await
-            .unwrap()
-    }).await
+    NETWORK_ENDPOINT
+        .get_or_init(|| async move {
+            let secret_key = iroh_net::key::SecretKey::generate();
+            iroh_net::MagicEndpoint::builder()
+                .alpns(vec![ALPN.to_vec(), lan::ALPN.to_vec()])
+                .discovery(Box::new(
+                    iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
+                        Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
+                        Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
+                            secret_key.clone(),
+                        )),
+                    ]),
+                ))
+                .secret_key(secret_key)
+                .bind(0)
+                .await
+                .unwrap()
+        })
+        .await
 }
 
 /// Resource containing the [`NetworkSocket`] implementation while there is a connection to a

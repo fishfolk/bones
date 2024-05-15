@@ -287,7 +287,8 @@ async fn lan_matchmaker(
 
                 loop {
                     let next_request = async { either::Left(matchmaker_channel.recv().await) };
-                    let next_conn = async { either::Right(get_network_endpoint().await.accept().await) };
+                    let next_conn =
+                        async { either::Right(get_network_endpoint().await.accept().await) };
 
                     match next_request.or(next_conn).await {
                         // Handle more matchmaker requests
@@ -411,7 +412,8 @@ async fn lan_matchmaker(
 
             // Join a hosted match
             LanMatchmakerRequest::JoinServer { id } => {
-                let conn = get_network_endpoint().await
+                let conn = get_network_endpoint()
+                    .await
                     .connect(NodeAddr::new(id), ALPN)
                     .await
                     .expect("Could not connect to server");
@@ -439,7 +441,8 @@ async fn lan_matchmaker(
                         info!(players=?range, "Waiting for {} peer connections", range.len());
                         for _ in range {
                             // Wait for connection
-                            let conn = get_network_endpoint().await
+                            let conn = get_network_endpoint()
+                                .await
                                 .accept()
                                 .await
                                 .unwrap()
@@ -464,7 +467,8 @@ async fn lan_matchmaker(
                         info!(players=?range, "Connecting to {} peers", range.len());
                         for i in range {
                             let addr = peer_addrs[i].unwrap();
-                            let conn = get_network_endpoint().await
+                            let conn = get_network_endpoint()
+                                .await
                                 .connect(addr.into(), ALPN)
                                 .await
                                 .expect("Could not connect to peer");
