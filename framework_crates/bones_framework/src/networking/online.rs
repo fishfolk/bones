@@ -96,33 +96,24 @@ async fn online_matchmaker(
                 }
 
                 loop {
-                    let recv_ui_message = matchmaker_channel.recv();
-                    let recv_online_matchmaker = conn.accept_uni();
-
-                    let next_message = futures_lite::future::or(
-                        async move { either::Left(recv_ui_message.await) },
-                        async move { either::Right(recv_online_matchmaker.await) },
-                    )
-                    .await;
-
-                    match next_message {
+                    tokio::select! {
                         // UI message
-                        either::Either::Left(message) => {
-                            let message = message.unwrap();
-
+                        message = matchmaker_channel.recv() => {
                             match message {
-                                OnlineMatchmakerRequest::SearchForGame { .. } => {
+                                Ok(OnlineMatchmakerRequest::SearchForGame { .. }) => {
                                     panic!("Unexpected message from UI");
                                 }
-                                OnlineMatchmakerRequest::StopSearch => {
+                                Ok(OnlineMatchmakerRequest::StopSearch) => {
                                     info!("Canceling online search");
                                     break;
                                 }
+                                Err(err) => {
+                                    panic!("Failed to recv from match maker channel: {err:?}");
+                                }
                             }
                         }
-
                         // Matchmaker message
-                        either::Either::Right(recv) => {
+                        recv = conn.accept_uni() => {
                             let mut recv = recv.unwrap();
                             let message = recv.read_to_end(5 * 1024).await.unwrap();
                             let message: MatchmakerResponse =

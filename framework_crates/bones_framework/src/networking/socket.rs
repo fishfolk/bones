@@ -3,7 +3,6 @@
 
 use bones_matchmaker_proto::PLAY_ALPN;
 use bytes::Bytes;
-use futures_lite::future;
 use iroh_net::NodeAddr;
 use tracing::{info, warn};
 
@@ -51,18 +50,12 @@ impl Socket {
                     let rng = AtomicRng::new();
 
                     loop {
-                        let event =
-                            future::or(async { either::Left(conn.closed().await) }, async {
-                                either::Right(conn.read_datagram().await)
-                            })
-                            .await;
-
-                        match event {
-                            either::Either::Left(closed) => {
+                        tokio::select! {
+                            closed = conn.closed() => {
                                 warn!("Connection error: {closed}");
                                 break;
                             }
-                            either::Either::Right(datagram_result) => match datagram_result {
+                            datagram_result = conn.read_datagram() => match datagram_result {
                                 Ok(data) => {
                                     let message: GameMessage = postcard::from_bytes(&data)
                                         .expect("Could not deserialize net message");
@@ -85,7 +78,7 @@ impl Socket {
                                 Err(e) => {
                                     warn!("Connection error: {e}");
                                 }
-                            },
+                            }
                         }
                     }
                 });
@@ -99,21 +92,14 @@ impl Socket {
                     let rng = AtomicRng::new();
 
                     loop {
-                        let event =
-                            future::or(async { either::Left(conn.closed().await) }, async {
-                                either::Right(conn.accept_uni().await)
-                            })
-                            .await;
-
-                        match event {
-                            either::Either::Left(closed) => {
+                        tokio::select! {
+                            closed = conn.closed() => {
                                 warn!("Connection error: {closed}");
                                 break;
                             }
-                            either::Either::Right(result) => match result {
+                            result = conn.accept_uni() => match result {
                                 Ok(mut stream) => {
-                                    let data =
-                                        stream.read_to_end(4096).await.expect("Network read error");
+                                    let data = stream.read_to_end(4096).await.expect("Network read error");
 
                                     // Debugging code to introduce artificial latency
                                     #[cfg(feature = "debug-network-slowdown")]

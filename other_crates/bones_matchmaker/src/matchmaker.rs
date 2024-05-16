@@ -1,5 +1,4 @@
 use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse};
-use futures_lite::future;
 use iroh_net::{magic_endpoint::get_remote_node_id, MagicEndpoint, NodeAddr};
 use once_cell::sync::Lazy;
 use quinn::{Connection, ConnectionError};
@@ -44,17 +43,12 @@ async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyho
 
     loop {
         // Get the next channel open or connection close event
-        let event = future::or(async { either::Left(conn.closed().await) }, async {
-            either::Right(conn.accept_bi().await)
-        })
-        .await;
-
-        match event {
-            either::Either::Left(close) => {
+        tokio::select! {
+            close = conn.closed() => {
                 debug!("Connection closed {close:?}");
                 return Ok(());
             }
-            either::Either::Right(bi) => {
+            bi = conn.accept_bi() => {
                 let (mut send, mut recv) = bi?;
 
                 // Parse matchmaker request

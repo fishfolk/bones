@@ -12,7 +12,6 @@
 
 use std::{net::IpAddr, time::Duration};
 
-use futures_lite::FutureExt;
 use iroh_net::{magic_endpoint::get_remote_node_id, NodeAddr};
 use mdns_sd::{ServiceDaemon, ServiceInfo};
 use smallvec::SmallVec;
@@ -286,15 +285,11 @@ async fn lan_matchmaker(
                     .unwrap();
 
                 let mut connections = Vec::new();
+                let ep = get_network_endpoint().await;
 
                 loop {
-                    let next_request = async { either::Left(matchmaker_channel.recv().await) };
-                    let next_conn =
-                        async { either::Right(get_network_endpoint().await.accept().await) };
-
-                    match next_request.or(next_conn).await {
-                        // Handle more matchmaker requests
-                        either::Either::Left(next_request) => {
+                    tokio::select! {
+                        next_request = matchmaker_channel.recv() => {
                             let Ok(next_request) = next_request else {
                                 break;
                             };
@@ -317,7 +312,10 @@ async fn lan_matchmaker(
                         }
 
                         // Handle new connections
-                        either::Either::Right(Some(mut new_connection)) => {
+                        new_connection = ep.accept() => {
+                            let Some(mut new_connection) = new_connection else {
+                                break;
+                            };
                             let Ok(alpn) = new_connection.alpn().await else {
                                 continue;
                             };
@@ -332,7 +330,6 @@ async fn lan_matchmaker(
                             let current_players = connections.len() + 1;
                             info!(%current_players, "New player connection");
                         }
-                        _ => (),
                     }
 
                     // Discard closed connections
