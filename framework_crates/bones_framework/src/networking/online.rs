@@ -28,7 +28,11 @@ pub enum SearchState {
 pub static ONLINE_MATCHMAKER: Lazy<OnlineMatchmaker> = Lazy::new(|| {
     let (client, server) = bi_channel();
 
-    RUNTIME.spawn(online_matchmaker(server));
+    RUNTIME.spawn(async move {
+        if let Err(err) = online_matchmaker(server).await {
+            warn!("online matchmaker failed: {err:?}");
+        }
+    });
 
     OnlineMatchmaker(client)
 });
@@ -58,110 +62,117 @@ pub enum OnlineMatchmakerResponse {
 
 async fn online_matchmaker(
     matchmaker_channel: BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-) {
+) -> anyhow::Result<()> {
     while let Ok(message) = matchmaker_channel.recv().await {
         match message {
             OnlineMatchmakerRequest::SearchForGame { id, player_count } => {
-                info!("Connecting to online matchmaker");
-                let conn = get_network_endpoint()
-                    .await
-                    .connect(id.into(), MATCH_ALPN)
-                    .await
-                    .unwrap();
-                info!("Connected to online matchmaker");
-
-                matchmaker_channel
-                    .try_send(OnlineMatchmakerResponse::Searching)
-                    .unwrap();
-
-                // Send a match request to the server
-                let (mut send, mut recv) = conn.open_bi().await.unwrap();
-
-                let message = MatchmakerRequest::RequestMatch(MatchInfo {
-                    client_count: player_count.try_into().unwrap(),
-                    match_data: b"jumpy_default_game".to_vec(),
-                });
-                info!(request=?message, "Sending match request");
-                let message = postcard::to_allocvec(&message).unwrap();
-                send.write_all(&message).await.unwrap();
-                send.finish().await.unwrap();
-
-                let response = recv.read_to_end(256).await.unwrap();
-                let message: MatchmakerResponse = postcard::from_bytes(&response).unwrap();
-
-                if let MatchmakerResponse::Accepted = message {
-                    info!("Waiting for match...");
-                } else {
-                    panic!("Invalid response from matchmaker");
-                }
-
-                loop {
-                    tokio::select! {
-                        // UI message
-                        message = matchmaker_channel.recv() => {
-                            match message {
-                                Ok(OnlineMatchmakerRequest::SearchForGame { .. }) => {
-                                    panic!("Unexpected message from UI");
-                                }
-                                Ok(OnlineMatchmakerRequest::StopSearch) => {
-                                    info!("Canceling online search");
-                                    break;
-                                }
-                                Err(err) => {
-                                    panic!("Failed to recv from match maker channel: {err:?}");
-                                }
-                            }
-                        }
-                        // Matchmaker message
-                        recv = conn.accept_uni() => {
-                            let mut recv = recv.unwrap();
-                            let message = recv.read_to_end(5 * 1024).await.unwrap();
-                            let message: MatchmakerResponse =
-                                postcard::from_bytes(&message).unwrap();
-
-                            match message {
-                                MatchmakerResponse::ClientCount(count) => {
-                                    info!("Online match player count: {count}");
-                                    matchmaker_channel
-                                        .try_send(OnlineMatchmakerResponse::PlayerCount(count as _))
-                                        .unwrap();
-                                }
-                                MatchmakerResponse::Success {
-                                    random_seed,
-                                    player_idx,
-                                    client_count,
-                                    player_ids,
-                                } => {
-                                    info!(%random_seed, %player_idx, player_count=%client_count, "Online match complete");
-
-                                    let peer_connections = establish_peer_connections(
-                                        player_idx as usize,
-                                        client_count as usize,
-                                        player_ids,
-                                        None,
-                                    )
-                                    .await;
-
-                                    let socket = Socket::new(player_idx as usize, peer_connections);
-
-                                    matchmaker_channel
-                                        .try_send(OnlineMatchmakerResponse::GameStarting {
-                                            socket,
-                                            player_idx: player_idx as _,
-                                            player_count: client_count as _,
-                                        })
-                                        .unwrap();
-                                    break;
-                                }
-                                _ => panic!("Unexpected message from matchmaker"),
-                            }
-                        }
-                    }
+                if let Err(err) = search_for_game(&matchmaker_channel, id, player_count).await {
+                    warn!("Online Game Search failed: {err:?}");
                 }
             }
             OnlineMatchmakerRequest::StopSearch => (), // Not searching, don't do anything
         }
     }
+
+    Ok(())
+}
+
+async fn search_for_game(
+    matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
+    id: NodeId,
+    player_count: usize,
+) -> anyhow::Result<()> {
+    info!("Connecting to online matchmaker");
+    let ep = get_network_endpoint().await;
+    let conn = ep.connect(id.into(), MATCH_ALPN).await?;
+    info!("Connected to online matchmaker");
+
+    matchmaker_channel
+        .send(OnlineMatchmakerResponse::Searching)
+        .await?;
+
+    // Send a match request to the server
+    let (mut send, mut recv) = conn.open_bi().await?;
+
+    let message = MatchmakerRequest::RequestMatch(MatchInfo {
+        client_count: player_count.try_into().unwrap(),
+        match_data: b"jumpy_default_game".to_vec(),
+    });
+    info!(request=?message, "Sending match request");
+
+    let message = postcard::to_allocvec(&message)?;
+    send.write_all(&message).await?;
+    send.finish().await?;
+
+    let response = recv.read_to_end(256).await?;
+    let message: MatchmakerResponse = postcard::from_bytes(&response)?;
+
+    if let MatchmakerResponse::Accepted = message {
+        info!("Waiting for match...");
+    } else {
+        panic!("Invalid response from matchmaker");
+    }
+
+    loop {
+        tokio::select! {
+            // UI message
+            message = matchmaker_channel.recv() => {
+                match message {
+                    Ok(OnlineMatchmakerRequest::SearchForGame { .. }) => {
+                        anyhow::bail!("Unexpected message from UI");
+                    }
+                    Ok(OnlineMatchmakerRequest::StopSearch) => {
+                        info!("Canceling online search");
+                        break;
+                    }
+                    Err(err) => {
+                        anyhow::bail!("Failed to recv from match maker channel: {err:?}");
+                    }
+                }
+            }
+            // Matchmaker message
+            recv = conn.accept_uni() => {
+                let mut recv = recv?;
+                let message = recv.read_to_end(5 * 1024).await?;
+                let message: MatchmakerResponse = postcard::from_bytes(&message)?;
+
+                match message {
+                    MatchmakerResponse::ClientCount(count) => {
+                        info!("Online match player count: {count}");
+                        matchmaker_channel.try_send(OnlineMatchmakerResponse::PlayerCount(count as _))?;
+                    }
+                    MatchmakerResponse::Success {
+                        random_seed,
+                        player_idx,
+                        client_count,
+                        player_ids,
+                    } => {
+                        info!(%random_seed, %player_idx, player_count=%client_count, "Online match complete");
+
+                        let peer_connections = establish_peer_connections(
+                            player_idx as usize,
+                            client_count as usize,
+                            player_ids,
+                            None,
+                        )
+                        .await;
+
+                        let socket = Socket::new(player_idx as usize, peer_connections);
+
+                        matchmaker_channel.try_send(OnlineMatchmakerResponse::GameStarting {
+                            socket,
+                            player_idx: player_idx as _,
+                            player_count: client_count as _,
+                        })?;
+                        break;
+                    }
+                    other => anyhow::bail!("Unexpected message from matchmaker: {other:?}"),
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// Search for game with `matchmaking_server` and `player_count`
