@@ -42,7 +42,12 @@ pub struct ServiceDiscoveryReceiver(mdns_sd::Receiver<mdns_sd::ServiceEvent>);
 static LAN_MATCHMAKER: Lazy<LanMatchmaker> = Lazy::new(|| {
     let (client, server) = bi_channel();
 
-    RUNTIME.spawn(lan_matchmaker(server));
+    RUNTIME.spawn(async move {
+        if let Err(err) = lan_matchmaker(server).await {
+            warn!("lan matchmaker failed: {err:?}");
+        }
+    });
+
     LanMatchmaker(client)
 });
 
@@ -76,20 +81,23 @@ pub fn start_server(server: ServerInfo, player_count: usize) {
 
 /// Stop hosting a server.
 pub fn stop_server(server: &ServerInfo) {
-    stop_server_by_name(server.service.get_fullname())
+    if let Err(err) = stop_server_by_name(server.service.get_fullname()) {
+        warn!("Lan: failed to stop server: {err:?}");
+    }
 }
 
 /// Stop hosting a server specified by name. (Use [`ServiceInfo::get_fullname()`].)
-fn stop_server_by_name(name: &str) {
+fn stop_server_by_name(name: &str) -> anyhow::Result<()> {
     loop {
         match MDNS.unregister(name) {
             Ok(_) => break,
             Err(mdns_sd::Error::Again) => (),
             Err(e) => {
-                panic!("Error unregistering MDNS service: {e}")
+                anyhow::bail!("Error unregistering MDNS service: {e}")
             }
         }
     }
+    Ok(())
 }
 
 /// Wait for players to join a hosted server.
@@ -106,12 +114,8 @@ pub fn wait_players(joined_players: &mut usize, server: &ServerInfo) -> Option<N
                 player_count: _,
             } => {
                 info!(?player_idx, "Starting network game");
-                loop {
-                    match MDNS.unregister(server.service.get_fullname()) {
-                        Ok(_) => break,
-                        Err(mdns_sd::Error::Again) => (),
-                        Err(e) => panic!("Error unregistering MDNS service: {e}"),
-                    }
+                if let Err(err) = stop_server_by_name(server.service.get_fullname()) {
+                    warn!("Lan: failed to stop server: {err:?}");
                 }
                 return Some(NetworkMatchSocket(Arc::new(socket)));
             }
@@ -121,17 +125,18 @@ pub fn wait_players(joined_players: &mut usize, server: &ServerInfo) -> Option<N
 }
 
 /// Join a server hosted by someone else.
-pub fn join_server(server: &ServerInfo) {
+pub fn join_server(server: &ServerInfo) -> anyhow::Result<()> {
     let addr_raw = server
         .service
         .get_properties()
         .get_property_val_str("node-addr")
-        .unwrap();
-    let addr_raw = hex::decode(addr_raw).unwrap();
-    let addr: NodeAddr = postcard::from_bytes(&addr_raw).unwrap();
+        .ok_or_else(|| anyhow::anyhow!("missing node-addr property from discovery"))?;
+    let addr_raw = hex::decode(addr_raw)?;
+    let addr: NodeAddr = postcard::from_bytes(&addr_raw)?;
     LAN_MATCHMAKER
         .try_send(lan::LanMatchmakerRequest::JoinServer { addr })
         .unwrap();
+    Ok(())
 }
 
 /// Leave a joined server.
@@ -249,7 +254,7 @@ pub async fn prepare_to_host<'a>(
 
     let mut is_recreated = false;
     if service_info.service.get_hostname() != service_name {
-        stop_server_by_name(service_info.service.get_fullname());
+        stop_server_by_name(service_info.service.get_fullname()).unwrap();
         is_recreated = true;
         *service_info = create_service_info().await;
     }
@@ -262,163 +267,14 @@ pub async fn prepare_to_host<'a>(
 /// channel.
 async fn lan_matchmaker(
     matchmaker_channel: BiChannelServer<LanMatchmakerRequest, LanMatchmakerResponse>,
-) {
-    #[derive(Serialize, Deserialize)]
-    enum MatchmakerNetMsg {
-        MatchReady {
-            /// The peers they have for the match, with the index in the array being the player index of the peer.
-            peers: [Option<NodeAddr>; MAX_PLAYERS],
-            /// The player index of the player getting the message.
-            player_idx: usize,
-            player_count: usize,
-        },
-    }
-
+) -> anyhow::Result<()> {
     while let Ok(request) = matchmaker_channel.recv().await {
         match request {
             // Start server
-            LanMatchmakerRequest::StartServer { mut player_count } => {
-                info!("Starting LAN server");
-                matchmaker_channel
-                    .send(LanMatchmakerResponse::ServerStarted)
-                    .await
-                    .unwrap();
-
-                let mut connections = Vec::new();
-                let ep = get_network_endpoint().await;
-
-                loop {
-                    tokio::select! {
-                        next_request = matchmaker_channel.recv() => {
-                            let Ok(next_request) = next_request else {
-                                break;
-                            };
-
-                            match next_request {
-                                LanMatchmakerRequest::StartServer {
-                                    player_count: new_player_count,
-                                } => {
-                                    connections.clear();
-                                    player_count = new_player_count;
-                                }
-                                LanMatchmakerRequest::StopServer => {
-                                    break;
-                                }
-                                LanMatchmakerRequest::StopJoin => {} // Not joining, so don't do anything
-                                LanMatchmakerRequest::JoinServer { .. } => {
-                                    error!("Cannot join server while hosting server");
-                                }
-                            }
-                        }
-
-                        // Handle new connections
-                        new_connection = ep.accept() => {
-                            let Some(mut new_connection) = new_connection else {
-                                break;
-                            };
-                            let Ok(alpn) = new_connection.alpn().await else {
-                                continue;
-                            };
-                            if alpn.as_bytes() != PLAY_ALPN {
-                                warn!("unexpected ALPN: {alpn}");
-                                continue;
-                            }
-                            let Some(conn) = new_connection.await.ok() else {
-                                continue;
-                            };
-                            connections.push(conn);
-                            let current_players = connections.len() + 1;
-                            info!(%current_players, "New player connection");
-                        }
-                    }
-
-                    // Discard closed connections
-                    connections.retain(|conn| {
-                        if conn.close_reason().is_some() {
-                            info!("Player closed connection");
-                            false
-                        } else {
-                            true
-                        }
-                    });
-
-                    let current_players = connections.len();
-                    let target_players = player_count;
-                    info!(%current_players, %target_players);
-
-                    // If we're ready to start a match
-                    if connections.len() == player_count - 1 {
-                        info!("All players joined.");
-
-                        let endpoint = get_network_endpoint().await;
-
-                        // Tell all clients we're ready
-                        for (i, conn) in connections.iter().enumerate() {
-                            let mut peers = std::array::from_fn(|_| None);
-                            connections
-                                .iter()
-                                .enumerate()
-                                .filter(|x| x.0 != i)
-                                .for_each(|(i, conn)| {
-                                    let id = get_remote_node_id(&conn).expect("invalid connection");
-                                    let mut addr = NodeAddr::new(id);
-                                    if let Some(info) = endpoint.connection_info(id) {
-                                        if let Some(relay_url) = info.relay_url {
-                                            addr = addr.with_relay_url(relay_url.relay_url);
-                                        }
-                                        addr = addr.with_direct_addresses(
-                                            info.addrs.into_iter().map(|addr| addr.addr),
-                                        );
-                                    }
-
-                                    peers[i + 1] = Some(addr);
-                                });
-
-                            let mut uni = conn.open_uni().await.unwrap();
-                            uni.write_all(
-                                &postcard::to_vec::<_, 20>(&MatchmakerNetMsg::MatchReady {
-                                    player_idx: i + 1,
-                                    peers,
-                                    player_count,
-                                })
-                                .unwrap(),
-                            )
-                            .await
-                            .unwrap();
-                            uni.finish().await.unwrap();
-                        }
-
-                        // Collect the list of client connections
-                        let connections = std::array::from_fn(|i| {
-                            if i == 0 {
-                                None
-                            } else {
-                                connections.get(i - 1).cloned()
-                            }
-                        });
-
-                        // Send the connections to the game so that it can start the network match.
-                        matchmaker_channel
-                            .try_send(LanMatchmakerResponse::GameStarting {
-                                socket: Socket::new(0, connections),
-                                player_idx: 0,
-                                player_count,
-                            })
-                            .ok();
-                        info!(player_idx=0, %player_count, "Matchmaking finished");
-
-                        // Break out of the server loop
-                        break;
-
-                    // If we don't have enough players yet, send the updated player count to the game.
-                    } else if matchmaker_channel
-                        .try_send(LanMatchmakerResponse::PlayerCount(current_players))
-                        .is_err()
-                    {
-                        break;
-                    }
+            LanMatchmakerRequest::StartServer { player_count } => {
+                if let Err(err) = lan_start_server(&matchmaker_channel, player_count).await {
+                    warn!("lan server failed: {err:?}");
                 }
-
                 // Once we are done with server matchmaking
             }
             // Server not running or joining so do nothing
@@ -427,49 +283,207 @@ async fn lan_matchmaker(
 
             // Join a hosted match
             LanMatchmakerRequest::JoinServer { addr } => {
-                let conn = get_network_endpoint()
-                    .await
-                    .connect(addr, PLAY_ALPN)
-                    .await
-                    .expect("Could not connect to server");
-
-                // Wait for match to start
-                let mut uni = conn.accept_uni().await.unwrap();
-                let bytes = uni.read_to_end(20).await.unwrap();
-                let message: MatchmakerNetMsg = postcard::from_bytes(&bytes).unwrap();
-
-                match message {
-                    MatchmakerNetMsg::MatchReady {
-                        peers: peer_addrs,
-                        player_idx,
-                        player_count,
-                    } => {
-                        info!(%player_count, %player_idx, ?peer_addrs, "Matchmaking finished");
-
-                        let peer_connections = establish_peer_connections(
-                            player_idx,
-                            player_count,
-                            peer_addrs,
-                            Some(conn),
-                        )
-                        .await
-                        .unwrap();
-
-                        let socket = Socket::new(player_idx, peer_connections);
-                        info!("Connections established.");
-
-                        matchmaker_channel
-                            .try_send(LanMatchmakerResponse::GameStarting {
-                                socket,
-                                player_idx,
-                                player_count,
-                            })
-                            .ok();
-                    }
+                if let Err(err) = lan_join_server(&matchmaker_channel, addr).await {
+                    warn!("failed to join server: {err:?}");
                 }
             }
         }
     }
+
+    Ok(())
+}
+
+async fn lan_start_server(
+    matchmaker_channel: &BiChannelServer<LanMatchmakerRequest, LanMatchmakerResponse>,
+    mut player_count: usize,
+) -> anyhow::Result<()> {
+    info!("Starting LAN server");
+    matchmaker_channel
+        .send(LanMatchmakerResponse::ServerStarted)
+        .await?;
+
+    let mut connections = Vec::new();
+    let ep = get_network_endpoint().await;
+
+    loop {
+        tokio::select! {
+            next_request = matchmaker_channel.recv() => {
+                match next_request? {
+                    LanMatchmakerRequest::StartServer {
+                        player_count: new_player_count,
+                    } => {
+                        connections.clear();
+                        player_count = new_player_count;
+                    }
+                    LanMatchmakerRequest::StopServer => {
+                        break;
+                    }
+                    LanMatchmakerRequest::StopJoin => {} // Not joining, so don't do anything
+                    LanMatchmakerRequest::JoinServer { .. } => {
+                        anyhow::bail!("Cannot join server while hosting server");
+                    }
+                }
+            }
+
+            // Handle new connections
+            new_connection = ep.accept() => {
+                let Some(mut new_connection) = new_connection else {
+                    anyhow::bail!("unable to accept new connections");
+                };
+                let result = async move {
+                    let alpn = new_connection.alpn().await?;
+                    anyhow::ensure!(alpn.as_bytes() == PLAY_ALPN, "unexpected ALPN");
+                    let conn = new_connection.await?;
+                    anyhow::Ok(conn)
+                };
+
+                match result.await {
+                    Ok(conn) => {
+                        connections.push(conn);
+                        let current_players = connections.len() + 1;
+                        info!(%current_players, "New player connection");
+                    }
+                    Err(err) => {
+                        warn!("failed to accept connection: {:?}", err);
+                        continue;
+                    }
+                }
+            }
+        }
+
+        // Discard closed connections
+        connections.retain(|conn| {
+            if conn.close_reason().is_some() {
+                info!("Player closed connection");
+                false
+            } else {
+                true
+            }
+        });
+
+        let current_players = connections.len();
+        let target_players = player_count;
+        info!(%current_players, %target_players);
+
+        // If we're ready to start a match
+        if connections.len() == player_count - 1 {
+            info!("All players joined.");
+
+            let endpoint = get_network_endpoint().await;
+
+            // Tell all clients we're ready
+            for (i, conn) in connections.iter().enumerate() {
+                let mut peers = std::array::from_fn(|_| None);
+                connections
+                    .iter()
+                    .enumerate()
+                    .filter(|x| x.0 != i)
+                    .for_each(|(i, conn)| {
+                        let id = get_remote_node_id(&conn).expect("invalid connection");
+                        let mut addr = NodeAddr::new(id);
+                        if let Some(info) = endpoint.connection_info(id) {
+                            if let Some(relay_url) = info.relay_url {
+                                addr = addr.with_relay_url(relay_url.relay_url);
+                            }
+                            addr = addr.with_direct_addresses(
+                                info.addrs.into_iter().map(|addr| addr.addr),
+                            );
+                        }
+
+                        peers[i + 1] = Some(addr);
+                    });
+
+                let mut uni = conn.open_uni().await?;
+                uni.write_all(&postcard::to_vec::<_, 20>(&MatchmakerNetMsg::MatchReady {
+                    player_idx: i + 1,
+                    peers,
+                    player_count,
+                })?)
+                .await?;
+                uni.finish().await?;
+            }
+
+            // Collect the list of client connections
+            let connections = std::array::from_fn(|i| {
+                if i == 0 {
+                    None
+                } else {
+                    connections.get(i - 1).cloned()
+                }
+            });
+
+            // Send the connections to the game so that it can start the network match.
+            matchmaker_channel
+                .send(LanMatchmakerResponse::GameStarting {
+                    socket: Socket::new(0, connections),
+                    player_idx: 0,
+                    player_count,
+                })
+                .await?;
+            info!(player_idx=0, %player_count, "Matchmaking finished");
+
+            // Break out of the server loop
+            break;
+
+            // If we don't have enough players yet, send the updated player count to the game.
+        } else {
+            matchmaker_channel
+                .send(LanMatchmakerResponse::PlayerCount(current_players))
+                .await?;
+        }
+    }
+
+    Ok(())
+}
+
+async fn lan_join_server(
+    matchmaker_channel: &BiChannelServer<LanMatchmakerRequest, LanMatchmakerResponse>,
+    addr: NodeAddr,
+) -> anyhow::Result<()> {
+    let ep = get_network_endpoint().await;
+    let conn = ep.connect(addr, PLAY_ALPN).await?;
+
+    // Wait for match to start
+    let mut uni = conn.accept_uni().await?;
+    let bytes = uni.read_to_end(20).await?;
+    let message: MatchmakerNetMsg = postcard::from_bytes(&bytes)?;
+
+    match message {
+        MatchmakerNetMsg::MatchReady {
+            peers: peer_addrs,
+            player_idx,
+            player_count,
+        } => {
+            info!(%player_count, %player_idx, ?peer_addrs, "Matchmaking finished");
+
+            let peer_connections =
+                establish_peer_connections(player_idx, player_count, peer_addrs, Some(conn))
+                    .await?;
+
+            let socket = Socket::new(player_idx, peer_connections);
+            info!("Connections established.");
+
+            matchmaker_channel
+                .send(LanMatchmakerResponse::GameStarting {
+                    socket,
+                    player_idx,
+                    player_count,
+                })
+                .await?;
+        }
+    }
+    Ok(())
+}
+
+#[derive(Serialize, Deserialize)]
+enum MatchmakerNetMsg {
+    MatchReady {
+        /// The peers they have for the match, with the index in the array being the player index of the peer.
+        peers: [Option<NodeAddr>; MAX_PLAYERS],
+        /// The player index of the player getting the message.
+        player_idx: usize,
+        player_count: usize,
+    },
 }
 
 /// The type of the `LAN_MATCHMAKER` channel.
