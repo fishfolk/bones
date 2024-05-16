@@ -155,7 +155,7 @@ async fn search_for_game(
                             player_ids,
                             None,
                         )
-                        .await;
+                        .await?;
 
                         let socket = Socket::new(player_idx as usize, peer_connections);
 

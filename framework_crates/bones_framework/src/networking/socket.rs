@@ -146,9 +146,15 @@ impl NetworkSocket for Socket {
                 let conn = self.connections[i].as_ref().unwrap().clone();
 
                 RUNTIME.spawn(async move {
-                    let mut stream = conn.open_uni().await.unwrap();
-                    stream.write_chunk(message).await.unwrap();
-                    stream.finish().await.unwrap();
+                    let result = async move {
+                        let mut stream = conn.open_uni().await?;
+                        stream.write_chunk(message).await?;
+                        stream.finish().await?;
+                        anyhow::Ok(())
+                    };
+                    if let Err(err) = result.await {
+                        warn!("send reliable to {i} failed: {err:?}");
+                    }
                 });
             }
             SocketTarget::All => {
@@ -156,9 +162,15 @@ impl NetworkSocket for Socket {
                     if let Some(conn) = conn.clone() {
                         let message = message.clone();
                         RUNTIME.spawn(async move {
-                            let mut stream = conn.open_uni().await.unwrap();
-                            stream.write_chunk(message).await.unwrap();
-                            stream.finish().await.unwrap();
+                            let result = async move {
+                                let mut stream = conn.open_uni().await?;
+                                stream.write_chunk(message).await?;
+                                stream.finish().await?;
+                                anyhow::Ok(())
+                            };
+                            if let Err(err) = result.await {
+                                warn!("send reliable all failed: {err:?}");
+                            }
                         });
                     }
                 }
@@ -206,7 +218,7 @@ pub(super) async fn establish_peer_connections(
     player_count: usize,
     peer_addrs: [Option<NodeAddr>; MAX_PLAYERS],
     conn: Option<iroh_quinn::Connection>,
-) -> [Option<iroh_quinn::Connection>; MAX_PLAYERS] {
+) -> anyhow::Result<[Option<iroh_quinn::Connection>; MAX_PLAYERS]> {
     let mut peer_connections = std::array::from_fn(|_| None);
 
     if let Some(conn) = conn {
@@ -220,24 +232,26 @@ pub(super) async fn establish_peer_connections(
     // them to connect to us.
     let range = (player_idx + 1)..player_count;
     info!(players=?range, "Waiting for {} peer connections", range.len());
-    for _ in range {
+    for i in range {
         // Wait for connection
-        let mut conn = ep.accept().await.unwrap();
-        let alpn = conn.alpn().await.unwrap();
-        if alpn.as_bytes() != PLAY_ALPN {
-            panic!("invalid ALPN: {}", alpn);
-        }
-        let conn = conn.await.expect("Could not accept incomming connection");
+        let mut conn = ep
+            .accept()
+            .await
+            .ok_or_else(|| anyhow::anyhow!("no connection for {}", i))?;
+        let alpn = conn.alpn().await?;
+        anyhow::ensure!(alpn.as_bytes() == PLAY_ALPN, "invalid ALPN: {}", alpn);
+
+        let conn = conn.await?;
 
         // Receive the player index
         let idx = {
             let mut buf = [0; 1];
-            let mut channel = conn.accept_uni().await.unwrap();
-            channel.read_exact(&mut buf).await.unwrap();
+            let mut channel = conn.accept_uni().await?;
+            channel.read_exact(&mut buf).await?;
 
             buf[0] as usize
         };
-        assert!(idx < MAX_PLAYERS, "Invalid player index");
+        anyhow::ensure!(idx < MAX_PLAYERS, "Invalid player index");
 
         peer_connections[idx] = Some(conn);
     }
@@ -246,22 +260,20 @@ pub(super) async fn establish_peer_connections(
     let start_range = if peer_connections[0].is_some() { 1 } else { 0 };
     let range = start_range..player_idx;
     info!(players=?range, "Connecting to {} peers", range.len());
+
     for i in range {
         let addr = peer_addrs[i].as_ref().unwrap();
-        let conn = ep
-            .connect(addr.clone(), PLAY_ALPN)
-            .await
-            .expect("Could not connect to peer");
+        let conn = ep.connect(addr.clone(), PLAY_ALPN).await?;
 
         // Send player index
-        let mut channel = conn.open_uni().await.unwrap();
-        channel.write(&[player_idx as u8]).await.unwrap();
-        channel.finish().await.unwrap();
+        let mut channel = conn.open_uni().await?;
+        channel.write(&[player_idx as u8]).await?;
+        channel.finish().await?;
 
         peer_connections[i] = Some(conn);
     }
 
-    peer_connections
+    Ok(peer_connections)
 }
 
 impl ggrs::NonBlockingSocket<usize> for Socket {

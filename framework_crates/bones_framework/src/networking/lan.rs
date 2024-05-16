@@ -452,7 +452,8 @@ async fn lan_matchmaker(
                             peer_addrs,
                             Some(conn),
                         )
-                        .await;
+                        .await
+                        .unwrap();
 
                         let socket = Socket::new(player_idx, peer_connections);
                         info!("Connections established.");
