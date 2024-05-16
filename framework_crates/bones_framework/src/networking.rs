@@ -13,6 +13,7 @@ use crate::prelude::*;
 use self::{
     debug::{NetworkDebugMessage, NETWORK_DEBUG_CHANNEL},
     input::{DenseInput, NetworkInputConfig, NetworkPlayerControl, NetworkPlayerControls},
+    socket::Socket,
 };
 use crate::input::PlayerControls as PlayerControlsTrait;
 
@@ -128,17 +129,6 @@ pub async fn get_network_endpoint() -> &'static iroh_net::MagicEndpoint {
 #[schema(no_default)]
 pub struct NetworkMatchSocket(Arc<dyn NetworkSocket>);
 
-/// A type-erased [`ggrs::NonBlockingSocket`]
-/// implementation.
-#[derive(Deref, DerefMut)]
-pub struct BoxedNonBlockingSocket(Box<dyn GgrsSocket>);
-
-impl Clone for BoxedNonBlockingSocket {
-    fn clone(&self) -> Self {
-        self.ggrs_socket()
-    }
-}
-
 /// Wraps [`ggrs::Message`] with included `match_id`, used to determine if message received
 /// from current match.
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -153,23 +143,13 @@ pub struct GameMessage {
 pub trait GgrsSocket: NetworkSocket + ggrs::NonBlockingSocket<usize> {}
 impl<T> GgrsSocket for T where T: NetworkSocket + ggrs::NonBlockingSocket<usize> {}
 
-impl ggrs::NonBlockingSocket<usize> for BoxedNonBlockingSocket {
-    fn send_to(&mut self, msg: &ggrs::Message, addr: &usize) {
-        self.0.send_to(msg, addr)
-    }
-
-    fn receive_all_messages(&mut self) -> Vec<(usize, ggrs::Message)> {
-        self.0.receive_all_messages()
-    }
-}
-
 /// Trait that must be implemented by socket connections establish by matchmakers.
 ///
 /// The [`NetworkMatchSocket`] resource will contain an instance of this trait and will be used by
 /// the game to send network messages after a match has been established.
 pub trait NetworkSocket: Sync + Send {
     /// Get a GGRS socket from this network socket.
-    fn ggrs_socket(&self) -> BoxedNonBlockingSocket;
+    fn ggrs_socket(&self) -> Socket;
     /// Send a reliable message to the given [`SocketTarget`].
     fn send_reliable(&self, target: SocketTarget, message: &[u8]);
     /// Receive reliable messages from other players. The `usize` is the index of the player that
@@ -209,7 +189,7 @@ pub struct NetworkInfo {
     pub last_confirmed_frame: i32,
 
     /// Socket
-    pub socket: BoxedNonBlockingSocket,
+    pub socket: Socket,
 }
 
 /// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
@@ -244,7 +224,7 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
     pub input_collector: InputTypes::InputCollector,
 
     /// Store copy of socket to be able to restart session runner with existing socket.
-    socket: BoxedNonBlockingSocket,
+    socket: Socket,
 
     /// Local input delay ggrs session was initialized with
     local_input_delay: usize,
@@ -254,7 +234,7 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
 #[derive(Clone)]
 pub struct GgrsSessionRunnerInfo {
     /// The socket that will be converted into GGRS socket implementation.
-    pub socket: BoxedNonBlockingSocket,
+    pub socket: Socket,
     /// The list of local players.
     pub player_is_local: [bool; MAX_PLAYERS],
     /// the player count.
@@ -275,12 +255,12 @@ pub struct GgrsSessionRunnerInfo {
 impl GgrsSessionRunnerInfo {
     /// See [`GgrsSessionRunnerInfo`] fields for info on arguments.
     pub fn new(
-        socket: BoxedNonBlockingSocket,
+        socket: Socket,
         max_prediction_window: Option<usize>,
         local_input_delay: Option<usize>,
     ) -> Self {
-        let player_is_local = socket.0.player_is_local();
-        let player_count = socket.0.player_count();
+        let player_is_local = socket.player_is_local();
+        let player_count = socket.player_count();
         Self {
             socket,
             player_is_local,
@@ -584,7 +564,7 @@ where
 
         // Increment match id so messages from previous match that are still in flight
         // will be filtered out.
-        self.socket.0.increment_match_id();
+        self.socket.increment_match_id();
 
         let runner_info = GgrsSessionRunnerInfo {
             socket: self.socket.clone(),

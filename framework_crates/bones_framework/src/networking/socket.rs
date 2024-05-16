@@ -8,9 +8,7 @@ use tracing::{info, warn};
 
 use crate::networking::get_network_endpoint;
 
-use super::{
-    BoxedNonBlockingSocket, GameMessage, NetworkSocket, SocketTarget, MAX_PLAYERS, RUNTIME,
-};
+use super::{GameMessage, NetworkSocket, SocketTarget, MAX_PLAYERS, RUNTIME};
 
 /// The [`NetworkSocket`] implementation.
 #[derive(Debug, Clone)]
@@ -186,8 +184,8 @@ impl NetworkSocket for Socket {
         messages
     }
 
-    fn ggrs_socket(&self) -> BoxedNonBlockingSocket {
-        BoxedNonBlockingSocket(Box::new(self.clone()))
+    fn ggrs_socket(&self) -> Self {
+        self.clone()
     }
 
     fn close(&self) {
