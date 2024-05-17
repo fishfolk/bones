@@ -150,6 +150,17 @@ where
     OptionalQueryItemMut(component_ref, PhantomData)
 }
 
+impl<'a> QueryItem for &'a Ref<'a, UntypedComponentStore> {
+    type Iter = UntypedComponentBitsetIterator<'a>;
+    fn apply_bitset(&self, bitset: &mut BitSetVec) {
+        bitset.bit_and(self.bitset());
+    }
+
+    fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
+        UntypedComponentStore::iter_with_bitset(self, bitset)
+    }
+}
+
 impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
     type Iter = ComponentBitsetIterator<'a, T>;
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
