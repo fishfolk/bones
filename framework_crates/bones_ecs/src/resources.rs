@@ -242,6 +242,7 @@ impl Resources {
     }
 
     /// Borrow a resource.
+    #[track_caller]
     pub fn get<T: HasSchema>(&self) -> Option<Ref<T>> {
         let b = self.untyped.get(T::schema()).borrow();
         if b.is_some() {
@@ -254,6 +255,7 @@ impl Resources {
     }
 
     /// Borrow a resource.
+    #[track_caller]
     pub fn get_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
         let b = self.untyped.get(T::schema()).borrow_mut();
         if b.is_some() {
