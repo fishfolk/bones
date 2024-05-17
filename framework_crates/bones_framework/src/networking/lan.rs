@@ -228,7 +228,7 @@ pub async fn prepare_to_host<'a>(
         let my_addr = ep.my_addr().await.expect("network endpoint dead");
         let port = ep.local_addr().0.port();
         let mut props = std::collections::HashMap::default();
-        let addr_encoded = hex::encode(&postcard::to_stdvec(&my_addr).unwrap());
+        let addr_encoded = hex::encode(postcard::to_stdvec(&my_addr).unwrap());
         props.insert("node-addr".to_string(), addr_encoded);
         let service = mdns_sd::ServiceInfo::new(
             MDNS_SERVICE_TYPE,
@@ -379,7 +379,7 @@ async fn lan_start_server(
                     .enumerate()
                     .filter(|x| x.0 != i)
                     .for_each(|(i, conn)| {
-                        let id = get_remote_node_id(&conn).expect("invalid connection");
+                        let id = get_remote_node_id(conn).expect("invalid connection");
                         let mut addr = NodeAddr::new(id);
                         if let Some(info) = endpoint.connection_info(id) {
                             if let Some(relay_url) = info.relay_url {

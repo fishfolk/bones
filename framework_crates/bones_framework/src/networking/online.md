@@ -1,4 +1,4 @@
-Contains the online matchmaker and the [`NetworkSocket`] implementation.
+Contains the online matchmaker.
 
 ## Matchmaking
 
