@@ -5,17 +5,13 @@
 #[macro_use]
 extern crate tracing;
 
-use std::{net::SocketAddr, sync::Arc, time::Duration};
+use std::net::SocketAddr;
 
-use bevy_tasks::IoTaskPool;
-use quinn::{Endpoint, EndpointConfig, ServerConfig, TransportConfig};
-use quinn_runtime_bevy::BevyIoTaskPoolExecutor;
+use bones_matchmaker_proto::MATCH_ALPN;
 
 pub mod cli;
 
-mod certs;
 mod matchmaker;
-mod proxy;
 
 #[derive(clap::Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -26,26 +22,28 @@ struct Config {
 }
 
 async fn server(args: Config) -> anyhow::Result<()> {
-    let task_pool = IoTaskPool::get();
+    let port = args.listen_addr.port();
 
-    // Generate certificate
-    let (cert, key) = certs::generate_self_signed_cert()?;
+    let secret_key = iroh_net::key::SecretKey::generate();
+    let endpoint = iroh_net::MagicEndpoint::builder()
+        .alpns(vec![MATCH_ALPN.to_vec()])
+        .discovery(Box::new(
+            iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
+                Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
+                Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
+                    secret_key.clone(),
+                )),
+            ]),
+        ))
+        .secret_key(secret_key)
+        .bind(port)
+        .await?;
 
-    let mut transport_config = TransportConfig::default();
-    transport_config.keep_alive_interval(Some(Duration::from_secs(5)));
+    let my_addr = endpoint.my_addr().await?;
 
-    let mut server_config = ServerConfig::with_single_cert([cert].to_vec(), key)?;
-    server_config.transport = Arc::new(transport_config);
+    info!(address=?my_addr, "Started server");
 
-    // Open Socket and create endpoint
-    let socket = std::net::UdpSocket::bind(args.listen_addr)?;
-    let endpoint = Endpoint::new(
-        EndpointConfig::default(),
-        Some(server_config),
-        socket,
-        Arc::new(BevyIoTaskPoolExecutor),
-    )?;
-    info!(address=%endpoint.local_addr()?, "Started server");
+    println!("Node ID: {}", my_addr.node_id);
 
     // Listen for incomming connections
     while let Some(connecting) = endpoint.accept().await {
@@ -59,9 +57,7 @@ async fn server(args: Config) -> anyhow::Result<()> {
                 );
 
                 // Spawn a task to handle the new connection
-                task_pool
-                    .spawn(matchmaker::handle_connection(conn))
-                    .detach();
+                tokio::task::spawn(matchmaker::handle_connection(endpoint.clone(), conn));
             }
             Err(e) => error!("Error opening client connection: {e:?}"),
         }

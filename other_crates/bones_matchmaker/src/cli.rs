@@ -1,19 +1,14 @@
-use bevy_tasks::{IoTaskPool, TaskPool};
 use clap::Parser;
 use tracing::metadata::LevelFilter;
 
-pub fn start() {
-    IoTaskPool::init(TaskPool::new);
-    let task_pool = IoTaskPool::get();
+pub async fn start() {
     configure_logging();
 
     let args = crate::Config::parse();
 
-    futures_lite::future::block_on(task_pool.spawn(async move {
-        if let Err(e) = super::server(args).await {
-            eprintln!("Error: {e}");
-        }
-    }));
+    if let Err(e) = super::server(args).await {
+        eprintln!("Error: {e}");
+    }
 }
 
 fn configure_logging() {

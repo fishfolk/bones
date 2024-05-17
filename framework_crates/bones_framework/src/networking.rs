@@ -2,6 +2,7 @@
 
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
+use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
 use ggrs::{NetworkStats, P2PSession, PlayerHandle};
 use instant::Duration;
 use once_cell::sync::Lazy;
@@ -12,15 +13,20 @@ use crate::prelude::*;
 use self::{
     debug::{NetworkDebugMessage, NETWORK_DEBUG_CHANNEL},
     input::{DenseInput, NetworkInputConfig, NetworkPlayerControl, NetworkPlayerControls},
+    socket::Socket,
 };
 use crate::input::PlayerControls as PlayerControlsTrait;
 
-pub mod certs;
 pub mod debug;
 pub mod input;
 pub mod lan;
 pub mod online;
 pub mod proto;
+pub mod socket;
+
+/// Runtime, needed to execute network related calls.
+pub static RUNTIME: Lazy<tokio::runtime::Runtime> =
+    Lazy::new(|| tokio::runtime::Runtime::new().expect("unable to crate tokio runtime"));
 
 /// Indicates if input from networking is confirmed, predicted, or if player is disconnected.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -45,7 +51,7 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{certs, debug::prelude::*, input, lan, online, proto, NetworkInfo};
+    pub use super::{debug::prelude::*, input, lan, online, proto, NetworkInfo, RUNTIME};
 }
 
 /// Muliplier for framerate that will be used when playing an online match.
@@ -66,12 +72,8 @@ pub const NETWORK_MAX_PREDICTION_WINDOW_DEFAULT: usize = 7;
 /// Amount of frames GGRS will delay local input.
 pub const NETWORK_LOCAL_INPUT_DELAY_DEFAULT: usize = 2;
 
-// TODO: Remove this limitation on max players, a variety of types use this for static arrays,
-// should either figure out how to make this a compile-time const value specified by game, or
-// use dynamic arrays.
-//
-/// Max players in networked game
-pub const MAX_PLAYERS: usize = 4;
+#[doc(inline)]
+pub use bones_matchmaker_proto::MAX_PLAYERS;
 
 /// Possible errors returned by network loop.
 pub enum NetworkError {
@@ -92,40 +94,32 @@ impl<T: DenseInput + Debug> ggrs::Config for GgrsConfig<T> {
     type Address = usize;
 }
 
-/// The network endpoint used for all QUIC network communications.
-pub static NETWORK_ENDPOINT: Lazy<quinn::Endpoint> = Lazy::new(|| {
-    // Generate certificate
-    let (cert, key) = certs::generate_self_signed_cert().unwrap();
+/// The network endpoint used for all network communications.
+static NETWORK_ENDPOINT: tokio::sync::OnceCell<iroh_net::MagicEndpoint> =
+    tokio::sync::OnceCell::const_new();
 
-    let mut transport_config = quinn::TransportConfig::default();
-    transport_config.keep_alive_interval(Some(std::time::Duration::from_secs(5)));
-
-    let mut server_config = quinn::ServerConfig::with_single_cert([cert].to_vec(), key).unwrap();
-    server_config.transport = Arc::new(transport_config);
-
-    // Open Socket and create endpoint
-    let port = THREAD_RNG.with(|rng| rng.u16(10000..=11000));
-    info!(port, "Started network endpoint");
-    let socket = std::net::UdpSocket::bind(("0.0.0.0", port)).unwrap();
-
-    let client_config = rustls::ClientConfig::builder()
-        .with_safe_defaults()
-        .with_custom_certificate_verifier(certs::SkipServerVerification::new())
-        .with_no_client_auth();
-    let client_config = quinn::ClientConfig::new(Arc::new(client_config));
-
-    let mut endpoint = quinn::Endpoint::new(
-        quinn::EndpointConfig::default(),
-        Some(server_config),
-        socket,
-        Arc::new(quinn_runtime_bevy::BevyIoTaskPoolExecutor),
-    )
-    .unwrap();
-
-    endpoint.set_default_client_config(client_config);
-
-    endpoint
-});
+/// Get the network endpoint used for all communications.
+pub async fn get_network_endpoint() -> &'static iroh_net::MagicEndpoint {
+    NETWORK_ENDPOINT
+        .get_or_init(|| async move {
+            let secret_key = iroh_net::key::SecretKey::generate();
+            iroh_net::MagicEndpoint::builder()
+                .alpns(vec![MATCH_ALPN.to_vec(), PLAY_ALPN.to_vec()])
+                .discovery(Box::new(
+                    iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
+                        Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
+                        Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
+                            secret_key.clone(),
+                        )),
+                    ]),
+                ))
+                .secret_key(secret_key)
+                .bind(0)
+                .await
+                .unwrap()
+        })
+        .await
+}
 
 /// Resource containing the [`NetworkSocket`] implementation while there is a connection to a
 /// network game.
@@ -134,17 +128,6 @@ pub static NETWORK_ENDPOINT: Lazy<quinn::Endpoint> = Lazy::new(|| {
 #[derive(Clone, HasSchema, Deref, DerefMut)]
 #[schema(no_default)]
 pub struct NetworkMatchSocket(Arc<dyn NetworkSocket>);
-
-/// A type-erased [`ggrs::NonBlockingSocket`]
-/// implementation.
-#[derive(Deref, DerefMut)]
-pub struct BoxedNonBlockingSocket(Box<dyn GgrsSocket>);
-
-impl Clone for BoxedNonBlockingSocket {
-    fn clone(&self) -> Self {
-        self.ggrs_socket()
-    }
-}
 
 /// Wraps [`ggrs::Message`] with included `match_id`, used to determine if message received
 /// from current match.
@@ -160,23 +143,13 @@ pub struct GameMessage {
 pub trait GgrsSocket: NetworkSocket + ggrs::NonBlockingSocket<usize> {}
 impl<T> GgrsSocket for T where T: NetworkSocket + ggrs::NonBlockingSocket<usize> {}
 
-impl ggrs::NonBlockingSocket<usize> for BoxedNonBlockingSocket {
-    fn send_to(&mut self, msg: &ggrs::Message, addr: &usize) {
-        self.0.send_to(msg, addr)
-    }
-
-    fn receive_all_messages(&mut self) -> Vec<(usize, ggrs::Message)> {
-        self.0.receive_all_messages()
-    }
-}
-
 /// Trait that must be implemented by socket connections establish by matchmakers.
 ///
 /// The [`NetworkMatchSocket`] resource will contain an instance of this trait and will be used by
 /// the game to send network messages after a match has been established.
 pub trait NetworkSocket: Sync + Send {
     /// Get a GGRS socket from this network socket.
-    fn ggrs_socket(&self) -> BoxedNonBlockingSocket;
+    fn ggrs_socket(&self) -> Socket;
     /// Send a reliable message to the given [`SocketTarget`].
     fn send_reliable(&self, target: SocketTarget, message: &[u8]);
     /// Receive reliable messages from other players. The `usize` is the index of the player that
@@ -216,7 +189,7 @@ pub struct NetworkInfo {
     pub last_confirmed_frame: i32,
 
     /// Socket
-    pub socket: BoxedNonBlockingSocket,
+    pub socket: Socket,
 }
 
 /// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
@@ -251,7 +224,7 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
     pub input_collector: InputTypes::InputCollector,
 
     /// Store copy of socket to be able to restart session runner with existing socket.
-    socket: BoxedNonBlockingSocket,
+    socket: Socket,
 
     /// Local input delay ggrs session was initialized with
     local_input_delay: usize,
@@ -261,7 +234,7 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
 #[derive(Clone)]
 pub struct GgrsSessionRunnerInfo {
     /// The socket that will be converted into GGRS socket implementation.
-    pub socket: BoxedNonBlockingSocket,
+    pub socket: Socket,
     /// The list of local players.
     pub player_is_local: [bool; MAX_PLAYERS],
     /// the player count.
@@ -282,12 +255,12 @@ pub struct GgrsSessionRunnerInfo {
 impl GgrsSessionRunnerInfo {
     /// See [`GgrsSessionRunnerInfo`] fields for info on arguments.
     pub fn new(
-        socket: BoxedNonBlockingSocket,
+        socket: Socket,
         max_prediction_window: Option<usize>,
         local_input_delay: Option<usize>,
     ) -> Self {
-        let player_is_local = socket.0.player_is_local();
-        let player_count = socket.0.player_count();
+        let player_is_local = socket.player_is_local();
+        let player_count = socket.player_count();
         Self {
             socket,
             player_is_local,
@@ -591,7 +564,7 @@ where
 
         // Increment match id so messages from previous match that are still in flight
         // will be filtered out.
-        self.socket.0.increment_match_id();
+        self.socket.increment_match_id();
 
         let runner_info = GgrsSessionRunnerInfo {
             socket: self.socket.clone(),

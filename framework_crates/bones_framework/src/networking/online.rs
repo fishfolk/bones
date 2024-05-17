@@ -2,24 +2,19 @@
 // TODO
 #![allow(missing_docs)]
 
-use std::{
-    net::{SocketAddr, ToSocketAddrs},
-    sync::Arc,
-};
+use std::sync::Arc;
 
-use bevy_tasks::IoTaskPool;
-use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse};
-use bytes::Bytes;
-use futures_lite::future;
+use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse, MATCH_ALPN};
+use iroh_net::NodeId;
 use once_cell::sync::Lazy;
-use quinn::Connection;
 use tracing::{info, warn};
 
-use crate::{networking::NetworkMatchSocket, prelude::*};
-
-use super::{
-    BoxedNonBlockingSocket, GameMessage, NetworkSocket, SocketTarget, MAX_PLAYERS, NETWORK_ENDPOINT,
+use crate::{
+    networking::{get_network_endpoint, socket::establish_peer_connections, NetworkMatchSocket},
+    prelude::*,
 };
+
+use super::socket::Socket;
 
 #[derive(Default, PartialEq, Eq, Clone, Copy)]
 pub enum SearchState {
@@ -33,7 +28,11 @@ pub enum SearchState {
 pub static ONLINE_MATCHMAKER: Lazy<OnlineMatchmaker> = Lazy::new(|| {
     let (client, server) = bi_channel();
 
-    IoTaskPool::get().spawn(online_matchmaker(server)).detach();
+    RUNTIME.spawn(async move {
+        if let Err(err) = online_matchmaker(server).await {
+            warn!("online matchmaker failed: {err:?}");
+        }
+    });
 
     OnlineMatchmaker(client)
 });
@@ -45,7 +44,7 @@ pub struct OnlineMatchmaker(BiChannelClient<OnlineMatchmakerRequest, OnlineMatch
 /// Online matchmaker request
 #[derive(Debug)]
 pub enum OnlineMatchmakerRequest {
-    SearchForGame { addr: String, player_count: usize },
+    SearchForGame { id: NodeId, player_count: usize },
     StopSearch,
 }
 
@@ -55,7 +54,7 @@ pub enum OnlineMatchmakerResponse {
     Searching,
     PlayerCount(usize),
     GameStarting {
-        online_socket: OnlineSocket,
+        socket: Socket,
         player_idx: usize,
         player_count: usize,
     },
@@ -63,337 +62,126 @@ pub enum OnlineMatchmakerResponse {
 
 async fn online_matchmaker(
     matchmaker_channel: BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-) {
+) -> anyhow::Result<()> {
     while let Ok(message) = matchmaker_channel.recv().await {
         match message {
-            OnlineMatchmakerRequest::SearchForGame { addr, player_count } => {
-                info!("Connecting to online matchmaker");
-                let addr = resolve_addr_blocking(&addr).unwrap();
-                let conn = NETWORK_ENDPOINT
-                    .connect(addr, "matchmaker")
-                    .unwrap()
-                    .await
-                    .unwrap();
-                info!("Connected to online matchmaker");
-
-                matchmaker_channel
-                    .try_send(OnlineMatchmakerResponse::Searching)
-                    .unwrap();
-
-                // Send a match request to the server
-                let (mut send, mut recv) = conn.open_bi().await.unwrap();
-
-                let message = MatchmakerRequest::RequestMatch(MatchInfo {
-                    client_count: player_count.try_into().unwrap(),
-                    match_data: b"jumpy_default_game".to_vec(),
-                });
-                info!(request=?message, "Sending match request");
-                let message = postcard::to_allocvec(&message).unwrap();
-                send.write_all(&message).await.unwrap();
-                send.finish().await.unwrap();
-
-                let response = recv.read_to_end(256).await.unwrap();
-                let message: MatchmakerResponse = postcard::from_bytes(&response).unwrap();
-
-                if let MatchmakerResponse::Accepted = message {
-                    info!("Waiting for match...");
-                } else {
-                    panic!("Invalid response from matchmaker");
-                }
-
-                loop {
-                    let recv_ui_message = matchmaker_channel.recv();
-                    let recv_online_matchmaker = conn.accept_uni();
-
-                    let next_message = futures_lite::future::or(
-                        async move { either::Left(recv_ui_message.await) },
-                        async move { either::Right(recv_online_matchmaker.await) },
-                    )
-                    .await;
-
-                    match next_message {
-                        // UI message
-                        either::Either::Left(message) => {
-                            let message = message.unwrap();
-
-                            match message {
-                                OnlineMatchmakerRequest::SearchForGame { .. } => {
-                                    panic!("Unexpected message from UI");
-                                }
-                                OnlineMatchmakerRequest::StopSearch => {
-                                    info!("Canceling online search");
-                                    break;
-                                }
-                            }
-                        }
-
-                        // Matchmaker message
-                        either::Either::Right(recv) => {
-                            let mut recv = recv.unwrap();
-                            let message = recv.read_to_end(256).await.unwrap();
-                            let message: MatchmakerResponse =
-                                postcard::from_bytes(&message).unwrap();
-
-                            match message {
-                                MatchmakerResponse::ClientCount(count) => {
-                                    info!("Online match player count: {count}");
-                                    matchmaker_channel
-                                        .try_send(OnlineMatchmakerResponse::PlayerCount(count as _))
-                                        .unwrap();
-                                }
-                                MatchmakerResponse::Success {
-                                    random_seed,
-                                    player_idx,
-                                    client_count,
-                                } => {
-                                    info!(%random_seed, %player_idx, player_count=%client_count, "Online match complete");
-                                    let online_socket = OnlineSocket::new(
-                                        player_idx as usize,
-                                        client_count as usize,
-                                        conn,
-                                    );
-
-                                    matchmaker_channel
-                                        .try_send(OnlineMatchmakerResponse::GameStarting {
-                                            online_socket,
-                                            player_idx: player_idx as _,
-                                            player_count: client_count as _,
-                                        })
-                                        .unwrap();
-                                    break;
-                                }
-                                _ => panic!("Unexpected message from matchmaker"),
-                            }
-                        }
-                    }
+            OnlineMatchmakerRequest::SearchForGame { id, player_count } => {
+                if let Err(err) = search_for_game(&matchmaker_channel, id, player_count).await {
+                    warn!("Online Game Search failed: {err:?}");
                 }
             }
             OnlineMatchmakerRequest::StopSearch => (), // Not searching, don't do anything
         }
     }
+
+    Ok(())
 }
 
-/// Resolve a server address.
-///
-/// Note: This may block the thread
-fn resolve_addr_blocking(addr: &str) -> anyhow::Result<SocketAddr> {
-    let formatting_err =
-        || anyhow::format_err!("Matchmaking server must be in the format `host:port`");
+async fn search_for_game(
+    matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
+    id: NodeId,
+    player_count: usize,
+) -> anyhow::Result<()> {
+    info!("Connecting to online matchmaker");
+    let ep = get_network_endpoint().await;
+    let conn = ep.connect(id.into(), MATCH_ALPN).await?;
+    info!("Connected to online matchmaker");
 
-    let mut iter = addr.split(':');
-    let host = iter.next().ok_or_else(formatting_err)?;
-    let port = iter.next().ok_or_else(formatting_err)?;
-    let port: u16 = port.parse().context("Couldn't parse port number")?;
-    if iter.next().is_some() {
-        return Err(formatting_err());
+    matchmaker_channel
+        .send(OnlineMatchmakerResponse::Searching)
+        .await?;
+
+    // Send a match request to the server
+    let (mut send, mut recv) = conn.open_bi().await?;
+
+    let message = MatchmakerRequest::RequestMatch(MatchInfo {
+        client_count: player_count.try_into().unwrap(),
+        match_data: b"jumpy_default_game".to_vec(),
+    });
+    info!(request=?message, "Sending match request");
+
+    let message = postcard::to_allocvec(&message)?;
+    send.write_all(&message).await?;
+    send.finish().await?;
+
+    let response = recv.read_to_end(256).await?;
+    let message: MatchmakerResponse = postcard::from_bytes(&response)?;
+
+    if let MatchmakerResponse::Accepted = message {
+        info!("Waiting for match...");
+    } else {
+        panic!("Invalid response from matchmaker");
     }
 
-    let addr = (host, port)
-        .to_socket_addrs()
-        .context("Couldn't resolve matchmaker address")?
-        .find(|x| x.is_ipv4()) // For now, only support IpV4. I don't think IpV6 works right.
-        .ok_or_else(|| anyhow::format_err!("Couldn't resolve matchmaker address"))?;
-
-    Ok(addr)
-}
-
-#[derive(Debug, Clone)]
-pub struct OnlineSocket {
-    pub conn: Connection,
-    pub ggrs_receiver: async_channel::Receiver<(usize, GameMessage)>,
-    pub reliable_receiver: async_channel::Receiver<(usize, Vec<u8>)>,
-    pub player_idx: usize,
-    pub player_count: usize,
-    /// ID for current match, messages received that do not match ID are dropped.
-    pub match_id: u8,
-}
-
-impl OnlineSocket {
-    pub fn new(player_idx: usize, player_count: usize, conn: Connection) -> Self {
-        let (ggrs_sender, ggrs_receiver) = async_channel::unbounded();
-        let (reliable_sender, reliable_receiver) = async_channel::unbounded();
-
-        let task_pool = IoTaskPool::get();
-
-        let conn_ = conn.clone();
-        task_pool
-            .spawn(async move {
-                let conn = conn_;
-                loop {
-                    let event = future::or(async { either::Left(conn.closed().await) }, async {
-                        either::Right(conn.read_datagram().await)
-                    })
-                    .await;
-
-                    match event {
-                        either::Either::Left(closed) => {
-                            warn!("Connection error: {closed}");
-                            break;
-                        }
-                        either::Either::Right(datagram_result) => match datagram_result {
-                            Ok(data) => {
-                                let message: bones_matchmaker_proto::RecvProxyMessage =
-                                    postcard::from_bytes(&data)
-                                        .expect("Could not deserialize net message");
-                                let player = message.from_client;
-                                let message = postcard::from_bytes(&message.message).unwrap();
-
-                                if ggrs_sender.send((player as _, message)).await.is_err() {
-                                    break;
-                                }
-                            }
-                            Err(e) => {
-                                warn!("Connection error: {e}");
-                            }
-                        },
+    loop {
+        tokio::select! {
+            // UI message
+            message = matchmaker_channel.recv() => {
+                match message {
+                    Ok(OnlineMatchmakerRequest::SearchForGame { .. }) => {
+                        anyhow::bail!("Unexpected message from UI");
+                    }
+                    Ok(OnlineMatchmakerRequest::StopSearch) => {
+                        info!("Canceling online search");
+                        break;
+                    }
+                    Err(err) => {
+                        anyhow::bail!("Failed to recv from match maker channel: {err:?}");
                     }
                 }
-            })
-            .detach();
+            }
+            // Matchmaker message
+            recv = conn.accept_uni() => {
+                let mut recv = recv?;
+                let message = recv.read_to_end(5 * 1024).await?;
+                let message: MatchmakerResponse = postcard::from_bytes(&message)?;
 
-        let conn_ = conn.clone();
-        task_pool
-            .spawn(async move {
-                let conn = conn_;
-                loop {
-                    let event = future::or(async { either::Left(conn.closed().await) }, async {
-                        either::Right(conn.accept_uni().await)
-                    })
-                    .await;
-
-                    match event {
-                        either::Either::Left(closed) => {
-                            warn!("Connection error: {closed}");
-                            break;
-                        }
-                        either::Either::Right(result) => match result {
-                            Ok(mut stream) => {
-                                let data =
-                                    stream.read_to_end(4096).await.expect("Network read error");
-                                let message: bones_matchmaker_proto::RecvProxyMessage =
-                                    postcard::from_bytes(&data).unwrap();
-
-                                if reliable_sender
-                                    .send((message.from_client as usize, message.message))
-                                    .await
-                                    .is_err()
-                                {
-                                    break;
-                                }
-                            }
-                            Err(e) => {
-                                warn!("Connection error: {e}");
-                            }
-                        },
+                match message {
+                    MatchmakerResponse::ClientCount(count) => {
+                        info!("Online match player count: {count}");
+                        matchmaker_channel.try_send(OnlineMatchmakerResponse::PlayerCount(count as _))?;
                     }
+                    MatchmakerResponse::Success {
+                        random_seed,
+                        player_idx,
+                        client_count,
+                        player_ids,
+                    } => {
+                        info!(%random_seed, %player_idx, player_count=%client_count, "Online match complete");
+
+                        let peer_connections = establish_peer_connections(
+                            player_idx as usize,
+                            client_count as usize,
+                            player_ids,
+                            None,
+                        )
+                        .await?;
+
+                        let socket = Socket::new(player_idx as usize, peer_connections);
+
+                        matchmaker_channel.try_send(OnlineMatchmakerResponse::GameStarting {
+                            socket,
+                            player_idx: player_idx as _,
+                            player_count: client_count as _,
+                        })?;
+                        break;
+                    }
+                    other => anyhow::bail!("Unexpected message from matchmaker: {other:?}"),
                 }
-            })
-            .detach();
-
-        Self {
-            conn,
-            ggrs_receiver,
-            reliable_receiver,
-            player_idx,
-            player_count,
-            match_id: 0,
-        }
-    }
-}
-
-impl NetworkSocket for OnlineSocket {
-    fn ggrs_socket(&self) -> BoxedNonBlockingSocket {
-        BoxedNonBlockingSocket(Box::new(self.clone()))
-    }
-
-    fn send_reliable(&self, target: SocketTarget, message: &[u8]) {
-        let task_pool = IoTaskPool::get();
-        let target_client = match target {
-            SocketTarget::Player(player) => bones_matchmaker_proto::TargetClient::One(player as _),
-            SocketTarget::All => bones_matchmaker_proto::TargetClient::All,
-        };
-        let message = bones_matchmaker_proto::SendProxyMessage {
-            target_client,
-            message: message.into(),
-        };
-
-        let conn = self.conn.clone();
-        task_pool
-            .spawn(async move {
-                let mut send = conn.open_uni().await.unwrap();
-
-                send.write_all(&postcard::to_allocvec(&message).unwrap())
-                    .await
-                    .unwrap();
-                send.finish().await.unwrap();
-            })
-            .detach();
-    }
-
-    fn recv_reliable(&self) -> Vec<(usize, Vec<u8>)> {
-        let mut messages = Vec::new();
-        while let Ok(message) = self.reliable_receiver.try_recv() {
-            messages.push(message);
-        }
-        messages
-    }
-
-    fn close(&self) {
-        self.conn.close(0u8.into(), &[]);
-    }
-
-    fn player_idx(&self) -> usize {
-        self.player_idx
-    }
-
-    fn player_is_local(&self) -> [bool; MAX_PLAYERS] {
-        std::array::from_fn(|i| i == self.player_idx)
-    }
-
-    fn player_count(&self) -> usize {
-        self.player_count
-    }
-
-    fn increment_match_id(&mut self) {
-        // This is wrapping addition
-        self.match_id = self.match_id.wrapping_add(1);
-    }
-}
-
-impl ggrs::NonBlockingSocket<usize> for OnlineSocket {
-    fn send_to(&mut self, msg: &ggrs::Message, addr: &usize) {
-        let msg = GameMessage {
-            message: msg.clone(),
-            match_id: self.match_id,
-        };
-        let message = bones_matchmaker_proto::SendProxyMessage {
-            target_client: bones_matchmaker_proto::TargetClient::One(*addr as u8),
-            message: postcard::to_allocvec(&msg).unwrap(),
-        };
-        let msg_bytes = postcard::to_allocvec(&message).unwrap();
-        self.conn
-            .send_datagram(Bytes::copy_from_slice(&msg_bytes[..]))
-            .ok();
-    }
-
-    fn receive_all_messages(&mut self) -> Vec<(usize, ggrs::Message)> {
-        let mut messages = Vec::new();
-        while let Ok(message) = self.ggrs_receiver.try_recv() {
-            if message.1.match_id == self.match_id {
-                messages.push((message.0, message.1.message));
             }
         }
-        messages
     }
+
+    Ok(())
 }
 
 /// Search for game with `matchmaking_server` and `player_count`
-pub fn start_search_for_game(matchmaking_server: String, player_count: usize) {
+pub fn start_search_for_game(matchmaking_server: NodeId, player_count: usize) {
     // TODO remove
     info!("Starting search for online game with player count {player_count}");
     ONLINE_MATCHMAKER
         .try_send(OnlineMatchmakerRequest::SearchForGame {
-            addr: matchmaking_server.clone(),
+            id: matchmaking_server,
             player_count,
         })
         .unwrap()
@@ -414,7 +202,7 @@ pub fn update_search_for_game(search_state: &mut SearchState) -> Option<NetworkM
                 *search_state = SearchState::WaitingForPlayers(count)
             }
             OnlineMatchmakerResponse::GameStarting {
-                online_socket,
+                socket,
                 player_idx,
                 player_count: _,
             } => {
@@ -422,7 +210,7 @@ pub fn update_search_for_game(search_state: &mut SearchState) -> Option<NetworkM
 
                 *search_state = default();
 
-                return Some(NetworkMatchSocket(Arc::new(online_socket)));
+                return Some(NetworkMatchSocket(Arc::new(socket)));
             }
         }
     }

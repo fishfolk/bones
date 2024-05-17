@@ -78,7 +78,6 @@ async-channel = "1.9"
 bevy_tasks    = "0.11"
 bytemuck      = "1.12"
 either        = "1.8"
-futures-lite  = "2.3"
 glam          = "0.24"
 hex           = "0.4"
 instant       = { version = "0.1", features = ["wasm-bindgen"] }
@@ -129,5 +128,6 @@ postcard               = { version = "1.0", features = ["alloc"] }
 rcgen                  = "0.12"
 rustls                 = { version = "0.21", features = ["dangerous_configuration", "quic"] }
 smallvec               = "1.10"
-quinn                  = { version = "0.10", default-features = false, features = ["native-certs", "tls-rustls"] }
-quinn_runtime_bevy     = { version = "0.3", path = "../../other_crates/quinn_runtime_bevy" }
+iroh-quinn             = { version = "0.10" }
+iroh-net               = { version = "0.16" }
+tokio                  = { version = "1", features = ["rt-multi-thread", "macros"] }

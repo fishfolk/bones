@@ -1,92 +1,50 @@
-use std::{net::SocketAddr, sync::Arc, time::Duration};
+use std::time::Duration;
 
-use bevy_tasks::{IoTaskPool, TaskPool};
-use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse};
-use certs::SkipServerVerification;
-use quinn::{ClientConfig, Endpoint, EndpointConfig};
-use quinn_runtime_bevy::BevyIoTaskPoolExecutor;
+use bones_matchmaker_proto::{
+    MatchInfo, MatchmakerRequest, MatchmakerResponse, MATCH_ALPN, PLAY_ALPN,
+};
 use serde::{Deserialize, Serialize};
+use tokio::task::JoinSet;
 
-static SERVER_NAME: &str = "localhost";
-
-fn client_addr() -> SocketAddr {
-    "127.0.0.1:0".parse::<SocketAddr>().unwrap()
-}
-
-fn server_addr() -> SocketAddr {
-    "127.0.0.1:8943".parse::<SocketAddr>().unwrap()
-}
+const CLIENT_PORT: u16 = 0;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Hello {
     i_am: String,
 }
 
-mod certs {
-    use std::sync::Arc;
-
-    // Implementation of `ServerCertVerifier` that verifies everything as trustworthy.
-    pub struct SkipServerVerification;
-
-    impl SkipServerVerification {
-        pub fn new() -> Arc<Self> {
-            Arc::new(Self)
-        }
+#[tokio::main]
+async fn main() {
+    if let Err(e) = client().await {
+        eprintln!("Error: {e}");
     }
-
-    impl rustls::client::ServerCertVerifier for SkipServerVerification {
-        fn verify_server_cert(
-            &self,
-            _end_entity: &rustls::Certificate,
-            _intermediates: &[rustls::Certificate],
-            _server_name: &rustls::ServerName,
-            _scts: &mut dyn Iterator<Item = &[u8]>,
-            _ocsp_response: &[u8],
-            _now: std::time::SystemTime,
-        ) -> Result<rustls::client::ServerCertVerified, rustls::Error> {
-            Ok(rustls::client::ServerCertVerified::assertion())
-        }
-    }
-}
-
-fn configure_client() -> ClientConfig {
-    let crypto = rustls::ClientConfig::builder()
-        .with_safe_defaults()
-        .with_custom_certificate_verifier(SkipServerVerification::new())
-        .with_no_client_auth();
-
-    ClientConfig::new(Arc::new(crypto))
-}
-
-pub fn main() {
-    IoTaskPool::init(TaskPool::new);
-    let task_pool = IoTaskPool::get();
-    futures_lite::future::block_on(task_pool.spawn(async move {
-        if let Err(e) = client().await {
-            eprintln!("Error: {e}");
-        }
-    }));
 }
 
 async fn client() -> anyhow::Result<()> {
-    let client_config = configure_client();
-    let socket = std::net::UdpSocket::bind(client_addr())?;
-    // Bind this endpoint to a UDP socket on the given client address.
-    let endpoint = Endpoint::new(
-        EndpointConfig::default(),
-        None,
-        socket,
-        Arc::new(BevyIoTaskPoolExecutor),
-    )?;
+    let secret_key = iroh_net::key::SecretKey::generate();
+    let endpoint = iroh_net::MagicEndpoint::builder()
+        .alpns(vec![MATCH_ALPN.to_vec(), PLAY_ALPN.to_vec()])
+        .discovery(Box::new(
+            iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
+                Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
+                Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
+                    secret_key.clone(),
+                )),
+            ]),
+        ))
+        .secret_key(secret_key)
+        .bind(CLIENT_PORT)
+        .await?;
 
     let i_am = std::env::args().nth(2).unwrap();
     let hello = Hello { i_am };
-    println!("o  Opened client on {}. {hello:?}", endpoint.local_addr()?);
+    println!("o  Opened client ID: {}. {hello:?}", endpoint.node_id());
 
-    // Connect to the server passing in the server name which is supposed to be in the server certificate.
-    let conn = endpoint
-        .connect_with(client_config, server_addr(), SERVER_NAME)?
-        .await?;
+    let server_id: iroh_net::NodeId = std::env::args().nth(3).expect("missing node id").parse()?;
+    let server_addr = iroh_net::NodeAddr::new(server_id);
+
+    // Connect to the server
+    let conn = endpoint.connect(server_addr, MATCH_ALPN).await?;
 
     // Send a match request to the server
     let (mut send, mut recv) = conn.open_bi().await?;
@@ -115,7 +73,7 @@ async fn client() -> anyhow::Result<()> {
         panic!("<= Unexpected message from server!");
     }
 
-    loop {
+    let (player_idx, player_ids, client_count) = loop {
         let mut recv = conn.accept_uni().await?;
         let message = recv.read_to_end(256).await?;
         let message: MatchmakerResponse = postcard::from_bytes(&message)?;
@@ -128,69 +86,87 @@ async fn client() -> anyhow::Result<()> {
                 random_seed,
                 player_idx,
                 client_count,
+                player_ids,
             } => {
                 println!("<= Match is ready! Random seed: {random_seed}. Player IDX: {player_idx}. Client count: {client_count}");
-                break;
+                break (player_idx, player_ids, client_count as usize);
             }
             _ => panic!("<= Unexpected message from server"),
         }
-    }
+    };
 
-    let task_pool = IoTaskPool::get();
+    println!("Closing matchmaking connection");
+    conn.close(0u8.into(), b"done");
 
-    let conn_ = conn.clone();
-    task_pool
-        .spawn(async move {
-            let result = async move {
-                for _ in 0..3 {
-                    println!("=> {hello:?}");
-                    let mut sender = conn_.open_uni().await?;
-                    sender
-                        .write_all(&postcard::to_allocvec(&hello.clone())?)
-                        .await?;
-                    sender.finish().await?;
+    let mut tasks = JoinSet::default();
+    for idx in 0..client_count {
+        if idx != player_idx as usize {
+            let endpoint_ = endpoint.clone();
+            let hello = hello.clone();
+            let player_id = player_ids[idx].as_ref().unwrap().clone();
 
-                    async_io::Timer::after(Duration::from_secs(1)).await;
-                }
+            tasks.spawn(async move {
+                let result = async move {
+                    let conn = endpoint_.connect(player_id.clone(), PLAY_ALPN).await?;
+                    println!("Connected to {}", player_id.node_id);
 
-                Ok::<_, anyhow::Error>(())
-            };
+                    for _ in 0..3 {
+                        println!("=> {hello:?}");
+                        let mut sender = conn.open_uni().await?;
+                        sender
+                            .write_all(&postcard::to_allocvec(&hello.clone())?)
+                            .await?;
+                        sender.finish().await?;
 
-            if let Err(e) = result.await {
-                eprintln!("<= Error: {e:?}");
-            }
-        })
-        .detach();
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                    }
 
-    let conn_ = conn.clone();
-    task_pool
-        .spawn(async move {
-            loop {
-                let result = async {
-                    let mut recv = conn_.accept_uni().await?;
-
-                    let incomming = recv.read_to_end(256).await?;
-                    let message: Hello = postcard::from_bytes(&incomming).unwrap();
-
-                    println!("<= {message:?}");
+                    conn.close(0u8.into(), b"done");
 
                     Ok::<_, anyhow::Error>(())
                 };
+
                 if let Err(e) = result.await {
-                    eprintln!("Error: {e:?}");
-                    break;
+                    eprintln!("<= Error: {e:?}");
                 }
-            }
-        })
-        .detach();
+            });
 
-    async_io::Timer::after(Duration::from_secs(4)).await;
+            let endpoint = endpoint.clone();
+            tasks.spawn(async move {
+                if let Some(mut conn) = endpoint.accept().await {
+                    let result = async {
+                        let alpn = conn.alpn().await?;
+                        if alpn.as_bytes() != PLAY_ALPN {
+                            anyhow::bail!("unexpected ALPN: {}", alpn);
+                        }
+                        let conn = conn.await?;
 
-    println!("Closing connection");
-    conn.close(0u8.into(), b"done");
+                        for _ in 0..3 {
+                            let mut recv = conn.accept_uni().await?;
+                            println!("<= accepted connection");
 
-    endpoint.close(0u8.into(), b"done");
-    endpoint.wait_idle().await;
+                            let incomming = recv.read_to_end(256).await?;
+                            let message: Hello = postcard::from_bytes(&incomming).unwrap();
+
+                            println!("<= {message:?}");
+                        }
+                        Ok::<_, anyhow::Error>(())
+                    };
+                    if let Err(e) = result.await {
+                        eprintln!("Error: {e:?}");
+                    }
+                }
+            });
+        }
+    }
+
+    // Wait for all tasks to finish
+    while let Some(task) = tasks.join_next().await {
+        task?;
+    }
+
+    // Shutdown the endpoint
+    endpoint.close(0u8.into(), b"done").await?;
 
     Ok(())
 }
