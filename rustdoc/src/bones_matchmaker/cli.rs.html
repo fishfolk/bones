@@ -23,27 +23,17 @@
 <a href="#23" id="23">23</a>
 <a href="#24" id="24">24</a>
 <a href="#25" id="25">25</a>
-<a href="#26" id="26">26</a>
-<a href="#27" id="27">27</a>
-<a href="#28" id="28">28</a>
-<a href="#29" id="29">29</a>
-<a href="#30" id="30">30</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>bevy_tasks::{IoTaskPool, TaskPool};
-<span class="kw">use </span>clap::Parser;
+</pre></div><pre class="rust"><code><span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>tracing::metadata::LevelFilter;
 
-<span class="kw">pub fn </span>start() {
-    IoTaskPool::init(TaskPool::new);
-    <span class="kw">let </span>task_pool = IoTaskPool::get();
+<span class="kw">pub async fn </span>start() {
     configure_logging();
 
     <span class="kw">let </span>args = <span class="kw">crate</span>::Config::parse();
 
-    futures_lite::future::block_on(task_pool.spawn(<span class="kw">async move </span>{
-        <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = <span class="kw">super</span>::server(args).<span class="kw">await </span>{
-            <span class="macro">eprintln!</span>(<span class="string">&quot;Error: {e}&quot;</span>);
-        }
-    }));
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = <span class="kw">super</span>::server(args).<span class="kw">await </span>{
+        <span class="macro">eprintln!</span>(<span class="string">&quot;Error: {e}&quot;</span>);
+    }
 }
 
 <span class="kw">fn </span>configure_logging() {

@@ -576,37 +576,11 @@
 <a href="#576" id="576">576</a>
 <a href="#577" id="577">577</a>
 <a href="#578" id="578">578</a>
-<a href="#579" id="579">579</a>
-<a href="#580" id="580">580</a>
-<a href="#581" id="581">581</a>
-<a href="#582" id="582">582</a>
-<a href="#583" id="583">583</a>
-<a href="#584" id="584">584</a>
-<a href="#585" id="585">585</a>
-<a href="#586" id="586">586</a>
-<a href="#587" id="587">587</a>
-<a href="#588" id="588">588</a>
-<a href="#589" id="589">589</a>
-<a href="#590" id="590">590</a>
-<a href="#591" id="591">591</a>
-<a href="#592" id="592">592</a>
-<a href="#593" id="593">593</a>
-<a href="#594" id="594">594</a>
-<a href="#595" id="595">595</a>
-<a href="#596" id="596">596</a>
-<a href="#597" id="597">597</a>
-<a href="#598" id="598">598</a>
-<a href="#599" id="599">599</a>
-<a href="#600" id="600">600</a>
-<a href="#601" id="601">601</a>
-<a href="#602" id="602">602</a>
-<a href="#603" id="603">603</a>
-<a href="#604" id="604">604</a>
-<a href="#605" id="605">605</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;./networking.md&quot;</span>)]
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
+<span class="kw">use </span>bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
 <span class="kw">use </span>ggrs::{NetworkStats, P2PSession, PlayerHandle};
 <span class="kw">use </span>instant::Duration;
 <span class="kw">use </span>once_cell::sync::Lazy;
@@ -617,15 +591,20 @@
 <span class="kw">use </span><span class="self">self</span>::{
     debug::{NetworkDebugMessage, NETWORK_DEBUG_CHANNEL},
     input::{DenseInput, NetworkInputConfig, NetworkPlayerControl, NetworkPlayerControls},
+    socket::Socket,
 };
 <span class="kw">use </span><span class="kw">crate</span>::input::PlayerControls <span class="kw">as </span>PlayerControlsTrait;
 
-<span class="kw">pub mod </span>certs;
 <span class="kw">pub mod </span>debug;
 <span class="kw">pub mod </span>input;
 <span class="kw">pub mod </span>lan;
 <span class="kw">pub mod </span>online;
 <span class="kw">pub mod </span>proto;
+<span class="kw">pub mod </span>socket;
+
+<span class="doccomment">/// Runtime, needed to execute network related calls.
+</span><span class="kw">pub static </span>RUNTIME: Lazy&lt;tokio::runtime::Runtime&gt; =
+    Lazy::new(|| tokio::runtime::Runtime::new().expect(<span class="string">&quot;unable to crate tokio runtime&quot;</span>));
 
 <span class="doccomment">/// Indicates if input from networking is confirmed, predicted, or if player is disconnected.
 </span><span class="attr">#[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -650,7 +629,7 @@
 
 <span class="doccomment">/// Module prelude.
 </span><span class="kw">pub mod </span>prelude {
-    <span class="kw">pub use super</span>::{certs, debug::prelude::<span class="kw-2">*</span>, input, lan, online, proto, NetworkInfo};
+    <span class="kw">pub use super</span>::{debug::prelude::<span class="kw-2">*</span>, input, lan, online, proto, NetworkInfo, RUNTIME};
 }
 
 <span class="doccomment">/// Muliplier for framerate that will be used when playing an online match.
@@ -671,12 +650,8 @@
 </span><span class="doccomment">/// Amount of frames GGRS will delay local input.
 </span><span class="kw">pub const </span>NETWORK_LOCAL_INPUT_DELAY_DEFAULT: usize = <span class="number">2</span>;
 
-<span class="comment">// TODO: Remove this limitation on max players, a variety of types use this for static arrays,
-// should either figure out how to make this a compile-time const value specified by game, or
-// use dynamic arrays.
-//
-</span><span class="doccomment">/// Max players in networked game
-</span><span class="kw">pub const </span>MAX_PLAYERS: usize = <span class="number">4</span>;
+<span class="attr">#[doc(inline)]
+</span><span class="kw">pub use </span>bones_matchmaker_proto::MAX_PLAYERS;
 
 <span class="doccomment">/// Possible errors returned by network loop.
 </span><span class="kw">pub enum </span>NetworkError {
@@ -697,40 +672,32 @@
     </span><span class="kw">type </span>Address = usize;
 }
 
-<span class="doccomment">/// The network endpoint used for all QUIC network communications.
-</span><span class="kw">pub static </span>NETWORK_ENDPOINT: Lazy&lt;quinn::Endpoint&gt; = Lazy::new(|| {
-    <span class="comment">// Generate certificate
-    </span><span class="kw">let </span>(cert, key) = certs::generate_self_signed_cert().unwrap();
+<span class="doccomment">/// The network endpoint used for all network communications.
+</span><span class="kw">static </span>NETWORK_ENDPOINT: tokio::sync::OnceCell&lt;iroh_net::MagicEndpoint&gt; =
+    tokio::sync::OnceCell::const_new();
 
-    <span class="kw">let </span><span class="kw-2">mut </span>transport_config = quinn::TransportConfig::default();
-    transport_config.keep_alive_interval(<span class="prelude-val">Some</span>(std::time::Duration::from_secs(<span class="number">5</span>)));
-
-    <span class="kw">let </span><span class="kw-2">mut </span>server_config = quinn::ServerConfig::with_single_cert([cert].to_vec(), key).unwrap();
-    server_config.transport = Arc::new(transport_config);
-
-    <span class="comment">// Open Socket and create endpoint
-    </span><span class="kw">let </span>port = THREAD_RNG.with(|rng| rng.u16(<span class="number">10000</span>..=<span class="number">11000</span>));
-    <span class="macro">info!</span>(port, <span class="string">&quot;Started network endpoint&quot;</span>);
-    <span class="kw">let </span>socket = std::net::UdpSocket::bind((<span class="string">&quot;0.0.0.0&quot;</span>, port)).unwrap();
-
-    <span class="kw">let </span>client_config = rustls::ClientConfig::builder()
-        .with_safe_defaults()
-        .with_custom_certificate_verifier(certs::SkipServerVerification::new())
-        .with_no_client_auth();
-    <span class="kw">let </span>client_config = quinn::ClientConfig::new(Arc::new(client_config));
-
-    <span class="kw">let </span><span class="kw-2">mut </span>endpoint = quinn::Endpoint::new(
-        quinn::EndpointConfig::default(),
-        <span class="prelude-val">Some</span>(server_config),
-        socket,
-        Arc::new(quinn_runtime_bevy::BevyIoTaskPoolExecutor),
-    )
-    .unwrap();
-
-    endpoint.set_default_client_config(client_config);
-
-    endpoint
-});
+<span class="doccomment">/// Get the network endpoint used for all communications.
+</span><span class="kw">pub async fn </span>get_network_endpoint() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>iroh_net::MagicEndpoint {
+    NETWORK_ENDPOINT
+        .get_or_init(|| <span class="kw">async move </span>{
+            <span class="kw">let </span>secret_key = iroh_net::key::SecretKey::generate();
+            iroh_net::MagicEndpoint::builder()
+                .alpns(<span class="macro">vec!</span>[MATCH_ALPN.to_vec(), PLAY_ALPN.to_vec()])
+                .discovery(Box::new(
+                    iroh_net::discovery::ConcurrentDiscovery::from_services(<span class="macro">vec!</span>[
+                        Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
+                        Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
+                            secret_key.clone(),
+                        )),
+                    ]),
+                ))
+                .secret_key(secret_key)
+                .bind(<span class="number">0</span>)
+                .<span class="kw">await
+                </span>.unwrap()
+        })
+        .<span class="kw">await
+</span>}
 
 <span class="doccomment">/// Resource containing the [`NetworkSocket`] implementation while there is a connection to a
 /// network game.
@@ -739,17 +706,6 @@
 </span><span class="attr">#[derive(Clone, HasSchema, Deref, DerefMut)]
 #[schema(no_default)]
 </span><span class="kw">pub struct </span>NetworkMatchSocket(Arc&lt;<span class="kw">dyn </span>NetworkSocket&gt;);
-
-<span class="doccomment">/// A type-erased [`ggrs::NonBlockingSocket`]
-/// implementation.
-</span><span class="attr">#[derive(Deref, DerefMut)]
-</span><span class="kw">pub struct </span>BoxedNonBlockingSocket(Box&lt;<span class="kw">dyn </span>GgrsSocket&gt;);
-
-<span class="kw">impl </span>Clone <span class="kw">for </span>BoxedNonBlockingSocket {
-    <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-        <span class="self">self</span>.ggrs_socket()
-    }
-}
 
 <span class="doccomment">/// Wraps [`ggrs::Message`] with included `match_id`, used to determine if message received
 /// from current match.
@@ -765,23 +721,13 @@
 </span><span class="kw">pub trait </span>GgrsSocket: NetworkSocket + ggrs::NonBlockingSocket&lt;usize&gt; {}
 <span class="kw">impl</span>&lt;T&gt; GgrsSocket <span class="kw">for </span>T <span class="kw">where </span>T: NetworkSocket + ggrs::NonBlockingSocket&lt;usize&gt; {}
 
-<span class="kw">impl </span>ggrs::NonBlockingSocket&lt;usize&gt; <span class="kw">for </span>BoxedNonBlockingSocket {
-    <span class="kw">fn </span>send_to(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: <span class="kw-2">&amp;</span>ggrs::Message, addr: <span class="kw-2">&amp;</span>usize) {
-        <span class="self">self</span>.<span class="number">0</span>.send_to(msg, addr)
-    }
-
-    <span class="kw">fn </span>receive_all_messages(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Vec&lt;(usize, ggrs::Message)&gt; {
-        <span class="self">self</span>.<span class="number">0</span>.receive_all_messages()
-    }
-}
-
 <span class="doccomment">/// Trait that must be implemented by socket connections establish by matchmakers.
 ///
 /// The [`NetworkMatchSocket`] resource will contain an instance of this trait and will be used by
 /// the game to send network messages after a match has been established.
 </span><span class="kw">pub trait </span>NetworkSocket: Sync + Send {
     <span class="doccomment">/// Get a GGRS socket from this network socket.
-    </span><span class="kw">fn </span>ggrs_socket(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BoxedNonBlockingSocket;
+    </span><span class="kw">fn </span>ggrs_socket(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Socket;
     <span class="doccomment">/// Send a reliable message to the given [`SocketTarget`].
     </span><span class="kw">fn </span>send_reliable(<span class="kw-2">&amp;</span><span class="self">self</span>, target: SocketTarget, message: <span class="kw-2">&amp;</span>[u8]);
     <span class="doccomment">/// Receive reliable messages from other players. The `usize` is the index of the player that
@@ -821,7 +767,7 @@
     </span><span class="kw">pub </span>last_confirmed_frame: i32,
 
     <span class="doccomment">/// Socket
-    </span><span class="kw">pub </span>socket: BoxedNonBlockingSocket,
+    </span><span class="kw">pub </span>socket: Socket,
 }
 
 <span class="doccomment">/// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
@@ -856,7 +802,7 @@
     </span><span class="kw">pub </span>input_collector: InputTypes::InputCollector,
 
     <span class="doccomment">/// Store copy of socket to be able to restart session runner with existing socket.
-    </span>socket: BoxedNonBlockingSocket,
+    </span>socket: Socket,
 
     <span class="doccomment">/// Local input delay ggrs session was initialized with
     </span>local_input_delay: usize,
@@ -866,7 +812,7 @@
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>GgrsSessionRunnerInfo {
     <span class="doccomment">/// The socket that will be converted into GGRS socket implementation.
-    </span><span class="kw">pub </span>socket: BoxedNonBlockingSocket,
+    </span><span class="kw">pub </span>socket: Socket,
     <span class="doccomment">/// The list of local players.
     </span><span class="kw">pub </span>player_is_local: [bool; MAX_PLAYERS],
     <span class="doccomment">/// the player count.
@@ -887,12 +833,12 @@
 <span class="kw">impl </span>GgrsSessionRunnerInfo {
     <span class="doccomment">/// See [`GgrsSessionRunnerInfo`] fields for info on arguments.
     </span><span class="kw">pub fn </span>new(
-        socket: BoxedNonBlockingSocket,
+        socket: Socket,
         max_prediction_window: <span class="prelude-ty">Option</span>&lt;usize&gt;,
         local_input_delay: <span class="prelude-ty">Option</span>&lt;usize&gt;,
     ) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>player_is_local = socket.<span class="number">0</span>.player_is_local();
-        <span class="kw">let </span>player_count = socket.<span class="number">0</span>.player_count();
+        <span class="kw">let </span>player_is_local = socket.player_is_local();
+        <span class="kw">let </span>player_count = socket.player_count();
         <span class="self">Self </span>{
             socket,
             player_is_local,
@@ -1196,7 +1142,7 @@
 
         // Increment match id so messages from previous match that are still in flight
         // will be filtered out.
-        </span><span class="self">self</span>.socket.<span class="number">0</span>.increment_match_id();
+        </span><span class="self">self</span>.socket.increment_match_id();
 
         <span class="kw">let </span>runner_info = GgrsSessionRunnerInfo {
             socket: <span class="self">self</span>.socket.clone(),

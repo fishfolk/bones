@@ -192,20 +192,25 @@
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a>
 <a href="#194" id="194">194</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>bevy_tasks::IoTaskPool;
-<span class="kw">use </span>bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse};
-<span class="kw">use </span>futures_lite::future;
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse};
+<span class="kw">use </span>iroh_net::{magic_endpoint::get_remote_node_id, MagicEndpoint, NodeAddr};
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>quinn::{Connection, ConnectionError};
 <span class="kw">use </span>scc::HashMap;
 
-<span class="kw">use </span><span class="kw">crate</span>::proxy::start_proxy;
-
-<span class="kw">pub async fn </span>handle_connection(conn: Connection) {
+<span class="kw">pub async fn </span>handle_connection(ep: MagicEndpoint, conn: Connection) {
     <span class="kw">let </span>connection_id = conn.stable_id();
     <span class="macro">debug!</span>(connection_id, <span class="string">&quot;Accepted matchmaker connection&quot;</span>);
 
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = impl_matchmaker(conn).<span class="kw">await </span>{
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = impl_matchmaker(ep, conn).<span class="kw">await </span>{
         <span class="kw">match </span>e.downcast::&lt;ConnectionError&gt;() {
             <span class="prelude-val">Ok</span>(conn_err) =&gt; <span class="kw">match </span>conn_err {
                 ConnectionError::ApplicationClosed(e) =&gt; {
@@ -235,22 +240,17 @@
 /// client.
 ///
 /// At this point the client is free to engage in the matchmaking protocol over that channel.
-</span><span class="kw">async fn </span>impl_matchmaker(conn: Connection) -&gt; anyhow::Result&lt;()&gt; {
+</span><span class="kw">async fn </span>impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">let </span>connection_id = conn.stable_id();
 
     <span class="kw">loop </span>{
         <span class="comment">// Get the next channel open or connection close event
-        </span><span class="kw">let </span>event = future::or(<span class="kw">async </span>{ either::Left(conn.closed().<span class="kw">await</span>) }, <span class="kw">async </span>{
-            either::Right(conn.accept_bi().<span class="kw">await</span>)
-        })
-        .<span class="kw">await</span>;
-
-        <span class="kw">match </span>event {
-            either::Either::Left(close) =&gt; {
+        </span><span class="macro">tokio::select! </span>{
+            close = conn.closed() =&gt; {
                 <span class="macro">debug!</span>(<span class="string">&quot;Connection closed {close:?}&quot;</span>);
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(());
             }
-            either::Either::Right(bi) =&gt; {
+            bi = conn.accept_bi() =&gt; {
                 <span class="kw">let </span>(<span class="kw-2">mut </span>send, <span class="kw-2">mut </span>recv) = bi<span class="question-mark">?</span>;
 
                 <span class="comment">// Parse matchmaker request
@@ -287,48 +287,46 @@
                                 <span class="comment">// Spawn task to wait for connction to close and remove it from the room if it does
                                 </span><span class="kw">let </span>conn = conn.clone();
                                 <span class="kw">let </span>info = match_info.clone();
-                                IoTaskPool::get()
-                                    .spawn(<span class="kw">async move </span>{
-                                        conn.closed().<span class="kw">await</span>;
-                                        <span class="kw">let </span>members = STATE
-                                            .rooms
-                                            .update_async(<span class="kw-2">&amp;</span>info, |<span class="kw">_</span>, members| {
-                                                <span class="kw">let </span><span class="kw-2">mut </span>was_removed = <span class="bool-val">false</span>;
-                                                members.retain(|x| {
-                                                    <span class="kw">if </span>x.stable_id() != conn.stable_id() {
-                                                        <span class="bool-val">true
-                                                    </span>} <span class="kw">else </span>{
-                                                        was_removed = <span class="bool-val">true</span>;
-                                                        <span class="bool-val">false
-                                                    </span>}
-                                                });
-
-                                                <span class="kw">if </span>was_removed {
-                                                    <span class="prelude-val">Some</span>(members.clone())
-                                                } <span class="kw">else </span>{
-                                                    <span class="prelude-val">None
+                                tokio::task::spawn(<span class="kw">async move </span>{
+                                    conn.closed().<span class="kw">await</span>;
+                                    <span class="kw">let </span>members = STATE
+                                        .rooms
+                                        .update_async(<span class="kw-2">&amp;</span>info, |<span class="kw">_</span>, members| {
+                                            <span class="kw">let </span><span class="kw-2">mut </span>was_removed = <span class="bool-val">false</span>;
+                                            members.retain(|x| {
+                                                <span class="kw">if </span>x.stable_id() != conn.stable_id() {
+                                                    <span class="bool-val">true
+                                                </span>} <span class="kw">else </span>{
+                                                    was_removed = <span class="bool-val">true</span>;
+                                                    <span class="bool-val">false
                                                 </span>}
-                                            })
-                                            .<span class="kw">await
-                                            </span>.flatten();
-                                        <span class="kw">if let </span><span class="prelude-val">Some</span>(members) = members {
-                                            <span class="kw">let </span>result = <span class="kw">async </span>{
-                                                <span class="kw">let </span>message = postcard::to_allocvec(
-                                                    <span class="kw-2">&amp;</span>MatchmakerResponse::ClientCount(
-                                                        members.len() <span class="kw">as </span>u8
-                                                    ),
-                                                )<span class="question-mark">?</span>;
-                                                <span class="kw">for </span>conn <span class="kw">in </span>members {
-                                                    <span class="kw">let </span><span class="kw-2">mut </span>send = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
-                                                    send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-                                                    send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
-                                                }
-                                                <span class="prelude-val">Ok</span>::&lt;(), anyhow::Error&gt;(())
-                                            };
-                                            result.<span class="kw">await</span>.ok();
-                                        }
-                                    })
-                                    .detach();
+                                            });
+
+                                            <span class="kw">if </span>was_removed {
+                                                <span class="prelude-val">Some</span>(members.clone())
+                                            } <span class="kw">else </span>{
+                                                <span class="prelude-val">None
+                                            </span>}
+                                        })
+                                        .<span class="kw">await
+                                        </span>.flatten();
+                                    <span class="kw">if let </span><span class="prelude-val">Some</span>(members) = members {
+                                        <span class="kw">let </span>result = <span class="kw">async </span>{
+                                            <span class="kw">let </span>message = postcard::to_allocvec(
+                                                <span class="kw-2">&amp;</span>MatchmakerResponse::ClientCount(
+                                                    members.len() <span class="kw">as </span>u8
+                                                ),
+                                            )<span class="question-mark">?</span>;
+                                            <span class="kw">for </span>conn <span class="kw">in </span>members {
+                                                <span class="kw">let </span><span class="kw-2">mut </span>send = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
+                                                send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
+                                                send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+                                            }
+                                            <span class="prelude-val">Ok</span>::&lt;(), anyhow::Error&gt;(())
+                                        };
+                                        result.<span class="kw">await</span>.ok();
+                                    }
+                                });
 
                                 <span class="kw">let </span>member_count = members.len();
 
@@ -360,25 +358,43 @@
 
                         <span class="kw">if </span>!members_to_join.is_empty() {
                             <span class="comment">// Send the match ID to all of the clients in the room
-                            </span><span class="kw">let </span><span class="kw-2">mut </span>clients = Vec::with_capacity(player_count <span class="kw">as </span>usize);
+                            </span><span class="kw">let </span><span class="kw-2">mut </span>player_ids = std::array::from_fn(|<span class="kw">_</span>| <span class="prelude-val">None</span>);
                             <span class="kw">let </span>random_seed = rand::random();
-                            <span class="kw">for </span>(idx, conn) <span class="kw">in </span>members_to_join.drain(..).enumerate() {
+
+                            <span class="kw">for </span>(idx, conn) <span class="kw">in </span>members_to_join.iter().enumerate() {
+                                <span class="kw">let </span>id = get_remote_node_id(<span class="kw-2">&amp;</span>conn)<span class="question-mark">?</span>;
+                                <span class="kw">let </span><span class="kw-2">mut </span>addr = NodeAddr::new(id);
+                                <span class="kw">if let </span><span class="prelude-val">Some</span>(info) = ep.connection_info(id) {
+                                    <span class="kw">if let </span><span class="prelude-val">Some</span>(relay_url) = info.relay_url {
+                                        addr = addr.with_relay_url(relay_url.relay_url);
+                                    }
+                                    addr = addr.with_direct_addresses(
+                                        info.addrs.into_iter().map(|addr| addr.addr),
+                                    );
+                                }
+
+                                player_ids[idx] = <span class="prelude-val">Some</span>(addr);
+                            }
+
+                            <span class="kw">for </span>(player_idx, conn) <span class="kw">in </span>members_to_join.into_iter().enumerate() {
                                 <span class="comment">// Respond with success
                                 </span><span class="kw">let </span>message =
                                     postcard::to_allocvec(<span class="kw-2">&amp;</span>MatchmakerResponse::Success {
                                         random_seed,
                                         client_count: player_count,
-                                        player_idx: idx <span class="kw">as </span>u8,
+                                        player_idx: player_idx <span class="kw">as </span>u8,
+                                        player_ids: player_ids.clone(),
                                     })<span class="question-mark">?</span>;
                                 <span class="kw">let </span><span class="kw-2">mut </span>send = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
                                 send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
                                 send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
 
-                                clients.push(conn);
+                                <span class="comment">// Close connection, we are done here
+                                </span>conn.close(<span class="number">0u32</span>.into(), <span class="string">b&quot;done&quot;</span>);
                             }
 
-                            <span class="comment">// Hand the clients off to the game manager
-                            </span>start_proxy(match_info, clients).<span class="kw">await</span>;
+                            <span class="comment">// cleanup
+                            </span>STATE.rooms.remove_async(<span class="kw-2">&amp;</span>match_info).<span class="kw">await</span>;
                         }
                     }
                 }

@@ -67,10 +67,6 @@
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
 </span><span class="comment">// This cfg_attr is needed because `rustdoc::all` includes lints not supported on stable
 </span><span class="attr">#![cfg_attr(doc, allow(unknown_lints))]
@@ -78,17 +74,13 @@
 #[macro_use]
 </span><span class="kw">extern crate </span>tracing;
 
-<span class="kw">use </span>std::{net::SocketAddr, sync::Arc, time::Duration};
+<span class="kw">use </span>std::net::SocketAddr;
 
-<span class="kw">use </span>bevy_tasks::IoTaskPool;
-<span class="kw">use </span>quinn::{Endpoint, EndpointConfig, ServerConfig, TransportConfig};
-<span class="kw">use </span>quinn_runtime_bevy::BevyIoTaskPoolExecutor;
+<span class="kw">use </span>bones_matchmaker_proto::MATCH_ALPN;
 
 <span class="kw">pub mod </span>cli;
 
-<span class="kw">mod </span>certs;
 <span class="kw">mod </span>matchmaker;
-<span class="kw">mod </span>proxy;
 
 <span class="attr">#[derive(clap::Parser, Debug)]
 #[command(author, version, about, long_about = <span class="prelude-val">None</span>)]
@@ -99,26 +91,28 @@
 }
 
 <span class="kw">async fn </span>server(args: Config) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">let </span>task_pool = IoTaskPool::get();
+    <span class="kw">let </span>port = args.listen_addr.port();
 
-    <span class="comment">// Generate certificate
-    </span><span class="kw">let </span>(cert, key) = certs::generate_self_signed_cert()<span class="question-mark">?</span>;
+    <span class="kw">let </span>secret_key = iroh_net::key::SecretKey::generate();
+    <span class="kw">let </span>endpoint = iroh_net::MagicEndpoint::builder()
+        .alpns(<span class="macro">vec!</span>[MATCH_ALPN.to_vec()])
+        .discovery(Box::new(
+            iroh_net::discovery::ConcurrentDiscovery::from_services(<span class="macro">vec!</span>[
+                Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
+                Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
+                    secret_key.clone(),
+                )),
+            ]),
+        ))
+        .secret_key(secret_key)
+        .bind(port)
+        .<span class="kw">await</span><span class="question-mark">?</span>;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>transport_config = TransportConfig::default();
-    transport_config.keep_alive_interval(<span class="prelude-val">Some</span>(Duration::from_secs(<span class="number">5</span>)));
+    <span class="kw">let </span>my_addr = endpoint.my_addr().<span class="kw">await</span><span class="question-mark">?</span>;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>server_config = ServerConfig::with_single_cert([cert].to_vec(), key)<span class="question-mark">?</span>;
-    server_config.transport = Arc::new(transport_config);
+    <span class="macro">info!</span>(address=<span class="question-mark">?</span>my_addr, <span class="string">&quot;Started server&quot;</span>);
 
-    <span class="comment">// Open Socket and create endpoint
-    </span><span class="kw">let </span>socket = std::net::UdpSocket::bind(args.listen_addr)<span class="question-mark">?</span>;
-    <span class="kw">let </span>endpoint = Endpoint::new(
-        EndpointConfig::default(),
-        <span class="prelude-val">Some</span>(server_config),
-        socket,
-        Arc::new(BevyIoTaskPoolExecutor),
-    )<span class="question-mark">?</span>;
-    <span class="macro">info!</span>(address=%endpoint.local_addr()<span class="question-mark">?</span>, <span class="string">&quot;Started server&quot;</span>);
+    <span class="macro">println!</span>(<span class="string">&quot;Node ID: {}&quot;</span>, my_addr.node_id);
 
     <span class="comment">// Listen for incomming connections
     </span><span class="kw">while let </span><span class="prelude-val">Some</span>(connecting) = endpoint.accept().<span class="kw">await </span>{
@@ -132,9 +126,7 @@
                 </span>);
 
                 <span class="comment">// Spawn a task to handle the new connection
-                </span>task_pool
-                    .spawn(matchmaker::handle_connection(conn))
-                    .detach();
+                </span>tokio::task::spawn(matchmaker::handle_connection(endpoint.clone(), conn));
             }
             <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">error!</span>(<span class="string">&quot;Error opening client connection: {e:?}&quot;</span>),
         }
