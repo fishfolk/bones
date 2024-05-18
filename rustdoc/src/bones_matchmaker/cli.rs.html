@@ -23,15 +23,37 @@
 <a href="#23" id="23">23</a>
 <a href="#24" id="24">24</a>
 <a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>tracing::metadata::LevelFilter;
+<span class="kw">use </span>tracing::warn;
 
 <span class="kw">pub async fn </span>start() {
     configure_logging();
 
     <span class="kw">let </span>args = <span class="kw">crate</span>::Config::parse();
+    <span class="kw">let </span>secret_key = <span class="kw">match </span>std::env::var(<span class="string">&quot;BONES_MATCHMAKER_SECRET_KEY&quot;</span>) {
+        <span class="prelude-val">Ok</span>(key) =&gt; <span class="kw">match </span>key.parse::&lt;iroh_net::key::SecretKey&gt;() {
+            <span class="prelude-val">Ok</span>(key) =&gt; <span class="prelude-val">Some</span>(key),
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
+                <span class="macro">warn!</span>(<span class="string">&quot;invalid matchmaker key provided&quot;</span>);
+                <span class="prelude-val">None
+            </span>}
+        },
+        <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
+    };
 
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = <span class="kw">super</span>::server(args).<span class="kw">await </span>{
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = <span class="kw">super</span>::server(args, secret_key).<span class="kw">await </span>{
         <span class="macro">eprintln!</span>(<span class="string">&quot;Error: {e}&quot;</span>);
     }
 }
