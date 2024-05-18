@@ -8,6 +8,7 @@ extern crate tracing;
 use std::net::SocketAddr;
 
 use bones_matchmaker_proto::MATCH_ALPN;
+use iroh_net::key::SecretKey;
 
 pub mod cli;
 
@@ -19,12 +20,29 @@ struct Config {
     /// The server address to listen on
     #[clap(short, long = "listen", default_value = "0.0.0.0:8943")]
     listen_addr: SocketAddr,
+    /// If enabled, prints the current secret key. Use with caution.
+    #[clap(long)]
+    print_secret_key: bool,
 }
 
-async fn server(args: Config) -> anyhow::Result<()> {
+async fn server(args: Config, secret_key: Option<SecretKey>) -> anyhow::Result<()> {
     let port = args.listen_addr.port();
 
-    let secret_key = iroh_net::key::SecretKey::generate();
+    match secret_key {
+        Some(ref key) => {
+            info!("Using existing key: {}", key.public());
+        }
+        None => {
+            info!("Generating new key");
+        }
+    }
+
+    let secret_key = secret_key.unwrap_or_else(SecretKey::generate);
+
+    if args.print_secret_key {
+        println!("Secret Key: {}", secret_key);
+    }
+
     let endpoint = iroh_net::MagicEndpoint::builder()
         .alpns(vec![MATCH_ALPN.to_vec()])
         .discovery(Box::new(
