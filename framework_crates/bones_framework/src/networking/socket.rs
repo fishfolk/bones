@@ -14,17 +14,17 @@ use super::{GameMessage, NetworkSocket, SocketTarget, RUNTIME};
 #[derive(Debug, Clone)]
 pub struct Socket {
     ///
-    pub connections: Vec<(usize, iroh_quinn::Connection)>,
-    pub ggrs_receiver: async_channel::Receiver<(usize, GameMessage)>,
-    pub reliable_receiver: async_channel::Receiver<(usize, Vec<u8>)>,
-    pub player_idx: usize,
-    pub player_count: usize,
+    pub connections: Vec<(u32, iroh_quinn::Connection)>,
+    pub ggrs_receiver: async_channel::Receiver<(u32, GameMessage)>,
+    pub reliable_receiver: async_channel::Receiver<(u32, Vec<u8>)>,
+    pub player_idx: u32,
+    pub player_count: u32,
     /// ID for current match, messages received that do not match ID are dropped.
     pub match_id: u8,
 }
 
 impl Socket {
-    pub fn new(player_idx: usize, connections: Vec<(usize, iroh_quinn::Connection)>) -> Self {
+    pub fn new(player_idx: u32, connections: Vec<(u32, iroh_quinn::Connection)>) -> Self {
         let (ggrs_sender, ggrs_receiver) = async_channel::unbounded();
         let (reliable_sender, reliable_receiver) = async_channel::unbounded();
 
@@ -122,7 +122,7 @@ impl Socket {
 
         Self {
             player_idx,
-            player_count: connections.iter().count() + 1,
+            player_count: (connections.len() + 1).try_into().unwrap(),
             connections,
             ggrs_receiver,
             reliable_receiver,
@@ -130,7 +130,7 @@ impl Socket {
         }
     }
 
-    fn get_connection(&self, idx: usize) -> &iroh_quinn::Connection {
+    fn get_connection(&self, idx: u32) -> &iroh_quinn::Connection {
         debug_assert!(idx < self.player_count);
         // TODO: if this is too slow, optimize storage
         self.connections
@@ -181,7 +181,7 @@ impl NetworkSocket for Socket {
         }
     }
 
-    fn recv_reliable(&self) -> Vec<(usize, Vec<u8>)> {
+    fn recv_reliable(&self) -> Vec<(u32, Vec<u8>)> {
         let mut messages = Vec::new();
         while let Ok(message) = self.reliable_receiver.try_recv() {
             messages.push(message);
@@ -199,11 +199,11 @@ impl NetworkSocket for Socket {
         }
     }
 
-    fn player_idx(&self) -> usize {
+    fn player_idx(&self) -> u32 {
         self.player_idx
     }
 
-    fn player_count(&self) -> usize {
+    fn player_count(&self) -> u32 {
         self.player_count
     }
 
@@ -213,11 +213,11 @@ impl NetworkSocket for Socket {
 }
 
 pub(super) async fn establish_peer_connections(
-    player_idx: usize,
-    player_count: usize,
-    peer_addrs: Vec<(usize, NodeAddr)>,
+    player_idx: u32,
+    player_count: u32,
+    peer_addrs: Vec<(u32, NodeAddr)>,
     conn: Option<iroh_quinn::Connection>,
-) -> anyhow::Result<Vec<(usize, iroh_quinn::Connection)>> {
+) -> anyhow::Result<Vec<(u32, iroh_quinn::Connection)>> {
     let mut peer_connections = Vec::new();
     let had_og_conn = conn.is_some();
     if let Some(conn) = conn {
@@ -245,11 +245,11 @@ pub(super) async fn establish_peer_connections(
 
         // Receive the player index
         let idx = {
-            let mut buf = [0; 1];
+            let mut buf = [0; 4];
             let mut channel = conn.accept_uni().await?;
             channel.read_exact(&mut buf).await?;
 
-            buf[0] as usize
+            u32::from_le_bytes(buf)
         };
 
         in_connections.push((idx, conn));
@@ -267,7 +267,7 @@ pub(super) async fn establish_peer_connections(
 
         // Send player index
         let mut channel = conn.open_uni().await?;
-        channel.write(&[player_idx as u8]).await?;
+        channel.write(&player_idx.to_le_bytes()).await?;
         channel.finish().await?;
 
         out_connections.push((i, conn));
@@ -286,7 +286,7 @@ impl ggrs::NonBlockingSocket<usize> for Socket {
             message: msg.clone(),
             match_id: self.match_id,
         };
-        let conn = self.get_connection(*addr);
+        let conn = self.get_connection((*addr).try_into().unwrap());
 
         let msg_bytes = postcard::to_allocvec(&msg).unwrap();
         conn.send_datagram(Bytes::copy_from_slice(&msg_bytes[..]))
@@ -297,7 +297,7 @@ impl ggrs::NonBlockingSocket<usize> for Socket {
         let mut messages = Vec::new();
         while let Ok(message) = self.ggrs_receiver.try_recv() {
             if message.1.match_id == self.match_id {
-                messages.push((message.0, message.1.message));
+                messages.push((message.0 as usize, message.1.message));
             }
         }
         messages

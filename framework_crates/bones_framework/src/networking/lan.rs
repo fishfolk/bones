@@ -71,7 +71,9 @@ static PINGER: Lazy<Pinger> = Lazy::new(|| {
 });
 
 /// Host a server.
-pub fn start_server(server: ServerInfo, player_count: usize) {
+///
+/// The number of players is limited to `u32::MAX`.
+pub fn start_server(server: ServerInfo, player_count: u32) {
     MDNS.register(server.service)
         .expect("Could not register MDNS service.");
     LAN_MATCHMAKER
@@ -295,7 +297,7 @@ async fn lan_matchmaker(
 
 async fn lan_start_server(
     matchmaker_channel: &BiChannelServer<LanMatchmakerRequest, LanMatchmakerResponse>,
-    mut player_count: usize,
+    mut player_count: u32,
 ) -> anyhow::Result<()> {
     info!("Starting LAN server");
     matchmaker_channel
@@ -366,7 +368,7 @@ async fn lan_start_server(
         info!(%current_players, %target_players);
 
         // If we're ready to start a match
-        if connections.len() == player_count - 1 {
+        if connections.len() == (player_count - 1) as usize {
             info!("All players joined.");
 
             let endpoint = get_network_endpoint().await;
@@ -390,12 +392,12 @@ async fn lan_start_server(
                             );
                         }
 
-                        peers.push((i + 1, addr));
+                        peers.push((u32::try_from(i + 1).unwrap(), addr));
                     });
 
                 let mut uni = conn.open_uni().await?;
                 uni.write_all(&postcard::to_vec::<_, 20>(&MatchmakerNetMsg::MatchReady {
-                    player_idx: i + 1,
+                    player_idx: (i + 1).try_into()?,
                     peers,
                     player_count,
                 })?)
@@ -406,7 +408,7 @@ async fn lan_start_server(
             let connections = connections
                 .into_iter()
                 .enumerate()
-                .map(|(i, c)| (i + 1, c))
+                .map(|(i, c)| (u32::try_from(i + 1).unwrap(), c))
                 .collect();
 
             // Send the connections to the game so that it can start the network match.
@@ -476,10 +478,10 @@ async fn lan_join_server(
 enum MatchmakerNetMsg {
     MatchReady {
         /// The peers they have for the match, with the index in the array being the player index of the peer.
-        peers: Vec<(usize, NodeAddr)>,
+        peers: Vec<(u32, NodeAddr)>,
         /// The player index of the player getting the message.
-        player_idx: usize,
-        player_count: usize,
+        player_idx: u32,
+        player_count: u32,
     },
 }
 
@@ -493,7 +495,7 @@ pub enum LanMatchmakerRequest {
     /// Start matchmaker server
     StartServer {
         /// match player count
-        player_count: usize,
+        player_count: u32,
     },
     /// Join server
     JoinServer {
@@ -517,9 +519,9 @@ pub enum LanMatchmakerResponse {
         /// Lan socket to game
         socket: Socket,
         /// Local player index
-        player_idx: usize,
+        player_idx: u32,
         /// Game player count
-        player_count: usize,
+        player_count: u32,
     },
 }
 

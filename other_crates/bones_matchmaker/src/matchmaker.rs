@@ -112,7 +112,7 @@ async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyho
                                         let result = async {
                                             let message = postcard::to_allocvec(
                                                 &MatchmakerResponse::ClientCount(
-                                                    members.len()
+                                                    members.len().try_into()?
                                                 ),
                                             )?;
                                             for conn in members {
@@ -145,7 +145,7 @@ async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyho
 
                         if !members_to_notify.is_empty() {
                             let message = postcard::to_allocvec(&MatchmakerResponse::ClientCount(
-                                members_to_notify.len()
+                                members_to_notify.len().try_into()?
                             ))?;
                             for conn in members_to_notify {
                                 let mut send = conn.open_uni().await?;
@@ -171,7 +171,7 @@ async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyho
                                     );
                                 }
 
-                                player_ids.push((idx, addr));
+                                player_ids.push((u32::try_from(idx)?, addr));
                             }
 
                             for (player_idx, conn) in members_to_join.into_iter().enumerate() {
@@ -180,7 +180,7 @@ async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyho
                                     postcard::to_allocvec(&MatchmakerResponse::Success {
                                         random_seed,
                                         client_count: player_count,
-                                        player_idx: player_idx,
+                                        player_idx: player_idx.try_into()?,
                                         player_ids: player_ids.clone(),
                                     })?;
                                 let mut send = conn.open_uni().await?;

@@ -150,14 +150,14 @@ async fn search_for_game(
                         info!(%random_seed, %player_idx, player_count=%client_count, "Online match complete");
 
                         let peer_connections = establish_peer_connections(
-                            player_idx as usize,
-                            client_count as usize,
+                            player_idx,
+                            client_count,
                             player_ids,
                             None,
                         )
                         .await?;
 
-                        let socket = Socket::new(player_idx as usize, peer_connections);
+                        let socket = Socket::new(player_idx, peer_connections);
 
                         matchmaker_channel.try_send(OnlineMatchmakerResponse::GameStarting {
                             socket,

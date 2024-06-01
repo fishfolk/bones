@@ -28,8 +28,8 @@ pub enum MatchmakerRequest {
 /// Information about a match that is being requested
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
 pub struct MatchInfo {
-    /// The number of clients to have in a match
-    pub client_count: usize,
+    /// The number of clients to have in a match.
+    pub client_count: u32,
     /// This is an arbitrary set of bytes that must match exactly for clients to end up in the same
     /// match.
     ///
@@ -44,17 +44,17 @@ pub enum MatchmakerResponse {
     /// The conneciton has been accepted
     Accepted,
     /// This is the current number of connected clients
-    ClientCount(usize),
+    ClientCount(u32),
     /// The desired client count has been reached, and you may start the match.
     Success {
         /// The random seed that each client should use.
         random_seed: u64,
         /// The client idx of the current client
-        player_idx: usize,
+        player_idx: u32,
         /// The number of connected clients in the match
-        client_count: usize,
+        client_count: u32,
         /// The node ids of all players.
-        player_ids: Vec<(usize, iroh_net::NodeAddr)>,
+        player_ids: Vec<(u32, iroh_net::NodeAddr)>,
     },
 }
 
