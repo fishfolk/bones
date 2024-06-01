@@ -8,13 +8,13 @@ use tracing::{info, warn};
 
 use crate::networking::get_network_endpoint;
 
-use super::{GameMessage, NetworkSocket, SocketTarget, MAX_PLAYERS, RUNTIME};
+use super::{GameMessage, NetworkSocket, SocketTarget, RUNTIME};
 
 /// The [`NetworkSocket`] implementation.
 #[derive(Debug, Clone)]
 pub struct Socket {
     ///
-    pub connections: [Option<iroh_quinn::Connection>; MAX_PLAYERS],
+    pub connections: Vec<(usize, iroh_quinn::Connection)>,
     pub ggrs_receiver: async_channel::Receiver<(usize, GameMessage)>,
     pub reliable_receiver: async_channel::Receiver<(usize, Vec<u8>)>,
     pub player_idx: usize,
@@ -24,114 +24,120 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn new(
-        player_idx: usize,
-        connections: [Option<iroh_quinn::Connection>; MAX_PLAYERS],
-    ) -> Self {
+    pub fn new(player_idx: usize, connections: Vec<(usize, iroh_quinn::Connection)>) -> Self {
         let (ggrs_sender, ggrs_receiver) = async_channel::unbounded();
         let (reliable_sender, reliable_receiver) = async_channel::unbounded();
 
         // Spawn tasks to receive network messages from each peer
-        #[allow(clippy::needless_range_loop)]
-        for i in 0..MAX_PLAYERS {
-            if let Some(conn) = connections[i].clone() {
-                let ggrs_sender = ggrs_sender.clone();
+        for (i, conn) in &connections {
+            let ggrs_sender = ggrs_sender.clone();
+            let i = *i;
 
-                // Unreliable message receiver
-                let conn_ = conn.clone();
-                RUNTIME.spawn(async move {
-                    let conn = conn_;
+            // Unreliable message receiver
+            let conn_ = conn.clone();
+            RUNTIME.spawn(async move {
+                let conn = conn_;
 
-                    #[cfg(feature = "debug-network-slowdown")]
-                    use turborand::prelude::*;
-                    #[cfg(feature = "debug-network-slowdown")]
-                    let rng = AtomicRng::new();
+                #[cfg(feature = "debug-network-slowdown")]
+                use turborand::prelude::*;
+                #[cfg(feature = "debug-network-slowdown")]
+                let rng = AtomicRng::new();
 
-                    loop {
-                        tokio::select! {
-                            closed = conn.closed() => {
-                                warn!("Connection error: {closed}");
-                                break;
+                loop {
+                    tokio::select! {
+                        closed = conn.closed() => {
+                            warn!("Connection error: {closed}");
+                            break;
+                        }
+                        datagram_result = conn.read_datagram() => match datagram_result {
+                            Ok(data) => {
+                                let message: GameMessage = postcard::from_bytes(&data)
+                                .expect("Could not deserialize net message");
+
+                                // Debugging code to introduce artificial latency
+                                #[cfg(feature = "debug-network-slowdown")]
+                                {
+                                    use async_timer::Oneshot;
+                                    async_timer::oneshot::Timer::new(
+                                        std::time::Duration::from_millis(
+                                            (rng.f32_normalized() * 100.0) as u64 + 1,
+                                        ),
+                                    )
+                                    .await;
+                                }
+                                if ggrs_sender.send((i, message)).await.is_err() {
+                                    break;
+                                }
                             }
-                            datagram_result = conn.read_datagram() => match datagram_result {
-                                Ok(data) => {
-                                    let message: GameMessage = postcard::from_bytes(&data)
-                                        .expect("Could not deserialize net message");
-
-                                    // Debugging code to introduce artificial latency
-                                    #[cfg(feature = "debug-network-slowdown")]
-                                    {
-                                        use async_timer::Oneshot;
-                                        async_timer::oneshot::Timer::new(
-                                            std::time::Duration::from_millis(
-                                                (rng.f32_normalized() * 100.0) as u64 + 1,
-                                            ),
-                                        )
-                                        .await;
-                                    }
-                                    if ggrs_sender.send((i, message)).await.is_err() {
-                                        break;
-                                    }
-                                }
-                                Err(e) => {
-                                    warn!("Connection error: {e}");
-                                }
+                            Err(e) => {
+                                warn!("Connection error: {e}");
                             }
                         }
                     }
-                });
+                }
+            });
 
-                // Reliable message receiver
-                let reliable_sender = reliable_sender.clone();
-                RUNTIME.spawn(async move {
-                    #[cfg(feature = "debug-network-slowdown")]
-                    use turborand::prelude::*;
-                    #[cfg(feature = "debug-network-slowdown")]
-                    let rng = AtomicRng::new();
+            // Reliable message receiver
+            let reliable_sender = reliable_sender.clone();
+            let conn = conn.clone();
+            RUNTIME.spawn(async move {
+                #[cfg(feature = "debug-network-slowdown")]
+                use turborand::prelude::*;
+                #[cfg(feature = "debug-network-slowdown")]
+                let rng = AtomicRng::new();
 
-                    loop {
-                        tokio::select! {
-                            closed = conn.closed() => {
-                                warn!("Connection error: {closed}");
-                                break;
-                            }
-                            result = conn.accept_uni() => match result {
-                                Ok(mut stream) => {
-                                    let data = stream.read_to_end(4096).await.expect("Network read error");
-
-                                    // Debugging code to introduce artificial latency
-                                    #[cfg(feature = "debug-network-slowdown")]
-                                    {
-                                        use async_timer::Oneshot;
-                                        async_timer::oneshot::Timer::new(
-                                            std::time::Duration::from_millis(
-                                                (rng.f32_normalized() * 100.0) as u64 + 1,
-                                            ),
-                                        )
-                                        .await;
-                                    }
-                                    if reliable_sender.send((i, data)).await.is_err() {
-                                        break;
-                                    }
-                                }
-                                Err(e) => {
-                                    warn!("Connection error: {e}");
-                                }
-                            },
+                loop {
+                    tokio::select! {
+                        closed = conn.closed() => {
+                            warn!("Connection error: {closed}");
+                            break;
                         }
+                        result = conn.accept_uni() => match result {
+                            Ok(mut stream) => {
+                                let data = stream.read_to_end(4096).await.expect("Network read error");
+
+                                // Debugging code to introduce artificial latency
+                                #[cfg(feature = "debug-network-slowdown")]
+                                {
+                                    use async_timer::Oneshot;
+                                    async_timer::oneshot::Timer::new(
+                                        std::time::Duration::from_millis(
+                                            (rng.f32_normalized() * 100.0) as u64 + 1,
+                                        ),
+                                    )
+                                    .await;
+                                }
+                                if reliable_sender.send((i, data)).await.is_err() {
+                                    break;
+                                }
+                            }
+                            Err(e) => {
+                                warn!("Connection error: {e}");
+                            }
+                        },
                     }
-                });
-            }
+                }
+            });
         }
 
         Self {
             player_idx,
-            player_count: connections.iter().flatten().count() + 1,
+            player_count: connections.iter().count() + 1,
             connections,
             ggrs_receiver,
             reliable_receiver,
             match_id: 0,
         }
+    }
+
+    fn get_connection(&self, idx: usize) -> &iroh_quinn::Connection {
+        debug_assert!(idx < self.player_count);
+        // TODO: if this is too slow, optimize storage
+        self.connections
+            .iter()
+            .find(|(i, _)| *i == idx)
+            .map(|(_, c)| c)
+            .unwrap()
     }
 }
 
@@ -141,7 +147,7 @@ impl NetworkSocket for Socket {
 
         match target {
             SocketTarget::Player(i) => {
-                let conn = self.connections[i].as_ref().unwrap().clone();
+                let conn = self.get_connection(i).clone();
 
                 RUNTIME.spawn(async move {
                     let result = async move {
@@ -156,21 +162,20 @@ impl NetworkSocket for Socket {
                 });
             }
             SocketTarget::All => {
-                for conn in &self.connections {
-                    if let Some(conn) = conn.clone() {
-                        let message = message.clone();
-                        RUNTIME.spawn(async move {
-                            let result = async move {
-                                let mut stream = conn.open_uni().await?;
-                                stream.write_chunk(message).await?;
-                                stream.finish().await?;
-                                anyhow::Ok(())
-                            };
-                            if let Err(err) = result.await {
-                                warn!("send reliable all failed: {err:?}");
-                            }
-                        });
-                    }
+                for (_, conn) in &self.connections {
+                    let message = message.clone();
+                    let conn = conn.clone();
+                    RUNTIME.spawn(async move {
+                        let result = async move {
+                            let mut stream = conn.open_uni().await?;
+                            stream.write_chunk(message).await?;
+                            stream.finish().await?;
+                            anyhow::Ok(())
+                        };
+                        if let Err(err) = result.await {
+                            warn!("send reliable all failed: {err:?}");
+                        }
+                    });
                 }
             }
         }
@@ -189,7 +194,7 @@ impl NetworkSocket for Socket {
     }
 
     fn close(&self) {
-        for conn in self.connections.iter().flatten() {
+        for (_, conn) in &self.connections {
             conn.close(0u8.into(), &[]);
         }
     }
@@ -202,10 +207,6 @@ impl NetworkSocket for Socket {
         self.player_count
     }
 
-    fn player_is_local(&self) -> [bool; MAX_PLAYERS] {
-        std::array::from_fn(|i| self.connections[i].is_none() && i < self.player_count)
-    }
-
     fn increment_match_id(&mut self) {
         self.match_id = self.match_id.wrapping_add(1);
     }
@@ -214,20 +215,21 @@ impl NetworkSocket for Socket {
 pub(super) async fn establish_peer_connections(
     player_idx: usize,
     player_count: usize,
-    peer_addrs: [Option<NodeAddr>; MAX_PLAYERS],
+    peer_addrs: Vec<(usize, NodeAddr)>,
     conn: Option<iroh_quinn::Connection>,
-) -> anyhow::Result<[Option<iroh_quinn::Connection>; MAX_PLAYERS]> {
-    let mut peer_connections = std::array::from_fn(|_| None);
-
+) -> anyhow::Result<Vec<(usize, iroh_quinn::Connection)>> {
+    let mut peer_connections = Vec::new();
+    let had_og_conn = conn.is_some();
     if let Some(conn) = conn {
         // Set the connection to the matchmaker for player 0
-        peer_connections[0] = Some(conn);
+        peer_connections.push((0, conn));
     }
 
     let ep = get_network_endpoint().await;
 
     // For every peer with a player index that is higher than ours, wait for
     // them to connect to us.
+    let mut in_connections = Vec::new();
     let range = (player_idx + 1)..player_count;
     info!(players=?range, "Waiting for {} peer connections", range.len());
     for i in range {
@@ -249,18 +251,18 @@ pub(super) async fn establish_peer_connections(
 
             buf[0] as usize
         };
-        anyhow::ensure!(idx < MAX_PLAYERS, "Invalid player index");
 
-        peer_connections[idx] = Some(conn);
+        in_connections.push((idx, conn));
     }
 
     // For every peer with a player index lower than ours, connect to them.
-    let start_range = if peer_connections[0].is_some() { 1 } else { 0 };
+    let start_range = if had_og_conn { 1 } else { 0 };
     let range = start_range..player_idx;
     info!(players=?range, "Connecting to {} peers", range.len());
 
+    let mut out_connections = Vec::new();
     for i in range {
-        let addr = peer_addrs[i].as_ref().unwrap();
+        let (_, addr) = peer_addrs.iter().find(|(idx, _)| *idx == i).unwrap();
         let conn = ep.connect(addr.clone(), PLAY_ALPN).await?;
 
         // Send player index
@@ -268,8 +270,11 @@ pub(super) async fn establish_peer_connections(
         channel.write(&[player_idx as u8]).await?;
         channel.finish().await?;
 
-        peer_connections[i] = Some(conn);
+        out_connections.push((i, conn));
     }
+
+    peer_connections.extend(out_connections);
+    peer_connections.extend(in_connections);
 
     Ok(peer_connections)
 }
@@ -281,7 +286,7 @@ impl ggrs::NonBlockingSocket<usize> for Socket {
             message: msg.clone(),
             match_id: self.match_id,
         };
-        let conn = self.connections[*addr].as_ref().unwrap();
+        let conn = self.get_connection(*addr);
 
         let msg_bytes = postcard::to_allocvec(&msg).unwrap();
         conn.send_datagram(Bytes::copy_from_slice(&msg_bytes[..]))

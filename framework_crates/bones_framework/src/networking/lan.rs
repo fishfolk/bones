@@ -373,7 +373,7 @@ async fn lan_start_server(
 
             // Tell all clients we're ready
             for (i, conn) in connections.iter().enumerate() {
-                let mut peers = std::array::from_fn(|_| None);
+                let mut peers = Vec::new();
                 connections
                     .iter()
                     .enumerate()
@@ -390,7 +390,7 @@ async fn lan_start_server(
                             );
                         }
 
-                        peers[i + 1] = Some(addr);
+                        peers.push((i + 1, addr));
                     });
 
                 let mut uni = conn.open_uni().await?;
@@ -403,14 +403,11 @@ async fn lan_start_server(
                 uni.finish().await?;
             }
 
-            // Collect the list of client connections
-            let connections = std::array::from_fn(|i| {
-                if i == 0 {
-                    None
-                } else {
-                    connections.get(i - 1).cloned()
-                }
-            });
+            let connections = connections
+                .into_iter()
+                .enumerate()
+                .map(|(i, c)| (i + 1, c))
+                .collect();
 
             // Send the connections to the game so that it can start the network match.
             matchmaker_channel
@@ -479,7 +476,7 @@ async fn lan_join_server(
 enum MatchmakerNetMsg {
     MatchReady {
         /// The peers they have for the match, with the index in the array being the player index of the peer.
-        peers: [Option<NodeAddr>; MAX_PLAYERS],
+        peers: Vec<(usize, NodeAddr)>,
         /// The player index of the player getting the message.
         player_idx: usize,
         player_count: usize,

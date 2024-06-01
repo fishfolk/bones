@@ -75,9 +75,6 @@ pub const NETWORK_MAX_PREDICTION_WINDOW_DEFAULT: usize = 7;
 /// Amount of frames GGRS will delay local input.
 pub const NETWORK_LOCAL_INPUT_DELAY_DEFAULT: usize = 2;
 
-#[doc(inline)]
-pub use bones_matchmaker_proto::MAX_PLAYERS;
-
 /// Possible errors returned by network loop.
 pub enum NetworkError {
     /// The session was disconnected.
@@ -162,8 +159,6 @@ pub trait NetworkSocket: Sync + Send {
     fn close(&self);
     /// Get the player index of the local player.
     fn player_idx(&self) -> usize;
-    /// Return, for every player index, whether the player is a local player.
-    fn player_is_local(&self) -> [bool; MAX_PLAYERS];
     /// Get the player count for this network match.
     fn player_count(&self) -> usize;
 
@@ -215,8 +210,8 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
     /// The GGRS peer-to-peer session.
     pub session: P2PSession<GgrsConfig<InputTypes::Dense>>,
 
-    /// Array containing a flag indicating, for each player, whether they are a local player.
-    pub player_is_local: [bool; MAX_PLAYERS],
+    /// Local player idx.
+    pub player_idx: usize,
 
     /// Index of local player, computed from player_is_local
     pub local_player_idx: usize,
@@ -254,8 +249,8 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
 pub struct GgrsSessionRunnerInfo {
     /// The socket that will be converted into GGRS socket implementation.
     pub socket: Socket,
-    /// The list of local players.
-    pub player_is_local: [bool; MAX_PLAYERS],
+    /// The local player idx
+    pub player_idx: usize,
     /// the player count.
     pub player_count: usize,
 
@@ -278,11 +273,11 @@ impl GgrsSessionRunnerInfo {
         max_prediction_window: Option<usize>,
         local_input_delay: Option<usize>,
     ) -> Self {
-        let player_is_local = socket.player_is_local();
+        let player_idx = socket.player_idx();
         let player_count = socket.player_count();
         Self {
             socket,
-            player_is_local,
+            player_idx,
             player_count,
             max_prediction_window,
             local_input_delay,
@@ -330,24 +325,21 @@ where
             .with_max_prediction_window(max_prediction)
             .unwrap();
 
-        let mut local_player_idx: Option<usize> = None;
+        let local_player_idx = info.player_idx;
         for i in 0..info.player_count {
-            if info.player_is_local[i] {
+            if i == info.player_idx {
                 builder = builder.add_player(ggrs::PlayerType::Local, i).unwrap();
-                local_player_idx = Some(i);
             } else {
                 builder = builder.add_player(ggrs::PlayerType::Remote(i), i).unwrap();
             }
         }
-        let local_player_idx =
-            local_player_idx.expect("Networking player_is_local array has no local players.");
 
         let session = builder.start_p2p_session(info.socket.clone()).unwrap();
 
         Self {
             last_player_input: InputTypes::Dense::default(),
             session,
-            player_is_local: info.player_is_local,
+            player_idx: info.player_idx,
             local_player_idx,
             accumulator: default(),
             last_run: None,
@@ -630,7 +622,7 @@ where
 
         let runner_info = GgrsSessionRunnerInfo {
             socket: self.socket.clone(),
-            player_is_local: self.player_is_local,
+            player_idx: self.player_idx,
             player_count: self.session.num_players(),
             max_prediction_window: Some(self.session.max_prediction()),
             local_input_delay: Some(self.local_input_delay),

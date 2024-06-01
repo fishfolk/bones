@@ -73,7 +73,7 @@ async fn client() -> anyhow::Result<()> {
         panic!("<= Unexpected message from server!");
     }
 
-    let (player_idx, player_ids, client_count) = loop {
+    let (player_idx, player_ids, _client_count) = loop {
         let mut recv = conn.accept_uni().await?;
         let message = recv.read_to_end(256).await?;
         let message: MatchmakerResponse = postcard::from_bytes(&message)?;
@@ -99,11 +99,10 @@ async fn client() -> anyhow::Result<()> {
     conn.close(0u8.into(), b"done");
 
     let mut tasks = JoinSet::default();
-    for idx in 0..client_count {
-        if idx != player_idx as usize {
+    for (idx, player_id) in player_ids {
+        if idx != player_idx {
             let endpoint_ = endpoint.clone();
             let hello = hello.clone();
-            let player_id = player_ids[idx].as_ref().unwrap().clone();
 
             tasks.spawn(async move {
                 let result = async move {

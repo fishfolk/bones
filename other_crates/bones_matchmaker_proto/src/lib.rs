@@ -11,13 +11,6 @@ pub const MATCH_ALPN: &[u8] = b"/bones/match/0";
 /// ALPN used for the direct connections between players.
 pub const PLAY_ALPN: &[u8] = b"/bones/play/0";
 
-// TODO: Remove this limitation on max players, a variety of types use this for static arrays,
-// should either figure out how to make this a compile-time const value specified by game, or
-// use dynamic arrays.
-//
-/// Max players in networked game
-pub const MAX_PLAYERS: usize = 4;
-
 //
 // === Matchmaking Mode ===
 //
@@ -36,7 +29,7 @@ pub enum MatchmakerRequest {
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
 pub struct MatchInfo {
     /// The number of clients to have in a match
-    pub client_count: u8,
+    pub client_count: usize,
     /// This is an arbitrary set of bytes that must match exactly for clients to end up in the same
     /// match.
     ///
@@ -51,17 +44,17 @@ pub enum MatchmakerResponse {
     /// The conneciton has been accepted
     Accepted,
     /// This is the current number of connected clients
-    ClientCount(u8),
+    ClientCount(usize),
     /// The desired client count has been reached, and you may start the match.
     Success {
         /// The random seed that each client should use.
         random_seed: u64,
         /// The client idx of the current client
-        player_idx: u8,
+        player_idx: usize,
         /// The number of connected clients in the match
-        client_count: u8,
+        client_count: usize,
         /// The node ids of all players.
-        player_ids: [Option<iroh_net::NodeAddr>; MAX_PLAYERS],
+        player_ids: Vec<(usize, iroh_net::NodeAddr)>,
     },
 }
 
