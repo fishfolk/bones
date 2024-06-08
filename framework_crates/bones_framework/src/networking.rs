@@ -51,7 +51,9 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{debug::prelude::*, input, lan, online, proto, NetworkInfo, RUNTIME};
+    pub use super::{
+        debug::prelude::*, input, lan, online, proto, DisconnectedPlayers, NetworkInfo, RUNTIME,
+    };
 }
 
 /// Muliplier for framerate that will be used when playing an online match.
@@ -192,6 +194,16 @@ pub struct NetworkInfo {
     pub socket: Socket,
 }
 
+/// Resource tracking which players have been disconnected.
+/// May not be in world if no disconnects.
+///
+/// If rollback to frame before disconnect, player handle is still included here.
+#[derive(HasSchema, Clone, Default)]
+pub struct DisconnectedPlayers {
+    /// Handles of players that have been disconnected.
+    pub disconnected_players: Vec<usize>,
+}
+
 /// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
 ///
 /// This is where the whole `ggrs` integration is implemented.
@@ -222,6 +234,9 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
 
     /// Session runner's input collector.
     pub input_collector: InputTypes::InputCollector,
+
+    /// Players who have been reported disconnected by ggrs
+    disconnected_players: Vec<usize>,
 
     /// Store copy of socket to be able to restart session runner with existing socket.
     socket: Socket,
@@ -334,6 +349,7 @@ where
             last_run: None,
             network_fps: network_fps as f64,
             original_fps: simulation_fps as f64,
+            disconnected_players: default(),
             input_collector: InputTypes::InputCollector::default(),
             socket: info.socket.clone(),
             local_input_delay,
@@ -398,8 +414,10 @@ where
                 ggrs::GgrsEvent::Synchronized { addr } => {
                     info!(player=%addr, "Syncrhonized network client");
                 }
-                // TODO
-                ggrs::GgrsEvent::Disconnected { .. } => {} //return Err(SessionError::Disconnected)},
+                ggrs::GgrsEvent::Disconnected { addr } => {
+                    warn!(player=%addr, "Player Disconnected");
+                    self.disconnected_players.push(addr);
+                } //return Err(SessionError::Disconnected)},
                 ggrs::GgrsEvent::NetworkInterrupted { addr, .. } => {
                     info!(player=%addr, "Network player interrupted");
                 }
@@ -489,6 +507,12 @@ where
                                         current_frame: self.session.current_frame(),
                                         last_confirmed_frame: self.session.confirmed_frame(),
                                         socket: self.socket.clone(),
+                                    });
+
+                                    // Disconnected players persisted on session runner, and updated each frame.
+                                    // This avoids a rollback from changing resource state.
+                                    world.insert_resource(DisconnectedPlayers {
+                                        disconnected_players: self.disconnected_players.clone(),
                                     });
 
                                     {
