@@ -576,6 +576,30 @@
 <a href="#576" id="576">576</a>
 <a href="#577" id="577">577</a>
 <a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;./networking.md&quot;</span>)]
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
@@ -629,7 +653,9 @@
 
 <span class="doccomment">/// Module prelude.
 </span><span class="kw">pub mod </span>prelude {
-    <span class="kw">pub use super</span>::{debug::prelude::<span class="kw-2">*</span>, input, lan, online, proto, NetworkInfo, RUNTIME};
+    <span class="kw">pub use super</span>::{
+        debug::prelude::<span class="kw-2">*</span>, input, lan, online, proto, DisconnectedPlayers, NetworkInfo, RUNTIME,
+    };
 }
 
 <span class="doccomment">/// Muliplier for framerate that will be used when playing an online match.
@@ -770,6 +796,16 @@
     </span><span class="kw">pub </span>socket: Socket,
 }
 
+<span class="doccomment">/// Resource tracking which players have been disconnected.
+/// May not be in world if no disconnects.
+///
+/// If rollback to frame before disconnect, player handle is still included here.
+</span><span class="attr">#[derive(HasSchema, Clone, Default)]
+</span><span class="kw">pub struct </span>DisconnectedPlayers {
+    <span class="doccomment">/// Handles of players that have been disconnected.
+    </span><span class="kw">pub </span>disconnected_players: Vec&lt;usize&gt;,
+}
+
 <span class="doccomment">/// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
 ///
 /// This is where the whole `ggrs` integration is implemented.
@@ -800,6 +836,9 @@
 
     <span class="doccomment">/// Session runner&#39;s input collector.
     </span><span class="kw">pub </span>input_collector: InputTypes::InputCollector,
+
+    <span class="doccomment">/// Players who have been reported disconnected by ggrs
+    </span>disconnected_players: Vec&lt;usize&gt;,
 
     <span class="doccomment">/// Store copy of socket to be able to restart session runner with existing socket.
     </span>socket: Socket,
@@ -912,6 +951,7 @@
             last_run: <span class="prelude-val">None</span>,
             network_fps: network_fps <span class="kw">as </span>f64,
             original_fps: simulation_fps <span class="kw">as </span>f64,
+            disconnected_players: default(),
             input_collector: InputTypes::InputCollector::default(),
             socket: info.socket.clone(),
             local_input_delay,
@@ -976,8 +1016,10 @@
                 ggrs::GgrsEvent::Synchronized { addr } =&gt; {
                     <span class="macro">info!</span>(player=%addr, <span class="string">&quot;Syncrhonized network client&quot;</span>);
                 }
-                <span class="comment">// TODO
-                </span>ggrs::GgrsEvent::Disconnected { .. } =&gt; {} <span class="comment">//return Err(SessionError::Disconnected)},
+                ggrs::GgrsEvent::Disconnected { addr } =&gt; {
+                    <span class="macro">warn!</span>(player=%addr, <span class="string">&quot;Player Disconnected&quot;</span>);
+                    <span class="self">self</span>.disconnected_players.push(addr);
+                } <span class="comment">//return Err(SessionError::Disconnected)},
                 </span>ggrs::GgrsEvent::NetworkInterrupted { addr, .. } =&gt; {
                     <span class="macro">info!</span>(player=%addr, <span class="string">&quot;Network player interrupted&quot;</span>);
                 }
@@ -1067,6 +1109,12 @@
                                         current_frame: <span class="self">self</span>.session.current_frame(),
                                         last_confirmed_frame: <span class="self">self</span>.session.confirmed_frame(),
                                         socket: <span class="self">self</span>.socket.clone(),
+                                    });
+
+                                    <span class="comment">// Disconnected players persisted on session runner, and updated each frame.
+                                    // This avoids a rollback from changing resource state.
+                                    </span>world.insert_resource(DisconnectedPlayers {
+                                        disconnected_players: <span class="self">self</span>.disconnected_players.clone(),
                                     });
 
                                     {
