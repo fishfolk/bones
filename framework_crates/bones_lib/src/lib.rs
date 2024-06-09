@@ -140,6 +140,7 @@ pub trait SessionRunner: Sync + Send + 'static {
     ///     stages.run(world);
     /// }
     /// fn restart_session(&mut self) {}
+    /// fn disable_local_input(&mut self, disable_input: bool) {}
     /// # }
     /// ```
     fn step(&mut self, now: Instant, world: &mut World, stages: &mut SystemStages);
