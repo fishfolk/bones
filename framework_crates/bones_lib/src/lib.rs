@@ -149,6 +149,9 @@ pub trait SessionRunner: Sync + Send + 'static {
     /// The expectation is that current players using it may continue to, so something like a network
     /// socket or player info should persist.
     fn restart_session(&mut self);
+
+    /// Disable the capture of local input by this session.
+    fn disable_local_input(&mut self, input_disabled: bool);
 }
 
 /// The default [`SessionRunner`], which just runs the systems once every time it is run.
@@ -165,6 +168,9 @@ impl SessionRunner for DefaultSessionRunner {
     fn restart_session(&mut self) {
         *self = DefaultSessionRunner::default();
     }
+
+    // `DefaultSessionRunner` does not collect input so this impl is not relevant.
+    fn disable_local_input(&mut self, _input_disabled: bool) {}
 }
 
 /// The [`Game`] encompasses a complete bones game's logic, independent of the renderer and IO

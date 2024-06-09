@@ -235,6 +235,9 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
     /// Session runner's input collector.
     pub input_collector: InputTypes::InputCollector,
 
+    /// Is local input disabled? (No input will be used if set)
+    pub local_input_disabled: bool,
+
     /// Players who have been reported disconnected by ggrs
     disconnected_players: Vec<usize>,
 
@@ -353,6 +356,7 @@ where
             input_collector: InputTypes::InputCollector::default(),
             socket: info.socket.clone(),
             local_input_delay,
+            local_input_disabled: false,
         }
     }
 }
@@ -455,9 +459,17 @@ where
             if self.accumulator >= step {
                 self.accumulator -= step;
 
-                self.session
-                    .add_local_input(self.local_player_idx, self.last_player_input)
-                    .unwrap();
+                if !self.local_input_disabled {
+                    self.session
+                        .add_local_input(self.local_player_idx, self.last_player_input)
+                        .unwrap();
+                } else {
+                    // If local input is disabled, we still submit a default value representing no-inputs.
+                    // This way if input is disabled current inputs will not be held down indefinitely.
+                    self.session
+                        .add_local_input(self.local_player_idx, InputTypes::Dense::default())
+                        .unwrap();
+                }
 
                 let current_frame = self.session.current_frame();
                 let confirmed_frame = self.session.confirmed_frame();
@@ -598,5 +610,9 @@ where
             local_input_delay: Some(self.local_input_delay),
         };
         *self = GgrsSessionRunner::new(self.original_fps as f32, runner_info);
+    }
+
+    fn disable_local_input(&mut self, input_disabled: bool) {
+        self.local_input_disabled = input_disabled;
     }
 }
