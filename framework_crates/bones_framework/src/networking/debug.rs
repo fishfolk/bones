@@ -9,6 +9,7 @@
 
 use async_channel::{Receiver, Sender};
 use bones_asset::HasSchema;
+use egui::CollapsingHeader;
 use egui_plot::{Bar, BarChart, GridMark, Plot};
 use ggrs::{NetworkStats, PlayerHandle};
 use once_cell::sync::Lazy;
@@ -24,6 +25,11 @@ pub mod prelude {
 /// may be modified to open menu.
 pub fn network_debug_session_plugin(session: &mut Session) {
     session.add_system_to_stage(CoreStage::First, network_debug_window);
+}
+
+pub enum PlayerSyncState {
+    SyncInProgress,
+    Sychronized,
 }
 
 /// Messages used by network debug channel
@@ -45,6 +51,10 @@ pub enum NetworkDebugMessage {
     },
     /// Set the max prediction window for y axis of plot
     SetMaxPrediction(usize),
+    /// List of players that are disconnected
+    DisconnectedPlayers(Vec<usize>),
+    /// Update ggrs synchronization state of player
+    PlayerSync((PlayerSyncState, PlayerHandle)),
 }
 
 /// Sender and receiver for [`NetworkDebugMessage`] for network diagnostics debug tool.
@@ -111,6 +121,13 @@ pub struct NetworkDebug {
     /// Max Prediction Window set in ggrs session runner.
     /// Cached here to determine max y on plot.
     pub max_prediction_window: usize,
+
+    /// List of player handles that have been disconnected
+    pub disconnected_players: Vec<usize>,
+
+    /// Track players that are synchronizing or synchronized. If player not listed,
+    /// no sync has been attempted.
+    pub player_sync_state: HashMap<PlayerHandle, PlayerSyncState>,
 }
 
 impl Default for NetworkDebug {
@@ -125,6 +142,8 @@ impl Default for NetworkDebug {
             paused: false,
             network_stats: vec![],
             max_prediction_window: 0,
+            disconnected_players: vec![],
+            player_sync_state: default(),
         }
     }
 }
@@ -199,6 +218,12 @@ pub fn network_debug_window(
                 }
                 NetworkDebugMessage::SetMaxPrediction(max_preiction_window) => {
                     diagnostics.max_prediction_window = max_preiction_window;
+                }
+                NetworkDebugMessage::DisconnectedPlayers(disconnected_players) => {
+                    diagnostics.disconnected_players = disconnected_players;
+                }
+                NetworkDebugMessage::PlayerSync((sync_state, player)) => {
+                    diagnostics.player_sync_state.insert(player, sync_state);
                 }
             }
         }
@@ -324,9 +349,34 @@ pub fn network_debug_window(
                     for (player_handle, stats) in diagnostics.network_stats.iter() {
                         // let label = format!("{} {}", localization.get("player"), player_handle);
                         let label = format!("{} {}", "player", player_handle);
-                        ui.collapsing(label, |ui| {
-                            ui.monospace(&format!("{stats:?}"));
-                        });
+                        CollapsingHeader::new(label)
+                            .default_open(true)
+                            .show(ui, |ui| {
+                                if diagnostics.disconnected_players.contains(player_handle) {
+                                    ui.colored_label(Color::RED, "Disconnected!");
+                                } else {
+                                    match diagnostics.player_sync_state.get(player_handle) {
+                                        Some(sync_state) => match sync_state {
+                                            PlayerSyncState::SyncInProgress => {
+                                                ui.colored_label(
+                                                Color::ORANGE,
+                                                "GGRS synchronization with player in progress...",
+                                            );
+                                            }
+                                            PlayerSyncState::Sychronized => {
+                                                ui.label("Synchronized with player.");
+                                            }
+                                        },
+                                        None => {
+                                            ui.colored_label(
+                                                Color::RED,
+                                                "Not synchronized with player.",
+                                            );
+                                        }
+                                    }
+                                }
+                                ui.monospace(&format!("{stats:?}"));
+                            });
                     }
                 });
         }

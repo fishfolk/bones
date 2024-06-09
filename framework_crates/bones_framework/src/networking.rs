@@ -3,6 +3,7 @@
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
 use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
+use debug::PlayerSyncState;
 use ggrs::{NetworkStats, P2PSession, PlayerHandle};
 use instant::Duration;
 use once_cell::sync::Lazy;
@@ -414,13 +415,33 @@ where
             match event {
                 ggrs::GgrsEvent::Synchronizing { addr, total, count } => {
                     info!(player=%addr, %total, progress=%count, "Syncing network player");
+                    NETWORK_DEBUG_CHANNEL
+                        .sender
+                        .try_send(NetworkDebugMessage::PlayerSync((
+                            PlayerSyncState::SyncInProgress,
+                            addr,
+                        )))
+                        .unwrap();
                 }
                 ggrs::GgrsEvent::Synchronized { addr } => {
                     info!(player=%addr, "Syncrhonized network client");
+                    NETWORK_DEBUG_CHANNEL
+                        .sender
+                        .try_send(NetworkDebugMessage::PlayerSync((
+                            PlayerSyncState::Sychronized,
+                            addr,
+                        )))
+                        .unwrap();
                 }
                 ggrs::GgrsEvent::Disconnected { addr } => {
                     warn!(player=%addr, "Player Disconnected");
                     self.disconnected_players.push(addr);
+                    NETWORK_DEBUG_CHANNEL
+                        .sender
+                        .try_send(NetworkDebugMessage::DisconnectedPlayers(
+                            self.disconnected_players.clone(),
+                        ))
+                        .unwrap();
                 } //return Err(SessionError::Disconnected)},
                 ggrs::GgrsEvent::NetworkInterrupted { addr, .. } => {
                     info!(player=%addr, "Network player interrupted");
