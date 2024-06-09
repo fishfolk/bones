@@ -621,11 +621,33 @@
 <a href="#621" id="621">621</a>
 <a href="#622" id="622">622</a>
 <a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;./networking.md&quot;</span>)]
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
 <span class="kw">use </span>bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
+<span class="kw">use </span>debug::PlayerSyncState;
 <span class="kw">use </span>ggrs::{NetworkStats, P2PSession, PlayerHandle};
 <span class="kw">use </span>instant::Duration;
 <span class="kw">use </span>once_cell::sync::Lazy;
@@ -1037,13 +1059,33 @@
             <span class="kw">match </span>event {
                 ggrs::GgrsEvent::Synchronizing { addr, total, count } =&gt; {
                     <span class="macro">info!</span>(player=%addr, %total, progress=%count, <span class="string">&quot;Syncing network player&quot;</span>);
+                    NETWORK_DEBUG_CHANNEL
+                        .sender
+                        .try_send(NetworkDebugMessage::PlayerSync((
+                            PlayerSyncState::SyncInProgress,
+                            addr,
+                        )))
+                        .unwrap();
                 }
                 ggrs::GgrsEvent::Synchronized { addr } =&gt; {
                     <span class="macro">info!</span>(player=%addr, <span class="string">&quot;Syncrhonized network client&quot;</span>);
+                    NETWORK_DEBUG_CHANNEL
+                        .sender
+                        .try_send(NetworkDebugMessage::PlayerSync((
+                            PlayerSyncState::Sychronized,
+                            addr,
+                        )))
+                        .unwrap();
                 }
                 ggrs::GgrsEvent::Disconnected { addr } =&gt; {
                     <span class="macro">warn!</span>(player=%addr, <span class="string">&quot;Player Disconnected&quot;</span>);
                     <span class="self">self</span>.disconnected_players.push(addr);
+                    NETWORK_DEBUG_CHANNEL
+                        .sender
+                        .try_send(NetworkDebugMessage::DisconnectedPlayers(
+                            <span class="self">self</span>.disconnected_players.clone(),
+                        ))
+                        .unwrap();
                 } <span class="comment">//return Err(SessionError::Disconnected)},
                 </span>ggrs::GgrsEvent::NetworkInterrupted { addr, .. } =&gt; {
                     <span class="macro">info!</span>(player=%addr, <span class="string">&quot;Network player interrupted&quot;</span>);
