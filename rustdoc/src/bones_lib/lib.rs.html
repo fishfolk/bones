@@ -621,6 +621,13 @@
 <a href="#621" id="621">621</a>
 <a href="#622" id="622">622</a>
 <a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -763,6 +770,7 @@
     ///     stages.run(world);
     /// }
     /// fn restart_session(&amp;mut self) {}
+    /// fn disable_local_input(&amp;mut self, disable_input: bool) {}
     /// # }
     /// ```
     </span><span class="kw">fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>, now: Instant, world: <span class="kw-2">&amp;mut </span>World, stages: <span class="kw-2">&amp;mut </span>SystemStages);
@@ -772,6 +780,9 @@
     /// The expectation is that current players using it may continue to, so something like a network
     /// socket or player info should persist.
     </span><span class="kw">fn </span>restart_session(<span class="kw-2">&amp;mut </span><span class="self">self</span>);
+
+    <span class="doccomment">/// Disable the capture of local input by this session.
+    </span><span class="kw">fn </span>disable_local_input(<span class="kw-2">&amp;mut </span><span class="self">self</span>, input_disabled: bool);
 }
 
 <span class="doccomment">/// The default [`SessionRunner`], which just runs the systems once every time it is run.
@@ -788,6 +799,9 @@
     </span><span class="kw">fn </span>restart_session(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw-2">*</span><span class="self">self </span>= DefaultSessionRunner::default();
     }
+
+    <span class="comment">// `DefaultSessionRunner` does not collect input so this impl is not relevant.
+    </span><span class="kw">fn </span>disable_local_input(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _input_disabled: bool) {}
 }
 
 <span class="doccomment">/// The [`Game`] encompasses a complete bones game&#39;s logic, independent of the renderer and IO
