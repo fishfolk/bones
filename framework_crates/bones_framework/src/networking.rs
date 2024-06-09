@@ -515,6 +515,11 @@ where
                                     // Input has been consumed, signal that we are in new input frame
                                     self.input_collector.advance_frame();
 
+                                    // TODO: Make sure NetworkInfo is initialized immediately when session is created,
+                                    // even before a frame has advanced.
+                                    //
+                                    // The existance of this resource may be used to determine if in an online match, and there could
+                                    // be race if expected it to exist but testing before first frame advance.
                                     world.insert_resource(NetworkInfo {
                                         current_frame: self.session.current_frame(),
                                         last_confirmed_frame: self.session.confirmed_frame(),
