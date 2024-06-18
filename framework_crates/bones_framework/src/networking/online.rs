@@ -95,7 +95,7 @@ async fn search_for_game(
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::RequestMatch(MatchInfo {
-        client_count: player_count.try_into().unwrap(),
+        client_count: player_count,
         match_data: b"jumpy_default_game".to_vec(),
     });
     info!(request=?message, "Sending match request");
