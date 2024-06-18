@@ -484,7 +484,10 @@ where
                     // If local input is disabled, we still submit a default value representing no-inputs.
                     // This way if input is disabled current inputs will not be held down indefinitely.
                     self.session
-                        .add_local_input(self.local_player_idx as usize, InputTypes::Dense::default())
+                        .add_local_input(
+                            self.local_player_idx as usize,
+                            InputTypes::Dense::default(),
+                        )
                         .unwrap();
                 }
 

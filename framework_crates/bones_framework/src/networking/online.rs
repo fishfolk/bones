@@ -44,7 +44,7 @@ pub struct OnlineMatchmaker(BiChannelClient<OnlineMatchmakerRequest, OnlineMatch
 /// Online matchmaker request
 #[derive(Debug)]
 pub enum OnlineMatchmakerRequest {
-    SearchForGame { id: NodeId, player_count: usize },
+    SearchForGame { id: NodeId, player_count: u32 },
     StopSearch,
 }
 
@@ -80,7 +80,7 @@ async fn online_matchmaker(
 async fn search_for_game(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     id: NodeId,
-    player_count: usize,
+    player_count: u32,
 ) -> anyhow::Result<()> {
     info!("Connecting to online matchmaker");
     let ep = get_network_endpoint().await;
@@ -176,7 +176,7 @@ async fn search_for_game(
 }
 
 /// Search for game with `matchmaking_server` and `player_count`
-pub fn start_search_for_game(matchmaking_server: NodeId, player_count: usize) {
+pub fn start_search_for_game(matchmaking_server: NodeId, player_count: u32) {
     // TODO remove
     info!("Starting search for online game with player count {player_count}");
     ONLINE_MATCHMAKER
