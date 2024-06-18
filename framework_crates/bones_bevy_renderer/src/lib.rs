@@ -223,6 +223,8 @@ impl BonesBevyRenderer {
             Update,
             (
                 load_egui_textures,
+                sync_bones_window,
+                handle_asset_changes,
                 // Run world simulation
                 step_bones_game,
                 // Synchronize bones render components with the Bevy world.
@@ -298,40 +300,19 @@ fn load_egui_textures(
 
 /// System to step the bones simulation.
 fn step_bones_game(world: &mut World) {
-    let mut game = world.remove_resource::<BonesGame>().unwrap();
-    let mut bones_image_ids = world.remove_resource::<BonesImageIds>().unwrap();
-    let mut bevy_egui_textures = world
-        .remove_resource::<bevy_egui::EguiUserTextures>()
-        .unwrap();
-    let mut bevy_images = world.remove_resource::<Assets<Image>>().unwrap();
+    world.resource_scope(|world: &mut World, mut game: Mut<BonesGame>| {
+        let time = world.get_resource::<Time>().unwrap();
+        game.step(time.last_update().unwrap_or_else(Instant::now));
+    });
+}
 
-    let mut winow_query = world.query::<&mut Window>();
-    let mut window = winow_query.get_single_mut(world).unwrap();
-    let bones_window = match game.shared_resource_cell::<bones::Window>() {
-        Some(w) => w,
-        None => {
-            game.insert_shared_resource(bones::Window {
-                size: vec2(window.width(), window.height()),
-                fullscreen: matches!(&window.mode, WindowMode::BorderlessFullscreen),
-            });
-            game.shared_resource_cell().unwrap()
-        }
-    };
-    let bones_window = bones_window.borrow_mut().unwrap();
-
-    let is_fullscreen = matches!(&window.mode, WindowMode::BorderlessFullscreen);
-    if is_fullscreen != bones_window.fullscreen {
-        window.mode = if bones_window.fullscreen {
-            WindowMode::BorderlessFullscreen
-        } else {
-            WindowMode::Windowed
-        };
-    }
-    drop(bones_window);
-
-    let bevy_time = world.resource::<Time>();
-
-    // Reload assets if necessary
+/// System for handling asset changes in the bones asset server
+pub fn handle_asset_changes(
+    game: ResMut<BonesGame>,
+    mut bevy_images: ResMut<Assets<Image>>,
+    mut bevy_egui_textures: ResMut<bevy_egui::EguiUserTextures>,
+    mut bones_image_ids: ResMut<BonesImageIds>,
+) {
     if let Some(mut asset_server) = game.shared_resource_mut::<bones::AssetServer>() {
         asset_server.handle_asset_changes(|asset_server, handle| {
             let mut bones_egui_textures =
@@ -354,12 +335,4 @@ fn step_bones_game(world: &mut World) {
             }
         })
     }
-
-    // Step the game simulation
-    game.step(bevy_time.last_update().unwrap_or_else(Instant::now));
-
-    world.insert_resource(game);
-    world.insert_resource(bones_image_ids);
-    world.insert_resource(bevy_egui_textures);
-    world.insert_resource(bevy_images);
 }

@@ -95,6 +95,31 @@ pub fn sync_clear_color(mut clear_color: ResMut<ClearColor>, game: Res<BonesGame
     }
 }
 
+/// Syncs elements of the bones window
+pub fn sync_bones_window(mut game: ResMut<BonesGame>, mut window_query: Query<&mut Window>) {
+    let mut window = window_query.get_single_mut().unwrap();
+    let bones_window = match game.shared_resource_cell::<bones::Window>() {
+        Some(w) => w,
+        None => {
+            game.insert_shared_resource(bones::Window {
+                size: vec2(window.width(), window.height()),
+                fullscreen: matches!(&window.mode, WindowMode::BorderlessFullscreen),
+            });
+            game.shared_resource_cell().unwrap()
+        }
+    };
+    let bones_window = bones_window.borrow().unwrap();
+
+    let is_fullscreen = matches!(&window.mode, WindowMode::BorderlessFullscreen);
+    if is_fullscreen != bones_window.fullscreen {
+        window.mode = if bones_window.fullscreen {
+            WindowMode::BorderlessFullscreen
+        } else {
+            WindowMode::Windowed
+        };
+    }
+}
+
 /// Sync bones cameras with Bevy
 pub fn sync_cameras(
     game: Res<BonesGame>,
