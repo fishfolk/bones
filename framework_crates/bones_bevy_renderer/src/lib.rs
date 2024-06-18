@@ -874,9 +874,6 @@ fn sync_egui_settings(
     }
 }
 
-#[derive(Resource, Deref, DerefMut)]
-struct CameraBuffer(Vec<(bones::Camera, bones::Transform)>);
-
 /// Sync bones cameras with Bevy
 fn sync_cameras(
     data: Res<BonesData>,
