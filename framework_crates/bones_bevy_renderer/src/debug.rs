@@ -18,8 +18,7 @@ impl Plugin for BevyDebugPlugin {
     }
 }
 
-fn sync_frame_time(mut bones_data: ResMut<BonesGame>, diagnostics: Res<DiagnosticsStore>) {
-    let game = &mut bones_data;
+fn sync_frame_time(mut game: ResMut<BonesGame>, diagnostics: Res<DiagnosticsStore>) {
     let mut state = game.init_shared_resource::<FrameDiagState>();
 
     let fps = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS).unwrap();

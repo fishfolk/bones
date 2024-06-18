@@ -6,15 +6,13 @@ use bones_framework::prelude::{BitSet, ComponentIterBitset};
 pub use lyon::ShapePlugin;
 
 pub fn sync_bones_path2ds(
-    data: Res<BonesGame>,
+    game: Res<BonesGame>,
     mut commands: Commands,
     mut bevy_bones_path2ds: Query<
         (Entity, &mut lyon::Path, &mut lyon::Stroke, &mut Transform),
         With<BevyBonesEntity>,
     >,
 ) {
-    let game = &data;
-
     // Collect the bevy path2ds that we've created for the bones game
     let mut bevy_bones_path2ds = bevy_bones_path2ds.iter_mut();
 
