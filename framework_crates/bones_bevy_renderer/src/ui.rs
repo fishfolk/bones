@@ -3,7 +3,7 @@ use bevy_egui::EguiContext;
 
 /// Startup system to load egui fonts and textures.
 pub fn setup_egui(world: &mut World) {
-    world.resource_scope(|world: &mut World, mut bones_data: Mut<BonesData>| {
+    world.resource_scope(|world: &mut World, mut bones_data: Mut<BonesGame>| {
         let ctx = {
             let mut egui_query = world.query_filtered::<&mut EguiContext, With<Window>>();
             let mut egui_ctx = egui_query.get_single_mut(world).unwrap();
@@ -11,18 +11,18 @@ pub fn setup_egui(world: &mut World) {
         };
 
         // Insert the egui context as a shared resource
-        bones_data
-            .game
-            .insert_shared_resource(bones::EguiCtx(ctx.clone()));
+        bones_data.insert_shared_resource(bones::EguiCtx(ctx.clone()));
 
-        if let Some(bones_assets) = &bones_data.asset_server {
+        if let Some(bones_assets) = &bones_data.asset_server() {
             update_egui_fonts(&ctx, bones_assets);
 
             // Insert the bones egui textures
             ctx.data_mut(|map| {
                 map.insert_temp(
                     bevy_egui::egui::Id::null(),
-                    bones_data.bones_egui_textures.clone(),
+                    bones_data
+                        .shared_resource_cell::<bones::EguiTextures>()
+                        .unwrap(),
                 );
             });
         }
@@ -31,20 +31,20 @@ pub fn setup_egui(world: &mut World) {
 
 pub fn egui_input_hook(
     mut egui_query: Query<&mut bevy_egui::EguiInput, With<Window>>,
-    mut data: ResMut<BonesData>,
+    mut data: ResMut<BonesGame>,
 ) {
-    if let Some(hook) = data.game.shared_resource_cell::<bones::EguiInputHook>() {
+    if let Some(hook) = data.shared_resource_cell::<bones::EguiInputHook>() {
         let hook = hook.borrow().unwrap();
         let mut egui_input = egui_query.get_single_mut().unwrap();
-        (hook.0)(&mut data.game, &mut egui_input);
+        (hook.0)(&mut data, &mut egui_input);
     }
 }
 
 pub fn sync_egui_settings(
-    data: Res<BonesData>,
+    data: Res<BonesGame>,
     mut bevy_egui_settings: ResMut<bevy_egui::EguiSettings>,
 ) {
-    let game = &data.game;
+    let game = &data;
 
     for session_name in &game.sorted_session_keys {
         let session = game.sessions.get(*session_name).unwrap();

@@ -12,12 +12,12 @@ pub fn insert_bones_input(
         bones::KeyboardInputs,
         bones::GamepadInputs,
     )>,
-    mut data: ResMut<BonesData>,
+    mut data: ResMut<BonesGame>,
 ) {
     // Add the game inputs
-    data.game.insert_shared_resource(mouse_inputs);
-    data.game.insert_shared_resource(keyboard_inputs);
-    data.game.insert_shared_resource(gamepad_inputs);
+    data.insert_shared_resource(mouse_inputs);
+    data.insert_shared_resource(keyboard_inputs);
+    data.insert_shared_resource(gamepad_inputs);
 }
 
 pub fn get_bones_input(

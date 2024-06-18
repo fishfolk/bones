@@ -83,8 +83,8 @@ impl BonesImageIds {
     }
 }
 
-pub fn sync_clear_color(mut clear_color: ResMut<ClearColor>, mut data: ResMut<BonesData>) {
-    let game = &mut data.game;
+pub fn sync_clear_color(mut clear_color: ResMut<ClearColor>, mut data: ResMut<BonesGame>) {
+    let game = &mut data;
 
     for name in &game.sorted_session_keys {
         let session = game.sessions.get(*name).unwrap();
@@ -99,11 +99,11 @@ pub fn sync_clear_color(mut clear_color: ResMut<ClearColor>, mut data: ResMut<Bo
 
 /// Sync bones cameras with Bevy
 pub fn sync_cameras(
-    data: Res<BonesData>,
+    data: Res<BonesGame>,
     mut commands: Commands,
     mut bevy_bones_cameras: Query<Entity, (With<BevyBonesEntity>, With<Camera>)>,
 ) {
-    let game = &data.game;
+    let game = &data;
 
     // Collect the bevy cameras that we've created for the bones game
     let mut bevy_bones_cameras = bevy_bones_cameras.iter_mut();
@@ -181,12 +181,12 @@ pub fn sync_cameras(
 
 pub fn extract_bones_sprites(
     mut extracted_sprites: ResMut<ExtractedSprites>,
-    data: Extract<Res<BonesData>>,
+    data: Extract<Res<BonesGame>>,
     bones_image_ids: Extract<Res<BonesImageIds>>,
     bones_renderable_entity: Extract<Res<BonesGameEntity>>,
 ) {
-    let game = &data.game;
-    let Some(bones_assets) = &data.asset_server else {
+    let game = &data;
+    let Some(bones_assets) = &data.asset_server() else {
         return;
     };
 
@@ -314,12 +314,12 @@ pub fn extract_bones_sprites(
 
 pub fn extract_bones_tilemaps(
     mut extracted_sprites: ResMut<ExtractedSprites>,
-    data: Extract<Res<BonesData>>,
+    data: Extract<Res<BonesGame>>,
     bones_image_ids: Extract<Res<BonesImageIds>>,
     bones_renderable_entity: Extract<Res<BonesGameEntity>>,
 ) {
-    let game = &data.game;
-    let Some(bones_assets) = &data.asset_server else {
+    let game = &data;
+    let Some(bones_assets) = &data.asset_server() else {
         return;
     };
 

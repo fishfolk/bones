@@ -6,7 +6,7 @@ use bevy::{
 };
 use bones_framework::debug::FrameDiagState;
 
-use crate::BonesData;
+use crate::BonesGame;
 
 /// Plugin for debug tools that hook into Bevy, such as [`bevy::diagnostic::FrameTimeDiagnosticsPlugin`].
 pub struct BevyDebugPlugin;
@@ -18,8 +18,8 @@ impl Plugin for BevyDebugPlugin {
     }
 }
 
-fn sync_frame_time(mut bones_data: ResMut<BonesData>, diagnostics: Res<DiagnosticsStore>) {
-    let game = &mut bones_data.game;
+fn sync_frame_time(mut bones_data: ResMut<BonesGame>, diagnostics: Res<DiagnosticsStore>) {
+    let game = &mut bones_data;
     let mut state = game.init_shared_resource::<FrameDiagState>();
 
     let fps = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS).unwrap();

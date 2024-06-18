@@ -50,9 +50,7 @@ pub struct BevyBonesEntity;
 pub struct BonesBevyRenderer {
     /// Skip the default loading screen and run the bones game immediately, so that you can
     /// implement your own loading screen.
-    pub custom_load_progress: Option<
-        Box<dyn FnMut(&bones::AssetServer, &bevy_egui::egui::Context) + Sync + Send + 'static>,
-    >,
+    pub custom_load_progress: Option<LoadingFunction>,
     /// Whether or not to use nearest-neighbor sampling for textures.
     pub pixel_art: bool,
     /// The bones game to run.
@@ -70,20 +68,19 @@ pub struct BonesBevyRenderer {
     pub packs_dir: PathBuf,
 }
 
-/// Bevy resource that contains the info for the bones game that is being rendered.
-#[derive(Resource)]
-pub struct BonesData {
-    /// The bones game.
-    pub game: bones::Game,
-    /// The bones asset server cell.
-    pub asset_server: Option<bones::AssetServer>,
-    /// The bones egui texture resource.
-    pub bones_egui_textures: bones::AtomicResource<bones::EguiTextures>,
-    /// The custom load progress indicator.
-    pub custom_load_progress: Option<
-        Box<dyn FnMut(&bones::AssetServer, &bevy_egui::egui::Context) + Sync + Send + 'static>,
-    >,
+/// Bevy resource containing the [`bones::Game`]
+#[derive(Resource, Deref, DerefMut)]
+pub struct BonesGame(pub bones::Game);
+impl BonesGame {
+    fn asset_server(&self) -> Option<bones::Ref<bones::AssetServer>> {
+        self.0.shared_resource()
+    }
 }
+
+#[derive(Resource, Deref, DerefMut)]
+struct LoadingContext(pub Option<LoadingFunction>);
+type LoadingFunction =
+    Box<dyn FnMut(&bones::AssetServer, &bevy_egui::egui::Context) + Sync + Send + 'static>;
 
 impl BonesBevyRenderer {
     // TODO: Create a better builder pattern struct for `BonesBevyRenderer`.
@@ -188,35 +185,25 @@ impl BonesBevyRenderer {
         self.game.init_shared_resource::<bones::GamepadInputs>();
 
         // Insert the bones data
-        app.insert_resource(BonesData {
-            asset_server: self
-                .game
-                .shared_resource::<bones::AssetServer>()
-                .map(|x| (*x).clone()),
-            bones_egui_textures: self
-                .game
-                .shared_resource_cell::<bones::EguiTextures>()
-                .unwrap(),
-            game: self.game,
-            custom_load_progress: self.custom_load_progress,
-        })
-        .init_resource::<BonesGameEntity>();
+        app.insert_resource(BonesGame(self.game))
+            .insert_resource(LoadingContext(self.custom_load_progress))
+            .init_resource::<BonesGameEntity>();
 
-        let assets_are_loaded = |data: Res<BonesData>| {
+        let assets_are_loaded = |data: Res<BonesGame>| {
             // Game is not required to have AssetServer, so default to true.
-            data.asset_server
+            data.asset_server()
                 .as_ref()
                 .map(|x| x.load_progress.is_finished())
                 .unwrap_or(true)
         };
-        let assets_not_loaded = |data: Res<BonesData>| {
-            data.asset_server
+        let assets_not_loaded = |data: Res<BonesGame>| {
+            data.asset_server()
                 .as_ref()
                 .map(|x| !x.load_progress.is_finished())
                 .unwrap_or(true)
         };
         let egui_ctx_initialized =
-            |data: Res<BonesData>| data.game.shared_resource::<EguiCtx>().is_some();
+            |data: Res<BonesGame>| data.shared_resource::<EguiCtx>().is_some();
 
         // Add the world sync systems
         app.add_systems(
@@ -265,21 +252,17 @@ impl BonesBevyRenderer {
 }
 
 fn asset_load_status(
-    mut data: ResMut<BonesData>,
+    data: Res<BonesGame>,
+    mut custom_load_context: ResMut<LoadingContext>,
     mut egui_query: Query<&mut bevy_egui::EguiContext, With<Window>>,
 ) {
-    let BonesData {
-        asset_server,
-        custom_load_progress,
-        ..
-    } = &mut *data;
-    let Some(asset_server) = &asset_server else {
+    let Some(asset_server) = &data.asset_server() else {
         return;
     };
 
     let mut ctx = egui_query.single_mut();
-    if let Some(load_progress) = custom_load_progress {
-        (load_progress)(asset_server, ctx.get_mut());
+    if let Some(function) = &mut **custom_load_context {
+        (function)(asset_server, ctx.get_mut());
     } else {
         default_load_progress(asset_server, ctx.get_mut());
     }
@@ -287,7 +270,7 @@ fn asset_load_status(
 
 fn load_egui_textures(
     mut has_initialized: Local<bool>,
-    data: ResMut<BonesData>,
+    data: ResMut<BonesGame>,
     mut bones_image_ids: ResMut<BonesImageIds>,
     mut bevy_images: ResMut<Assets<Image>>,
     mut bevy_egui_textures: ResMut<bevy_egui::EguiUserTextures>,
@@ -297,11 +280,8 @@ fn load_egui_textures(
     } else {
         return;
     }
-    if let Some(asset_server) = &data.asset_server {
-        let bones_egui_textures_cell = data
-            .game
-            .shared_resource_cell::<bones::EguiTextures>()
-            .unwrap();
+    if let Some(asset_server) = &data.asset_server() {
+        let bones_egui_textures_cell = data.shared_resource_cell::<bones::EguiTextures>().unwrap();
         // TODO: Avoid doing this every frame when there have been no assets loaded.
         // We should should be able to use the asset load progress event listener to detect newly
         // loaded assets that will need to be handled.
@@ -318,7 +298,7 @@ fn load_egui_textures(
 
 /// System to step the bones simulation.
 fn step_bones_game(world: &mut World) {
-    let mut data = world.remove_resource::<BonesData>().unwrap();
+    let mut data = world.remove_resource::<BonesGame>().unwrap();
     let mut bones_image_ids = world.remove_resource::<BonesImageIds>().unwrap();
     let mut bevy_egui_textures = world
         .remove_resource::<bevy_egui::EguiUserTextures>()
@@ -327,14 +307,14 @@ fn step_bones_game(world: &mut World) {
 
     let mut winow_query = world.query::<&mut Window>();
     let mut window = winow_query.get_single_mut(world).unwrap();
-    let bones_window = match data.game.shared_resource_cell::<bones::Window>() {
+    let bones_window = match data.shared_resource_cell::<bones::Window>() {
         Some(w) => w,
         None => {
-            data.game.insert_shared_resource(bones::Window {
+            data.insert_shared_resource(bones::Window {
                 size: vec2(window.width(), window.height()),
                 fullscreen: matches!(&window.mode, WindowMode::BorderlessFullscreen),
             });
-            data.game.shared_resource_cell().unwrap()
+            data.shared_resource_cell().unwrap()
         }
     };
     let bones_window = bones_window.borrow_mut().unwrap();
@@ -349,7 +329,7 @@ fn step_bones_game(world: &mut World) {
     }
     drop(bones_window);
 
-    let BonesData { game, .. } = &mut data;
+    let game = &mut data;
 
     let bevy_time = world.resource::<Time>();
 
