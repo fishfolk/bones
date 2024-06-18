@@ -140,19 +140,7 @@ impl BonesBevyRenderer {
             asset_server.set_game_version(self.game_version);
 
             // Configure the AssetIO implementation
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                let io = bones::FileAssetIo::new(&self.asset_dir, &self.packs_dir);
-                asset_server.set_io(io);
-            }
-            #[cfg(target_arch = "wasm32")]
-            {
-                let window = web_sys::window().unwrap();
-                let path = window.location().pathname().unwrap();
-                let base = path.rsplit_once('/').map(|x| x.0).unwrap_or(&path);
-                let io = bones::WebAssetIo::new(&format!("{base}/assets"));
-                asset_server.set_io(io);
-            }
+            asset_server.set_io(asset_io(self.asset_dir, self.packs_dir));
 
             // Spawn the task to load game assets
             let s = asset_server.clone();
@@ -250,6 +238,21 @@ impl BonesBevyRenderer {
         }
 
         app
+    }
+}
+
+/// A [`bones::AssetIo`] configured for web and local file access
+pub fn asset_io(asset_dir: PathBuf, packs_dir: PathBuf) -> impl bones::AssetIo + 'static {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        bones::FileAssetIo::new(&asset_dir, &packs_dir)
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let window = web_sys::window().unwrap();
+        let path = window.location().pathname().unwrap();
+        let base = path.rsplit_once('/').map(|x| x.0).unwrap_or(&path);
+        bones::WebAssetIo::new(&format!("{base}/assets"))
     }
 }
 
