@@ -177,22 +177,6 @@ impl BonesBevyRenderer {
             .insert_resource(LoadingContext(self.custom_load_progress))
             .init_resource::<BonesGameEntity>();
 
-        let assets_are_loaded = |game: Res<BonesGame>| {
-            // Game is not required to have AssetServer, so default to true.
-            game.asset_server()
-                .as_ref()
-                .map(|x| x.load_progress.is_finished())
-                .unwrap_or(true)
-        };
-        let assets_not_loaded = |game: Res<BonesGame>| {
-            game.asset_server()
-                .as_ref()
-                .map(|x| !x.load_progress.is_finished())
-                .unwrap_or(true)
-        };
-        let egui_ctx_initialized =
-            |game: Res<BonesGame>| game.shared_resource::<EguiCtx>().is_some();
-
         // Add the world sync systems
         app.add_systems(
             PreUpdate,
@@ -239,6 +223,25 @@ impl BonesBevyRenderer {
 
         app
     }
+}
+
+fn egui_ctx_initialized(game: Res<BonesGame>) -> bool {
+    game.shared_resource::<EguiCtx>().is_some()
+}
+
+fn assets_are_loaded(game: Res<BonesGame>) -> bool {
+    // Game is not required to have AssetServer, so default to true.
+    game.asset_server()
+        .as_ref()
+        .map(|x| x.load_progress.is_finished())
+        .unwrap_or(true)
+}
+
+fn assets_not_loaded(game: Res<BonesGame>) -> bool {
+    game.asset_server()
+        .as_ref()
+        .map(|x| !x.load_progress.is_finished())
+        .unwrap_or(true)
 }
 
 /// A [`bones::AssetIo`] configured for web and local file access
