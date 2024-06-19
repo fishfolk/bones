@@ -117,20 +117,19 @@ impl BonesBevyRenderer {
             plugins = plugins.set(ImagePlugin::default_nearest());
         }
 
-        app.add_plugins(plugins)
-            .add_plugins((
-                bevy_egui::EguiPlugin,
-                lyon::ShapePlugin,
-                debug::BevyDebugPlugin,
-            ))
-            .insert_resource({
+        app.add_plugins(plugins).add_plugins((
+            bevy_egui::EguiPlugin,
+            lyon::ShapePlugin,
+            debug::BevyDebugPlugin,
+        ));
+        if self.pixel_art {
+            app.insert_resource({
                 let mut egui_settings = bevy_egui::EguiSettings::default();
-                if self.pixel_art {
-                    egui_settings.use_nearest_descriptor();
-                }
+                egui_settings.use_nearest_descriptor();
                 egui_settings
-            })
-            .init_resource::<BonesImageIds>();
+            });
+        }
+        app.init_resource::<BonesImageIds>();
 
         'asset_load: {
             let Some(mut asset_server) = self.game.shared_resource_mut::<bones::AssetServer>()
