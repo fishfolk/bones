@@ -93,7 +93,7 @@ impl BonesBevyRenderer {
             custom_load_progress: None,
             game,
             game_version: bones::Version::new(0, 1, 0),
-            app_namespace: ("org".into(), "fishfolk".into(), "bones_demo_game".into()),
+            app_namespace: ("local".into(), "developer".into(), "bones_demo_game".into()),
             asset_dir: PathBuf::from("assets"),
             packs_dir: PathBuf::from("packs"),
         }
