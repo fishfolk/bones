@@ -5,46 +5,36 @@
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
 
-use std::path::PathBuf;
-
 pub use bevy;
-
-use bevy::{
-    input::InputSystem,
-    prelude::*,
-    render::RenderApp,
-    sprite::{extract_sprites, SpriteSystem},
-    tasks::IoTaskPool,
-    utils::{HashMap, Instant},
-    window::WindowMode,
-};
-use glam::*;
-
-use bones_framework::prelude::{self as bones, EguiCtx, SchemaBox, SCHEMA_REGISTRY};
-use prelude::convert::{IntoBevy, IntoBones};
-use serde::{de::Visitor, Deserialize, Serialize};
 
 /// The prelude
 pub mod prelude {
     pub use crate::*;
 }
 
-mod convert;
 mod debug;
 mod storage;
 
+mod convert;
+use convert::*;
 mod input;
 use input::*;
-mod lyon;
-use lyon::*;
 mod render;
 use render::*;
 mod ui;
 use ui::*;
 
-/// Marker component for entities that are rendered in Bevy for bones.
-#[derive(Component)]
-pub struct BevyBonesEntity;
+use bevy::prelude::*;
+use bones_framework::prelude as bones;
+
+use bevy::{
+    input::InputSystem,
+    render::RenderApp,
+    sprite::{extract_sprites, SpriteSystem},
+    tasks::IoTaskPool,
+    utils::Instant,
+};
+use std::path::PathBuf;
 
 /// Renderer for [`bones_framework`] [`Game`][bones::Game]s using Bevy.
 pub struct BonesBevyRenderer {
@@ -72,7 +62,8 @@ pub struct BonesBevyRenderer {
 #[derive(Resource, Deref, DerefMut)]
 pub struct BonesGame(pub bones::Game);
 impl BonesGame {
-    fn asset_server(&self) -> Option<bones::Ref<bones::AssetServer>> {
+    /// Shorthand for [`bones::AssetServer`] typed access to the shared resource
+    pub fn asset_server(&self) -> Option<bones::Ref<bones::AssetServer>> {
         self.0.shared_resource()
     }
 }
@@ -119,7 +110,7 @@ impl BonesBevyRenderer {
 
         app.add_plugins(plugins).add_plugins((
             bevy_egui::EguiPlugin,
-            lyon::ShapePlugin,
+            bevy_prototype_lyon::plugin::ShapePlugin,
             debug::BevyDebugPlugin,
         ));
         if self.pixel_art {
@@ -224,7 +215,7 @@ impl BonesBevyRenderer {
 }
 
 fn egui_ctx_initialized(game: Res<BonesGame>) -> bool {
-    game.shared_resource::<EguiCtx>().is_some()
+    game.shared_resource::<bones::EguiCtx>().is_some()
 }
 
 fn assets_are_loaded(game: Res<BonesGame>) -> bool {

@@ -1,4 +1,7 @@
-use super::*;
+use bevy::log::error;
+use bones_framework::prelude::*;
+use serde::{de::Visitor, Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[cfg(target_arch = "wasm32")]
 pub use wasm::StorageBackend;
@@ -17,7 +20,7 @@ mod wasm {
         }
     }
 
-    impl bones::StorageApi for StorageBackend {
+    impl StorageApi for StorageBackend {
         fn save(&mut self, data: Vec<SchemaBox>) {
             let mut buffer = Vec::new();
             let mut serializer = serde_yaml::Serializer::new(&mut buffer);
@@ -65,8 +68,8 @@ mod native {
         }
     }
 
-    impl bones::StorageApi for StorageBackend {
-        fn save(&mut self, data: Vec<bones::SchemaBox>) {
+    impl StorageApi for StorageBackend {
+        fn save(&mut self, data: Vec<SchemaBox>) {
             let file = std::fs::OpenOptions::new()
                 .write(true)
                 .truncate(true)
@@ -79,7 +82,7 @@ mod native {
                 .expect("Failed to serialize to storage file.");
         }
 
-        fn load(&mut self) -> Vec<bones::SchemaBox> {
+        fn load(&mut self) -> Vec<SchemaBox> {
             use anyhow::Context;
             if self.storage_path.exists() {
                 let result: anyhow::Result<LoadedStorage> = (|| {
@@ -116,7 +119,7 @@ impl Serialize for LoadedStorage {
     where
         S: serde::Serializer,
     {
-        let data: HashMap<String, bones::SchemaRef> = self
+        let data: HashMap<String, SchemaRef> = self
             .0
             .iter()
             .map(|x| (x.schema().full_name.to_string(), x.as_ref()))
@@ -127,7 +130,7 @@ impl Serialize for LoadedStorage {
 
         for (key, value) in data {
             map.serialize_key(&key)?;
-            map.serialize_value(&bones::SchemaSerializer(value))?;
+            map.serialize_value(&SchemaSerializer(value))?;
         }
 
         map.end()
@@ -169,7 +172,7 @@ impl<'de> Visitor<'de> for LoadedStorageVisitor {
                 continue;
             };
 
-            data.push(map.next_value_seed(bones::SchemaDeserializer(schema))?);
+            data.push(map.next_value_seed(SchemaDeserializer(schema))?);
         }
 
         Ok(data)
