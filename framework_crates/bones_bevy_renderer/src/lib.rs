@@ -38,8 +38,7 @@ use std::path::PathBuf;
 
 /// Renderer for [`bones_framework`] [`Game`][bones::Game]s using Bevy.
 pub struct BonesBevyRenderer {
-    /// Skip the default loading screen and run the bones game immediately, so that you can
-    /// implement your own loading screen.
+    /// Optional field to implement your own loading screen.
     pub custom_load_progress: Option<LoadingFunction>,
     /// Whether or not to use nearest-neighbor sampling for textures.
     pub pixel_art: bool,
@@ -89,17 +88,29 @@ impl BonesBevyRenderer {
             packs_dir: PathBuf::from("packs"),
         }
     }
-    pub fn pixel_art(mut self, pixel_art: bool) -> Self {
+    /// Insert a custom loading screen function that will be used in place of the default
+    pub fn loading_screen(mut self, function: LoadingFunction) -> Self {
+        self.custom_load_progress = Some(function);
+        self
+    }
+    /// Whether or not to use nearest-neighbor sampling for textures.
+    pub fn pixel_art(self, pixel_art: bool) -> Self {
         Self { pixel_art, ..self }
     }
+    /// The (qualifier, organization, application) that will be used to pick a persistent storage
+    /// location for the game.
+    ///
+    /// For example: `("org", "fishfolk", "jumpy")`
     pub fn namespace(mut self, (qualifier, organization, application): (&str, &str, &str)) -> Self {
         self.app_namespace = (qualifier.into(), organization.into(), application.into());
         self
     }
-    pub fn asset_dir(mut self, asset_dir: PathBuf) -> Self {
+    /// The path to load assets from.
+    pub fn asset_dir(self, asset_dir: PathBuf) -> Self {
         Self { asset_dir, ..self }
     }
-    pub fn packs_dir(mut self, packs_dir: PathBuf) -> Self {
+    /// The path to load asset packs from.
+    pub fn packs_dir(self, packs_dir: PathBuf) -> Self {
         Self { packs_dir, ..self }
     }
 
