@@ -89,6 +89,19 @@ impl BonesBevyRenderer {
             packs_dir: PathBuf::from("packs"),
         }
     }
+    pub fn pixel_art(mut self, pixel_art: bool) -> Self {
+        Self { pixel_art, ..self }
+    }
+    pub fn namespace(mut self, (qualifier, organization, application): (&str, &str, &str)) -> Self {
+        self.app_namespace = (qualifier.into(), organization.into(), application.into());
+        self
+    }
+    pub fn asset_dir(mut self, asset_dir: PathBuf) -> Self {
+        Self { asset_dir, ..self }
+    }
+    pub fn packs_dir(mut self, packs_dir: PathBuf) -> Self {
+        Self { packs_dir, ..self }
+    }
 
     /// Return a bevy [`App`] configured to run the bones game.
     pub fn app(mut self) -> App {
