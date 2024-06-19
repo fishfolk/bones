@@ -165,7 +165,6 @@ impl BonesBevyRenderer {
 
         self.game
             .insert_shared_resource(bones::EguiTextures::default());
-        app.insert_resource(BonesImageIds::default());
 
         // Insert empty inputs that will be updated by the `insert_bones_input` system later.
         self.game.init_shared_resource::<bones::KeyboardInputs>();
