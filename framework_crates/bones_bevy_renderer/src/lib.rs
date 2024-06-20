@@ -22,6 +22,7 @@ use bevy::{
     tasks::IoTaskPool,
     utils::{HashMap, Instant},
     window::WindowMode,
+    log::{LogPlugin, Level},
 };
 use bevy_egui::EguiContext;
 use glam::*;
@@ -220,6 +221,10 @@ impl BonesBevyRenderer {
                     ..default()
                 }),
                 ..default()
+            })
+            .set(LogPlugin {
+                level: Level::INFO,
+                filter: "symphonia=error".to_string(),
             })
             .build();
         if self.pixel_art {
