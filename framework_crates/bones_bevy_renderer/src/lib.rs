@@ -38,7 +38,10 @@ use std::path::PathBuf;
 
 /// Renderer for [`bones_framework`] [`Game`][bones::Game]s using Bevy.
 pub struct BonesBevyRenderer {
-    /// Optional field to implement your own loading screen.
+    /// Whether or not to load all assets on startup with a loading screen,
+    /// or skip straight to running the bones game immedietally.
+    pub preload: bool,
+    /// Optional field to implement your own loading screen. Does nothing if [`Self::preload`] = false
     pub custom_load_progress: Option<LoadingFunction>,
     /// Whether or not to use nearest-neighbor sampling for textures.
     pub pixel_art: bool,
@@ -79,6 +82,7 @@ impl BonesBevyRenderer {
     /// Create a new [`BonesBevyRenderer`] for the provided game.
     pub fn new(game: bones::Game) -> Self {
         BonesBevyRenderer {
+            preload: true,
             pixel_art: true,
             custom_load_progress: None,
             game,
@@ -87,6 +91,11 @@ impl BonesBevyRenderer {
             asset_dir: PathBuf::from("assets"),
             packs_dir: PathBuf::from("packs"),
         }
+    }
+    /// Whether or not to load all assets on startup with a loading screen,
+    /// or skip straight to running the bones game immedietally.
+    pub fn preload(self, preload: bool) -> Self {
+        Self { preload, ..self }
     }
     /// Insert a custom loading screen function that will be used in place of the default
     pub fn loading_screen(mut self, function: LoadingFunction) -> Self {
@@ -146,23 +155,19 @@ impl BonesBevyRenderer {
         }
         app.init_resource::<BonesImageIds>();
 
-        'asset_load: {
-            let Some(mut asset_server) = self.game.shared_resource_mut::<bones::AssetServer>()
-            else {
-                break 'asset_load;
-            };
+        if let Some(mut asset_server) = self.game.shared_resource_mut::<bones::AssetServer>() {
             asset_server.set_game_version(self.game_version);
-
-            // Configure the AssetIO implementation
             asset_server.set_io(asset_io(self.asset_dir, self.packs_dir));
 
-            // Spawn the task to load game assets
-            let s = asset_server.clone();
-            IoTaskPool::get()
-                .spawn(async move {
-                    s.load_assets().await.unwrap();
-                })
-                .detach();
+            if self.preload {
+                // Spawn the task to load game assets
+                let s = asset_server.clone();
+                IoTaskPool::get()
+                    .spawn(async move {
+                        s.load_assets().await.unwrap();
+                    })
+                    .detach();
+            }
 
             // Enable asset hot reload.
             asset_server.watch_for_changes();
@@ -199,12 +204,14 @@ impl BonesBevyRenderer {
                 egui_input_hook,
             )
                 .chain()
-                .run_if(assets_are_loaded)
+                .run_if(assets_are_loaded.or_else(move || !self.preload))
                 .after(bevy_egui::EguiSet::ProcessInput)
                 .before(bevy_egui::EguiSet::BeginFrame),
-        )
-        .add_systems(Update, asset_load_status.run_if(assets_not_loaded))
-        .add_systems(
+        );
+        if self.preload {
+            app.add_systems(Update, asset_load_status.run_if(assets_not_loaded));
+        }
+        app.add_systems(
             Update,
             (
                 load_egui_textures,
@@ -221,7 +228,7 @@ impl BonesBevyRenderer {
                 ),
             )
                 .chain()
-                .run_if(assets_are_loaded)
+                .run_if(assets_are_loaded.or_else(move || !self.preload))
                 .run_if(egui_ctx_initialized),
         );
 
