@@ -122,6 +122,13 @@ impl BonesBevyRenderer {
     pub fn packs_dir(self, packs_dir: PathBuf) -> Self {
         Self { packs_dir, ..self }
     }
+    /// Set the version of the game, used for the asset loader.
+    pub fn version(self, game_version: bones::Version) -> Self {
+        Self {
+            game_version,
+            ..self
+        }
+    }
 
     /// Return a bevy [`App`] configured to run the bones game.
     pub fn app(mut self) -> App {
