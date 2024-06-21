@@ -469,6 +469,8 @@
 <a href="#469" id="469">469</a>
 <a href="#470" id="470">470</a>
 <a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! World resource storage.
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
@@ -713,6 +715,7 @@
     }
 
     <span class="doccomment">/// Borrow a resource.
+    </span><span class="attr">#[track_caller]
     </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;T&gt;&gt; {
         <span class="kw">let </span>b = <span class="self">self</span>.untyped.get(T::schema()).borrow();
         <span class="kw">if </span>b.is_some() {
@@ -725,6 +728,7 @@
     }
 
     <span class="doccomment">/// Borrow a resource.
+    </span><span class="attr">#[track_caller]
     </span><span class="kw">pub fn </span>get_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
         <span class="kw">let </span>b = <span class="self">self</span>.untyped.get(T::schema()).borrow_mut();
         <span class="kw">if </span>b.is_some() {

@@ -628,6 +628,8 @@
 <a href="#628" id="628">628</a>
 <a href="#629" id="629">629</a>
 <a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -838,7 +840,8 @@
         plugin.install(<span class="self">self</span>);
         <span class="self">self
     </span>}
-    <span class="doccomment">/// Get the shared resource of a given type out of this [`Game`]s shared resources.
+    <span class="attr">#[track_caller]
+    </span><span class="doccomment">/// Get the shared resource of a given type out of this [`Game`]s shared resources.
     </span><span class="kw">pub fn </span>shared_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;T&gt;&gt; {
         <span class="kw">let </span>res = <span class="self">self
             </span>.shared_resources
@@ -856,7 +859,8 @@
         </span>}
     }
 
-    <span class="doccomment">/// Get the shared resource of a given type out of this [`Game`]s shared resources.
+    <span class="attr">#[track_caller]
+    </span><span class="doccomment">/// Get the shared resource of a given type out of this [`Game`]s shared resources.
     </span><span class="kw">pub fn </span>shared_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
         <span class="kw">let </span>res = <span class="self">self
             </span>.shared_resources
