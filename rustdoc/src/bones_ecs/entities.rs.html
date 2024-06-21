@@ -677,6 +677,17 @@
 <a href="#677" id="677">677</a>
 <a href="#678" id="678">678</a>
 <a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! [`Entity`] implementation, storage, and interation.
 
 </span><span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
@@ -827,6 +838,17 @@
     S: std::ops::DerefMut&lt;Target = C&gt; + <span class="lifetime">&#39;a</span>,
 {
     OptionalQueryItemMut(component_ref, PhantomData)
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Ref&lt;<span class="lifetime">&#39;a</span>, UntypedComponentStore&gt; {
+    <span class="kw">type </span>Iter = UntypedComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>&gt;;
+    <span class="kw">fn </span>apply_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: <span class="kw-2">&amp;mut </span>BitSetVec) {
+        bitset.bit_and(<span class="self">self</span>.bitset());
+    }
+
+    <span class="kw">fn </span>iter_with_bitset(<span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; <span class="self">Self</span>::Iter {
+        UntypedComponentStore::iter_with_bitset(<span class="self">self</span>, bitset)
+    }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;q</span>, T: HasSchema&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Comp&lt;<span class="lifetime">&#39;q</span>, T&gt; {
