@@ -208,6 +208,7 @@ impl Game {
         plugin.install(self);
         self
     }
+    #[track_caller]
     /// Get the shared resource of a given type out of this [`Game`]s shared resources.
     pub fn shared_resource<T: HasSchema>(&self) -> Option<Ref<T>> {
         let res = self
@@ -226,6 +227,7 @@ impl Game {
         }
     }
 
+    #[track_caller]
     /// Get the shared resource of a given type out of this [`Game`]s shared resources.
     pub fn shared_resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
         let res = self
