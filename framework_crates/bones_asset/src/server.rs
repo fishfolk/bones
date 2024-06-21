@@ -223,12 +223,11 @@ impl AssetServer {
         &mut self,
         mut handle_change: F,
     ) {
-        let mut pending_asset_changes = Vec::new();
         while let Ok(changed) = self.asset_change_recv.try_recv() {
             match changed {
                 ChangedAsset::Loc(loc) => {
                     let handle = self.load_asset_forced(loc.as_ref());
-                    pending_asset_changes.push(handle);
+                    handle_change(self, handle)
                 }
                 ChangedAsset::Handle(handle) => {
                     let entry = self
@@ -240,13 +239,9 @@ impl AssetServer {
                     let loc = entry.key().to_owned();
                     drop(entry);
                     self.load_asset_forced(loc.as_ref());
-                    pending_asset_changes.push(handle);
+                    handle_change(self, handle)
                 }
             }
-        }
-
-        for handle in pending_asset_changes {
-            handle_change(self, handle)
         }
     }
 
