@@ -168,6 +168,7 @@ fn menu_system(
     ctx: Res<EguiCtx>,
     mut sessions: ResMut<Sessions>,
     mut session_options: ResMut<SessionOptions>,
+    mut exit_bones: Option<ResMut<ExitBones>>,
     // Get the localization field from our `GameMeta`
     localization: Localization<GameMeta>,
     world: &World,
@@ -262,6 +263,15 @@ fn menu_system(
                         sessions
                             .create("path2d_demo")
                             .install_plugin(path2d_demo_plugin);
+                    }
+
+                    if let Some(exit_bones) = &mut exit_bones {
+                        if BorderedButton::themed(&meta.button_style, localization.get("quit"))
+                            .show(ui)
+                            .clicked()
+                        {
+                            ***exit_bones = true;
+                        }
                     }
 
                     ui.add_space(10.0);

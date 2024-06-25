@@ -197,6 +197,12 @@ impl BonesBevyRenderer {
         self.game.init_shared_resource::<bones::MouseInputs>();
         self.game.init_shared_resource::<bones::GamepadInputs>();
 
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.game.init_shared_resource::<bones::ExitBones>();
+            app.add_systems(Update, handle_exits);
+        }
+
         // Insert the bones data
         app.insert_resource(BonesGame(self.game))
             .insert_resource(LoadingContext(self.custom_load_progress))
@@ -369,5 +375,12 @@ pub fn handle_asset_changes(
                 );
             }
         })
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn handle_exits(game: Res<BonesGame>, mut exits: EventWriter<bevy::app::AppExit>) {
+    if **game.shared_resource::<bones::ExitBones>().unwrap() {
+        exits.send(bevy::app::AppExit);
     }
 }
