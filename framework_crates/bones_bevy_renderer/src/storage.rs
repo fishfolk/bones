@@ -1,7 +1,6 @@
 use bevy::log::error;
 use bones_framework::prelude::*;
 use serde::{de::Visitor, Deserialize, Serialize};
-use std::path::PathBuf;
 
 #[cfg(target_arch = "wasm32")]
 pub use wasm::StorageBackend;
@@ -55,7 +54,7 @@ mod native {
     use super::*;
 
     pub struct StorageBackend {
-        storage_path: PathBuf,
+        storage_path: std::path::PathBuf,
     }
 
     impl StorageBackend {

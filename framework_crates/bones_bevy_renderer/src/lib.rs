@@ -34,7 +34,7 @@ use bevy::{
     tasks::IoTaskPool,
     utils::Instant,
 };
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Renderer for [`bones_framework`] [`Game`][bones::Game]s using Bevy.
 pub struct BonesBevyRenderer {
@@ -164,7 +164,7 @@ impl BonesBevyRenderer {
 
         if let Some(mut asset_server) = self.game.shared_resource_mut::<bones::AssetServer>() {
             asset_server.set_game_version(self.game_version);
-            asset_server.set_io(asset_io(self.asset_dir, self.packs_dir));
+            asset_server.set_io(asset_io(&self.asset_dir, &self.packs_dir));
 
             if self.preload {
                 // Spawn the task to load game assets
@@ -272,13 +272,15 @@ fn assets_not_loaded(game: Res<BonesGame>) -> bool {
 }
 
 /// A [`bones::AssetIo`] configured for web and local file access
-pub fn asset_io(asset_dir: PathBuf, packs_dir: PathBuf) -> impl bones::AssetIo + 'static {
+pub fn asset_io(asset_dir: &Path, packs_dir: &Path) -> impl bones::AssetIo + 'static {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        bones::FileAssetIo::new(&asset_dir, &packs_dir)
+        bones::FileAssetIo::new(asset_dir, packs_dir)
     }
     #[cfg(target_arch = "wasm32")]
     {
+        let _ = asset_dir;
+        let _ = packs_dir;
         let window = web_sys::window().unwrap();
         let path = window.location().pathname().unwrap();
         let base = path.rsplit_once('/').map(|x| x.0).unwrap_or(&path);
