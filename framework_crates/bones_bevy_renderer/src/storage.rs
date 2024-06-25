@@ -82,7 +82,6 @@ mod native {
         }
 
         fn load(&mut self) -> Vec<SchemaBox> {
-            use anyhow::Context;
             if self.storage_path.exists() {
                 let result: anyhow::Result<LoadedStorage> = (|| {
                     let file = std::fs::OpenOptions::new()
