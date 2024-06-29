@@ -75,9 +75,6 @@ pub const NETWORK_MAX_PREDICTION_WINDOW_DEFAULT: usize = 7;
 /// Amount of frames GGRS will delay local input.
 pub const NETWORK_LOCAL_INPUT_DELAY_DEFAULT: usize = 2;
 
-#[doc(inline)]
-pub use bones_matchmaker_proto::MAX_PLAYERS;
-
 /// Possible errors returned by network loop.
 pub enum NetworkError {
     /// The session was disconnected.
@@ -157,15 +154,13 @@ pub trait NetworkSocket: Sync + Send {
     fn send_reliable(&self, target: SocketTarget, message: &[u8]);
     /// Receive reliable messages from other players. The `usize` is the index of the player that
     /// sent the message.
-    fn recv_reliable(&self) -> Vec<(usize, Vec<u8>)>;
+    fn recv_reliable(&self) -> Vec<(u32, Vec<u8>)>;
     /// Close the connection.
     fn close(&self);
     /// Get the player index of the local player.
-    fn player_idx(&self) -> usize;
-    /// Return, for every player index, whether the player is a local player.
-    fn player_is_local(&self) -> [bool; MAX_PLAYERS];
+    fn player_idx(&self) -> u32;
     /// Get the player count for this network match.
-    fn player_count(&self) -> usize;
+    fn player_count(&self) -> u32;
 
     /// Increment match id so messages from previous match that are still in flight
     /// will be filtered out. Used when starting new session with existing socket.
@@ -175,7 +170,7 @@ pub trait NetworkSocket: Sync + Send {
 /// The destination for a reliable network message.
 pub enum SocketTarget {
     /// Send to a specific player.
-    Player(usize),
+    Player(u32),
     /// Broadcast to all players.
     All,
 }
@@ -215,11 +210,11 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
     /// The GGRS peer-to-peer session.
     pub session: P2PSession<GgrsConfig<InputTypes::Dense>>,
 
-    /// Array containing a flag indicating, for each player, whether they are a local player.
-    pub player_is_local: [bool; MAX_PLAYERS],
+    /// Local player idx.
+    pub player_idx: u32,
 
     /// Index of local player, computed from player_is_local
-    pub local_player_idx: usize,
+    pub local_player_idx: u32,
 
     /// The frame time accumulator, used to produce a fixed refresh rate.
     pub accumulator: f64,
@@ -254,10 +249,10 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
 pub struct GgrsSessionRunnerInfo {
     /// The socket that will be converted into GGRS socket implementation.
     pub socket: Socket,
-    /// The list of local players.
-    pub player_is_local: [bool; MAX_PLAYERS],
+    /// The local player idx
+    pub player_idx: u32,
     /// the player count.
-    pub player_count: usize,
+    pub player_count: u32,
 
     /// Max prediction window (max number of frames client may predict ahead of last confirmed frame)
     /// `None` will use Bone's default.
@@ -278,11 +273,11 @@ impl GgrsSessionRunnerInfo {
         max_prediction_window: Option<usize>,
         local_input_delay: Option<usize>,
     ) -> Self {
-        let player_is_local = socket.player_is_local();
+        let player_idx = socket.player_idx();
         let player_count = socket.player_count();
         Self {
             socket,
-            player_is_local,
+            player_idx,
             player_count,
             max_prediction_window,
             local_input_delay,
@@ -323,31 +318,32 @@ where
             .unwrap();
 
         let mut builder = ggrs::SessionBuilder::new()
-            .with_num_players(info.player_count)
+            .with_num_players(info.player_count as usize)
             .with_input_delay(local_input_delay)
             .with_fps(network_fps)
             .unwrap()
             .with_max_prediction_window(max_prediction)
             .unwrap();
 
-        let mut local_player_idx: Option<usize> = None;
+        let local_player_idx = info.player_idx;
         for i in 0..info.player_count {
-            if info.player_is_local[i] {
-                builder = builder.add_player(ggrs::PlayerType::Local, i).unwrap();
-                local_player_idx = Some(i);
+            if i == info.player_idx {
+                builder = builder
+                    .add_player(ggrs::PlayerType::Local, i as usize)
+                    .unwrap();
             } else {
-                builder = builder.add_player(ggrs::PlayerType::Remote(i), i).unwrap();
+                builder = builder
+                    .add_player(ggrs::PlayerType::Remote(i as usize), i as usize)
+                    .unwrap();
             }
         }
-        let local_player_idx =
-            local_player_idx.expect("Networking player_is_local array has no local players.");
 
         let session = builder.start_p2p_session(info.socket.clone()).unwrap();
 
         Self {
             last_player_input: InputTypes::Dense::default(),
             session,
-            player_is_local: info.player_is_local,
+            player_idx: info.player_idx,
             local_player_idx,
             accumulator: default(),
             last_run: None,
@@ -395,11 +391,11 @@ where
             self.input_collector.update_just_pressed();
 
             // save local players dense input for use with ggrs
-            match player_inputs.get_control_source(self.local_player_idx) {
+            match player_inputs.get_control_source(self.local_player_idx as usize) {
                 Some(control_source) => {
                     let control = self
                         .input_collector
-                        .get_control(self.local_player_idx, control_source);
+                        .get_control(self.local_player_idx as usize, control_source);
 
                     self.last_player_input = control.get_dense_input();
                 },
@@ -482,13 +478,16 @@ where
 
                 if !self.local_input_disabled {
                     self.session
-                        .add_local_input(self.local_player_idx, self.last_player_input)
+                        .add_local_input(self.local_player_idx as usize, self.last_player_input)
                         .unwrap();
                 } else {
                     // If local input is disabled, we still submit a default value representing no-inputs.
                     // This way if input is disabled current inputs will not be held down indefinitely.
                     self.session
-                        .add_local_input(self.local_player_idx, InputTypes::Dense::default())
+                        .add_local_input(
+                            self.local_player_idx as usize,
+                            InputTypes::Dense::default(),
+                        )
                         .unwrap();
                 }
 
@@ -566,7 +565,7 @@ where
                                         {
                                             trace!(
                                                 "Net player({player_idx}) local: {}, status: {status:?}, input: {:?}",
-                                                self.local_player_idx == player_idx,
+                                                self.local_player_idx as usize == player_idx,
                                                 input
                                             );
                                             player_inputs.network_update(
@@ -630,8 +629,8 @@ where
 
         let runner_info = GgrsSessionRunnerInfo {
             socket: self.socket.clone(),
-            player_is_local: self.player_is_local,
-            player_count: self.session.num_players(),
+            player_idx: self.player_idx,
+            player_count: self.session.num_players().try_into().unwrap(),
             max_prediction_window: Some(self.session.max_prediction()),
             local_input_delay: Some(self.local_input_delay),
         };
