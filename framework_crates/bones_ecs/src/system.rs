@@ -4,11 +4,6 @@ use std::sync::Arc;
 
 use crate::prelude::*;
 
-#[derive(Deref, DerefMut)]
-struct Test {
-    s: String,
-}
-
 /// Trait implemented by systems.
 pub trait System<In, Out> {
     /// Run the system.
