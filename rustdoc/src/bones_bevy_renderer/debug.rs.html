@@ -45,7 +45,6 @@
 <a href="#45" id="45">45</a>
 <a href="#46" id="46">46</a>
 <a href="#47" id="47">47</a>
-<a href="#48" id="48">48</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Debug module for data that hooks into Bevy. Bevy frame diagnostics are synchronized into [`bones_framework::debug::FrameDiagState`]
 //! which may be displayed using [`bones_framework::debug`] module.
 </span><span class="kw">use </span>bevy::{
@@ -54,7 +53,7 @@
 };
 <span class="kw">use </span>bones_framework::debug::FrameDiagState;
 
-<span class="kw">use </span><span class="kw">crate</span>::BonesData;
+<span class="kw">use </span><span class="kw">crate</span>::BonesGame;
 
 <span class="doccomment">/// Plugin for debug tools that hook into Bevy, such as [`bevy::diagnostic::FrameTimeDiagnosticsPlugin`].
 </span><span class="kw">pub struct </span>BevyDebugPlugin;
@@ -66,8 +65,7 @@
     }
 }
 
-<span class="kw">fn </span>sync_frame_time(<span class="kw-2">mut </span>bones_data: ResMut&lt;BonesData&gt;, diagnostics: Res&lt;DiagnosticsStore&gt;) {
-    <span class="kw">let </span>game = <span class="kw-2">&amp;mut </span>bones_data.game;
+<span class="kw">fn </span>sync_frame_time(<span class="kw-2">mut </span>game: ResMut&lt;BonesGame&gt;, diagnostics: Res&lt;DiagnosticsStore&gt;) {
     <span class="kw">let </span><span class="kw-2">mut </span>state = game.init_shared_resource::&lt;FrameDiagState&gt;();
 
     <span class="kw">let </span>fps = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS).unwrap();
