@@ -314,8 +314,8 @@
                                         <span class="kw">let </span>result = <span class="kw">async </span>{
                                             <span class="kw">let </span>message = postcard::to_allocvec(
                                                 <span class="kw-2">&amp;</span>MatchmakerResponse::ClientCount(
-                                                    members.len() <span class="kw">as </span>u8
-                                                ),
+                                                    members.len().try_into()<span class="question-mark">?
+                                                </span>),
                                             )<span class="question-mark">?</span>;
                                             <span class="kw">for </span>conn <span class="kw">in </span>members {
                                                 <span class="kw">let </span><span class="kw-2">mut </span>send = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
@@ -347,8 +347,8 @@
 
                         <span class="kw">if </span>!members_to_notify.is_empty() {
                             <span class="kw">let </span>message = postcard::to_allocvec(<span class="kw-2">&amp;</span>MatchmakerResponse::ClientCount(
-                                members_to_notify.len() <span class="kw">as </span>u8,
-                            ))<span class="question-mark">?</span>;
+                                members_to_notify.len().try_into()<span class="question-mark">?
+                            </span>))<span class="question-mark">?</span>;
                             <span class="kw">for </span>conn <span class="kw">in </span>members_to_notify {
                                 <span class="kw">let </span><span class="kw-2">mut </span>send = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
                                 send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -358,7 +358,7 @@
 
                         <span class="kw">if </span>!members_to_join.is_empty() {
                             <span class="comment">// Send the match ID to all of the clients in the room
-                            </span><span class="kw">let </span><span class="kw-2">mut </span>player_ids = std::array::from_fn(|<span class="kw">_</span>| <span class="prelude-val">None</span>);
+                            </span><span class="kw">let </span><span class="kw-2">mut </span>player_ids = Vec::new();
                             <span class="kw">let </span>random_seed = rand::random();
 
                             <span class="kw">for </span>(idx, conn) <span class="kw">in </span>members_to_join.iter().enumerate() {
@@ -373,7 +373,7 @@
                                     );
                                 }
 
-                                player_ids[idx] = <span class="prelude-val">Some</span>(addr);
+                                player_ids.push((u32::try_from(idx)<span class="question-mark">?</span>, addr));
                             }
 
                             <span class="kw">for </span>(player_idx, conn) <span class="kw">in </span>members_to_join.into_iter().enumerate() {
@@ -382,7 +382,7 @@
                                     postcard::to_allocvec(<span class="kw-2">&amp;</span>MatchmakerResponse::Success {
                                         random_seed,
                                         client_count: player_count,
-                                        player_idx: player_idx <span class="kw">as </span>u8,
+                                        player_idx: player_idx.try_into()<span class="question-mark">?</span>,
                                         player_ids: player_ids.clone(),
                                     })<span class="question-mark">?</span>;
                                 <span class="kw">let </span><span class="kw-2">mut </span>send = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;

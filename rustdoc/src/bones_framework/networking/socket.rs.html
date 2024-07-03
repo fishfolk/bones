@@ -298,6 +298,11 @@
 <a href="#298" id="298">298</a>
 <a href="#299" id="299">299</a>
 <a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
 </pre></div><pre class="rust"><code><span class="comment">// TODO
 </span><span class="attr">#![allow(missing_docs)]
 
@@ -308,130 +313,136 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::networking::get_network_endpoint;
 
-<span class="kw">use super</span>::{GameMessage, NetworkSocket, SocketTarget, MAX_PLAYERS, RUNTIME};
+<span class="kw">use super</span>::{GameMessage, NetworkSocket, SocketTarget, RUNTIME};
 
 <span class="doccomment">/// The [`NetworkSocket`] implementation.
 </span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>Socket {
     <span class="doccomment">///
-    </span><span class="kw">pub </span>connections: [<span class="prelude-ty">Option</span>&lt;iroh_quinn::Connection&gt;; MAX_PLAYERS],
-    <span class="kw">pub </span>ggrs_receiver: async_channel::Receiver&lt;(usize, GameMessage)&gt;,
-    <span class="kw">pub </span>reliable_receiver: async_channel::Receiver&lt;(usize, Vec&lt;u8&gt;)&gt;,
-    <span class="kw">pub </span>player_idx: usize,
-    <span class="kw">pub </span>player_count: usize,
+    </span><span class="kw">pub </span>connections: Vec&lt;(u32, iroh_quinn::Connection)&gt;,
+    <span class="kw">pub </span>ggrs_receiver: async_channel::Receiver&lt;(u32, GameMessage)&gt;,
+    <span class="kw">pub </span>reliable_receiver: async_channel::Receiver&lt;(u32, Vec&lt;u8&gt;)&gt;,
+    <span class="kw">pub </span>player_idx: u32,
+    <span class="kw">pub </span>player_count: u32,
     <span class="doccomment">/// ID for current match, messages received that do not match ID are dropped.
     </span><span class="kw">pub </span>match_id: u8,
 }
 
 <span class="kw">impl </span>Socket {
-    <span class="kw">pub fn </span>new(
-        player_idx: usize,
-        connections: [<span class="prelude-ty">Option</span>&lt;iroh_quinn::Connection&gt;; MAX_PLAYERS],
-    ) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(player_idx: u32, connections: Vec&lt;(u32, iroh_quinn::Connection)&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>(ggrs_sender, ggrs_receiver) = async_channel::unbounded();
         <span class="kw">let </span>(reliable_sender, reliable_receiver) = async_channel::unbounded();
 
         <span class="comment">// Spawn tasks to receive network messages from each peer
-        </span><span class="attr">#[allow(clippy::needless_range_loop)]
-        </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..MAX_PLAYERS {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(conn) = connections[i].clone() {
-                <span class="kw">let </span>ggrs_sender = ggrs_sender.clone();
+        </span><span class="kw">for </span>(i, conn) <span class="kw">in </span><span class="kw-2">&amp;</span>connections {
+            <span class="kw">let </span>ggrs_sender = ggrs_sender.clone();
+            <span class="kw">let </span>i = <span class="kw-2">*</span>i;
 
-                <span class="comment">// Unreliable message receiver
-                </span><span class="kw">let </span>conn_ = conn.clone();
-                RUNTIME.spawn(<span class="kw">async move </span>{
-                    <span class="kw">let </span>conn = conn_;
+            <span class="comment">// Unreliable message receiver
+            </span><span class="kw">let </span>conn_ = conn.clone();
+            RUNTIME.spawn(<span class="kw">async move </span>{
+                <span class="kw">let </span>conn = conn_;
 
-                    <span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
-                    </span><span class="kw">use </span>turborand::prelude::<span class="kw-2">*</span>;
-                    <span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
-                    </span><span class="kw">let </span>rng = AtomicRng::new();
+                <span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
+                </span><span class="kw">use </span>turborand::prelude::<span class="kw-2">*</span>;
+                <span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
+                </span><span class="kw">let </span>rng = AtomicRng::new();
 
-                    <span class="kw">loop </span>{
-                        <span class="macro">tokio::select! </span>{
-                            closed = conn.closed() =&gt; {
-                                <span class="macro">warn!</span>(<span class="string">&quot;Connection error: {closed}&quot;</span>);
-                                <span class="kw">break</span>;
+                <span class="kw">loop </span>{
+                    <span class="macro">tokio::select! </span>{
+                        closed = conn.closed() =&gt; {
+                            <span class="macro">warn!</span>(<span class="string">&quot;Connection error: {closed}&quot;</span>);
+                            <span class="kw">break</span>;
+                        }
+                        datagram_result = conn.read_datagram() =&gt; <span class="kw">match </span>datagram_result {
+                            <span class="prelude-val">Ok</span>(data) =&gt; {
+                                <span class="kw">let </span>message: GameMessage = postcard::from_bytes(<span class="kw-2">&amp;</span>data)
+                                .expect(<span class="string">&quot;Could not deserialize net message&quot;</span>);
+
+                                <span class="comment">// Debugging code to introduce artificial latency
+                                </span><span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
+                                </span>{
+                                    <span class="kw">use </span>async_timer::Oneshot;
+                                    async_timer::oneshot::Timer::new(
+                                        std::time::Duration::from_millis(
+                                            (rng.f32_normalized() * <span class="number">100.0</span>) <span class="kw">as </span>u64 + <span class="number">1</span>,
+                                        ),
+                                    )
+                                    .<span class="kw">await</span>;
+                                }
+                                <span class="kw">if </span>ggrs_sender.send((i, message)).<span class="kw">await</span>.is_err() {
+                                    <span class="kw">break</span>;
+                                }
                             }
-                            datagram_result = conn.read_datagram() =&gt; <span class="kw">match </span>datagram_result {
-                                <span class="prelude-val">Ok</span>(data) =&gt; {
-                                    <span class="kw">let </span>message: GameMessage = postcard::from_bytes(<span class="kw-2">&amp;</span>data)
-                                        .expect(<span class="string">&quot;Could not deserialize net message&quot;</span>);
-
-                                    <span class="comment">// Debugging code to introduce artificial latency
-                                    </span><span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
-                                    </span>{
-                                        <span class="kw">use </span>async_timer::Oneshot;
-                                        async_timer::oneshot::Timer::new(
-                                            std::time::Duration::from_millis(
-                                                (rng.f32_normalized() * <span class="number">100.0</span>) <span class="kw">as </span>u64 + <span class="number">1</span>,
-                                            ),
-                                        )
-                                        .<span class="kw">await</span>;
-                                    }
-                                    <span class="kw">if </span>ggrs_sender.send((i, message)).<span class="kw">await</span>.is_err() {
-                                        <span class="kw">break</span>;
-                                    }
-                                }
-                                <span class="prelude-val">Err</span>(e) =&gt; {
-                                    <span class="macro">warn!</span>(<span class="string">&quot;Connection error: {e}&quot;</span>);
-                                }
+                            <span class="prelude-val">Err</span>(e) =&gt; {
+                                <span class="macro">warn!</span>(<span class="string">&quot;Connection error: {e}&quot;</span>);
                             }
                         }
                     }
-                });
+                }
+            });
 
-                <span class="comment">// Reliable message receiver
-                </span><span class="kw">let </span>reliable_sender = reliable_sender.clone();
-                RUNTIME.spawn(<span class="kw">async move </span>{
-                    <span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
-                    </span><span class="kw">use </span>turborand::prelude::<span class="kw-2">*</span>;
-                    <span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
-                    </span><span class="kw">let </span>rng = AtomicRng::new();
+            <span class="comment">// Reliable message receiver
+            </span><span class="kw">let </span>reliable_sender = reliable_sender.clone();
+            <span class="kw">let </span>conn = conn.clone();
+            RUNTIME.spawn(<span class="kw">async move </span>{
+                <span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
+                </span><span class="kw">use </span>turborand::prelude::<span class="kw-2">*</span>;
+                <span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
+                </span><span class="kw">let </span>rng = AtomicRng::new();
 
-                    <span class="kw">loop </span>{
-                        <span class="macro">tokio::select! </span>{
-                            closed = conn.closed() =&gt; {
-                                <span class="macro">warn!</span>(<span class="string">&quot;Connection error: {closed}&quot;</span>);
-                                <span class="kw">break</span>;
-                            }
-                            result = conn.accept_uni() =&gt; <span class="kw">match </span>result {
-                                <span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>stream) =&gt; {
-                                    <span class="kw">let </span>data = stream.read_to_end(<span class="number">4096</span>).<span class="kw">await</span>.expect(<span class="string">&quot;Network read error&quot;</span>);
-
-                                    <span class="comment">// Debugging code to introduce artificial latency
-                                    </span><span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
-                                    </span>{
-                                        <span class="kw">use </span>async_timer::Oneshot;
-                                        async_timer::oneshot::Timer::new(
-                                            std::time::Duration::from_millis(
-                                                (rng.f32_normalized() * <span class="number">100.0</span>) <span class="kw">as </span>u64 + <span class="number">1</span>,
-                                            ),
-                                        )
-                                        .<span class="kw">await</span>;
-                                    }
-                                    <span class="kw">if </span>reliable_sender.send((i, data)).<span class="kw">await</span>.is_err() {
-                                        <span class="kw">break</span>;
-                                    }
-                                }
-                                <span class="prelude-val">Err</span>(e) =&gt; {
-                                    <span class="macro">warn!</span>(<span class="string">&quot;Connection error: {e}&quot;</span>);
-                                }
-                            },
+                <span class="kw">loop </span>{
+                    <span class="macro">tokio::select! </span>{
+                        closed = conn.closed() =&gt; {
+                            <span class="macro">warn!</span>(<span class="string">&quot;Connection error: {closed}&quot;</span>);
+                            <span class="kw">break</span>;
                         }
+                        result = conn.accept_uni() =&gt; <span class="kw">match </span>result {
+                            <span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>stream) =&gt; {
+                                <span class="kw">let </span>data = stream.read_to_end(<span class="number">4096</span>).<span class="kw">await</span>.expect(<span class="string">&quot;Network read error&quot;</span>);
+
+                                <span class="comment">// Debugging code to introduce artificial latency
+                                </span><span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
+                                </span>{
+                                    <span class="kw">use </span>async_timer::Oneshot;
+                                    async_timer::oneshot::Timer::new(
+                                        std::time::Duration::from_millis(
+                                            (rng.f32_normalized() * <span class="number">100.0</span>) <span class="kw">as </span>u64 + <span class="number">1</span>,
+                                        ),
+                                    )
+                                    .<span class="kw">await</span>;
+                                }
+                                <span class="kw">if </span>reliable_sender.send((i, data)).<span class="kw">await</span>.is_err() {
+                                    <span class="kw">break</span>;
+                                }
+                            }
+                            <span class="prelude-val">Err</span>(e) =&gt; {
+                                <span class="macro">warn!</span>(<span class="string">&quot;Connection error: {e}&quot;</span>);
+                            }
+                        },
                     }
-                });
-            }
+                }
+            });
         }
 
         <span class="self">Self </span>{
             player_idx,
-            player_count: connections.iter().flatten().count() + <span class="number">1</span>,
+            player_count: (connections.len() + <span class="number">1</span>).try_into().unwrap(),
             connections,
             ggrs_receiver,
             reliable_receiver,
             match_id: <span class="number">0</span>,
         }
+    }
+
+    <span class="kw">fn </span>get_connection(<span class="kw-2">&amp;</span><span class="self">self</span>, idx: u32) -&gt; <span class="kw-2">&amp;</span>iroh_quinn::Connection {
+        <span class="macro">debug_assert!</span>(idx &lt; <span class="self">self</span>.player_count);
+        <span class="comment">// TODO: if this is too slow, optimize storage
+        </span><span class="self">self</span>.connections
+            .iter()
+            .find(|(i, <span class="kw">_</span>)| <span class="kw-2">*</span>i == idx)
+            .map(|(<span class="kw">_</span>, c)| c)
+            .unwrap()
     }
 }
 
@@ -441,7 +452,7 @@
 
         <span class="kw">match </span>target {
             SocketTarget::Player(i) =&gt; {
-                <span class="kw">let </span>conn = <span class="self">self</span>.connections[i].as_ref().unwrap().clone();
+                <span class="kw">let </span>conn = <span class="self">self</span>.get_connection(i).clone();
 
                 RUNTIME.spawn(<span class="kw">async move </span>{
                     <span class="kw">let </span>result = <span class="kw">async move </span>{
@@ -456,27 +467,26 @@
                 });
             }
             SocketTarget::All =&gt; {
-                <span class="kw">for </span>conn <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.connections {
-                    <span class="kw">if let </span><span class="prelude-val">Some</span>(conn) = conn.clone() {
-                        <span class="kw">let </span>message = message.clone();
-                        RUNTIME.spawn(<span class="kw">async move </span>{
-                            <span class="kw">let </span>result = <span class="kw">async move </span>{
-                                <span class="kw">let </span><span class="kw-2">mut </span>stream = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
-                                stream.write_chunk(message).<span class="kw">await</span><span class="question-mark">?</span>;
-                                stream.finish().<span class="kw">await</span><span class="question-mark">?</span>;
-                                anyhow::Ok(())
-                            };
-                            <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = result.<span class="kw">await </span>{
-                                <span class="macro">warn!</span>(<span class="string">&quot;send reliable all failed: {err:?}&quot;</span>);
-                            }
-                        });
-                    }
+                <span class="kw">for </span>(<span class="kw">_</span>, conn) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.connections {
+                    <span class="kw">let </span>message = message.clone();
+                    <span class="kw">let </span>conn = conn.clone();
+                    RUNTIME.spawn(<span class="kw">async move </span>{
+                        <span class="kw">let </span>result = <span class="kw">async move </span>{
+                            <span class="kw">let </span><span class="kw-2">mut </span>stream = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
+                            stream.write_chunk(message).<span class="kw">await</span><span class="question-mark">?</span>;
+                            stream.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+                            anyhow::Ok(())
+                        };
+                        <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = result.<span class="kw">await </span>{
+                            <span class="macro">warn!</span>(<span class="string">&quot;send reliable all failed: {err:?}&quot;</span>);
+                        }
+                    });
                 }
             }
         }
     }
 
-    <span class="kw">fn </span>recv_reliable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;(usize, Vec&lt;u8&gt;)&gt; {
+    <span class="kw">fn </span>recv_reliable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;(u32, Vec&lt;u8&gt;)&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>messages = Vec::new();
         <span class="kw">while let </span><span class="prelude-val">Ok</span>(message) = <span class="self">self</span>.reliable_receiver.try_recv() {
             messages.push(message);
@@ -489,21 +499,17 @@
     }
 
     <span class="kw">fn </span>close(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="kw">for </span>conn <span class="kw">in </span><span class="self">self</span>.connections.iter().flatten() {
+        <span class="kw">for </span>(<span class="kw">_</span>, conn) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.connections {
             conn.close(<span class="number">0u8</span>.into(), <span class="kw-2">&amp;</span>[]);
         }
     }
 
-    <span class="kw">fn </span>player_idx(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+    <span class="kw">fn </span>player_idx(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
         <span class="self">self</span>.player_idx
     }
 
-    <span class="kw">fn </span>player_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+    <span class="kw">fn </span>player_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
         <span class="self">self</span>.player_count
-    }
-
-    <span class="kw">fn </span>player_is_local(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; [bool; MAX_PLAYERS] {
-        std::array::from_fn(|i| <span class="self">self</span>.connections[i].is_none() &amp;&amp; i &lt; <span class="self">self</span>.player_count)
     }
 
     <span class="kw">fn </span>increment_match_id(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
@@ -512,23 +518,24 @@
 }
 
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">async fn </span>establish_peer_connections(
-    player_idx: usize,
-    player_count: usize,
-    peer_addrs: [<span class="prelude-ty">Option</span>&lt;NodeAddr&gt;; MAX_PLAYERS],
+    player_idx: u32,
+    player_count: u32,
+    peer_addrs: Vec&lt;(u32, NodeAddr)&gt;,
     conn: <span class="prelude-ty">Option</span>&lt;iroh_quinn::Connection&gt;,
-) -&gt; anyhow::Result&lt;[<span class="prelude-ty">Option</span>&lt;iroh_quinn::Connection&gt;; MAX_PLAYERS]&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>peer_connections = std::array::from_fn(|<span class="kw">_</span>| <span class="prelude-val">None</span>);
-
+) -&gt; anyhow::Result&lt;Vec&lt;(u32, iroh_quinn::Connection)&gt;&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>peer_connections = Vec::new();
+    <span class="kw">let </span>had_og_conn = conn.is_some();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(conn) = conn {
         <span class="comment">// Set the connection to the matchmaker for player 0
-        </span>peer_connections[<span class="number">0</span>] = <span class="prelude-val">Some</span>(conn);
+        </span>peer_connections.push((<span class="number">0</span>, conn));
     }
 
     <span class="kw">let </span>ep = get_network_endpoint().<span class="kw">await</span>;
 
     <span class="comment">// For every peer with a player index that is higher than ours, wait for
     // them to connect to us.
-    </span><span class="kw">let </span>range = (player_idx + <span class="number">1</span>)..player_count;
+    </span><span class="kw">let </span><span class="kw-2">mut </span>in_connections = Vec::new();
+    <span class="kw">let </span>range = (player_idx + <span class="number">1</span>)..player_count;
     <span class="macro">info!</span>(players=<span class="question-mark">?</span>range, <span class="string">&quot;Waiting for {} peer connections&quot;</span>, range.len());
     <span class="kw">for </span>i <span class="kw">in </span>range {
         <span class="comment">// Wait for connection
@@ -543,33 +550,36 @@
 
         <span class="comment">// Receive the player index
         </span><span class="kw">let </span>idx = {
-            <span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0</span>; <span class="number">1</span>];
+            <span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0</span>; <span class="number">4</span>];
             <span class="kw">let </span><span class="kw-2">mut </span>channel = conn.accept_uni().<span class="kw">await</span><span class="question-mark">?</span>;
             channel.read_exact(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await</span><span class="question-mark">?</span>;
 
-            buf[<span class="number">0</span>] <span class="kw">as </span>usize
+            u32::from_le_bytes(buf)
         };
-        <span class="macro">anyhow::ensure!</span>(idx &lt; MAX_PLAYERS, <span class="string">&quot;Invalid player index&quot;</span>);
 
-        peer_connections[idx] = <span class="prelude-val">Some</span>(conn);
+        in_connections.push((idx, conn));
     }
 
     <span class="comment">// For every peer with a player index lower than ours, connect to them.
-    </span><span class="kw">let </span>start_range = <span class="kw">if </span>peer_connections[<span class="number">0</span>].is_some() { <span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">0 </span>};
+    </span><span class="kw">let </span>start_range = <span class="kw">if </span>had_og_conn { <span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">0 </span>};
     <span class="kw">let </span>range = start_range..player_idx;
     <span class="macro">info!</span>(players=<span class="question-mark">?</span>range, <span class="string">&quot;Connecting to {} peers&quot;</span>, range.len());
 
+    <span class="kw">let </span><span class="kw-2">mut </span>out_connections = Vec::new();
     <span class="kw">for </span>i <span class="kw">in </span>range {
-        <span class="kw">let </span>addr = peer_addrs[i].as_ref().unwrap();
+        <span class="kw">let </span>(<span class="kw">_</span>, addr) = peer_addrs.iter().find(|(idx, <span class="kw">_</span>)| <span class="kw-2">*</span>idx == i).unwrap();
         <span class="kw">let </span>conn = ep.connect(addr.clone(), PLAY_ALPN).<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="comment">// Send player index
         </span><span class="kw">let </span><span class="kw-2">mut </span>channel = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
-        channel.write(<span class="kw-2">&amp;</span>[player_idx <span class="kw">as </span>u8]).<span class="kw">await</span><span class="question-mark">?</span>;
+        channel.write(<span class="kw-2">&amp;</span>player_idx.to_le_bytes()).<span class="kw">await</span><span class="question-mark">?</span>;
         channel.finish().<span class="kw">await</span><span class="question-mark">?</span>;
 
-        peer_connections[i] = <span class="prelude-val">Some</span>(conn);
+        out_connections.push((i, conn));
     }
+
+    peer_connections.extend(out_connections);
+    peer_connections.extend(in_connections);
 
     <span class="prelude-val">Ok</span>(peer_connections)
 }
@@ -581,7 +591,7 @@
             </span>message: msg.clone(),
             match_id: <span class="self">self</span>.match_id,
         };
-        <span class="kw">let </span>conn = <span class="self">self</span>.connections[<span class="kw-2">*</span>addr].as_ref().unwrap();
+        <span class="kw">let </span>conn = <span class="self">self</span>.get_connection((<span class="kw-2">*</span>addr).try_into().unwrap());
 
         <span class="kw">let </span>msg_bytes = postcard::to_allocvec(<span class="kw-2">&amp;</span>msg).unwrap();
         conn.send_datagram(Bytes::copy_from_slice(<span class="kw-2">&amp;</span>msg_bytes[..]))
@@ -592,7 +602,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>messages = Vec::new();
         <span class="kw">while let </span><span class="prelude-val">Ok</span>(message) = <span class="self">self</span>.ggrs_receiver.try_recv() {
             <span class="kw">if </span>message.<span class="number">1</span>.match_id == <span class="self">self</span>.match_id {
-                messages.push((message.<span class="number">0</span>, message.<span class="number">1</span>.message));
+                messages.push((message.<span class="number">0 </span><span class="kw">as </span>usize, message.<span class="number">1</span>.message));
             }
         }
         messages

@@ -641,7 +641,6 @@
 <a href="#641" id="641">641</a>
 <a href="#642" id="642">642</a>
 <a href="#643" id="643">643</a>
-<a href="#644" id="644">644</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;./networking.md&quot;</span>)]
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
@@ -718,9 +717,6 @@
 
 </span><span class="doccomment">/// Amount of frames GGRS will delay local input.
 </span><span class="kw">pub const </span>NETWORK_LOCAL_INPUT_DELAY_DEFAULT: usize = <span class="number">2</span>;
-
-<span class="attr">#[doc(inline)]
-</span><span class="kw">pub use </span>bones_matchmaker_proto::MAX_PLAYERS;
 
 <span class="doccomment">/// Possible errors returned by network loop.
 </span><span class="kw">pub enum </span>NetworkError {
@@ -801,15 +797,13 @@
     </span><span class="kw">fn </span>send_reliable(<span class="kw-2">&amp;</span><span class="self">self</span>, target: SocketTarget, message: <span class="kw-2">&amp;</span>[u8]);
     <span class="doccomment">/// Receive reliable messages from other players. The `usize` is the index of the player that
     /// sent the message.
-    </span><span class="kw">fn </span>recv_reliable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;(usize, Vec&lt;u8&gt;)&gt;;
+    </span><span class="kw">fn </span>recv_reliable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;(u32, Vec&lt;u8&gt;)&gt;;
     <span class="doccomment">/// Close the connection.
     </span><span class="kw">fn </span>close(<span class="kw-2">&amp;</span><span class="self">self</span>);
     <span class="doccomment">/// Get the player index of the local player.
-    </span><span class="kw">fn </span>player_idx(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
-    <span class="doccomment">/// Return, for every player index, whether the player is a local player.
-    </span><span class="kw">fn </span>player_is_local(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; [bool; MAX_PLAYERS];
+    </span><span class="kw">fn </span>player_idx(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32;
     <span class="doccomment">/// Get the player count for this network match.
-    </span><span class="kw">fn </span>player_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
+    </span><span class="kw">fn </span>player_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32;
 
     <span class="doccomment">/// Increment match id so messages from previous match that are still in flight
     /// will be filtered out. Used when starting new session with existing socket.
@@ -819,7 +813,7 @@
 <span class="doccomment">/// The destination for a reliable network message.
 </span><span class="kw">pub enum </span>SocketTarget {
     <span class="doccomment">/// Send to a specific player.
-    </span>Player(usize),
+    </span>Player(u32),
     <span class="doccomment">/// Broadcast to all players.
     </span>All,
 }
@@ -859,11 +853,11 @@
     <span class="doccomment">/// The GGRS peer-to-peer session.
     </span><span class="kw">pub </span>session: P2PSession&lt;GgrsConfig&lt;InputTypes::Dense&gt;&gt;,
 
-    <span class="doccomment">/// Array containing a flag indicating, for each player, whether they are a local player.
-    </span><span class="kw">pub </span>player_is_local: [bool; MAX_PLAYERS],
+    <span class="doccomment">/// Local player idx.
+    </span><span class="kw">pub </span>player_idx: u32,
 
     <span class="doccomment">/// Index of local player, computed from player_is_local
-    </span><span class="kw">pub </span>local_player_idx: usize,
+    </span><span class="kw">pub </span>local_player_idx: u32,
 
     <span class="doccomment">/// The frame time accumulator, used to produce a fixed refresh rate.
     </span><span class="kw">pub </span>accumulator: f64,
@@ -898,10 +892,10 @@
 </span><span class="kw">pub struct </span>GgrsSessionRunnerInfo {
     <span class="doccomment">/// The socket that will be converted into GGRS socket implementation.
     </span><span class="kw">pub </span>socket: Socket,
-    <span class="doccomment">/// The list of local players.
-    </span><span class="kw">pub </span>player_is_local: [bool; MAX_PLAYERS],
+    <span class="doccomment">/// The local player idx
+    </span><span class="kw">pub </span>player_idx: u32,
     <span class="doccomment">/// the player count.
-    </span><span class="kw">pub </span>player_count: usize,
+    </span><span class="kw">pub </span>player_count: u32,
 
     <span class="doccomment">/// Max prediction window (max number of frames client may predict ahead of last confirmed frame)
     /// `None` will use Bone&#39;s default.
@@ -922,11 +916,11 @@
         max_prediction_window: <span class="prelude-ty">Option</span>&lt;usize&gt;,
         local_input_delay: <span class="prelude-ty">Option</span>&lt;usize&gt;,
     ) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>player_is_local = socket.player_is_local();
+        <span class="kw">let </span>player_idx = socket.player_idx();
         <span class="kw">let </span>player_count = socket.player_count();
         <span class="self">Self </span>{
             socket,
-            player_is_local,
+            player_idx,
             player_count,
             max_prediction_window,
             local_input_delay,
@@ -967,31 +961,32 @@
             .unwrap();
 
         <span class="kw">let </span><span class="kw-2">mut </span>builder = ggrs::SessionBuilder::new()
-            .with_num_players(info.player_count)
+            .with_num_players(info.player_count <span class="kw">as </span>usize)
             .with_input_delay(local_input_delay)
             .with_fps(network_fps)
             .unwrap()
             .with_max_prediction_window(max_prediction)
             .unwrap();
 
-        <span class="kw">let </span><span class="kw-2">mut </span>local_player_idx: <span class="prelude-ty">Option</span>&lt;usize&gt; = <span class="prelude-val">None</span>;
+        <span class="kw">let </span>local_player_idx = info.player_idx;
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..info.player_count {
-            <span class="kw">if </span>info.player_is_local[i] {
-                builder = builder.add_player(ggrs::PlayerType::Local, i).unwrap();
-                local_player_idx = <span class="prelude-val">Some</span>(i);
+            <span class="kw">if </span>i == info.player_idx {
+                builder = builder
+                    .add_player(ggrs::PlayerType::Local, i <span class="kw">as </span>usize)
+                    .unwrap();
             } <span class="kw">else </span>{
-                builder = builder.add_player(ggrs::PlayerType::Remote(i), i).unwrap();
+                builder = builder
+                    .add_player(ggrs::PlayerType::Remote(i <span class="kw">as </span>usize), i <span class="kw">as </span>usize)
+                    .unwrap();
             }
         }
-        <span class="kw">let </span>local_player_idx =
-            local_player_idx.expect(<span class="string">&quot;Networking player_is_local array has no local players.&quot;</span>);
 
         <span class="kw">let </span>session = builder.start_p2p_session(info.socket.clone()).unwrap();
 
         <span class="self">Self </span>{
             last_player_input: InputTypes::Dense::default(),
             session,
-            player_is_local: info.player_is_local,
+            player_idx: info.player_idx,
             local_player_idx,
             accumulator: default(),
             last_run: <span class="prelude-val">None</span>,
@@ -1039,11 +1034,11 @@
             <span class="self">self</span>.input_collector.update_just_pressed();
 
             <span class="comment">// save local players dense input for use with ggrs
-            </span><span class="kw">match </span>player_inputs.get_control_source(<span class="self">self</span>.local_player_idx) {
+            </span><span class="kw">match </span>player_inputs.get_control_source(<span class="self">self</span>.local_player_idx <span class="kw">as </span>usize) {
                 <span class="prelude-val">Some</span>(control_source) =&gt; {
                     <span class="kw">let </span>control = <span class="self">self
                         </span>.input_collector
-                        .get_control(<span class="self">self</span>.local_player_idx, control_source);
+                        .get_control(<span class="self">self</span>.local_player_idx <span class="kw">as </span>usize, control_source);
 
                     <span class="self">self</span>.last_player_input = control.get_dense_input();
                 },
@@ -1126,13 +1121,16 @@
 
                 <span class="kw">if </span>!<span class="self">self</span>.local_input_disabled {
                     <span class="self">self</span>.session
-                        .add_local_input(<span class="self">self</span>.local_player_idx, <span class="self">self</span>.last_player_input)
+                        .add_local_input(<span class="self">self</span>.local_player_idx <span class="kw">as </span>usize, <span class="self">self</span>.last_player_input)
                         .unwrap();
                 } <span class="kw">else </span>{
                     <span class="comment">// If local input is disabled, we still submit a default value representing no-inputs.
                     // This way if input is disabled current inputs will not be held down indefinitely.
                     </span><span class="self">self</span>.session
-                        .add_local_input(<span class="self">self</span>.local_player_idx, InputTypes::Dense::default())
+                        .add_local_input(
+                            <span class="self">self</span>.local_player_idx <span class="kw">as </span>usize,
+                            InputTypes::Dense::default(),
+                        )
                         .unwrap();
                 }
 
@@ -1210,7 +1208,7 @@
                                         {
                                             <span class="macro">trace!</span>(
                                                 <span class="string">&quot;Net player({player_idx}) local: {}, status: {status:?}, input: {:?}&quot;</span>,
-                                                <span class="self">self</span>.local_player_idx == player_idx,
+                                                <span class="self">self</span>.local_player_idx <span class="kw">as </span>usize == player_idx,
                                                 input
                                             );
                                             player_inputs.network_update(
@@ -1274,8 +1272,8 @@
 
         <span class="kw">let </span>runner_info = GgrsSessionRunnerInfo {
             socket: <span class="self">self</span>.socket.clone(),
-            player_is_local: <span class="self">self</span>.player_is_local,
-            player_count: <span class="self">self</span>.session.num_players(),
+            player_idx: <span class="self">self</span>.player_idx,
+            player_count: <span class="self">self</span>.session.num_players().try_into().unwrap(),
             max_prediction_window: <span class="prelude-val">Some</span>(<span class="self">self</span>.session.max_prediction()),
             local_input_delay: <span class="prelude-val">Some</span>(<span class="self">self</span>.local_input_delay),
         };

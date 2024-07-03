@@ -263,7 +263,7 @@
 <span class="doccomment">/// Online matchmaker request
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub enum </span>OnlineMatchmakerRequest {
-    SearchForGame { id: NodeId, player_count: usize },
+    SearchForGame { id: NodeId, player_count: u32 },
     StopSearch,
 }
 
@@ -299,7 +299,7 @@
 <span class="kw">async fn </span>search_for_game(
     matchmaker_channel: <span class="kw-2">&amp;</span>BiChannelServer&lt;OnlineMatchmakerRequest, OnlineMatchmakerResponse&gt;,
     id: NodeId,
-    player_count: usize,
+    player_count: u32,
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="macro">info!</span>(<span class="string">&quot;Connecting to online matchmaker&quot;</span>);
     <span class="kw">let </span>ep = get_network_endpoint().<span class="kw">await</span>;
@@ -314,7 +314,7 @@
     </span><span class="kw">let </span>(<span class="kw-2">mut </span>send, <span class="kw-2">mut </span>recv) = conn.open_bi().<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">let </span>message = MatchmakerRequest::RequestMatch(MatchInfo {
-        client_count: player_count.try_into().unwrap(),
+        client_count: player_count,
         match_data: <span class="string">b&quot;jumpy_default_game&quot;</span>.to_vec(),
     });
     <span class="macro">info!</span>(request=<span class="question-mark">?</span>message, <span class="string">&quot;Sending match request&quot;</span>);
@@ -369,14 +369,14 @@
                         <span class="macro">info!</span>(%random_seed, %player_idx, player_count=%client_count, <span class="string">&quot;Online match complete&quot;</span>);
 
                         <span class="kw">let </span>peer_connections = establish_peer_connections(
-                            player_idx <span class="kw">as </span>usize,
-                            client_count <span class="kw">as </span>usize,
+                            player_idx,
+                            client_count,
                             player_ids,
                             <span class="prelude-val">None</span>,
                         )
                         .<span class="kw">await</span><span class="question-mark">?</span>;
 
-                        <span class="kw">let </span>socket = Socket::new(player_idx <span class="kw">as </span>usize, peer_connections);
+                        <span class="kw">let </span>socket = Socket::new(player_idx, peer_connections);
 
                         matchmaker_channel.try_send(OnlineMatchmakerResponse::GameStarting {
                             socket,
@@ -395,7 +395,7 @@
 }
 
 <span class="doccomment">/// Search for game with `matchmaking_server` and `player_count`
-</span><span class="kw">pub fn </span>start_search_for_game(matchmaking_server: NodeId, player_count: usize) {
+</span><span class="kw">pub fn </span>start_search_for_game(matchmaking_server: NodeId, player_count: u32) {
     <span class="comment">// TODO remove
     </span><span class="macro">info!</span>(<span class="string">&quot;Starting search for online game with player count {player_count}&quot;</span>);
     ONLINE_MATCHMAKER

@@ -547,7 +547,6 @@
 <a href="#547" id="547">547</a>
 <a href="#548" id="548">548</a>
 <a href="#549" id="549">549</a>
-<a href="#550" id="550">550</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! LAN matchmaking and socket implementation.
 //!
 //! ## Matchmaking
@@ -621,7 +620,9 @@
 });
 
 <span class="doccomment">/// Host a server.
-</span><span class="kw">pub fn </span>start_server(server: ServerInfo, player_count: usize) {
+///
+/// The number of players is limited to `u32::MAX`.
+</span><span class="kw">pub fn </span>start_server(server: ServerInfo, player_count: u32) {
     MDNS.register(server.service)
         .expect(<span class="string">&quot;Could not register MDNS service.&quot;</span>);
     LAN_MATCHMAKER
@@ -845,7 +846,7 @@
 
 <span class="kw">async fn </span>lan_start_server(
     matchmaker_channel: <span class="kw-2">&amp;</span>BiChannelServer&lt;LanMatchmakerRequest, LanMatchmakerResponse&gt;,
-    <span class="kw-2">mut </span>player_count: usize,
+    <span class="kw-2">mut </span>player_count: u32,
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="macro">info!</span>(<span class="string">&quot;Starting LAN server&quot;</span>);
     matchmaker_channel
@@ -916,14 +917,14 @@
         <span class="macro">info!</span>(%current_players, %target_players);
 
         <span class="comment">// If we&#39;re ready to start a match
-        </span><span class="kw">if </span>connections.len() == player_count - <span class="number">1 </span>{
+        </span><span class="kw">if </span>connections.len() == (player_count - <span class="number">1</span>) <span class="kw">as </span>usize {
             <span class="macro">info!</span>(<span class="string">&quot;All players joined.&quot;</span>);
 
             <span class="kw">let </span>endpoint = get_network_endpoint().<span class="kw">await</span>;
 
             <span class="comment">// Tell all clients we&#39;re ready
             </span><span class="kw">for </span>(i, conn) <span class="kw">in </span>connections.iter().enumerate() {
-                <span class="kw">let </span><span class="kw-2">mut </span>peers = std::array::from_fn(|<span class="kw">_</span>| <span class="prelude-val">None</span>);
+                <span class="kw">let </span><span class="kw-2">mut </span>peers = Vec::new();
                 connections
                     .iter()
                     .enumerate()
@@ -940,12 +941,12 @@
                             );
                         }
 
-                        peers[i + <span class="number">1</span>] = <span class="prelude-val">Some</span>(addr);
+                        peers.push((u32::try_from(i + <span class="number">1</span>).unwrap(), addr));
                     });
 
                 <span class="kw">let </span><span class="kw-2">mut </span>uni = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
                 uni.write_all(<span class="kw-2">&amp;</span>postcard::to_vec::&lt;<span class="kw">_</span>, <span class="number">20</span>&gt;(<span class="kw-2">&amp;</span>MatchmakerNetMsg::MatchReady {
-                    player_idx: i + <span class="number">1</span>,
+                    player_idx: (i + <span class="number">1</span>).try_into()<span class="question-mark">?</span>,
                     peers,
                     player_count,
                 })<span class="question-mark">?</span>)
@@ -953,14 +954,11 @@
                 uni.finish().<span class="kw">await</span><span class="question-mark">?</span>;
             }
 
-            <span class="comment">// Collect the list of client connections
-            </span><span class="kw">let </span>connections = std::array::from_fn(|i| {
-                <span class="kw">if </span>i == <span class="number">0 </span>{
-                    <span class="prelude-val">None
-                </span>} <span class="kw">else </span>{
-                    connections.get(i - <span class="number">1</span>).cloned()
-                }
-            });
+            <span class="kw">let </span>connections = connections
+                .into_iter()
+                .enumerate()
+                .map(|(i, c)| (u32::try_from(i + <span class="number">1</span>).unwrap(), c))
+                .collect();
 
             <span class="comment">// Send the connections to the game so that it can start the network match.
             </span>matchmaker_channel
@@ -1029,10 +1027,10 @@
 </span><span class="kw">enum </span>MatchmakerNetMsg {
     MatchReady {
         <span class="doccomment">/// The peers they have for the match, with the index in the array being the player index of the peer.
-        </span>peers: [<span class="prelude-ty">Option</span>&lt;NodeAddr&gt;; MAX_PLAYERS],
+        </span>peers: Vec&lt;(u32, NodeAddr)&gt;,
         <span class="doccomment">/// The player index of the player getting the message.
-        </span>player_idx: usize,
-        player_count: usize,
+        </span>player_idx: u32,
+        player_count: u32,
     },
 }
 
@@ -1046,7 +1044,7 @@
     <span class="doccomment">/// Start matchmaker server
     </span>StartServer {
         <span class="doccomment">/// match player count
-        </span>player_count: usize,
+        </span>player_count: u32,
     },
     <span class="doccomment">/// Join server
     </span>JoinServer {
@@ -1070,9 +1068,9 @@
         <span class="doccomment">/// Lan socket to game
         </span>socket: Socket,
         <span class="doccomment">/// Local player index
-        </span>player_idx: usize,
+        </span>player_idx: u32,
         <span class="doccomment">/// Game player count
-        </span>player_count: usize,
+        </span>player_count: u32,
     },
 }
 

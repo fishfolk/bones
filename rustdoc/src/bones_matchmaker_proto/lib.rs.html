@@ -92,13 +92,6 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
 </span><span class="comment">// This cfg_attr is needed because `rustdoc::all` includes lints not supported on stable
 </span><span class="attr">#![cfg_attr(doc, allow(unknown_lints))]
@@ -111,13 +104,6 @@
 
 <span class="doccomment">/// ALPN used for the direct connections between players.
 </span><span class="kw">pub const </span>PLAY_ALPN: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;/bones/play/0&quot;</span>;
-
-<span class="comment">// TODO: Remove this limitation on max players, a variety of types use this for static arrays,
-// should either figure out how to make this a compile-time const value specified by game, or
-// use dynamic arrays.
-//
-</span><span class="doccomment">/// Max players in networked game
-</span><span class="kw">pub const </span>MAX_PLAYERS: usize = <span class="number">4</span>;
 
 <span class="comment">//
 // === Matchmaking Mode ===
@@ -136,8 +122,8 @@
 <span class="doccomment">/// Information about a match that is being requested
 </span><span class="attr">#[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
 </span><span class="kw">pub struct </span>MatchInfo {
-    <span class="doccomment">/// The number of clients to have in a match
-    </span><span class="kw">pub </span>client_count: u8,
+    <span class="doccomment">/// The number of clients to have in a match.
+    </span><span class="kw">pub </span>client_count: u32,
     <span class="doccomment">/// This is an arbitrary set of bytes that must match exactly for clients to end up in the same
     /// match.
     ///
@@ -152,17 +138,17 @@
     <span class="doccomment">/// The conneciton has been accepted
     </span>Accepted,
     <span class="doccomment">/// This is the current number of connected clients
-    </span>ClientCount(u8),
+    </span>ClientCount(u32),
     <span class="doccomment">/// The desired client count has been reached, and you may start the match.
     </span>Success {
         <span class="doccomment">/// The random seed that each client should use.
         </span>random_seed: u64,
         <span class="doccomment">/// The client idx of the current client
-        </span>player_idx: u8,
+        </span>player_idx: u32,
         <span class="doccomment">/// The number of connected clients in the match
-        </span>client_count: u8,
+        </span>client_count: u32,
         <span class="doccomment">/// The node ids of all players.
-        </span>player_ids: [<span class="prelude-ty">Option</span>&lt;iroh_net::NodeAddr&gt;; MAX_PLAYERS],
+        </span>player_ids: Vec&lt;(u32, iroh_net::NodeAddr)&gt;,
     },
 }
 
