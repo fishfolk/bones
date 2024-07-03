@@ -112,7 +112,7 @@ async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyho
                                         let result = async {
                                             let message = postcard::to_allocvec(
                                                 &MatchmakerResponse::ClientCount(
-                                                    members.len() as u8
+                                                    members.len().try_into()?
                                                 ),
                                             )?;
                                             for conn in members {
@@ -145,7 +145,7 @@ async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyho
 
                         if !members_to_notify.is_empty() {
                             let message = postcard::to_allocvec(&MatchmakerResponse::ClientCount(
-                                members_to_notify.len() as u8,
+                                members_to_notify.len().try_into()?
                             ))?;
                             for conn in members_to_notify {
                                 let mut send = conn.open_uni().await?;
@@ -156,7 +156,7 @@ async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyho
 
                         if !members_to_join.is_empty() {
                             // Send the match ID to all of the clients in the room
-                            let mut player_ids = std::array::from_fn(|_| None);
+                            let mut player_ids = Vec::new();
                             let random_seed = rand::random();
 
                             for (idx, conn) in members_to_join.iter().enumerate() {
@@ -171,7 +171,7 @@ async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyho
                                     );
                                 }
 
-                                player_ids[idx] = Some(addr);
+                                player_ids.push((u32::try_from(idx)?, addr));
                             }
 
                             for (player_idx, conn) in members_to_join.into_iter().enumerate() {
@@ -180,7 +180,7 @@ async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyho
                                     postcard::to_allocvec(&MatchmakerResponse::Success {
                                         random_seed,
                                         client_count: player_count,
-                                        player_idx: player_idx as u8,
+                                        player_idx: player_idx.try_into()?,
                                         player_ids: player_ids.clone(),
                                     })?;
                                 let mut send = conn.open_uni().await?;
