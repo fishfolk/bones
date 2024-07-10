@@ -90,26 +90,8 @@ pub trait QueryItem {
     type Iter: Iterator;
     /// Modify the iteration bitset
     fn apply_bitset(&self, bitset: &mut BitSetVec);
-    /// Return the item that matches the query within the given bitset if there is exactly one
-    /// entity that matches this query item.
-    fn get_single_with_bitset(
-        self,
-        bitset: Rc<BitSetVec>,
-    ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError>;
     /// Return an iterator over the provided bitset.
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter;
-}
-
-/// An error that may occur when querying for a single entity. For example, via
-/// [`Entities::get_single_with`], or more directly with
-/// [`ComponentStore::get_single_with_bitset`] or
-/// [`ComponentStore::get_single_mut_with_bitset`].
-#[derive(Debug, PartialEq, Eq)]
-pub enum QuerySingleError {
-    /// No entity matches the query.
-    NoEntities,
-    /// More than one entity matches the query.
-    MultipleEntities,
 }
 
 /// Wrapper for the [`Comp`] [`SystemParam`] used as [`QueryItem`] to iterate
@@ -181,16 +163,8 @@ impl<'a> QueryItem for &'a Ref<'a, UntypedComponentStore> {
 
 impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
     type Iter = ComponentBitsetIterator<'a, T>;
-
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
         bitset.bit_and(self.bitset());
-    }
-
-    fn get_single_with_bitset(
-        self,
-        bitset: Rc<BitSetVec>,
-    ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
-        ComponentStore::get_single_with_bitset(&**self, bitset)
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -200,16 +174,8 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a Comp<'q, T> {
 
 impl<'a, 'q, T: HasSchema> QueryItem for &'a CompMut<'q, T> {
     type Iter = ComponentBitsetIterator<'a, T>;
-
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
         bitset.bit_and(self.bitset());
-    }
-
-    fn get_single_with_bitset(
-        self,
-        bitset: Rc<BitSetVec>,
-    ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
-        ComponentStore::get_single_with_bitset(&**self, bitset)
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -219,16 +185,8 @@ impl<'a, 'q, T: HasSchema> QueryItem for &'a CompMut<'q, T> {
 
 impl<'a, 'q, T: HasSchema> QueryItem for &'a mut CompMut<'q, T> {
     type Iter = ComponentBitsetIteratorMut<'a, T>;
-
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
         bitset.bit_and(self.bitset());
-    }
-
-    fn get_single_with_bitset(
-        self,
-        bitset: Rc<BitSetVec>,
-    ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
-        ComponentStore::get_single_with_bitset_mut(self, bitset)
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
@@ -244,19 +202,7 @@ where
     S: std::ops::Deref<Target = C> + 'a,
 {
     type Iter = ComponentBitsetOptionalIterator<'a, T>;
-
     fn apply_bitset(&self, _bitset: &mut BitSetVec) {}
-
-    fn get_single_with_bitset(
-        self,
-        bitset: Rc<BitSetVec>,
-    ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
-        match self.0.get_single_with_bitset(bitset) {
-            Ok(single) => Ok(Some(single)),
-            Err(QuerySingleError::NoEntities) => Ok(None),
-            Err(err) => Err(err),
-        }
-    }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
         self.0.iter_with_bitset_optional(bitset)
@@ -270,19 +216,7 @@ where
     S: std::ops::DerefMut<Target = C> + 'a,
 {
     type Iter = ComponentBitsetOptionalIteratorMut<'a, T>;
-
     fn apply_bitset(&self, _bitset: &mut BitSetVec) {}
-
-    fn get_single_with_bitset(
-        self,
-        bitset: Rc<BitSetVec>,
-    ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
-        match self.0.get_single_mut_with_bitset(bitset) {
-            Ok(x) => Ok(Some(x)),
-            Err(QuerySingleError::NoEntities) => Ok(None),
-            Err(err) => Err(err),
-        }
-    }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
         self.0.iter_mut_with_bitset_optional(bitset)
@@ -364,32 +298,6 @@ macro_rules! impl_query {
             }
 
             #[allow(non_snake_case)]
-            fn get_single_with_bitset(
-                self,
-                bitset: Rc<BitSetVec>,
-            ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
-                let (
-                    $(
-                        $args,
-                    )*
-                ) = self;
-                let mut query = MultiQueryIter {
-                    data: (
-                        $(
-                            $args.iter_with_bitset(bitset.clone()),
-                        )*
-                    )
-                };
-                let first = query.next();
-                let has_second = query.next().is_some();
-                match (first, has_second) {
-                    (None, _) => Err(QuerySingleError::NoEntities),
-                    (Some(items), false) => Ok(items),
-                    (Some(_), true) => Err(QuerySingleError::MultipleEntities),
-                }
-            }
-
-            #[allow(non_snake_case)]
             fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
                 let (
                     $(
@@ -454,89 +362,6 @@ impl<'a, I: Iterator> Iterator for EntitiesIterWith<'a, I> {
 }
 
 impl Entities {
-    /// Get a single entity and components in the given query if there is exactly one entity
-    /// matching the query.
-    ///
-    /// # Panics
-    ///
-    /// This method panics if the number of matching entities is not *exactly one*.
-    pub fn single_with<Q: QueryItem>(
-        &self,
-        query: Q,
-    ) -> (Entity, <<Q as QueryItem>::Iter as Iterator>::Item) {
-        self.get_single_with(query).unwrap()
-    }
-
-    /// Get a single entity and components in the given query if there is exactly one entity
-    /// matching the query.
-    pub fn get_single_with<Q: QueryItem>(
-        &self,
-        query: Q,
-    ) -> Result<(Entity, <<Q as QueryItem>::Iter as Iterator>::Item), QuerySingleError> {
-        let mut bitset = self.bitset().clone();
-        query.apply_bitset(&mut bitset);
-
-        let entity = {
-            let mut ids = (0..self.next_id).filter(|&i| bitset.bit_test(i));
-            let id = ids.next().ok_or(QuerySingleError::NoEntities)?;
-            if ids.next().is_some() {
-                return Err(QuerySingleError::MultipleEntities);
-            }
-            Entity::new(id as u32, self.generation[id])
-        };
-
-        let bitset = Rc::new(bitset);
-
-        query
-            .get_single_with_bitset(bitset)
-            .map(|item| (entity, item))
-    }
-
-    /// Get the first entity in the given bitset.
-    ///
-    /// # Panics
-    ///
-    /// This method panics if there are no entities in the bitset.
-    pub fn first_with_bitset(&self, bitset: &BitSetVec) -> Entity {
-        self.get_first_with_bitset(bitset).unwrap()
-    }
-
-    /// Get the first entity in the given bitset.
-    pub fn get_first_with_bitset(&self, bitset: &BitSetVec) -> Option<Entity> {
-        self.iter_with_bitset(bitset).next()
-    }
-
-    /// Get the first entity and components in the given query.
-    ///
-    /// # Panics
-    ///
-    /// This method panics if there are no entities that match the query.
-    pub fn first_with<Q: QueryItem>(
-        &self,
-        query: Q,
-    ) -> (Entity, <<Q as QueryItem>::Iter as Iterator>::Item) {
-        self.get_first_with(query).unwrap()
-    }
-
-    /// Get the first entity and components in the given query.
-    pub fn get_first_with<Q: QueryItem>(
-        &self,
-        query: Q,
-    ) -> Option<(Entity, <<Q as QueryItem>::Iter as Iterator>::Item)> {
-        self.iter_with(query).next()
-    }
-
-    /// Iterates over entities using the provided bitset.
-    pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> EntityIterator {
-        EntityIterator {
-            current_id: 0,
-            next_id: self.next_id,
-            entities: &self.alive,
-            generations: &self.generation,
-            bitset,
-        }
-    }
-
     /// Iterate over the entities and components in the given query.
     ///
     /// The [`QueryItem`] trait is automatically implemented for references to [`Comp`] and
@@ -691,6 +516,17 @@ impl Entities {
     pub fn bitset(&self) -> &BitSetVec {
         &self.alive
     }
+
+    /// Iterates over entities using the provided bitset.
+    pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> EntityIterator {
+        EntityIterator {
+            current_id: 0,
+            next_id: self.next_id,
+            entities: &self.alive,
+            generations: &self.generation,
+            bitset,
+        }
+    }
 }
 
 /// Iterator over entities using the provided bitset.
@@ -726,155 +562,12 @@ impl<'a> Iterator for EntityIterator<'a> {
 
 #[cfg(test)]
 mod tests {
-    #![allow(non_snake_case)]
-
-    use std::{collections::HashSet, rc::Rc};
+    use std::collections::HashSet;
 
     use crate::prelude::*;
 
-    #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
-    #[repr(C)]
-    struct A(String);
-
-    #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
-    #[repr(C)]
-    struct B(String);
-
     #[test]
-    fn query_item__get_single_with_one_required() {
-        let mut entities = Entities::default();
-        let state = AtomicCell::new(ComponentStore::<A>::default());
-
-        {
-            let comp = state.borrow_mut();
-            let query = &comp;
-
-            let mut bitset = entities.bitset().clone();
-            query.apply_bitset(&mut bitset);
-
-            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
-
-            assert_eq!(maybe_comps, Err(QuerySingleError::NoEntities));
-        }
-
-        {
-            let mut comp = state.borrow_mut();
-
-            let e = entities.create();
-            let a = A("e".to_string());
-            comp.insert(e, a.clone());
-
-            let query = &comp;
-            let mut bitset = entities.bitset().clone();
-            query.apply_bitset(&mut bitset);
-
-            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
-
-            assert_eq!(maybe_comps, Ok(&a));
-
-            entities.kill(e);
-        }
-
-        {
-            let mut comp = state.borrow_mut();
-
-            let e1 = entities.create();
-            comp.insert(e1, A("e1".to_string()));
-
-            let e2 = entities.create();
-            comp.insert(e2, A("e2".to_string()));
-
-            let query = &comp;
-            let mut bitset = entities.bitset().clone();
-            query.apply_bitset(&mut bitset);
-
-            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
-
-            assert_eq!(maybe_comps, Err(QuerySingleError::MultipleEntities));
-
-            entities.kill(e1);
-            entities.kill(e2);
-        }
-    }
-
-    #[test]
-    fn query_item__get_single_with_multiple_required() {
-        let mut entities = Entities::default();
-        let state_a = AtomicCell::new(ComponentStore::<A>::default());
-        let state_b = AtomicCell::new(ComponentStore::<B>::default());
-
-        {
-            let query = (&state_a.borrow(), &state_b.borrow());
-            let mut bitset = entities.bitset().clone();
-            query.apply_bitset(&mut bitset);
-
-            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
-
-            assert_eq!(maybe_comps, Err(QuerySingleError::NoEntities));
-        }
-
-        {
-            let e = entities.create();
-            let a = A("e".to_string());
-            let b = B("e".to_string());
-            state_a.borrow_mut().insert(e, a.clone());
-            state_b.borrow_mut().insert(e, b.clone());
-
-            let query = (&state_a.borrow(), &state_b.borrow());
-            let mut bitset = entities.bitset().clone();
-            query.apply_bitset(&mut bitset);
-
-            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
-
-            assert_eq!(maybe_comps, Ok((&a, &b)));
-
-            entities.kill(e);
-        }
-
-        {
-            let e1 = entities.create();
-            state_a.borrow_mut().insert(e1, A("e1".to_string()));
-            state_b.borrow_mut().insert(e1, B("e1".to_string()));
-
-            let e2 = entities.create();
-            state_a.borrow_mut().insert(e2, A("e2".to_string()));
-            state_b.borrow_mut().insert(e2, B("e2".to_string()));
-
-            let query = (&state_a.borrow(), &state_b.borrow());
-            let mut bitset = entities.bitset().clone();
-            query.apply_bitset(&mut bitset);
-
-            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
-
-            assert_eq!(maybe_comps, Err(QuerySingleError::MultipleEntities));
-
-            entities.kill(e1);
-            entities.kill(e2);
-        }
-    }
-
-    #[test]
-    fn query_item__get_single_with_bitset__uses_bitset() {
-        let mut entities = Entities::default();
-        let state = AtomicCell::new(ComponentStore::<A>::default());
-
-        let e = entities.create();
-        state.borrow_mut().insert(e, A("unexpected".to_string()));
-
-        let query = &state.borrow();
-        let bitset = Rc::new({
-            let mut bitset = BitSetVec::default();
-            bitset.bit_set(99);
-            bitset
-        });
-
-        let maybe_comp = query.get_single_with_bitset(bitset);
-
-        assert_eq!(maybe_comp, Err(QuerySingleError::NoEntities));
-    }
-
-    #[test]
-    fn entities__create_kill() {
+    fn create_kill_entities() {
         let mut entities = Entities::default();
         let e1 = entities.create();
         let e2 = entities.create();
@@ -902,7 +595,7 @@ mod tests {
     }
 
     #[test]
-    fn entities__interleaved_create_kill() {
+    fn test_interleaved_create_kill() {
         let mut entities = Entities::default();
 
         let e1 = entities.create();
@@ -926,7 +619,7 @@ mod tests {
 
     #[test]
     /// Exercise basic operations on entities to increase code coverage
-    fn entities__clone_debug_hash() {
+    fn clone_debug_hash() {
         let mut entities = Entities::default();
         let e1 = entities.create();
         // Clone
@@ -943,7 +636,7 @@ mod tests {
     ///
     /// Exercises a code path not tested according to code coverage.
     #[test]
-    fn entities__force_generate_next_section() {
+    fn force_generate_next_section() {
         let mut entities = Entities::default();
         // Create enough entities to fil up the first section of the bitset
         for _ in 0..256 {
@@ -960,7 +653,7 @@ mod tests {
     #[cfg(not(miri))] // This test is very slow on miri and not critical to test for.
     #[test]
     #[should_panic(expected = "Exceeded maximum amount")]
-    fn entities__force_max_entity_panic() {
+    fn force_max_entity_panic() {
         let mut entities = Entities::default();
         for _ in 0..(BITSET_SIZE + 1) {
             entities.create();
@@ -970,7 +663,7 @@ mod tests {
     #[cfg(not(miri))] // This test is very slow on miri and not critical to test for.
     #[test]
     #[should_panic(expected = "Exceeded maximum amount")]
-    fn entities__force_max_entity_panic2() {
+    fn force_max_entity_panic2() {
         let mut entities = Entities::default();
         let mut e = None;
         for _ in 0..BITSET_SIZE {
@@ -983,7 +676,7 @@ mod tests {
     }
 
     #[test]
-    fn entities__iter_with_empty_bitset() {
+    fn iter_with_empty_bitset() {
         let mut entities = Entities::default();
 
         // Create a couple entities
@@ -993,141 +686,5 @@ mod tests {
         // Join with an empty bitset
         let bitset = BitSetVec::default();
         assert_eq!(entities.iter_with_bitset(&bitset).count(), 0);
-    }
-
-    #[test]
-    fn entities__get_single__with_one_required() {
-        let mut entities = Entities::default();
-        (0..3).map(|_| entities.create()).count();
-        let e = entities.create();
-        let a = A("a".to_string());
-
-        let state = AtomicCell::new(ComponentStore::<A>::default());
-        state.borrow_mut().insert(e, a.clone());
-
-        let comp = state.borrow();
-
-        assert_eq!(entities.get_single_with(&comp), Ok((e, &a)));
-    }
-
-    #[test]
-    fn entities__get_single__with_multiple_required() {
-        let mut entities = Entities::default();
-
-        let state_a = AtomicCell::new(ComponentStore::<A>::default());
-        let state_b = AtomicCell::new(ComponentStore::<B>::default());
-
-        let _e1 = entities.create();
-
-        let e2 = entities.create();
-        state_a.borrow_mut().insert(e2, A("a2".to_string()));
-
-        let e3 = entities.create();
-        state_b.borrow_mut().insert(e3, B("b3".to_string()));
-
-        let e4 = entities.create();
-        let a4 = A("a4".to_string());
-        let b4 = B("b4".to_string());
-        state_a.borrow_mut().insert(e4, a4.clone());
-        state_b.borrow_mut().insert(e4, b4.clone());
-
-        let comp_a = state_a.borrow();
-        let comp_b = state_b.borrow();
-        assert_eq!(
-            entities.get_single_with((&comp_a, &comp_b)),
-            Ok((e4, (&a4, &b4)))
-        );
-    }
-
-    #[test]
-    fn entities__get_single__with_one_optional() {
-        let mut entities = Entities::default();
-        let state = AtomicCell::new(ComponentStore::<A>::default());
-
-        {
-            let e = entities.create();
-
-            let mut comp = state.borrow_mut();
-
-            assert_eq!(entities.get_single_with(&Optional(&comp)), Ok((e, None)));
-
-            assert_eq!(
-                entities.get_single_with(&mut OptionalMut(&mut comp)),
-                Ok((e, None))
-            );
-
-            entities.kill(e);
-        }
-
-        {
-            let e = entities.create();
-            let mut a = A("a".to_string());
-            state.borrow_mut().insert(e, a.clone());
-
-            let mut comp = state.borrow_mut();
-
-            assert_eq!(
-                entities.get_single_with(&Optional(&comp)),
-                Ok((e, Some(&a)))
-            );
-
-            assert_eq!(
-                entities.get_single_with(&mut OptionalMut(&mut comp)),
-                Ok((e, Some(&mut a)))
-            );
-
-            entities.kill(e);
-        }
-    }
-
-    #[test]
-    fn entities__get_single__with_required_and_optional() {
-        let mut entities = Entities::default();
-        let state_a = AtomicCell::new(ComponentStore::<A>::default());
-        let state_b = AtomicCell::new(ComponentStore::<B>::default());
-
-        {
-            let e = entities.create();
-            let a = A("a".to_string());
-            state_a.borrow_mut().insert(e, a.clone());
-
-            let comp_a = state_a.borrow();
-            let mut comp_b = state_b.borrow_mut();
-
-            assert_eq!(
-                entities.get_single_with((&comp_a, &Optional(&comp_b))),
-                Ok((e, (&a, None)))
-            );
-
-            assert_eq!(
-                entities.get_single_with((&comp_a, &mut OptionalMut(&mut comp_b))),
-                Ok((e, (&a, None)))
-            );
-
-            entities.kill(e);
-        }
-
-        {
-            let e = entities.create();
-            let a = A("a".to_string());
-            let mut b = B("b".to_string());
-            state_a.borrow_mut().insert(e, a.clone());
-            state_b.borrow_mut().insert(e, b.clone());
-
-            let comp_a = state_a.borrow();
-            let mut comp_b = state_b.borrow_mut();
-
-            assert_eq!(
-                entities.get_single_with((&comp_a, &Optional(&comp_b))),
-                Ok((e, (&a, Some(&b))))
-            );
-
-            assert_eq!(
-                entities.get_single_with((&comp_a, &mut OptionalMut(&mut comp_b))),
-                Ok((e, (&a, Some(&mut b))))
-            );
-
-            entities.kill(e);
-        }
     }
 }
