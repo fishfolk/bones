@@ -13,6 +13,9 @@ keywords.workspace      = true
 [features]
 default = []
 
+# Enables debug logging of asset cid computation during loading.
+cid_debug_trace = []
+
 [dependencies]
 bones_utils  = { version = "0.3", path = "../bones_utils", features = ["serde"] }
 bones_schema = { version = "0.3", path = "../bones_schema", features = ["serde"] }
