@@ -19,7 +19,11 @@ use semver::VersionReq;
 use serde::{de::DeserializeSeed, Deserialize};
 use ulid::Ulid;
 
+#[allow(unused_imports)]
+use tracing::info;
+
 use crate::prelude::*;
+
 use bones_utils::{
     parking_lot::{MappedMutexGuard, MutexGuard},
     *,
@@ -610,10 +614,28 @@ impl AssetServer {
         let mut dependencies = Vec::new();
 
         let mut cid = Cid::default();
+
+        // NOTE: If changing cid computation logic, please update `CidDebugTrace` impl if possible.
+        //
+        // Tracks inputs to asset cid for debug tracing.
+        #[cfg(feature = "cid_debug_trace")]
+        let mut cid_debug = CidDebugTrace::new(schema.full_name, loc.path);
+
         // Use the schema name and the file contents to create a unique, content-addressed ID for
         // the asset.
         cid.update(schema.full_name.as_bytes());
+
+        #[cfg(feature = "cid_debug_trace")]
+        {
+            cid_debug.cid_after_schema_fullname = cid;
+        }
+
         cid.update(contents);
+
+        #[cfg(feature = "cid_debug_trace")]
+        {
+            cid_debug.cid_after_contents = cid;
+        }
 
         let loader = MetaAssetLoadCtx {
             server: self,
@@ -654,6 +676,22 @@ impl AssetServer {
         dep_cids.sort();
         for dep_cid in dep_cids {
             cid.update(dep_cid.0.as_slice());
+
+            #[cfg(feature = "cid_debug_trace")]
+            {
+                // TODO: Get dep_cid asset_loc for cid debug trace,
+                // It is currently None, needs fix / alterative idenifying metadata.
+
+                let asset_loc = self.store.assets.get(&cid).map(|x| x.loc.clone());
+                cid_debug.cid_after_deps.push((dep_cid, cid, asset_loc));
+            }
+        }
+
+        #[cfg(feature = "cid_debug_trace")]
+        {
+            // log asset cid trace
+            cid_debug.final_cid = cid;
+            info!("{cid_debug}");
         }
 
         Ok(PartialAsset {
