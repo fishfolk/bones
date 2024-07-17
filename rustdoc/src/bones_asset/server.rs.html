@@ -1458,6 +1458,44 @@
 <a href="#1458" id="1458">1458</a>
 <a href="#1459" id="1459">1459</a>
 <a href="#1460" id="1460">1460</a>
+<a href="#1461" id="1461">1461</a>
+<a href="#1462" id="1462">1462</a>
+<a href="#1463" id="1463">1463</a>
+<a href="#1464" id="1464">1464</a>
+<a href="#1465" id="1465">1465</a>
+<a href="#1466" id="1466">1466</a>
+<a href="#1467" id="1467">1467</a>
+<a href="#1468" id="1468">1468</a>
+<a href="#1469" id="1469">1469</a>
+<a href="#1470" id="1470">1470</a>
+<a href="#1471" id="1471">1471</a>
+<a href="#1472" id="1472">1472</a>
+<a href="#1473" id="1473">1473</a>
+<a href="#1474" id="1474">1474</a>
+<a href="#1475" id="1475">1475</a>
+<a href="#1476" id="1476">1476</a>
+<a href="#1477" id="1477">1477</a>
+<a href="#1478" id="1478">1478</a>
+<a href="#1479" id="1479">1479</a>
+<a href="#1480" id="1480">1480</a>
+<a href="#1481" id="1481">1481</a>
+<a href="#1482" id="1482">1482</a>
+<a href="#1483" id="1483">1483</a>
+<a href="#1484" id="1484">1484</a>
+<a href="#1485" id="1485">1485</a>
+<a href="#1486" id="1486">1486</a>
+<a href="#1487" id="1487">1487</a>
+<a href="#1488" id="1488">1488</a>
+<a href="#1489" id="1489">1489</a>
+<a href="#1490" id="1490">1490</a>
+<a href="#1491" id="1491">1491</a>
+<a href="#1492" id="1492">1492</a>
+<a href="#1493" id="1493">1493</a>
+<a href="#1494" id="1494">1494</a>
+<a href="#1495" id="1495">1495</a>
+<a href="#1496" id="1496">1496</a>
+<a href="#1497" id="1497">1497</a>
+<a href="#1498" id="1498">1498</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -1479,7 +1517,11 @@
 <span class="kw">use </span>serde::{de::DeserializeSeed, Deserialize};
 <span class="kw">use </span>ulid::Ulid;
 
+<span class="attr">#[allow(unused_imports)]
+</span><span class="kw">use </span>tracing::info;
+
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+
 <span class="kw">use </span>bones_utils::{
     parking_lot::{MappedMutexGuard, MutexGuard},
     <span class="kw-2">*</span>,
@@ -2070,10 +2112,28 @@
         <span class="kw">let </span><span class="kw-2">mut </span>dependencies = Vec::new();
 
         <span class="kw">let </span><span class="kw-2">mut </span>cid = Cid::default();
+
+        <span class="comment">// NOTE: If changing cid computation logic, please update `CidDebugTrace` impl if possible.
+        //
+        // Tracks inputs to asset cid for debug tracing.
+        </span><span class="attr">#[cfg(feature = <span class="string">&quot;cid_debug_trace&quot;</span>)]
+        </span><span class="kw">let </span><span class="kw-2">mut </span>cid_debug = CidDebugTrace::new(schema.full_name, loc.path);
+
         <span class="comment">// Use the schema name and the file contents to create a unique, content-addressed ID for
         // the asset.
         </span>cid.update(schema.full_name.as_bytes());
+
+        <span class="attr">#[cfg(feature = <span class="string">&quot;cid_debug_trace&quot;</span>)]
+        </span>{
+            cid_debug.cid_after_schema_fullname = cid;
+        }
+
         cid.update(contents);
+
+        <span class="attr">#[cfg(feature = <span class="string">&quot;cid_debug_trace&quot;</span>)]
+        </span>{
+            cid_debug.cid_after_contents = cid;
+        }
 
         <span class="kw">let </span>loader = MetaAssetLoadCtx {
             server: <span class="self">self</span>,
@@ -2114,6 +2174,22 @@
         dep_cids.sort();
         <span class="kw">for </span>dep_cid <span class="kw">in </span>dep_cids {
             cid.update(dep_cid.<span class="number">0</span>.as_slice());
+
+            <span class="attr">#[cfg(feature = <span class="string">&quot;cid_debug_trace&quot;</span>)]
+            </span>{
+                <span class="comment">// TODO: Get dep_cid asset_loc for cid debug trace,
+                // It is currently None, needs fix / alterative idenifying metadata.
+
+                </span><span class="kw">let </span>asset_loc = <span class="self">self</span>.store.assets.get(<span class="kw-2">&amp;</span>cid).map(|x| x.loc.clone());
+                cid_debug.cid_after_deps.push((dep_cid, cid, asset_loc));
+            }
+        }
+
+        <span class="attr">#[cfg(feature = <span class="string">&quot;cid_debug_trace&quot;</span>)]
+        </span>{
+            <span class="comment">// log asset cid trace
+            </span>cid_debug.final_cid = cid;
+            <span class="macro">info!</span>(<span class="string">&quot;{cid_debug}&quot;</span>);
         }
 
         <span class="prelude-val">Ok</span>(PartialAsset {
