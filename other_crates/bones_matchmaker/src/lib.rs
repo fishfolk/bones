@@ -23,12 +23,15 @@ struct Config {
     /// If enabled, prints the current secret key. Use with caution.
     #[clap(long)]
     print_secret_key: bool,
+    /// Use this secret key for the node
+    #[clap(short, long, env = "BONES_MATCHMAKER_SECRET_KEY")]
+    secret_key: Option<iroh_net::key::SecretKey>,
 }
 
-async fn server(args: Config, secret_key: Option<SecretKey>) -> anyhow::Result<()> {
+async fn server(args: Config) -> anyhow::Result<()> {
     let port = args.listen_addr.port();
 
-    match secret_key {
+    match args.secret_key {
         Some(ref key) => {
             info!("Using existing key: {}", key.public());
         }
@@ -37,18 +40,18 @@ async fn server(args: Config, secret_key: Option<SecretKey>) -> anyhow::Result<(
         }
     }
 
-    let secret_key = secret_key.unwrap_or_else(SecretKey::generate);
+    let secret_key = args.secret_key.unwrap_or_else(SecretKey::generate);
 
     if args.print_secret_key {
         println!("Secret Key: {}", secret_key);
     }
 
-    let endpoint = iroh_net::MagicEndpoint::builder()
+    let endpoint = iroh_net::Endpoint::builder()
         .alpns(vec![MATCH_ALPN.to_vec()])
         .discovery(Box::new(
             iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
                 Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
-                Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
+                Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
                     secret_key.clone(),
                 )),
             ]),
@@ -57,7 +60,7 @@ async fn server(args: Config, secret_key: Option<SecretKey>) -> anyhow::Result<(
         .bind(port)
         .await?;
 
-    let my_addr = endpoint.my_addr().await?;
+    let my_addr = endpoint.node_addr().await?;
 
     info!(address=?my_addr, "Started server");
 
