@@ -21,7 +21,7 @@ pub use glam;
 pub mod prelude {
     pub use crate::{
         animation::*, debug, input::prelude::*, params::*, render::prelude::*, storage::*, time::*,
-        utils::*, AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin,
+        utils::*, AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin, ExitBones,
     };
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -117,5 +117,28 @@ impl AssetServerExt for &mut bones_asset::AssetServer {
         Font::register_schema();
 
         self
+    }
+}
+
+/// Resource for exiting bones games.
+///
+/// ## Notes
+/// This has to be supported by the platform that is using bones.
+/// Though it is not enforced, whether or not the platform inserts
+/// this as a shared resource on your bones game should determine
+/// whether or not it supports an exit functionality.
+#[derive(bones_schema::HasSchema, Default, Clone)]
+pub struct ExitBones(pub bool);
+
+impl std::ops::Deref for ExitBones {
+    type Target = bool;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for ExitBones {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
