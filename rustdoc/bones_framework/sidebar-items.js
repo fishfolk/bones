@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["animation","asset","debug","external","glam","input","lib","localization","networking","params","prelude","render","storage","time","utils"],"struct":["DefaultGamePlugin","DefaultSessionPlugin"],"trait":["AssetServerExt"]};
+window.SIDEBAR_ITEMS = {"mod":["animation","asset","debug","external","glam","input","lib","localization","networking","params","prelude","render","storage","time","utils"],"struct":["DefaultGamePlugin","DefaultSessionPlugin","ExitBones"],"trait":["AssetServerExt"]};

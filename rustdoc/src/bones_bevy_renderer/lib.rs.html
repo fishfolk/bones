@@ -371,6 +371,19 @@
 <a href="#371" id="371">371</a>
 <a href="#372" id="372">372</a>
 <a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -570,6 +583,12 @@
         <span class="self">self</span>.game.init_shared_resource::&lt;bones::MouseInputs&gt;();
         <span class="self">self</span>.game.init_shared_resource::&lt;bones::GamepadInputs&gt;();
 
+        <span class="attr">#[cfg(not(target_arch = <span class="string">&quot;wasm32&quot;</span>))]
+        </span>{
+            <span class="self">self</span>.game.init_shared_resource::&lt;bones::ExitBones&gt;();
+            app.add_systems(Update, handle_exits);
+        }
+
         <span class="comment">// Insert the bones data
         </span>app.insert_resource(BonesGame(<span class="self">self</span>.game))
             .insert_resource(LoadingContext(<span class="self">self</span>.custom_load_progress))
@@ -742,6 +761,13 @@
                 );
             }
         })
+    }
+}
+
+<span class="attr">#[cfg(not(target_arch = <span class="string">&quot;wasm32&quot;</span>))]
+</span><span class="kw">fn </span>handle_exits(game: Res&lt;BonesGame&gt;, <span class="kw-2">mut </span>exits: EventWriter&lt;bevy::app::AppExit&gt;) {
+    <span class="kw">if </span><span class="kw-2">**</span>game.shared_resource::&lt;bones::ExitBones&gt;().unwrap() {
+        exits.send(bevy::app::AppExit);
     }
 }
 </code></pre></div></section></main></body></html>

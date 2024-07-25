@@ -568,6 +568,16 @@
 <a href="#568" id="568">568</a>
 <a href="#569" id="569">569</a>
 <a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::too_many_arguments)]
 
 </span><span class="kw">use </span>bones_bevy_renderer::{bevy::diagnostic::LogDiagnosticsPlugin, BonesBevyRenderer};
@@ -738,6 +748,7 @@
     ctx: Res&lt;EguiCtx&gt;,
     <span class="kw-2">mut </span>sessions: ResMut&lt;Sessions&gt;,
     <span class="kw-2">mut </span>session_options: ResMut&lt;SessionOptions&gt;,
+    <span class="kw-2">mut </span>exit_bones: <span class="prelude-ty">Option</span>&lt;ResMut&lt;ExitBones&gt;&gt;,
     <span class="comment">// Get the localization field from our `GameMeta`
     </span>localization: Localization&lt;GameMeta&gt;,
     world: <span class="kw-2">&amp;</span>World,
@@ -832,6 +843,15 @@
                         </span>sessions
                             .create(<span class="string">&quot;path2d_demo&quot;</span>)
                             .install_plugin(path2d_demo_plugin);
+                    }
+
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(exit_bones) = <span class="kw-2">&amp;mut </span>exit_bones {
+                        <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;quit&quot;</span>))
+                            .show(ui)
+                            .clicked()
+                        {
+                            <span class="kw-2">***</span>exit_bones = <span class="bool-val">true</span>;
+                        }
                     }
 
                     ui.add_space(<span class="number">10.0</span>);
