@@ -22,12 +22,12 @@ async fn main() {
 
 async fn client() -> anyhow::Result<()> {
     let secret_key = iroh_net::key::SecretKey::generate();
-    let endpoint = iroh_net::MagicEndpoint::builder()
+    let endpoint = iroh_net::Endpoint::builder()
         .alpns(vec![MATCH_ALPN.to_vec(), PLAY_ALPN.to_vec()])
         .discovery(Box::new(
             iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
                 Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
-                Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
+                Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
                     secret_key.clone(),
                 )),
             ]),
@@ -135,8 +135,8 @@ async fn client() -> anyhow::Result<()> {
                 if let Some(mut conn) = endpoint.accept().await {
                     let result = async {
                         let alpn = conn.alpn().await?;
-                        if alpn.as_bytes() != PLAY_ALPN {
-                            anyhow::bail!("unexpected ALPN: {}", alpn);
+                        if alpn != PLAY_ALPN {
+                            anyhow::bail!("unexpected ALPN: {:?}", alpn);
                         }
                         let conn = conn.await?;
 
