@@ -1,10 +1,10 @@
 use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse};
-use iroh_net::{magic_endpoint::get_remote_node_id, MagicEndpoint, NodeAddr};
+use iroh_net::{endpoint::get_remote_node_id, Endpoint, NodeAddr};
 use once_cell::sync::Lazy;
 use quinn::{Connection, ConnectionError};
 use scc::HashMap;
 
-pub async fn handle_connection(ep: MagicEndpoint, conn: Connection) {
+pub async fn handle_connection(ep: Endpoint, conn: Connection) {
     let connection_id = conn.stable_id();
     debug!(connection_id, "Accepted matchmaker connection");
 
@@ -38,7 +38,7 @@ static STATE: Lazy<State> = Lazy::new(State::default);
 /// client.
 ///
 /// At this point the client is free to engage in the matchmaking protocol over that channel.
-async fn impl_matchmaker(ep: iroh_net::MagicEndpoint, conn: Connection) -> anyhow::Result<()> {
+async fn impl_matchmaker(ep: iroh_net::Endpoint, conn: Connection) -> anyhow::Result<()> {
     let connection_id = conn.stable_id();
 
     loop {

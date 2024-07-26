@@ -12,7 +12,7 @@
 
 use std::{net::IpAddr, time::Duration};
 
-use iroh_net::{magic_endpoint::get_remote_node_id, NodeAddr};
+use iroh_net::{endpoint::get_remote_node_id, NodeAddr};
 use mdns_sd::{ServiceDaemon, ServiceInfo};
 use smallvec::SmallVec;
 use tracing::warn;
@@ -227,8 +227,8 @@ pub async fn prepare_to_host<'a>(
     let create_service_info = || async {
         info!("New service hosting");
         let ep = get_network_endpoint().await;
-        let my_addr = ep.my_addr().await.expect("network endpoint dead");
-        let port = ep.local_addr().0.port();
+        let my_addr = ep.node_addr().await.expect("network endpoint dead");
+        let port = my_addr.info.direct_addresses.first().unwrap().port();
         let mut props = std::collections::HashMap::default();
         let addr_encoded = hex::encode(postcard::to_stdvec(&my_addr).unwrap());
         props.insert("node-addr".to_string(), addr_encoded);
@@ -334,7 +334,7 @@ async fn lan_start_server(
                 };
                 let result = async move {
                     let alpn = new_connection.alpn().await?;
-                    anyhow::ensure!(alpn.as_bytes() == PLAY_ALPN, "unexpected ALPN");
+                    anyhow::ensure!(alpn == PLAY_ALPN, "unexpected ALPN");
                     let conn = new_connection.await?;
                     anyhow::Ok(conn)
                 };
