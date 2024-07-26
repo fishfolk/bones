@@ -242,7 +242,7 @@ pub(super) async fn establish_peer_connections(
         anyhow::ensure!(
             alpn == PLAY_ALPN,
             "invalid ALPN: {:?}",
-            std::str::from_utf8(&alpn).unwrap_or_else(|_| "<bytes>")
+            std::str::from_utf8(&alpn).unwrap_or("<bytes>")
         );
 
         let conn = conn.await?;
