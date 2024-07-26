@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_framework/src/networking/socket.rs`."><title>socket.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_framework" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_framework/src/networking/socket.rs`."><title>socket.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_framework" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -303,6 +304,10 @@
 <a href="#303" id="303">303</a>
 <a href="#304" id="304">304</a>
 <a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
 </pre></div><pre class="rust"><code><span class="comment">// TODO
 </span><span class="attr">#![allow(missing_docs)]
 
@@ -343,24 +348,24 @@
             RUNTIME.spawn(<span class="kw">async move </span>{
                 <span class="kw">let </span>conn = conn_;
 
-                <span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
+                <span class="attr">#[cfg(feature = <span class="string">"debug-network-slowdown"</span>)]
                 </span><span class="kw">use </span>turborand::prelude::<span class="kw-2">*</span>;
-                <span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
+                <span class="attr">#[cfg(feature = <span class="string">"debug-network-slowdown"</span>)]
                 </span><span class="kw">let </span>rng = AtomicRng::new();
 
                 <span class="kw">loop </span>{
                     <span class="macro">tokio::select! </span>{
                         closed = conn.closed() =&gt; {
-                            <span class="macro">warn!</span>(<span class="string">&quot;Connection error: {closed}&quot;</span>);
+                            <span class="macro">warn!</span>(<span class="string">"Connection error: {closed}"</span>);
                             <span class="kw">break</span>;
                         }
                         datagram_result = conn.read_datagram() =&gt; <span class="kw">match </span>datagram_result {
                             <span class="prelude-val">Ok</span>(data) =&gt; {
                                 <span class="kw">let </span>message: GameMessage = postcard::from_bytes(<span class="kw-2">&amp;</span>data)
-                                .expect(<span class="string">&quot;Could not deserialize net message&quot;</span>);
+                                .expect(<span class="string">"Could not deserialize net message"</span>);
 
                                 <span class="comment">// Debugging code to introduce artificial latency
-                                </span><span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
+                                </span><span class="attr">#[cfg(feature = <span class="string">"debug-network-slowdown"</span>)]
                                 </span>{
                                     <span class="kw">use </span>async_timer::Oneshot;
                                     async_timer::oneshot::Timer::new(
@@ -375,7 +380,7 @@
                                 }
                             }
                             <span class="prelude-val">Err</span>(e) =&gt; {
-                                <span class="macro">warn!</span>(<span class="string">&quot;Connection error: {e}&quot;</span>);
+                                <span class="macro">warn!</span>(<span class="string">"Connection error: {e}"</span>);
                             }
                         }
                     }
@@ -386,23 +391,23 @@
             </span><span class="kw">let </span>reliable_sender = reliable_sender.clone();
             <span class="kw">let </span>conn = conn.clone();
             RUNTIME.spawn(<span class="kw">async move </span>{
-                <span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
+                <span class="attr">#[cfg(feature = <span class="string">"debug-network-slowdown"</span>)]
                 </span><span class="kw">use </span>turborand::prelude::<span class="kw-2">*</span>;
-                <span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
+                <span class="attr">#[cfg(feature = <span class="string">"debug-network-slowdown"</span>)]
                 </span><span class="kw">let </span>rng = AtomicRng::new();
 
                 <span class="kw">loop </span>{
                     <span class="macro">tokio::select! </span>{
                         closed = conn.closed() =&gt; {
-                            <span class="macro">warn!</span>(<span class="string">&quot;Connection error: {closed}&quot;</span>);
+                            <span class="macro">warn!</span>(<span class="string">"Connection error: {closed}"</span>);
                             <span class="kw">break</span>;
                         }
                         result = conn.accept_uni() =&gt; <span class="kw">match </span>result {
                             <span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>stream) =&gt; {
-                                <span class="kw">let </span>data = stream.read_to_end(<span class="number">4096</span>).<span class="kw">await</span>.expect(<span class="string">&quot;Network read error&quot;</span>);
+                                <span class="kw">let </span>data = stream.read_to_end(<span class="number">4096</span>).<span class="kw">await</span>.expect(<span class="string">"Network read error"</span>);
 
                                 <span class="comment">// Debugging code to introduce artificial latency
-                                </span><span class="attr">#[cfg(feature = <span class="string">&quot;debug-network-slowdown&quot;</span>)]
+                                </span><span class="attr">#[cfg(feature = <span class="string">"debug-network-slowdown"</span>)]
                                 </span>{
                                     <span class="kw">use </span>async_timer::Oneshot;
                                     async_timer::oneshot::Timer::new(
@@ -417,7 +422,7 @@
                                 }
                             }
                             <span class="prelude-val">Err</span>(e) =&gt; {
-                                <span class="macro">warn!</span>(<span class="string">&quot;Connection error: {e}&quot;</span>);
+                                <span class="macro">warn!</span>(<span class="string">"Connection error: {e}"</span>);
                             }
                         },
                     }
@@ -462,7 +467,7 @@
                         anyhow::Ok(())
                     };
                     <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = result.<span class="kw">await </span>{
-                        <span class="macro">warn!</span>(<span class="string">&quot;send reliable to {i} failed: {err:?}&quot;</span>);
+                        <span class="macro">warn!</span>(<span class="string">"send reliable to {i} failed: {err:?}"</span>);
                     }
                 });
             }
@@ -478,7 +483,7 @@
                             anyhow::Ok(())
                         };
                         <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = result.<span class="kw">await </span>{
-                            <span class="macro">warn!</span>(<span class="string">&quot;send reliable all failed: {err:?}&quot;</span>);
+                            <span class="macro">warn!</span>(<span class="string">"send reliable all failed: {err:?}"</span>);
                         }
                     });
                 }
@@ -536,15 +541,19 @@
     // them to connect to us.
     </span><span class="kw">let </span><span class="kw-2">mut </span>in_connections = Vec::new();
     <span class="kw">let </span>range = (player_idx + <span class="number">1</span>)..player_count;
-    <span class="macro">info!</span>(players=<span class="question-mark">?</span>range, <span class="string">&quot;Waiting for {} peer connections&quot;</span>, range.len());
+    <span class="macro">info!</span>(players=<span class="question-mark">?</span>range, <span class="string">"Waiting for {} peer connections"</span>, range.len());
     <span class="kw">for </span>i <span class="kw">in </span>range {
         <span class="comment">// Wait for connection
         </span><span class="kw">let </span><span class="kw-2">mut </span>conn = ep
             .accept()
             .<span class="kw">await
-            </span>.ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no connection for {}&quot;</span>, i))<span class="question-mark">?</span>;
+            </span>.ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no connection for {}"</span>, i))<span class="question-mark">?</span>;
         <span class="kw">let </span>alpn = conn.alpn().<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="macro">anyhow::ensure!</span>(alpn.as_bytes() == PLAY_ALPN, <span class="string">&quot;invalid ALPN: {}&quot;</span>, alpn);
+        <span class="macro">anyhow::ensure!</span>(
+            alpn == PLAY_ALPN,
+            <span class="string">"invalid ALPN: {:?}"</span>,
+            std::str::from_utf8(<span class="kw-2">&amp;</span>alpn).unwrap_or(<span class="string">"&lt;bytes&gt;"</span>)
+        );
 
         <span class="kw">let </span>conn = conn.<span class="kw">await</span><span class="question-mark">?</span>;
 
@@ -563,7 +572,7 @@
     <span class="comment">// For every peer with a player index lower than ours, connect to them.
     </span><span class="kw">let </span>start_range = <span class="kw">if </span>had_og_conn { <span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">0 </span>};
     <span class="kw">let </span>range = start_range..player_idx;
-    <span class="macro">info!</span>(players=<span class="question-mark">?</span>range, <span class="string">&quot;Connecting to {} peers&quot;</span>, range.len());
+    <span class="macro">info!</span>(players=<span class="question-mark">?</span>range, <span class="string">"Connecting to {} peers"</span>, range.len());
 
     <span class="kw">let </span><span class="kw-2">mut </span>out_connections = Vec::new();
     <span class="kw">for </span>i <span class="kw">in </span>range {

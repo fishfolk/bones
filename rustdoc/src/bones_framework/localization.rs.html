@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_framework/src/localization.rs`."><title>localization.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_framework" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_framework/src/localization.rs`."><title>localization.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_framework" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -317,7 +318,7 @@
 <span class="doccomment">/// An asset containing a [`FluentResource`].
 </span><span class="attr">#[derive(HasSchema, Deref, DerefMut, Clone)]
 #[schema(opaque, no_default)]
-#[type_data(asset_loader([<span class="string">&quot;ftl&quot;</span>]</span>, FluentResourceLoader))]
+#[type_data(asset_loader([<span class="string">"ftl"</span>]</span>, FluentResourceLoader))]
 <span class="kw">pub struct </span>FluentResourceAsset(<span class="kw">pub </span>Arc&lt;FluentResource&gt;);
 <span class="kw">impl </span>std::borrow::Borrow&lt;FluentResource&gt; <span class="kw">for </span>FluentResourceAsset {
     <span class="kw">fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>FluentResource {
@@ -328,13 +329,13 @@
 <span class="doccomment">/// An asset containing a [`FluentBundle`].
 </span><span class="attr">#[derive(HasSchema, Deref, DerefMut, Clone)]
 #[schema(opaque, no_default)]
-#[type_data(asset_loader([<span class="string">&quot;locale.yaml&quot;</span>, <span class="string">&quot;locale.yml&quot;</span>]</span>, FluentBundleLoader))]
+#[type_data(asset_loader([<span class="string">"locale.yaml"</span>, <span class="string">"locale.yml"</span>]</span>, FluentBundleLoader))]
 <span class="kw">pub struct </span>FluentBundleAsset(<span class="kw">pub </span>Arc&lt;FluentBundle&gt;);
 
 <span class="doccomment">/// Asset containing all loaded localizations, and functions for formatting localized messages.
 </span><span class="attr">#[derive(HasSchema, Deref, DerefMut, Clone)]
 #[schema(opaque, no_default)]
-#[type_data(asset_loader([<span class="string">&quot;localization.yaml&quot;</span>, <span class="string">&quot;localization.yml&quot;</span>]</span>, LocalizationLoader))]
+#[type_data(asset_loader([<span class="string">"localization.yaml"</span>, <span class="string">"localization.yml"</span>]</span>, LocalizationLoader))]
 <span class="kw">pub struct </span>LocalizationAsset {
     <span class="doccomment">/// The bundle selected as the current language.
     </span><span class="attr">#[deref]
@@ -345,13 +346,13 @@
 
 <span class="kw">impl </span>LocalizationAsset {
     <span class="doccomment">/// Get a localized message.
-    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>str) -&gt; Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>str) -&gt; Cow&lt;<span class="lifetime">'_</span>, str&gt; {
         <span class="kw">let </span>b = <span class="kw-2">&amp;</span><span class="self">self</span>.current_bundle.<span class="number">0</span>;
         <span class="kw">let </span><span class="prelude-val">Some</span>(message) = b.get_message(id) <span class="kw">else </span>{
-            <span class="kw">return </span>Cow::from(<span class="string">&quot;&quot;</span>);
+            <span class="kw">return </span>Cow::from(<span class="string">""</span>);
         };
         <span class="kw">let </span><span class="prelude-val">Some</span>(value) = message.value() <span class="kw">else </span>{
-            <span class="kw">return </span>Cow::from(<span class="string">&quot;&quot;</span>);
+            <span class="kw">return </span>Cow::from(<span class="string">""</span>);
         };
 
         <span class="comment">// TODO: Log localization formatting errors.
@@ -361,13 +362,13 @@
     }
 
     <span class="doccomment">/// Get a localized message with the provided arguments.
-    </span><span class="kw">pub fn </span>get_with&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, id: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str, args: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>FluentArgs) -&gt; Cow&lt;<span class="lifetime">&#39;a</span>, str&gt; {
+    </span><span class="kw">pub fn </span>get_with&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, id: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str, args: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>FluentArgs) -&gt; Cow&lt;<span class="lifetime">'a</span>, str&gt; {
         <span class="kw">let </span>b = <span class="kw-2">&amp;</span><span class="self">self</span>.current_bundle.<span class="number">0</span>;
         <span class="kw">let </span><span class="prelude-val">Some</span>(message) = b.get_message(id) <span class="kw">else </span>{
-            <span class="kw">return </span>Cow::from(<span class="string">&quot;&quot;</span>);
+            <span class="kw">return </span>Cow::from(<span class="string">""</span>);
         };
         <span class="kw">let </span><span class="prelude-val">Some</span>(value) = message.value() <span class="kw">else </span>{
-            <span class="kw">return </span>Cow::from(<span class="string">&quot;&quot;</span>);
+            <span class="kw">return </span>Cow::from(<span class="string">""</span>);
         };
 
         b.format_pattern(value, <span class="prelude-val">Some</span>(args), <span class="kw-2">&amp;mut </span><span class="macro">vec!</span>[])
@@ -380,9 +381,9 @@
 /// This parameter uses the schema implementation to find the field of the root asset that is a
 /// [`Handle&lt;LocalizationAsset&gt;`].
 </span><span class="attr">#[derive(Deref, DerefMut)]
-</span><span class="kw">pub struct </span>Localization&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+</span><span class="kw">pub struct </span>Localization&lt;<span class="lifetime">'a</span>, T&gt; {
     <span class="attr">#[deref]
-    </span>asset: MappedRef&lt;<span class="lifetime">&#39;a</span>, Cid, LoadedAsset, LocalizationAsset&gt;,
+    </span>asset: MappedRef&lt;<span class="lifetime">'a</span>, Cid, LoadedAsset, LocalizationAsset&gt;,
     _phantom: PhantomData&lt;T&gt;,
 }
 
@@ -391,9 +392,9 @@
 </span><span class="attr">#[derive(HasSchema, Default, Clone)]
 </span><span class="kw">pub struct </span>RootLocalizationFieldIdx(OnceLock&lt;usize&gt;);
 
-<span class="kw">impl</span>&lt;T: HasSchema&gt; SystemParam <span class="kw">for </span>Localization&lt;<span class="lifetime">&#39;_</span>, T&gt; {
+<span class="kw">impl</span>&lt;T: HasSchema&gt; SystemParam <span class="kw">for </span>Localization&lt;<span class="lifetime">'_</span>, T&gt; {
     <span class="kw">type </span>State = (AssetServer, AtomicResource&lt;RootLocalizationFieldIdx&gt;);
-    <span class="kw">type </span>Param&lt;<span class="lifetime">&#39;s</span>&gt; = Localization&lt;<span class="lifetime">&#39;s</span>, T&gt;;
+    <span class="kw">type </span>Param&lt;<span class="lifetime">'s</span>&gt; = Localization&lt;<span class="lifetime">'s</span>, T&gt;;
 
     <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>World) -&gt; <span class="self">Self</span>::State {
         (
@@ -401,12 +402,12 @@
             world.resources.get_cell::&lt;RootLocalizationFieldIdx&gt;(),
         )
     }
-    <span class="kw">fn </span>borrow&lt;<span class="lifetime">&#39;s</span>&gt;(
-        world: <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span>World,
-        (asset_server, field_idx): <span class="kw-2">&amp;</span><span class="lifetime">&#39;s </span><span class="kw-2">mut </span><span class="self">Self</span>::State,
-    ) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">&#39;s</span>&gt; {
-        <span class="kw">const </span>ERR: <span class="kw-2">&amp;</span>str = <span class="string">&quot;Could not find a `Handle&lt;LocalizationAsset&gt;` field on root asset, \
-                           needed for `Localization` parameter to work&quot;</span>;
+    <span class="kw">fn </span>borrow&lt;<span class="lifetime">'s</span>&gt;(
+        world: <span class="kw-2">&amp;</span><span class="lifetime">'s </span>World,
+        (asset_server, field_idx): <span class="kw-2">&amp;</span><span class="lifetime">'s </span><span class="kw-2">mut </span><span class="self">Self</span>::State,
+    ) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">'s</span>&gt; {
+        <span class="kw">const </span>ERR: <span class="kw-2">&amp;</span>str = <span class="string">"Could not find a `Handle&lt;LocalizationAsset&gt;` field on root asset, \
+                           needed for `Localization` parameter to work"</span>;
         <span class="kw">let </span>field_idx = field_idx.init_borrow(world);
         <span class="kw">let </span>field_idx = field_idx.<span class="number">0</span>.get_or_init(|| {
             <span class="kw">let </span><span class="kw-2">mut </span>idx = <span class="prelude-val">None</span>;
@@ -454,15 +455,15 @@
     ) -&gt; futures::future::Boxed&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
         <span class="kw">let </span>bytes = bytes.to_vec();
         Box::pin(<span class="kw">async move </span>{
-            <span class="kw">let </span>string = String::from_utf8(bytes).context(<span class="string">&quot;Error loading fluent resource file.&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>string = String::from_utf8(bytes).context(<span class="string">"Error loading fluent resource file."</span>)<span class="question-mark">?</span>;
             <span class="kw">let </span>res = FluentResource::try_new(string).map_err(|(<span class="kw">_</span>, errors)| {
                 <span class="kw">let </span>errors = errors
                     .into_iter()
                     .map(|e| e.to_string())
                     .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-                    .join(<span class="string">&quot;\n&quot;</span>);
+                    .join(<span class="string">"\n"</span>);
 
-                <span class="macro">anyhow::format_err!</span>(<span class="string">&quot;Error loading fluent resource file. \n{}&quot;</span>, errors)
+                <span class="macro">anyhow::format_err!</span>(<span class="string">"Error loading fluent resource file. \n{}"</span>, errors)
             })<span class="question-mark">?</span>;
 
             <span class="prelude-val">Ok</span>(SchemaBox::new(FluentResourceAsset(Arc::new(res))))
@@ -486,7 +487,7 @@
                 <span class="kw">pub </span>resources: Vec&lt;PathBuf&gt;,
             }
             <span class="kw">let </span>meta: BundleMeta =
-                serde_yaml::from_slice(<span class="kw-2">&amp;</span>bytes).context(<span class="string">&quot;Could not parse locale YAML&quot;</span>)<span class="question-mark">?</span>;
+                serde_yaml::from_slice(<span class="kw-2">&amp;</span>bytes).context(<span class="string">"Could not parse locale YAML"</span>)<span class="question-mark">?</span>;
 
             <span class="kw">let </span><span class="kw-2">mut </span>bundle = FluentBundle::new_concurrent(meta.locales);
 
@@ -497,13 +498,13 @@
                 <span class="kw">let </span>resource_handle = ctx.load_asset(<span class="kw-2">&amp;</span>normalized)<span class="question-mark">?</span>.typed::&lt;FluentResourceAsset&gt;();
                 <span class="kw">let </span>resource = <span class="kw">loop </span>{
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(resource) = ctx.asset_server.try_get(resource_handle) {
-                        <span class="kw">break </span>resource.context(<span class="string">&quot;FluentBundle resource `{normalized:?}` handle could not be cast to `FluentResourceAsset`&quot;</span>)<span class="question-mark">?</span>;
+                        <span class="kw">break </span>resource.context(<span class="string">"FluentBundle resource `{normalized:?}` handle could not be cast to `FluentResourceAsset`"</span>)<span class="question-mark">?</span>;
                     }
                     ctx.asset_server.load_progress.listen().<span class="kw">await</span>;
                 };
                 bundle.add_resource(resource.clone()).map_err(|e| {
                     <span class="macro">anyhow::format_err!</span>(
-                    <span class="string">&quot;Error(s) adding resource `{normalized:?}` to bundle `{self_path:?}`: {e:?}&quot;
+                    <span class="string">"Error(s) adding resource `{normalized:?}` to bundle `{self_path:?}`: {e:?}"
                 </span>)
                 })<span class="question-mark">?</span>;
             }
@@ -528,7 +529,7 @@
                 <span class="kw">pub </span>locales: Vec&lt;PathBuf&gt;,
             }
             <span class="kw">let </span>meta: LocalizationMeta =
-                serde_yaml::from_slice(<span class="kw-2">&amp;</span>bytes).context(<span class="string">&quot;Could not parse locale YAML&quot;</span>)<span class="question-mark">?</span>;
+                serde_yaml::from_slice(<span class="kw-2">&amp;</span>bytes).context(<span class="string">"Could not parse locale YAML"</span>)<span class="question-mark">?</span>;
 
             <span class="kw">let </span><span class="kw-2">mut </span>bundles: Vec&lt;FluentBundleAsset&gt; = Vec::new();
 
@@ -539,7 +540,7 @@
                 <span class="kw">let </span>bundle_handle = ctx.load_asset(<span class="kw-2">&amp;</span>normalized)<span class="question-mark">?</span>.typed::&lt;FluentBundleAsset&gt;();
                 <span class="kw">let </span>bundle = <span class="kw">loop </span>{
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(bundle) = ctx.asset_server.try_get(bundle_handle) {
-                        <span class="kw">break </span>bundle.context(<span class="string">&quot;Localization resource `{normalized:?}` loaded handle could not be cast to `FluentBundleAsset`&quot;</span>)<span class="question-mark">?</span>;
+                        <span class="kw">break </span>bundle.context(<span class="string">"Localization resource `{normalized:?}` loaded handle could not be cast to `FluentBundleAsset`"</span>)<span class="question-mark">?</span>;
                     }
                     ctx.asset_server.load_progress.listen().<span class="kw">await</span>;
                 };
@@ -552,7 +553,7 @@
                 .cloned()
                 .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-            <span class="kw">let </span>en_us = LanguageIdentifier::from_str(<span class="string">&quot;en-US&quot;</span>).unwrap();
+            <span class="kw">let </span>en_us = LanguageIdentifier::from_str(<span class="string">"en-US"</span>).unwrap();
             <span class="kw">let </span>user_locale = sys_locale::get_locale()
                 .and_then(|x| x.parse::&lt;LanguageIdentifier&gt;().ok())
                 .unwrap_or(en_us.clone());
@@ -568,7 +569,7 @@
                 .iter()
                 .find(|bundle| bundle.locales.contains(selected_locale))
                 .ok_or_else(|| {
-                    <span class="macro">anyhow::format_err!</span>(<span class="string">&quot;Could not find matching locale for {user_locale}&quot;</span>)
+                    <span class="macro">anyhow::format_err!</span>(<span class="string">"Could not find matching locale for {user_locale}"</span>)
                 })<span class="question-mark">?</span>;
 
             <span class="prelude-val">Ok</span>(SchemaBox::new(LocalizationAsset {

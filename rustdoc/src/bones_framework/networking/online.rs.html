@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_framework/src/networking/online.rs`."><title>online.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_framework" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_framework/src/networking/online.rs`."><title>online.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_framework" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -217,7 +218,7 @@
 <a href="#217" id="217">217</a>
 <a href="#218" id="218">218</a>
 <a href="#219" id="219">219</a>
-</pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;./online.md&quot;</span>)]
+</pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"./online.md"</span>)]
 </span><span class="comment">// TODO
 </span><span class="attr">#![allow(missing_docs)]
 
@@ -249,7 +250,7 @@
 
     RUNTIME.spawn(<span class="kw">async move </span>{
         <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = online_matchmaker(server).<span class="kw">await </span>{
-            <span class="macro">warn!</span>(<span class="string">&quot;online matchmaker failed: {err:?}&quot;</span>);
+            <span class="macro">warn!</span>(<span class="string">"online matchmaker failed: {err:?}"</span>);
         }
     });
 
@@ -286,10 +287,10 @@
         <span class="kw">match </span>message {
             OnlineMatchmakerRequest::SearchForGame { id, player_count } =&gt; {
                 <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = search_for_game(<span class="kw-2">&amp;</span>matchmaker_channel, id, player_count).<span class="kw">await </span>{
-                    <span class="macro">warn!</span>(<span class="string">&quot;Online Game Search failed: {err:?}&quot;</span>);
+                    <span class="macro">warn!</span>(<span class="string">"Online Game Search failed: {err:?}"</span>);
                 }
             }
-            OnlineMatchmakerRequest::StopSearch =&gt; (), <span class="comment">// Not searching, don&#39;t do anything
+            OnlineMatchmakerRequest::StopSearch =&gt; (), <span class="comment">// Not searching, don't do anything
         </span>}
     }
 
@@ -301,10 +302,10 @@
     id: NodeId,
     player_count: u32,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="macro">info!</span>(<span class="string">&quot;Connecting to online matchmaker&quot;</span>);
+    <span class="macro">info!</span>(<span class="string">"Connecting to online matchmaker"</span>);
     <span class="kw">let </span>ep = get_network_endpoint().<span class="kw">await</span>;
     <span class="kw">let </span>conn = ep.connect(id.into(), MATCH_ALPN).<span class="kw">await</span><span class="question-mark">?</span>;
-    <span class="macro">info!</span>(<span class="string">&quot;Connected to online matchmaker&quot;</span>);
+    <span class="macro">info!</span>(<span class="string">"Connected to online matchmaker"</span>);
 
     matchmaker_channel
         .send(OnlineMatchmakerResponse::Searching)
@@ -315,9 +316,9 @@
 
     <span class="kw">let </span>message = MatchmakerRequest::RequestMatch(MatchInfo {
         client_count: player_count,
-        match_data: <span class="string">b&quot;jumpy_default_game&quot;</span>.to_vec(),
+        match_data: <span class="string">b"jumpy_default_game"</span>.to_vec(),
     });
-    <span class="macro">info!</span>(request=<span class="question-mark">?</span>message, <span class="string">&quot;Sending match request&quot;</span>);
+    <span class="macro">info!</span>(request=<span class="question-mark">?</span>message, <span class="string">"Sending match request"</span>);
 
     <span class="kw">let </span>message = postcard::to_allocvec(<span class="kw-2">&amp;</span>message)<span class="question-mark">?</span>;
     send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -327,9 +328,9 @@
     <span class="kw">let </span>message: MatchmakerResponse = postcard::from_bytes(<span class="kw-2">&amp;</span>response)<span class="question-mark">?</span>;
 
     <span class="kw">if let </span>MatchmakerResponse::Accepted = message {
-        <span class="macro">info!</span>(<span class="string">&quot;Waiting for match...&quot;</span>);
+        <span class="macro">info!</span>(<span class="string">"Waiting for match..."</span>);
     } <span class="kw">else </span>{
-        <span class="macro">panic!</span>(<span class="string">&quot;Invalid response from matchmaker&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"Invalid response from matchmaker"</span>);
     }
 
     <span class="kw">loop </span>{
@@ -338,14 +339,14 @@
             </span>message = matchmaker_channel.recv() =&gt; {
                 <span class="kw">match </span>message {
                     <span class="prelude-val">Ok</span>(OnlineMatchmakerRequest::SearchForGame { .. }) =&gt; {
-                        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Unexpected message from UI&quot;</span>);
+                        <span class="macro">anyhow::bail!</span>(<span class="string">"Unexpected message from UI"</span>);
                     }
                     <span class="prelude-val">Ok</span>(OnlineMatchmakerRequest::StopSearch) =&gt; {
-                        <span class="macro">info!</span>(<span class="string">&quot;Canceling online search&quot;</span>);
+                        <span class="macro">info!</span>(<span class="string">"Canceling online search"</span>);
                         <span class="kw">break</span>;
                     }
                     <span class="prelude-val">Err</span>(err) =&gt; {
-                        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Failed to recv from match maker channel: {err:?}&quot;</span>);
+                        <span class="macro">anyhow::bail!</span>(<span class="string">"Failed to recv from match maker channel: {err:?}"</span>);
                     }
                 }
             }
@@ -357,7 +358,7 @@
 
                 <span class="kw">match </span>message {
                     MatchmakerResponse::ClientCount(count) =&gt; {
-                        <span class="macro">info!</span>(<span class="string">&quot;Online match player count: {count}&quot;</span>);
+                        <span class="macro">info!</span>(<span class="string">"Online match player count: {count}"</span>);
                         matchmaker_channel.try_send(OnlineMatchmakerResponse::PlayerCount(count <span class="kw">as _</span>))<span class="question-mark">?</span>;
                     }
                     MatchmakerResponse::Success {
@@ -366,7 +367,7 @@
                         client_count,
                         player_ids,
                     } =&gt; {
-                        <span class="macro">info!</span>(%random_seed, %player_idx, player_count=%client_count, <span class="string">&quot;Online match complete&quot;</span>);
+                        <span class="macro">info!</span>(%random_seed, %player_idx, player_count=%client_count, <span class="string">"Online match complete"</span>);
 
                         <span class="kw">let </span>peer_connections = establish_peer_connections(
                             player_idx,
@@ -385,7 +386,7 @@
                         })<span class="question-mark">?</span>;
                         <span class="kw">break</span>;
                     }
-                    other =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Unexpected message from matchmaker: {other:?}&quot;</span>),
+                    other =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">"Unexpected message from matchmaker: {other:?}"</span>),
                 }
             }
         }
@@ -397,7 +398,7 @@
 <span class="doccomment">/// Search for game with `matchmaking_server` and `player_count`
 </span><span class="kw">pub fn </span>start_search_for_game(matchmaking_server: NodeId, player_count: u32) {
     <span class="comment">// TODO remove
-    </span><span class="macro">info!</span>(<span class="string">&quot;Starting search for online game with player count {player_count}&quot;</span>);
+    </span><span class="macro">info!</span>(<span class="string">"Starting search for online game with player count {player_count}"</span>);
     ONLINE_MATCHMAKER
         .try_send(OnlineMatchmakerRequest::SearchForGame {
             id: matchmaking_server,
@@ -417,7 +418,7 @@
         <span class="kw">match </span>message {
             OnlineMatchmakerResponse::Searching =&gt; <span class="kw-2">*</span>search_state = SearchState::Searching,
             OnlineMatchmakerResponse::PlayerCount(count) =&gt; {
-                <span class="macro">warn!</span>(<span class="string">&quot;Waiting for players: {count}&quot;</span>);
+                <span class="macro">warn!</span>(<span class="string">"Waiting for players: {count}"</span>);
                 <span class="kw-2">*</span>search_state = SearchState::WaitingForPlayers(count)
             }
             OnlineMatchmakerResponse::GameStarting {
@@ -425,7 +426,7 @@
                 player_idx,
                 player_count: <span class="kw">_</span>,
             } =&gt; {
-                <span class="macro">info!</span>(<span class="question-mark">?</span>player_idx, <span class="string">&quot;Starting network game&quot;</span>);
+                <span class="macro">info!</span>(<span class="question-mark">?</span>player_idx, <span class="string">"Starting network game"</span>);
 
                 <span class="kw-2">*</span>search_state = default();
 

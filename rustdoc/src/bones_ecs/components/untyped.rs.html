@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_ecs/src/components/untyped.rs`."><title>untyped.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_ecs/src/components/untyped.rs`."><title>untyped.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -654,7 +655,7 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) bitset: BitSetVec,
     <span class="kw">pub</span>(<span class="kw">crate</span>) storage: ResizableAlloc,
     <span class="kw">pub</span>(<span class="kw">crate</span>) max_id: usize,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
 }
 
 <span class="kw">unsafe impl </span>Sync <span class="kw">for </span>UntypedComponentStore {}
@@ -679,7 +680,7 @@
                         </span>.schema
                         .clone_fn
                         .as_ref()
-                        .expect(<span class="string">&quot;Cannot clone component&quot;</span>)
+                        .expect(<span class="string">"Cannot clone component"</span>)
                         .get())(prev_ptr, new_ptr);
                 }
             }
@@ -718,7 +719,7 @@
     ///
     /// In Rust, you will usually not use [`UntypedComponentStore`] and will use the statically
     /// typed [`ComponentStore&lt;T&gt;`] instead.
-    </span><span class="kw">pub fn </span>new(schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new(schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             bitset: create_bitset(),
             storage: ResizableAlloc::new(schema.layout()),
@@ -738,13 +739,13 @@
     }
 
     <span class="doccomment">/// Get the schema of the components stored.
-    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
         <span class="self">self</span>.schema
     }
 
     <span class="doccomment">/// Insert component data for the given entity and get the previous component data if present.
     /// # Panics
-    /// Panics if the schema of `T` doesn&#39;t match the store.
+    /// Panics if the schema of `T` doesn't match the store.
     </span><span class="attr">#[inline]
     #[track_caller]
     </span><span class="kw">pub fn </span>insert_box(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity, data: SchemaBox) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaBox&gt; {
@@ -753,7 +754,7 @@
 
     <span class="doccomment">/// Insert component data for the given entity and get the previous component data if present.
     /// # Errors
-    /// Errors if the schema of `T` doesn&#39;t match the store.
+    /// Errors if the schema of `T` doesn't match the store.
     </span><span class="kw">pub fn </span>try_insert_box(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         entity: Entity,
@@ -769,7 +770,7 @@
                 <span class="comment">// Previous component data will be written to data pointer
                 </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(data))
             } <span class="kw">else </span>{
-                <span class="comment">// Don&#39;t run the data&#39;s destructor, it has been moved into the storage.
+                <span class="comment">// Don't run the data's destructor, it has been moved into the storage.
                 </span>std::mem::forget(data);
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
             }
@@ -778,7 +779,7 @@
 
     <span class="doccomment">/// Insert component data for the given entity and get the previous component data if present.
     /// # Panics
-    /// Panics if the schema of `T` doesn&#39;t match the store.
+    /// Panics if the schema of `T` doesn't match the store.
     </span><span class="attr">#[inline]
     #[track_caller]
     </span><span class="kw">pub fn </span>insert&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity, data: T) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
@@ -787,7 +788,7 @@
 
     <span class="doccomment">/// Insert component data for the given entity and get the previous component data if present.
     /// # Errors
-    /// Errors if the schema of `T` doesn&#39;t match the store.
+    /// Errors if the schema of `T` doesn't match the store.
     </span><span class="kw">pub fn </span>try_insert&lt;T: HasSchema&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         entity: Entity,
@@ -803,7 +804,7 @@
                 <span class="comment">// Previous component data will be written to data pointer
                 </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(data))
             } <span class="kw">else </span>{
-                <span class="comment">// Don&#39;t run the data&#39;s destructor, it has been moved into the storage.
+                <span class="comment">// Don't run the data's destructor, it has been moved into the storage.
                 </span>std::mem::forget(data);
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
             }
@@ -863,7 +864,7 @@
                 // might be able to come up with a smarter policy. On top of that we should
                 // be able to create a type data for components ( see
                 // `bones_framework::metadata_asset()` for example ) that lets you customize the resize
-                // and also pre-allocation strategy for the component. Right now we don&#39;t pre-allocate
+                // and also pre-allocation strategy for the component. Right now we don't pre-allocate
                 // any memory, but that could be useful for components that know there will be a lot of
                 // them, such as bullets.
                 </span>.resize((until + <span class="number">1</span>) * <span class="number">2</span>)
@@ -873,7 +874,7 @@
 
     <span class="doccomment">/// Get a reference to the component storage for the given [`Entity`].
     /// # Panics
-    /// Panics if the schema of `T` doesn&#39;t match.
+    /// Panics if the schema of `T` doesn't match.
     </span><span class="attr">#[track_caller]
     #[inline]
     </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: Entity) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; {
@@ -882,7 +883,7 @@
 
     <span class="doccomment">/// Get a reference to the component storage for the given [`Entity`].
     /// # Errors
-    /// Errors if the schema of `T` doesn&#39;t match.
+    /// Errors if the schema of `T` doesn't match.
     </span><span class="kw">pub fn </span>try_get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: Entity) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt;, SchemaMismatchError&gt; {
         <span class="self">self</span>.get_ref(entity).map(|x| x.try_cast()).transpose()
     }
@@ -908,7 +909,7 @@
 
     <span class="doccomment">/// Get a mutable reference to the component storage for the given [`Entity`].
     /// # Panics
-    /// Panics if the schema of `T` doesn&#39;t match.
+    /// Panics if the schema of `T` doesn't match.
     </span><span class="attr">#[track_caller]
     #[inline]
     </span><span class="kw">pub fn </span>get_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt; {
@@ -917,7 +918,7 @@
 
     <span class="doccomment">/// Get a mutable reference to the component storage for the given [`Entity`].
     /// # Errors
-    /// Errors if the schema of `T` doesn&#39;t match.
+    /// Errors if the schema of `T` doesn't match.
     </span><span class="kw">pub fn </span>try_get_mut&lt;T: HasSchema&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         entity: Entity,
@@ -945,12 +946,12 @@
 
     <span class="doccomment">/// Get a [`SchemaRefMut`] to the component for the given [`Entity`]
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>get_ref_mut&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;&gt; {
+    </span><span class="kw">pub fn </span>get_ref_mut&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;&gt; {
         <span class="kw">let </span>idx = entity.index() <span class="kw">as </span>usize;
         <span class="self">self</span>.get_idx_mut(idx)
     }
 
-    <span class="kw">fn </span>get_idx_mut&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, idx: usize) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;&gt; {
+    <span class="kw">fn </span>get_idx_mut&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, idx: usize) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;&gt; {
         <span class="kw">if </span><span class="self">self</span>.bitset.bit_test(idx) {
             <span class="comment">// SOUND: we ensure that there is allocated storage for entities that have their bit
             // set.
@@ -1001,7 +1002,7 @@
             <span class="kw">let </span><span class="kw-2">mut </span>refs = <span class="self">self</span>.get_many_ref_mut(entities);
             <span class="kw">let </span>refs = std::array::from_fn(|i| {
                 <span class="kw">let </span>r = refs[i].take();
-                <span class="comment">// SOUND: we&#39;ve validated the schema matches.
+                <span class="comment">// SOUND: we've validated the schema matches.
                 </span>r.map(|r| <span class="kw">unsafe </span>{ r.cast_into_mut_unchecked() })
             });
 
@@ -1030,7 +1031,7 @@
         // as it.
         </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..(N - <span class="number">1</span>) {
             <span class="kw">if </span>sorted[i] == sorted[i + <span class="number">1</span>] {
-                <span class="macro">panic!</span>(<span class="string">&quot;All entities passed to `get_multiple_mut()` must be unique.&quot;</span>);
+                <span class="macro">panic!</span>(<span class="string">"All entities passed to `get_multiple_mut()` must be unique."</span>);
             }
         }
 
@@ -1038,8 +1039,8 @@
             <span class="kw">let </span>index = entities[i].index() <span class="kw">as </span>usize;
 
             <span class="kw">if </span><span class="self">self</span>.bitset.bit_test(index) {
-                <span class="comment">// SOUND: we&#39;ve already validated that the contents of storage is valid for type T.
-                // The new lifetime is sound because we validate that all of these borrows don&#39;t
+                <span class="comment">// SOUND: we've already validated that the contents of storage is valid for type T.
+                // The new lifetime is sound because we validate that all of these borrows don't
                 // overlap and their lifetimes are that of the &amp;mut self borrow.
                 </span><span class="kw">unsafe </span>{
                     <span class="kw">let </span>ptr = <span class="self">self</span>.storage.unchecked_idx(index);
@@ -1053,7 +1054,7 @@
 
     <span class="doccomment">/// Remove the component data for the entity if it exists.
     /// # Errors
-    /// Errors if the schema doesn&#39;t match.
+    /// Errors if the schema doesn't match.
     </span><span class="attr">#[inline]
     #[track_caller]
     </span><span class="kw">pub fn </span>remove&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
@@ -1062,7 +1063,7 @@
 
     <span class="doccomment">/// Remove the component data for the entity if it exists.
     /// # Errors
-    /// Errors if the schema doesn&#39;t match.
+    /// Errors if the schema doesn't match.
     </span><span class="kw">pub fn </span>try_remove&lt;T: HasSchema&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         entity: Entity,
@@ -1071,13 +1072,13 @@
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         } <span class="kw">else if </span><span class="self">self</span>.bitset.contains(entity) {
             <span class="kw">let </span><span class="kw-2">mut </span>data = MaybeUninit::&lt;T&gt;::uninit();
-            <span class="comment">// SOUND: the data doesn&#39;t overlap the storage.
+            <span class="comment">// SOUND: the data doesn't overlap the storage.
             </span><span class="kw">unsafe </span>{ <span class="self">self</span>.remove_raw(entity, <span class="prelude-val">Some</span>(data.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>c_void)) };
 
-            <span class="comment">// SOUND: we&#39;ve initialized the data.
+            <span class="comment">// SOUND: we've initialized the data.
             </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ data.assume_init() }))
         } <span class="kw">else </span>{
-            <span class="comment">// SOUND: we don&#39;t use the out pointer.
+            <span class="comment">// SOUND: we don't use the out pointer.
             </span><span class="kw">unsafe </span>{ <span class="self">self</span>.remove_raw(entity, <span class="prelude-val">None</span>) };
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
         }
@@ -1088,11 +1089,11 @@
         <span class="kw">if </span><span class="self">self</span>.bitset.contains(entity) {
             <span class="comment">// SOUND: we will immediately initialize the schema box with data matching the schema.
             </span><span class="kw">let </span>b = <span class="kw">unsafe </span>{ SchemaBox::uninitialized(<span class="self">self</span>.schema) };
-            <span class="comment">// SOUND: the box data doesn&#39;t overlap the storage.
+            <span class="comment">// SOUND: the box data doesn't overlap the storage.
             </span><span class="kw">unsafe </span>{ <span class="self">self</span>.remove_raw(entity, <span class="prelude-val">Some</span>(b.as_ptr())) };
             <span class="prelude-val">Some</span>(b)
         } <span class="kw">else </span>{
-            <span class="comment">// SOUND: we don&#39;t use the out pointer.
+            <span class="comment">// SOUND: we don't use the out pointer.
             </span><span class="kw">unsafe </span>{ <span class="self">self</span>.remove_raw(entity, <span class="prelude-val">None</span>) };
             <span class="prelude-val">None
         </span>}
@@ -1134,8 +1135,8 @@
 
     <span class="doccomment">/// Iterates immutably over all components of this type.
     ///
-    /// Very fast but doesn&#39;t allow joining with other component types.
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; UntypedComponentStoreIter&lt;<span class="lifetime">&#39;_</span>&gt; {
+    /// Very fast but doesn't allow joining with other component types.
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; UntypedComponentStoreIter&lt;<span class="lifetime">'_</span>&gt; {
         UntypedComponentStoreIter {
             store: <span class="self">self</span>,
             idx: <span class="number">0</span>,
@@ -1144,8 +1145,8 @@
 
     <span class="doccomment">/// Iterates mutably over all components of this type.
     ///
-    /// Very fast but doesn&#39;t allow joining with other component types.
-    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; UntypedComponentStoreIterMut&lt;<span class="lifetime">&#39;_</span>&gt; {
+    /// Very fast but doesn't allow joining with other component types.
+    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; UntypedComponentStoreIterMut&lt;<span class="lifetime">'_</span>&gt; {
         UntypedComponentStoreIterMut {
             store: <span class="self">self</span>,
             idx: <span class="number">0</span>,
@@ -1207,7 +1208,7 @@
 
     <span class="doccomment">/// Returns the bitset indicating which entity indices have a component associated to them.
     ///
-    /// Useful to build conditions between multiple `Components`&#39; bitsets.
+    /// Useful to build conditions between multiple `Components`' bitsets.
     ///
     /// For example, take two bitsets from two different `Components` types. Then,
     /// bitset1.clone().bit_and(bitset2); And finally, you can use bitset1 in `iter_with_bitset` and
@@ -1219,7 +1220,7 @@
 
     <span class="doccomment">/// Convert into a typed [`ComponentStore`].
     /// # Panics
-    /// Panics if the schema doesn&#39;t match.
+    /// Panics if the schema doesn't match.
     </span><span class="attr">#[inline]
     #[track_caller]
     </span><span class="kw">pub fn </span>into_typed&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; ComponentStore&lt;T&gt; {
@@ -1228,12 +1229,12 @@
 }
 
 <span class="doccomment">/// Mutable iterator over pointers in an untyped component store.
-</span><span class="kw">pub struct </span>UntypedComponentStoreIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    store: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>UntypedComponentStore,
+</span><span class="kw">pub struct </span>UntypedComponentStoreIter&lt;<span class="lifetime">'a</span>&gt; {
+    store: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>UntypedComponentStore,
     idx: usize,
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>UntypedComponentStoreIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>UntypedComponentStoreIter&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">type </span>Item = SchemaRef&lt;<span class="lifetime">'a</span>&gt;;
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">loop </span>{
             <span class="kw">if </span><span class="self">self</span>.idx &lt; <span class="self">self</span>.store.max_id {
@@ -1251,12 +1252,12 @@
 }
 
 <span class="doccomment">/// Mutable iterator over pointers in an untyped component store.
-</span><span class="kw">pub struct </span>UntypedComponentStoreIterMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    store: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>UntypedComponentStore,
+</span><span class="kw">pub struct </span>UntypedComponentStoreIterMut&lt;<span class="lifetime">'a</span>&gt; {
+    store: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>UntypedComponentStore,
     idx: usize,
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>UntypedComponentStoreIterMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>UntypedComponentStoreIterMut&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">type </span>Item = SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;;
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">loop </span>{
             <span class="kw">if </span><span class="self">self</span>.idx &lt; <span class="self">self</span>.store.max_id {

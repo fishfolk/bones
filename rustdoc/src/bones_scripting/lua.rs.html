@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_scripting/src/lua.rs`."><title>lua.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_scripting" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_scripting/src/lua.rs`."><title>lua.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_scripting" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -438,7 +439,7 @@
                       lua_plugins: Res&lt;LuaPlugins&gt;,
                       world: <span class="kw-2">&amp;</span>World| {
                     engine.exec(|lua| {
-                        Frozen::&lt;<span class="macro">Freeze!</span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;freeze </span>World]&gt;::in_scope(world, |world| {
+                        Frozen::&lt;<span class="macro">Freeze!</span>[<span class="kw-2">&amp;</span><span class="lifetime">'freeze </span>World]&gt;::in_scope(world, |world| {
                             lua.enter(|ctx| {
                                 <span class="kw">let </span>env = ctx.singletons().get(ctx, bindings::env);
                                 <span class="kw">let </span>worldref = WorldRef(world);
@@ -454,7 +455,7 @@
                                 <span class="comment">// Load the plugin if necessary
                                 </span><span class="kw">if </span>!plugin.has_loaded() {
                                     <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = plugin.load(engine.executor.clone(), lua) {
-                                        <span class="macro">tracing::error!</span>(<span class="string">&quot;Error loading lua plugin: {e}&quot;</span>);
+                                        <span class="macro">tracing::error!</span>(<span class="string">"Error loading lua plugin: {e}"</span>);
                                     }
                                 }
 
@@ -469,7 +470,7 @@
                                             ctx.registry().stash(<span class="kw-2">&amp;</span>ctx, ex)
                                         });
                                         <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = lua.execute::&lt;()&gt;(<span class="kw-2">&amp;</span>executor) {
-                                            <span class="macro">tracing::error!</span>(<span class="string">&quot;Error running lua plugin system: {e}&quot;</span>);
+                                            <span class="macro">tracing::error!</span>(<span class="string">"Error running lua plugin system: {e}"</span>);
                                         }
 
                                         <span class="kw-2">*</span>has_run = <span class="bool-val">true</span>;
@@ -484,7 +485,7 @@
                                             ctx.registry().stash(<span class="kw-2">&amp;</span>ctx, ex)
                                         });
                                         <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = lua.execute::&lt;()&gt;(<span class="kw-2">&amp;</span>executor) {
-                                            <span class="macro">tracing::error!</span>(<span class="string">&quot;Error running lua plugin system: {e}&quot;</span>);
+                                            <span class="macro">tracing::error!</span>(<span class="string">"Error running lua plugin system: {e}"</span>);
                                         }
                                     }
                                 }
@@ -501,21 +502,21 @@
 ///
 </span><span class="comment">// This type can be converted into lua userdata for accessing the world from lua.
 </span><span class="attr">#[derive(Deref, DerefMut, Clone)]
-</span><span class="kw">pub struct </span>WorldRef(Frozen&lt;<span class="macro">Freeze!</span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;freeze </span>World]&gt;);
+</span><span class="kw">pub struct </span>WorldRef(Frozen&lt;<span class="macro">Freeze!</span>[<span class="kw-2">&amp;</span><span class="lifetime">'freeze </span>World]&gt;);
 <span class="kw">impl </span>Default <span class="kw">for </span>WorldRef {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(Frozen::new())
     }
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;gc</span>&gt; FromValue&lt;<span class="lifetime">&#39;gc</span>&gt; <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;gc </span>WorldRef {
-    <span class="kw">fn </span>from_value(_ctx: Context&lt;<span class="lifetime">&#39;gc</span>&gt;, value: Value&lt;<span class="lifetime">&#39;gc</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, piccolo::TypeError&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'gc</span>&gt; FromValue&lt;<span class="lifetime">'gc</span>&gt; <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'gc </span>WorldRef {
+    <span class="kw">fn </span>from_value(_ctx: Context&lt;<span class="lifetime">'gc</span>&gt;, value: Value&lt;<span class="lifetime">'gc</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, piccolo::TypeError&gt; {
         value.as_static_user_data::&lt;WorldRef&gt;()
     }
 }
 
 <span class="kw">impl </span>WorldRef {
     <span class="doccomment">/// Convert this [`WorldRef`] into a Lua userdata.
-    </span><span class="kw">pub fn </span>into_userdata(<span class="self">self</span>, ctx: Context&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; UserData&lt;<span class="lifetime">&#39;_</span>&gt; {
+    </span><span class="kw">pub fn </span>into_userdata(<span class="self">self</span>, ctx: Context&lt;<span class="lifetime">'_</span>&gt;) -&gt; UserData&lt;<span class="lifetime">'_</span>&gt; {
         <span class="kw">let </span>data = UserData::new_static(<span class="kw-2">&amp;</span>ctx, <span class="self">self</span>);
         data.set_metatable(
             <span class="kw-2">&amp;</span>ctx,
@@ -525,15 +526,15 @@
     }
 
     <span class="doccomment">/// Add this world
-    </span><span class="kw">fn </span>add_to_env&lt;<span class="lifetime">&#39;gc</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context&lt;<span class="lifetime">&#39;gc</span>&gt;, env: Table&lt;<span class="lifetime">&#39;gc</span>&gt;) {
+    </span><span class="kw">fn </span>add_to_env&lt;<span class="lifetime">'gc</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context&lt;<span class="lifetime">'gc</span>&gt;, env: Table&lt;<span class="lifetime">'gc</span>&gt;) {
         ctx.globals()
-            .set(ctx, <span class="string">&quot;world&quot;</span>, <span class="self">self</span>.clone().into_userdata(ctx))
+            .set(ctx, <span class="string">"world"</span>, <span class="self">self</span>.clone().into_userdata(ctx))
             .unwrap();
         <span class="kw">for </span>(name, metatable) <span class="kw">in </span>[
-            (<span class="string">&quot;world&quot;</span>, bindings::world::metatable <span class="kw">as fn</span>(Context) -&gt; Table),
-            (<span class="string">&quot;components&quot;</span>, bindings::components::metatable),
-            (<span class="string">&quot;resources&quot;</span>, bindings::resources::metatable),
-            (<span class="string">&quot;assets&quot;</span>, bindings::assets::metatable),
+            (<span class="string">"world"</span>, bindings::world::metatable <span class="kw">as fn</span>(Context) -&gt; Table),
+            (<span class="string">"components"</span>, bindings::components::metatable),
+            (<span class="string">"resources"</span>, bindings::resources::metatable),
+            (<span class="string">"assets"</span>, bindings::assets::metatable),
         ] {
             <span class="kw">let </span>data = UserData::new_static(<span class="kw-2">&amp;</span>ctx, <span class="self">self</span>.clone());
             data.set_metatable(<span class="kw-2">&amp;</span>ctx, <span class="prelude-val">Some</span>(ctx.singletons().get(ctx, metatable)));
@@ -547,8 +548,8 @@
 #[schema(no_default)]
 </span><span class="kw">pub struct </span>LuaEngine {
     <span class="doccomment">/// The thread-local task executor that is used to spawn any tasks that need access to the
-    /// lua engine which can only be accessed on it&#39;s own thread.
-    </span>executor: Arc&lt;ThreadExecutor&lt;<span class="lifetime">&#39;static</span>&gt;&gt;,
+    /// lua engine which can only be accessed on it's own thread.
+    </span>executor: Arc&lt;ThreadExecutor&lt;<span class="lifetime">'static</span>&gt;&gt;,
     <span class="doccomment">/// The lua engine state container.
     </span>state: Arc&lt;SendWrapper&lt;EngineState&gt;&gt;,
 }
@@ -564,7 +565,7 @@
     </span>compiled_scripts: Mutex&lt;HashMap&lt;Cid, StashedClosure&gt;&gt;,
 }
 
-<span class="comment">// TODO: Don&#39;t Use Function Pointers to Index Lua Singletons.
+<span class="comment">// TODO: Don't Use Function Pointers to Index Lua Singletons.
 // Unfortunately, function pointers with different signatures may be unified by
 // LLVM when activating, for intance, LTO, and that can cause unexpected behavior
 // when using them as indexes into a HashMap for singletons.
@@ -587,24 +588,24 @@
     ///
     /// The singleton is defined by a function pointer that returns a stashable value.
     </span><span class="kw">fn </span>get&lt;
-        <span class="lifetime">&#39;gc</span>,
-        S: Fetchable&lt;<span class="lifetime">&#39;gc</span>, Fetched = T&gt; + <span class="lifetime">&#39;static</span>,
-        T: Stashable&lt;<span class="lifetime">&#39;gc</span>, Stashed = S&gt; + Clone + Copy + <span class="lifetime">&#39;gc</span>,
+        <span class="lifetime">'gc</span>,
+        S: Fetchable&lt;<span class="lifetime">'gc</span>, Fetched = T&gt; + <span class="lifetime">'static</span>,
+        T: Stashable&lt;<span class="lifetime">'gc</span>, Stashed = S&gt; + Clone + Copy + <span class="lifetime">'gc</span>,
     &gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Context&lt;<span class="lifetime">&#39;gc</span>&gt;,
-        singleton: <span class="kw">fn</span>(Context&lt;<span class="lifetime">&#39;gc</span>&gt;) -&gt; T,
+        ctx: Context&lt;<span class="lifetime">'gc</span>&gt;,
+        singleton: <span class="kw">fn</span>(Context&lt;<span class="lifetime">'gc</span>&gt;) -&gt; T,
     ) -&gt; T {
         <span class="kw">let </span>map = <span class="self">self</span>.singletons.borrow_mut();
         <span class="kw">let </span>id = singleton <span class="kw">as </span>usize;
         <span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = map.get(<span class="kw-2">&amp;</span>id) {
             <span class="kw">let </span>stashed = entry.downcast_ref::&lt;S&gt;().expect(
-                <span class="string">&quot;Encountered two functions with different return types and \
-                the same function pointer.&quot;</span>,
+                <span class="string">"Encountered two functions with different return types and \
+                the same function pointer."</span>,
             );
             ctx.registry().fetch(stashed)
         } <span class="kw">else </span>{
-            drop(map); <span class="comment">// Make sure we don&#39;t deadlock
+            drop(map); <span class="comment">// Make sure we don't deadlock
             </span><span class="kw">let </span>v = singleton(ctx);
             <span class="kw">let </span>stashed = ctx.registry().stash(<span class="kw-2">&amp;</span>ctx, v);
             <span class="self">self</span>.singletons.borrow_mut().insert(id, Box::new(stashed));
@@ -621,7 +622,7 @@
             <span class="comment">// Insert our lua singletons.
             </span>ctx.globals().set(
                 ctx,
-                <span class="string">&quot;luasingletons&quot;</span>,
+                <span class="string">"luasingletons"</span>,
                 UserData::new_static(<span class="kw-2">&amp;</span>ctx, LuaSingletons::default()),
             )<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(())
@@ -641,7 +642,7 @@
         <span class="comment">// Make sure the compute task pool is initialized
         </span>ComputeTaskPool::init(TaskPool::new);
 
-        <span class="attr">#[cfg(not(target_arch = <span class="string">&quot;wasm32&quot;</span>))]
+        <span class="attr">#[cfg(not(target_arch = <span class="string">"wasm32"</span>))]
         </span><span class="kw">let </span>executor = {
             <span class="kw">let </span>(send, recv) = async_channel::bounded(<span class="number">1</span>);
 
@@ -662,7 +663,7 @@
             recv.try_recv().unwrap()
         };
 
-        <span class="attr">#[cfg(target_arch = <span class="string">&quot;wasm32&quot;</span>)]
+        <span class="attr">#[cfg(target_arch = <span class="string">"wasm32"</span>)]
         </span><span class="kw">let </span>executor = Arc::new(ThreadExecutor::new());
 
         LuaEngine {
@@ -674,7 +675,7 @@
 
 <span class="kw">impl </span>LuaEngine {
     <span class="doccomment">/// Access the lua engine to run code on it.
-    </span><span class="kw">pub fn </span>exec&lt;<span class="lifetime">&#39;a</span>, F: FnOnce(<span class="kw-2">&amp;mut </span>Lua) + Send + <span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, f: F) {
+    </span><span class="kw">pub fn </span>exec&lt;<span class="lifetime">'a</span>, F: FnOnce(<span class="kw-2">&amp;mut </span>Lua) + Send + <span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, f: F) {
         <span class="kw">let </span>pool = ComputeTaskPool::get();
 
         <span class="comment">// Create a new scope spawned on the lua engine thread.
@@ -688,7 +689,7 @@
     <span class="doccomment">/// Run a lua script as a system on the given world.
     </span><span class="kw">pub fn </span>run_script_system(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World, script: Handle&lt;LuaScript&gt;) {
         <span class="self">self</span>.exec(|lua| {
-            Frozen::&lt;<span class="macro">Freeze!</span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;freeze </span>World]&gt;::in_scope(world, |world| {
+            Frozen::&lt;<span class="macro">Freeze!</span>[<span class="kw-2">&amp;</span><span class="lifetime">'freeze </span>World]&gt;::in_scope(world, |world| {
                 <span class="comment">// Wrap world reference so that it can be converted to lua userdata.
                 </span><span class="kw">let </span>worldref = WorldRef(world);
 
@@ -704,7 +705,7 @@
                             .asset_ids
                             .get(<span class="kw-2">&amp;</span>script.untyped())
                             .ok_or_else(|| {
-                                <span class="macro">tracing::warn!</span>(<span class="string">&quot;Script asset not loaded.&quot;</span>);
+                                <span class="macro">tracing::warn!</span>(<span class="string">"Script asset not loaded."</span>);
                                 PrototypeError::Parser(ParseError {
                                     kind: piccolo::compiler::ParseErrorKind::EndOfStream {
                                         expected: <span class="prelude-val">None</span>,
@@ -740,7 +741,7 @@
                 });
 
                 <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = executor.and_then(|ex| lua.execute::&lt;()&gt;(<span class="kw-2">&amp;</span>ex)) {
-                    <span class="macro">tracing::error!</span>(<span class="string">&quot;{e}&quot;</span>);
+                    <span class="macro">tracing::error!</span>(<span class="string">"{e}"</span>);
                 }
             });
         });

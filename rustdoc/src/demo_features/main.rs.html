@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `demos/features/src/main.rs`."><title>main.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="demo_features" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `demos/features/src/main.rs`."><title>main.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="demo_features" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -588,8 +589,8 @@
 /// The path to our root asset file is specified in `assets/pack.yaml`.
 </span><span class="attr">#[derive(HasSchema, Default, Clone)]
 #[repr(C)]
-</span><span class="comment">// Allow asset to be loaded from &quot;game.yaml&quot; assets.
-</span><span class="attr">#[type_data(metadata_asset(<span class="string">&quot;game&quot;</span>))]
+</span><span class="comment">// Allow asset to be loaded from "game.yaml" assets.
+</span><span class="attr">#[type_data(metadata_asset(<span class="string">"game"</span>))]
 </span><span class="kw">struct </span>GameMeta {
     <span class="doccomment">/// A lua script that will be run every frame on the menu.
     </span>menu_script: Handle&lt;LuaScript&gt;,
@@ -620,7 +621,7 @@
 <span class="doccomment">/// Atlas information.
 </span><span class="attr">#[derive(HasSchema, Default, Clone)]
 #[repr(C)]
-#[type_data(metadata_asset(<span class="string">&quot;atlas-demo&quot;</span>))]
+#[type_data(metadata_asset(<span class="string">"atlas-demo"</span>))]
 </span><span class="kw">struct </span>AtlasDemoMeta {
     <span class="doccomment">/// The size of the camera.
     </span>camera_size: CameraSize,
@@ -638,7 +639,7 @@
 <span class="doccomment">/// Tilemap info.
 </span><span class="attr">#[derive(HasSchema, Default, Clone)]
 #[repr(C)]
-#[type_data(metadata_asset(<span class="string">&quot;tilemap&quot;</span>))]
+#[type_data(metadata_asset(<span class="string">"tilemap"</span>))]
 </span><span class="kw">struct </span>TilemapDemoMeta {
     <span class="doccomment">/// The atlas that will be used for the tilemap.
     </span><span class="kw">pub </span>atlas: Handle&lt;Atlas&gt;,
@@ -664,7 +665,7 @@
 </span><span class="kw">struct </span>PersistedTextData(String);
 
 <span class="kw">fn </span>main() {
-    <span class="comment">// Register persistent data&#39;s schema so that it can be loaded by the storage loader.
+    <span class="comment">// Register persistent data's schema so that it can be loaded by the storage loader.
     </span>PersistedTextData::register_schema();
 
     <span class="comment">// Create a bones bevy renderer from our bones game
@@ -672,9 +673,9 @@
     <span class="comment">// Set the app namespace which will be used by the renderer to decide where to put
     // persistent storage files.
     </span>renderer.app_namespace = (
-        <span class="string">&quot;org&quot;</span>.into(),
-        <span class="string">&quot;fishfolk&quot;</span>.into(),
-        <span class="string">&quot;bones.demo_features&quot;</span>.into(),
+        <span class="string">"org"</span>.into(),
+        <span class="string">"fishfolk"</span>.into(),
+        <span class="string">"bones.demo_features"</span>.into(),
     );
     <span class="comment">// Get a bevy app for running our game
     </span>renderer
@@ -702,7 +703,7 @@
     TilemapDemoMeta::register_schema();
 
     <span class="comment">// Create our menu session
-    </span>game.sessions.create(<span class="string">&quot;menu&quot;</span>).install_plugin(menu_plugin);
+    </span>game.sessions.create(<span class="string">"menu"</span>).install_plugin(menu_plugin);
 
     game
 }
@@ -764,10 +765,10 @@
             BorderedFrame::new(<span class="kw-2">&amp;</span>meta.menu_border).show(ui, |ui| {
                 ui.vertical_centered(|ui| {
                     ui.add_space(<span class="number">20.0</span>);
-                    ui.label(meta.title_font.rich(localization.get(<span class="string">&quot;title&quot;</span>)));
+                    ui.label(meta.title_font.rich(localization.get(<span class="string">"title"</span>)));
                     ui.add_space(<span class="number">20.0</span>);
 
-                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;sprite-demo&quot;</span>))
+                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">"sprite-demo"</span>))
                         .show(ui)
                         .clicked()
                     {
@@ -776,11 +777,11 @@
 
                         <span class="comment">// Create a session for the match
                         </span>sessions
-                            .create(<span class="string">&quot;sprite_demo&quot;</span>)
+                            .create(<span class="string">"sprite_demo"</span>)
                             .install_plugin(sprite_demo_plugin);
                     }
 
-                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;atlas-demo&quot;</span>))
+                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">"atlas-demo"</span>))
                         .show(ui)
                         .clicked()
                     {
@@ -789,11 +790,11 @@
 
                         <span class="comment">// Create a session for the match
                         </span>sessions
-                            .create(<span class="string">&quot;atlas_demo&quot;</span>)
+                            .create(<span class="string">"atlas_demo"</span>)
                             .install_plugin(atlas_demo_plugin);
                     }
 
-                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;tilemap-demo&quot;</span>))
+                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">"tilemap-demo"</span>))
                         .show(ui)
                         .clicked()
                     {
@@ -802,11 +803,11 @@
 
                         <span class="comment">// Create a session for the match
                         </span>sessions
-                            .create(<span class="string">&quot;tilemap_demo&quot;</span>)
+                            .create(<span class="string">"tilemap_demo"</span>)
                             .install_plugin(tilemap_demo_plugin);
                     }
 
-                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;audio-demo&quot;</span>))
+                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">"audio-demo"</span>))
                         .show(ui)
                         .clicked()
                     {
@@ -815,11 +816,11 @@
 
                         <span class="comment">// Create a session for the match
                         </span>sessions
-                            .create(<span class="string">&quot;audio_demo&quot;</span>)
+                            .create(<span class="string">"audio_demo"</span>)
                             .install_plugin(audio_demo_plugin);
                     }
 
-                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;storage-demo&quot;</span>))
+                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">"storage-demo"</span>))
                         .show(ui)
                         .clicked()
                     {
@@ -828,11 +829,11 @@
 
                         <span class="comment">// Create a session for the match
                         </span>sessions
-                            .create(<span class="string">&quot;storage_demo&quot;</span>)
+                            .create(<span class="string">"storage_demo"</span>)
                             .install_plugin(storage_demo_plugin);
                     }
 
-                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;path2d-demo&quot;</span>))
+                    <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">"path2d-demo"</span>))
                         .show(ui)
                         .clicked()
                     {
@@ -841,12 +842,12 @@
 
                         <span class="comment">// Create a session for the match
                         </span>sessions
-                            .create(<span class="string">&quot;path2d_demo&quot;</span>)
+                            .create(<span class="string">"path2d_demo"</span>)
                             .install_plugin(path2d_demo_plugin);
                     }
 
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(exit_bones) = <span class="kw-2">&amp;mut </span>exit_bones {
-                        <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">&quot;quit&quot;</span>))
+                        <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">"quit"</span>))
                             .show(ui)
                             .clicked()
                         {
@@ -909,7 +910,7 @@
     egui::CentralPanel::default()
         .frame(egui::Frame::none())
         .show(<span class="kw-2">&amp;</span>ctx, |ui| {
-            ui.label(<span class="string">&quot;Press left and right arrow keys to move sprite&quot;</span>);
+            ui.label(<span class="string">"Press left and right arrow keys to move sprite"</span>);
         });
 
     <span class="kw">let </span><span class="kw-2">mut </span>left = <span class="bool-val">false</span>;
@@ -1047,7 +1048,7 @@
         .show(<span class="kw-2">&amp;</span>ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(<span class="number">50.0</span>);
-                <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;play-sound&quot;</span>)).clicked() {
+                <span class="kw">if </span>ui.button(localization.get(<span class="string">"play-sound"</span>)).clicked() {
                     audio.play(<span class="kw-2">&amp;*</span>assets.get(meta.audio_demo)).unwrap();
                 }
             })
@@ -1074,10 +1075,10 @@
             {
                 <span class="kw">let </span>data = storage.get_or_insert_default_mut::&lt;PersistedTextData&gt;();
                 egui::TextEdit::singleline(<span class="kw-2">&amp;mut </span>data.<span class="number">0</span>)
-                    .hint_text(localization.get(<span class="string">&quot;persisted-text-box-content&quot;</span>))
+                    .hint_text(localization.get(<span class="string">"persisted-text-box-content"</span>))
                     .show(ui);
             }
-            <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;save&quot;</span>)).clicked() {
+            <span class="kw">if </span>ui.button(localization.get(<span class="string">"save"</span>)).clicked() {
                 storage.save()
             }
         });
@@ -1127,15 +1128,15 @@
     <span class="kw-2">mut </span>session_options: ResMut&lt;SessionOptions&gt;,
     localization: Localization&lt;GameMeta&gt;,
 ) {
-    egui::TopBottomPanel::bottom(<span class="string">&quot;back-to-menu&quot;</span>)
+    egui::TopBottomPanel::bottom(<span class="string">"back-to-menu"</span>)
         .frame(egui::Frame::none())
         .show_separator_line(<span class="bool-val">false</span>)
         .show(<span class="kw-2">&amp;</span>ctx, |ui| {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
                 ui.add_space(<span class="number">20.0</span>);
-                <span class="kw">if </span>ui.button(localization.get(<span class="string">&quot;back-to-menu&quot;</span>)).clicked() {
+                <span class="kw">if </span>ui.button(localization.get(<span class="string">"back-to-menu"</span>)).clicked() {
                     session_options.delete = <span class="bool-val">true</span>;
-                    sessions.create(<span class="string">&quot;menu&quot;</span>).install_plugin(menu_plugin);
+                    sessions.create(<span class="string">"menu"</span>).install_plugin(menu_plugin);
                 }
             });
         });
@@ -1150,8 +1151,8 @@
     egui_textures: Res&lt;EguiTextures&gt;,
     <span class="comment">// And they may return an `egui::Response` or any other value.
 </span>) -&gt; egui::Response {
-    ui.label(<span class="string">&quot;Demo Widget&quot;</span>);
-    <span class="comment">// When using a bones image in egui, we have to get it&#39;s corresponding egui texture
+    ui.label(<span class="string">"Demo Widget"</span>);
+    <span class="comment">// When using a bones image in egui, we have to get it's corresponding egui texture
     // from the egui textures resource.
     </span>ui.image(egui::load::SizedTexture::new(
         egui_textures.get(meta.menu_image),

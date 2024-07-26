@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_schema/src/alloc/resizable.rs`."><title>resizable.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_schema" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_schema/src/alloc/resizable.rs`."><title>resizable.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_schema" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -337,14 +338,14 @@
 /// The allocation has a capacity measured in the number of elements with the given [`Layout`] that
 /// it has room for.
 ///
-/// Dropping a [`ResizableAlloc`] will de-allocate it&#39;s memory.
+/// Dropping a [`ResizableAlloc`] will de-allocate it's memory.
 </span><span class="kw">pub struct </span>ResizableAlloc {
     <span class="doccomment">/// The pointer to the allocation. May be dangling for a capacity of zero or for a zero-sized
     /// layout.
     </span>ptr: NonNull&lt;c_void&gt;,
     <span class="doccomment">/// The layout of the items stored
     </span>layout: Layout,
-    <span class="doccomment">/// The layout of the items stored, with it&#39;s size padded to its alignment.
+    <span class="doccomment">/// The layout of the items stored, with it's size padded to its alignment.
     </span>padded: Layout,
     <span class="doccomment">/// The current capacity measured in items.
     </span>cap: usize,
@@ -361,7 +362,7 @@
         </span><span class="kw">if </span><span class="self">self</span>.layout.size() &gt; <span class="number">0 </span>{
             <span class="comment">// Copy the data from this allocation into the copy.
             </span><span class="kw">unsafe </span>{
-                <span class="comment">// SOUND: we have just allocated the copy so we know it&#39;s pointer doesn&#39;t overlap with
+                <span class="comment">// SOUND: we have just allocated the copy so we know it's pointer doesn't overlap with
                 // our own.
                 </span>copy.ptr
                     .as_ptr()
@@ -379,7 +380,7 @@
     /// anything yet.hing.
     ///
     /// If the new capacity is greater, it will reallocate and extend the allocated region to be
-    /// able to fit `new_capacity` items of the this [`ResizableAlloc`]&#39;s layout.
+    /// able to fit `new_capacity` items of the this [`ResizableAlloc`]'s layout.
     ///
     /// If the new capacity is lower, it will reallocate and remove all items
     ///
@@ -402,9 +403,9 @@
         <span class="prelude-val">Ok</span>(a)
     }
 
-    <span class="doccomment">/// Resize the buffer, re-allocating it&#39;s memory.
+    <span class="doccomment">/// Resize the buffer, re-allocating it's memory.
     </span><span class="kw">pub fn </span>resize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_capacity: usize) -&gt; <span class="prelude-ty">Result</span>&lt;(), LayoutError&gt; {
-        <span class="comment">// Don&#39;t do anything for an equal new_capacity
+        <span class="comment">// Don't do anything for an equal new_capacity
         </span><span class="kw">if </span><span class="self">self</span>.cap == new_capacity {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
@@ -479,7 +480,7 @@
     }
 
     <span class="doccomment">/// Iterate over the allocation.
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ResizableAllocIter&lt;<span class="lifetime">&#39;_</span>&gt; {
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ResizableAllocIter&lt;<span class="lifetime">'_</span>&gt; {
         ResizableAllocIter {
             alloc: <span class="self">self</span>,
             idx: <span class="number">0</span>,
@@ -487,7 +488,7 @@
     }
 
     <span class="doccomment">/// Iterate mutably over the allocation.
-    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; ResizableAllocIterMut&lt;<span class="lifetime">&#39;_</span>&gt; {
+    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; ResizableAllocIterMut&lt;<span class="lifetime">'_</span>&gt; {
         ResizableAllocIterMut {
             alloc: <span class="self">self</span>,
             idx: <span class="number">0</span>,
@@ -524,16 +525,16 @@
 }
 
 <span class="doccomment">/// Iterator over items in a [`ResizableAlloc`].
-</span><span class="kw">pub struct </span>ResizableAllocIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ResizableAlloc,
+</span><span class="kw">pub struct </span>ResizableAllocIter&lt;<span class="lifetime">'a</span>&gt; {
+    alloc: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ResizableAlloc,
     idx: usize,
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>ResizableAllocIter&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>ResizableAllocIter&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">type </span>Item = <span class="kw-2">*const </span>c_void;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">if </span><span class="self">self</span>.idx &lt; <span class="self">self</span>.alloc.cap {
-            <span class="comment">// SOUND: we&#39;ve checked that it is within bounds.
+            <span class="comment">// SOUND: we've checked that it is within bounds.
             </span><span class="kw">let </span>r = <span class="kw">unsafe </span>{ <span class="self">self</span>.alloc.unchecked_idx(<span class="self">self</span>.idx) };
             <span class="self">self</span>.idx += <span class="number">1</span>;
             <span class="prelude-val">Some</span>(r)
@@ -544,16 +545,16 @@
 }
 
 <span class="doccomment">/// Mutable iterator over items in a [`ResizableAlloc`].
-</span><span class="kw">pub struct </span>ResizableAllocIterMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>ResizableAlloc,
+</span><span class="kw">pub struct </span>ResizableAllocIterMut&lt;<span class="lifetime">'a</span>&gt; {
+    alloc: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>ResizableAlloc,
     idx: usize,
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>ResizableAllocIterMut&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>ResizableAllocIterMut&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">type </span>Item = <span class="kw-2">*mut </span>c_void;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">if </span><span class="self">self</span>.idx &lt; <span class="self">self</span>.alloc.cap {
-            <span class="comment">// SOUND: we&#39;ve checked that it is within bounds, and we know that the pointer will be
+            <span class="comment">// SOUND: we've checked that it is within bounds, and we know that the pointer will be
             // valid for the new lifetime.
             </span><span class="kw">let </span>r = <span class="kw">unsafe </span>{ <span class="self">self</span>.alloc.unchecked_idx(<span class="self">self</span>.idx) };
             <span class="self">self</span>.idx += <span class="number">1</span>;
@@ -571,7 +572,7 @@
     <span class="kw">use </span><span class="kw">crate</span>::alloc::ResizableAlloc;
 
     <span class="attr">#[test]
-    #[cfg(feature = <span class="string">&quot;glam&quot;</span>)]
+    #[cfg(feature = <span class="string">"glam"</span>)]
     </span><span class="kw">fn </span>realloc_transform() {
         <span class="kw">use crate as </span>bones_schema;
         <span class="kw">use </span>bones_schema_macros::HasSchema;
@@ -600,7 +601,7 @@
         </span><span class="kw">type </span>Ty = (u32, u8);
         <span class="kw">let </span>layout = Layout::new::&lt;Ty&gt;();
 
-        <span class="comment">// This doesn&#39;t allocate yet
+        <span class="comment">// This doesn't allocate yet
         </span><span class="kw">let </span><span class="kw-2">mut </span>a = ResizableAlloc::new(layout);
 
         <span class="comment">// We can now use resize() to allocate memory for 3 elements.
@@ -640,7 +641,7 @@
             <span class="macro">assert_eq!</span>((<span class="number">0</span>, <span class="number">0</span>), (a.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>Ty).read());
         }
 
-        <span class="comment">// And we can delete all the items by resizing to zero ( again, this doesn&#39;t drop item, just
+        <span class="comment">// And we can delete all the items by resizing to zero ( again, this doesn't drop item, just
         // removes their memory ).
         </span>a.resize(<span class="number">0</span>).unwrap();
 

@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_ecs/src/resources.rs`."><title>resources.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_ecs/src/resources.rs`."><title>resources.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -485,21 +486,21 @@
 <span class="doccomment">/// An untyped resource that may be inserted into [`UntypedResources`].
 ///
 /// This is fundamentally a [`Arc&lt;AtomicCell&lt;Option&lt;SchemaBox&gt;&gt;&gt;`] and thus represents
-/// a cell that may or may not contain a resource of it&#39;s schema.
+/// a cell that may or may not contain a resource of it's schema.
 </span><span class="kw">pub struct </span>UntypedResource {
     cell: AtomicCell&lt;<span class="prelude-ty">Option</span>&lt;SchemaBox&gt;&gt;,
-    schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
+    schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
 }
 
 <span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>UntypedResource {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        f.debug_struct(<span class="string">&quot;UntypedResource&quot;</span>).finish_non_exhaustive()
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">"UntypedResource"</span>).finish_non_exhaustive()
     }
 }
 
 <span class="kw">impl </span>UntypedResource {
     <span class="doccomment">/// Initialize a new, empty [`UntypedResource`].
-    </span><span class="kw">pub fn </span>empty(schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>empty(schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             cell: AtomicCell::new(<span class="prelude-val">None</span>),
             schema,
@@ -516,7 +517,7 @@
 
     <span class="doccomment">/// Create a new [`UntypedResource`] for the given schema, initially populated with the default
     /// value for the schema.
-    </span><span class="kw">pub fn </span>from_default(schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>from_default(schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             cell: AtomicCell::new(<span class="prelude-val">Some</span>(SchemaBox::default(schema))),
             schema,
@@ -559,7 +560,7 @@
     }
 
     <span class="doccomment">/// Get the schema of the resource.
-    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
         <span class="self">self</span>.schema
     }
 }
@@ -613,8 +614,8 @@
 </span><span class="attr">#[derive(Debug, Clone, Copy)]
 </span><span class="kw">pub struct </span>CellAlreadyPresentError;
 <span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>CellAlreadyPresentError {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        f.write_str(<span class="string">&quot;Resource cell already present&quot;</span>)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        f.write_str(<span class="string">"Resource cell already present"</span>)
     }
 }
 <span class="kw">impl </span>std::error::Error <span class="kw">for </span>CellAlreadyPresentError {}
@@ -660,13 +661,13 @@
     }
 
     <span class="doccomment">/// Borrow the resource for the given schema.
-    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="kw-2">&amp;</span>UntypedResource {
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema) -&gt; <span class="kw-2">&amp;</span>UntypedResource {
         <span class="self">self</span>.resources
             .insert(schema.id(), |<span class="kw">_</span>| Arc::new(UntypedResource::empty(schema)))
     }
 
     <span class="doccomment">/// Get a cell for the resource with the given schema.
-    </span><span class="kw">pub fn </span>get_cell(<span class="kw-2">&amp;</span><span class="self">self</span>, schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; AtomicUntypedResource {
+    </span><span class="kw">pub fn </span>get_cell(<span class="kw-2">&amp;</span><span class="self">self</span>, schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema) -&gt; AtomicUntypedResource {
         <span class="self">self</span>.resources.map_insert(
             schema.id(),
             |<span class="kw">_</span>| Arc::new(UntypedResource::empty(schema)),
@@ -710,7 +711,7 @@
         <span class="self">self</span>.untyped
             .get(T::schema())
             .remove()
-            <span class="comment">// SOUND: we know the type matches because we retrieve it by it&#39;s schema.
+            <span class="comment">// SOUND: we know the type matches because we retrieve it by it's schema.
             </span>.map(|x| <span class="kw">unsafe </span>{ x.cast_into_unchecked() })
     }
 
@@ -772,15 +773,15 @@
     _phantom: PhantomData&lt;T&gt;,
 }
 <span class="kw">impl</span>&lt;T: HasSchema + Debug&gt; Debug <span class="kw">for </span>AtomicResource&lt;T&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        f.write_str(<span class="string">&quot;AtomicResource(&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        f.write_str(<span class="string">"AtomicResource("</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.untyped
             .cell
             .borrow()
             .as_ref()
             .map(|x| x.cast_ref::&lt;T&gt;())
             .fmt(f)<span class="question-mark">?</span>;
-        f.write_str(<span class="string">&quot;)&quot;</span>)<span class="question-mark">?</span>;
+        f.write_str(<span class="string">")"</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -863,7 +864,7 @@
 }
 
 <span class="kw">impl</span>&lt;T: HasSchema + FromWorld&gt; AtomicResource&lt;T&gt; {
-    <span class="doccomment">/// Initialize the resource using it&#39;s [`FromWorld`] implementation, if it is not present.
+    <span class="doccomment">/// Initialize the resource using it's [`FromWorld`] implementation, if it is not present.
     </span><span class="kw">pub fn </span>init(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World) {
         <span class="kw">let </span><span class="kw-2">mut </span>borrow = <span class="self">self</span>.untyped.borrow_mut();
         <span class="kw">if </span>unlikely(borrow.is_none()) {
@@ -871,7 +872,7 @@
         }
     }
 
-    <span class="doccomment">/// Borrow the resource, initializing it if it doesn&#39;t exist.
+    <span class="doccomment">/// Borrow the resource, initializing it if it doesn't exist.
     </span><span class="attr">#[track_caller]
     </span><span class="kw">pub fn </span>init_borrow(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World) -&gt; Ref&lt;T&gt; {
         <span class="kw">let </span>map_borrow = |borrow| {
@@ -894,7 +895,7 @@
         }
     }
 
-    <span class="doccomment">/// Borrow the resource, initializing it if it doesn&#39;t exist.
+    <span class="doccomment">/// Borrow the resource, initializing it if it doesn't exist.
     </span><span class="attr">#[track_caller]
     </span><span class="kw">pub fn </span>init_borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World) -&gt; RefMut&lt;T&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>borrow = <span class="self">self</span>.untyped.borrow_mut();
@@ -923,25 +924,25 @@
 
         <span class="kw">let </span>r1 = Resources::new();
 
-        r1.insert(A(String::from(<span class="string">&quot;hi&quot;</span>)));
+        r1.insert(A(String::from(<span class="string">"hi"</span>)));
         <span class="kw">let </span>r1a = r1.get_cell::&lt;A&gt;();
-        <span class="macro">assert_eq!</span>(r1a.borrow().unwrap().<span class="number">0</span>, <span class="string">&quot;hi&quot;</span>);
+        <span class="macro">assert_eq!</span>(r1a.borrow().unwrap().<span class="number">0</span>, <span class="string">"hi"</span>);
 
         <span class="kw">let </span>r2 = r1.clone();
 
-        r1.insert(A(String::from(<span class="string">&quot;bye&quot;</span>)));
-        r1.insert(A(String::from(<span class="string">&quot;world&quot;</span>)));
-        <span class="macro">assert_eq!</span>(r1a.borrow().unwrap().<span class="number">0</span>, <span class="string">&quot;world&quot;</span>);
+        r1.insert(A(String::from(<span class="string">"bye"</span>)));
+        r1.insert(A(String::from(<span class="string">"world"</span>)));
+        <span class="macro">assert_eq!</span>(r1a.borrow().unwrap().<span class="number">0</span>, <span class="string">"world"</span>);
 
         <span class="kw">let </span>r2a = r2.get_cell::&lt;A&gt;();
-        <span class="macro">assert_eq!</span>(r2a.borrow().unwrap().<span class="number">0</span>, <span class="string">&quot;hi&quot;</span>);
+        <span class="macro">assert_eq!</span>(r2a.borrow().unwrap().<span class="number">0</span>, <span class="string">"hi"</span>);
 
         r1.insert(B(<span class="number">1</span>));
         <span class="kw">let </span>r1b = r1.get_cell::&lt;B&gt;();
         <span class="macro">assert_eq!</span>(r1b.borrow().unwrap().<span class="number">0</span>, <span class="number">1</span>);
         r1.insert(B(<span class="number">2</span>));
         <span class="macro">assert_eq!</span>(r1b.borrow().unwrap().<span class="number">0</span>, <span class="number">2</span>);
-        <span class="macro">assert_eq!</span>(r1a.borrow().unwrap().<span class="number">0</span>, <span class="string">&quot;world&quot;</span>);
+        <span class="macro">assert_eq!</span>(r1a.borrow().unwrap().<span class="number">0</span>, <span class="string">"world"</span>);
     }
 }
 </code></pre></div></section></main></body></html>

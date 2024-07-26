@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_asset/src/asset.rs`."><title>asset.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_asset" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_asset/src/asset.rs`."><title>asset.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_asset" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -470,7 +471,7 @@
 
 <span class="doccomment">/// An asset pack contains assets that are loaded by the game.
 ///
-/// The game&#39;s built-in assets are contained the the core asset pack, and mods or other assets may
+/// The game's built-in assets are contained the the core asset pack, and mods or other assets may
 /// also be loaded.
 </span><span class="attr">#[derive(Clone, Debug)]
 </span><span class="kw">pub struct </span>AssetPack {
@@ -485,12 +486,12 @@
     </span><span class="kw">pub </span>game_version: VersionReq,
 
     <span class="doccomment">/// Schemas provided in the asset pack.
-    </span><span class="kw">pub </span>schemas: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt;,
+    </span><span class="kw">pub </span>schemas: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema&gt;,
     <span class="doccomment">/// The root asset for the asset pack.
     </span><span class="kw">pub </span>root: UntypedHandle,
 }
 
-<span class="doccomment">/// Specifies an asset pack, and it&#39;s exact version.
+<span class="doccomment">/// Specifies an asset pack, and it's exact version.
 </span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 </span><span class="kw">pub struct </span>AssetPackSpec {
     <span class="doccomment">/// The ID of the asset pack.
@@ -500,13 +501,13 @@
 }
 
 <span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>AssetPackSpec {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         <span class="kw">let </span><span class="self">Self </span>{ id, version } = <span class="self">self</span>;
-        <span class="macro">write!</span>(f, <span class="string">&quot;{id}@{version}&quot;</span>)
+        <span class="macro">write!</span>(f, <span class="string">"{id}@{version}"</span>)
     }
 }
 
-<span class="doccomment">/// A requirement specifier for an asset pack, made up of the asset pack&#39;s [`LabeledId`] and it&#39;s
+<span class="doccomment">/// A requirement specifier for an asset pack, made up of the asset pack's [`LabeledId`] and it's
 /// [`VersionReq`].
 </span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>AssetPackReq {
@@ -526,10 +527,10 @@
     </span><span class="kw">pub </span>name: String,
 }
 
-<span class="doccomment">/// Struct containing all the game&#39;s loaded assets, including the default assets and
+<span class="doccomment">/// Struct containing all the game's loaded assets, including the default assets and
 /// asset-packs/mods.
 </span><span class="kw">pub struct </span>LoadedAssets {
-    <span class="doccomment">/// The game&#39;s default asset pack.
+    <span class="doccomment">/// The game's default asset pack.
     </span><span class="kw">pub </span>default: UntypedHandle,
     <span class="doccomment">/// Extra asset packs. The key is the the name of the asset pack.
     </span><span class="kw">pub </span>packs: HashMap&lt;String, UntypedHandle&gt;,
@@ -571,7 +572,7 @@
 
     <span class="doccomment">/// Get whether or not all the assets are done loading.
     ///
-    /// &gt; **Note:** Assets that have errored while loading are still counted as &quot;done loading&quot;.
+    /// &gt; **Note:** Assets that have errored while loading are still counted as "done loading".
     </span><span class="kw">pub fn </span>is_finished(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="kw">let </span>loaded = <span class="self">self</span>.assets_loaded.load(SeqCst);
         <span class="kw">let </span>pending = <span class="self">self</span>.assets_to_load.load(SeqCst);
@@ -598,7 +599,7 @@
     }
 
     <span class="doccomment">/// Get the number of assets that have had their data downloaded. Once an asset is downloaded
-    /// we have the raw bytes, but it may not have been processed by it&#39;s asset loader.
+    /// we have the raw bytes, but it may not have been processed by it's asset loader.
     </span><span class="kw">pub fn </span>downloaded(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
         <span class="self">self</span>.assets_downloaded.load(SeqCst)
     }
@@ -618,7 +619,7 @@
 </span><span class="doccomment">/// Stores assets for later retrieval.
 </span><span class="attr">#[derive(Default, Clone, Debug)]
 </span><span class="kw">pub struct </span>AssetStore {
-    <span class="doccomment">/// Maps the handle of the asset to it&#39;s content ID.
+    <span class="doccomment">/// Maps the handle of the asset to it's content ID.
     </span><span class="kw">pub </span>asset_ids: DashMap&lt;UntypedHandle, Cid&gt;,
     <span class="doccomment">/// Content addressed cache of raw bytes for asset data.
     ///
@@ -628,7 +629,7 @@
     <span class="doccomment">/// Maps asset content IDs, to assets that have been loaded by an asset loader from the raw
     /// bytes.
     </span><span class="kw">pub </span>assets: DashMap&lt;Cid, LoadedAsset&gt;,
-    <span class="doccomment">/// Maps the asset [`AssetLoc`] to it&#39;s handle.
+    <span class="doccomment">/// Maps the asset [`AssetLoc`] to it's handle.
     </span><span class="kw">pub </span>path_handles: DashMap&lt;AssetLoc, UntypedHandle&gt;,
 
     <span class="doccomment">/// List of assets that depend on the given assets.
@@ -636,7 +637,7 @@
     <span class="doccomment">/// Lists the packs that have not been loaded due to an incompatible game version.
     </span><span class="kw">pub </span>incompabile_packs: DashMap&lt;String, PackfileMeta&gt;,
 
-    <span class="doccomment">/// The core asset pack, if it&#39;s been loaded.
+    <span class="doccomment">/// The core asset pack, if it's been loaded.
     </span><span class="kw">pub </span>core_pack: Arc&lt;Mutex&lt;<span class="prelude-ty">Option</span>&lt;AssetPack&gt;&gt;&gt;,
     <span class="doccomment">/// The asset packs that have been loaded.
     </span><span class="kw">pub </span>packs: DashMap&lt;AssetPackSpec, AssetPack&gt;,
@@ -649,7 +650,7 @@
 /// A pack of [`None`] means that it was loaded from the core pack.
 </span><span class="attr">#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 </span><span class="kw">pub struct </span>AssetLoc {
-    <span class="doccomment">/// The path to the asset in it&#39;s pack.
+    <span class="doccomment">/// The path to the asset in it's pack.
     </span><span class="kw">pub </span>path: PathBuf,
     <span class="doccomment">/// The pack_dir of the pack that the asset is in.
     </span><span class="kw">pub </span>pack: <span class="prelude-ty">Option</span>&lt;String&gt;,
@@ -665,8 +666,8 @@
     }
 }
 
-<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>AssetLocRef&lt;<span class="lifetime">&#39;_</span>&gt;&gt; <span class="kw">for </span>AssetLoc {
-    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span>AssetLocRef&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>AssetLocRef&lt;<span class="lifetime">'_</span>&gt;&gt; <span class="kw">for </span>AssetLoc {
+    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span>AssetLocRef&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="self">Self </span>{
         AssetLoc {
             path: value.path.to_owned(),
             pack: value.pack.map(|x| x.to_owned()),
@@ -676,20 +677,20 @@
 
 <span class="doccomment">/// A borrowed version of [`AssetLoc`].
 </span><span class="attr">#[derive(Clone, PartialEq, Eq, Hash, Debug, Copy)]
-</span><span class="kw">pub struct </span>AssetLocRef&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="doccomment">/// The path to the asset in it&#39;s pack.
-    </span><span class="kw">pub </span>path: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Path,
+</span><span class="kw">pub struct </span>AssetLocRef&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="doccomment">/// The path to the asset in it's pack.
+    </span><span class="kw">pub </span>path: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Path,
     <span class="doccomment">/// The pack_dir of the pack that the asset is in.
-    </span><span class="kw">pub </span>pack: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt;,
+    </span><span class="kw">pub </span>pack: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Path, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt;)&gt; <span class="kw">for </span>AssetLocRef&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">fn </span>from((path, pack): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Path, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt;)) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Path, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt;)&gt; <span class="kw">for </span>AssetLocRef&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>from((path, pack): (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Path, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt;)) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ pack, path }
     }
 }
 
-<span class="kw">impl </span>AssetLocRef&lt;<span class="lifetime">&#39;_</span>&gt; {
+<span class="kw">impl </span>AssetLocRef&lt;<span class="lifetime">'_</span>&gt; {
     <span class="doccomment">/// Clone data to an owned [`AssetLoc`].
     </span><span class="kw">pub fn </span>to_owned(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AssetLoc {
         <span class="self">self</span>.into()
@@ -701,7 +702,7 @@
 </span><span class="kw">pub struct </span>LoadedAsset {
     <span class="doccomment">/// The content ID of the loaded asset.
     ///
-    /// This is a hash of the contents of the asset&#39;s binary data and all of the cids of it&#39;s
+    /// This is a hash of the contents of the asset's binary data and all of the cids of it's
     /// dependencies.
     </span><span class="kw">pub </span>cid: Cid,
     <span class="doccomment">/// The asset pack this was loaded from, or [`None`] if it is from the default pack.
@@ -749,7 +750,7 @@
 }
 
 <span class="doccomment">/// A custom assset loader.
-</span><span class="kw">pub trait </span>AssetLoader: Sync + Send + <span class="lifetime">&#39;static </span>{
+</span><span class="kw">pub trait </span>AssetLoader: Sync + Send + <span class="lifetime">'static </span>{
     <span class="doccomment">/// Load the asset from raw bytes.
     </span><span class="kw">fn </span>load(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -768,21 +769,21 @@
 </span><span class="kw">pub struct </span>SchemaMetaAssetLoader(
     <span class="kw">pub  fn</span>(
         ctx: <span class="kw-2">&amp;mut </span>MetaAssetLoadCtx,
-        ptr: SchemaRefMut&lt;<span class="lifetime">&#39;_</span>&gt;,
+        ptr: SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;,
         deserialzer: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>erased_serde::Deserializer,
     ) -&gt; anyhow::Result&lt;()&gt;,
 );
 
 <span class="kw">impl </span>SchemaMetaAssetLoader {
     <span class="doccomment">/// Load the asset
-    </span><span class="kw">pub fn </span>load&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;de</span>, D&gt;(
+    </span><span class="kw">pub fn </span>load&lt;<span class="lifetime">'a</span>, <span class="lifetime">'de</span>, D&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         ctx: <span class="kw-2">&amp;mut </span>MetaAssetLoadCtx,
-        ptr: SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;,
+        ptr: SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;,
         deserializer: D,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), erased_serde::Error&gt;
     <span class="kw">where
-        </span>D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
+        </span>D: serde::Deserializer&lt;<span class="lifetime">'de</span>&gt;,
     {
         <span class="kw">use </span>serde::de::Error;
         <span class="kw">let </span><span class="kw-2">mut </span>de = &lt;<span class="kw">dyn </span>erased_serde::Deserializer&gt;::erase(deserializer);
@@ -820,7 +821,7 @@
 /// # use bones_asset::prelude::*;
 /// # use glam::*;
 /// #[derive(HasSchema, Default, Clone)]
-/// #[type_data(metadata_asset(&quot;atlas&quot;))]
+/// #[type_data(metadata_asset("atlas"))]
 /// #[repr(C)]
 /// struct AtlasMeta {
 ///     pub tile_size: Vec2,
@@ -843,7 +844,7 @@
 /// # use bones_asset::prelude::*;
 /// # use bones_utils::prelude::*;
 /// #[derive(HasSchema, Default, Clone)]
-/// #[type_data(asset_loader(&quot;png&quot;, PngLoader))]
+/// #[type_data(asset_loader("png", PngLoader))]
 /// #[repr(C)]
 /// struct Image {
 ///     data: SVec&lt;u8&gt;,
@@ -855,7 +856,7 @@
 /// impl AssetLoader for PngLoader {
 ///     fn load(&amp;self, ctx: AssetLoadCtx, data: &amp;[u8]) -&gt; futures::future::Boxed&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
 ///         Box::pin(async move {
-///             todo!(&quot;Load PNG from data&quot;);
+///             todo!("Load PNG from data");
 ///         })
 ///     }
 /// }
@@ -872,13 +873,13 @@
 
 <span class="doccomment">/// Helper type for storing asset extensions.
 </span><span class="kw">pub struct </span>AssetExtensions(Vec&lt;String&gt;);
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="kw">const </span>N: usize&gt; From&lt;[<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str; N]&gt; <span class="kw">for </span>AssetExtensions {
-    <span class="kw">fn </span>from(value: [<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str; N]) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="kw">const </span>N: usize&gt; From&lt;[<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str; N]&gt; <span class="kw">for </span>AssetExtensions {
+    <span class="kw">fn </span>from(value: [<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str; N]) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(value.iter().map(|x| x.to_string()).collect())
     }
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt; <span class="kw">for </span>AssetExtensions {
-    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt; <span class="kw">for </span>AssetExtensions {
+    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(<span class="macro">vec!</span>[value.to_string()])
     }
 }

@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_framework/src/networking/debug.rs`."><title>debug.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_framework" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_framework/src/networking/debug.rs`."><title>debug.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_framework" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -385,7 +386,7 @@
 <a href="#385" id="385">385</a>
 <a href="#386" id="386">386</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! [`network_debug_session_plugin`] may be installed to open network diagnostics egui window:
-//! - Graphs player&#39;s predicted frames
+//! - Graphs player's predicted frames
 //! - Highlights freezes waiting for remote input (when reached max prediction window)
 //! - Displays [`ggrs::NetworkStats`]
 //! - Displays last frame with skips and how many frames were skipped.
@@ -615,52 +616,52 @@
         }
 
         <span class="kw">if </span><span class="kw-2">*</span>show {
-            <span class="comment">// let frame_localized = localization.get(&quot;frame&quot;);
-            </span><span class="kw">let </span>frame_localized = <span class="string">&quot;frame&quot;</span>;
-            <span class="comment">// let predicted_localized = localization.get(&quot;predicted&quot;);
-            </span><span class="kw">let </span>predicted_localized = <span class="string">&quot;predicted&quot;</span>;
-            <span class="comment">// egui::Window::new(&amp;localization.get(&quot;network-diagnostics&quot;))
-            </span>egui::Window::new(<span class="string">&quot;Network Diagnostics&quot;</span>)
-                .id(egui::Id::new(<span class="string">&quot;network-diagnostics&quot;</span>))
+            <span class="comment">// let frame_localized = localization.get("frame");
+            </span><span class="kw">let </span>frame_localized = <span class="string">"frame"</span>;
+            <span class="comment">// let predicted_localized = localization.get("predicted");
+            </span><span class="kw">let </span>predicted_localized = <span class="string">"predicted"</span>;
+            <span class="comment">// egui::Window::new(&amp;localization.get("network-diagnostics"))
+            </span>egui::Window::new(<span class="string">"Network Diagnostics"</span>)
+                .id(egui::Id::new(<span class="string">"network-diagnostics"</span>))
                 .open(show)
                 .show(<span class="kw-2">&amp;</span>egui_ctx, |ui| {
                     ui.monospace(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                        <span class="string">&quot;{label}: {current_frame}&quot;</span>,
-                        <span class="comment">// label = localization.get(&quot;current-frame&quot;),
-                        </span>label = <span class="string">&quot;Current Frame&quot;</span>,
+                        <span class="string">"{label}: {current_frame}"</span>,
+                        <span class="comment">// label = localization.get("current-frame"),
+                        </span>label = <span class="string">"Current Frame"</span>,
                         current_frame = diagnostics.current_frame
                     ));
                     ui.monospace(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                        <span class="string">&quot;{label}: {confirmed_frame}&quot;</span>,
-                        <span class="comment">// label = localization.get(&quot;confirmed-frame&quot;),
-                        </span>label = <span class="string">&quot;Confirmed Frame&quot;</span>,
+                        <span class="string">"{label}: {confirmed_frame}"</span>,
+                        <span class="comment">// label = localization.get("confirmed-frame"),
+                        </span>label = <span class="string">"Confirmed Frame"</span>,
                         confirmed_frame = diagnostics.confirmed_frame
                     ));
 
                     <span class="kw">if </span>diagnostics.last_frame_with_skips != -<span class="number">1 </span>{
                         ui.monospace(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                            <span class="string">&quot;{label}: {last_skip_frame}&quot;</span>,
-                            <span class="comment">// label = localization.get(&quot;last-frame-with-skips&quot;),
-                            </span>label = <span class="string">&quot;Last Frame With Skips&quot;</span>,
+                            <span class="string">"{label}: {last_skip_frame}"</span>,
+                            <span class="comment">// label = localization.get("last-frame-with-skips"),
+                            </span>label = <span class="string">"Last Frame With Skips"</span>,
                             last_skip_frame = diagnostics.last_frame_with_skips
                         ));
                         ui.monospace(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                            <span class="string">&quot;{label}: {skip_count}&quot;</span>,
-                            <span class="comment">// label = localization.get(&quot;last-skipped-frame-count&quot;),
-                            </span>label = <span class="string">&quot;Last Skipped Frame Count&quot;</span>,
+                            <span class="string">"{label}: {skip_count}"</span>,
+                            <span class="comment">// label = localization.get("last-skipped-frame-count"),
+                            </span>label = <span class="string">"Last Skipped Frame Count"</span>,
                             skip_count = diagnostics.last_skipped_frame_count
                         ));
                     } <span class="kw">else </span>{
-                        <span class="comment">// ui.monospace(localization.get(&quot;no-frame-skips-detected&quot;));
-                        </span>ui.monospace(<span class="string">&quot;No Frame Skips Detected&quot;</span>);
+                        <span class="comment">// ui.monospace(localization.get("no-frame-skips-detected"));
+                        </span>ui.monospace(<span class="string">"No Frame Skips Detected"</span>);
                     }
 
                     <span class="kw">let </span>pause_label = <span class="kw">if </span>diagnostics.paused {
-                        <span class="comment">// localization.get(&quot;resume&quot;)
-                        </span><span class="string">&quot;resume&quot;
+                        <span class="comment">// localization.get("resume")
+                        </span><span class="string">"resume"
                     </span>} <span class="kw">else </span>{
-                        <span class="comment">// localization.get(&quot;pause&quot;)
-                        </span><span class="string">&quot;pause&quot;
+                        <span class="comment">// localization.get("pause")
+                        </span><span class="string">"pause"
                     </span>};
                     <span class="kw">if </span>ui.button(pause_label).clicked() {
                         diagnostics.paused = !diagnostics.paused;
@@ -677,8 +678,8 @@
 
                     <span class="kw">let </span>max_prediction_window = diagnostics.max_prediction_window;
 
-                    <span class="comment">// Plot::new(localization.get(&quot;predicted-frames&quot;))
-                    </span>Plot::new(<span class="string">&quot;Predicted Frames&quot;</span>)
+                    <span class="comment">// Plot::new(localization.get("predicted-frames"))
+                    </span>Plot::new(<span class="string">"Predicted Frames"</span>)
                         .allow_zoom(<span class="bool-val">false</span>)
                         .allow_scroll(<span class="bool-val">false</span>)
                         .allow_boxed_zoom(<span class="bool-val">false</span>)
@@ -698,7 +699,7 @@
                         .label_formatter({
                             <span class="kw">move </span>|_name, value| {
                                 <span class="kw">let </span>frame_floor = value.x <span class="kw">as </span>i32;
-                                <span class="macro">format!</span>(<span class="string">&quot;{frame_localized}: {frame_floor}&quot;</span>)
+                                <span class="macro">format!</span>(<span class="string">"{frame_localized}: {frame_floor}"</span>)
                             }
                         })
                         .height(<span class="number">128.0</span>)
@@ -725,7 +726,7 @@
                                 .width(<span class="number">1.0</span>)
                                 .element_formatter(Box::new(<span class="kw">move </span>|bar, _chart| {
                                     <span class="macro">format!</span>(
-                                        <span class="string">&quot;{frame_localized}: {} {predicted_localized}: {}&quot;</span>,
+                                        <span class="string">"{frame_localized}: {} {predicted_localized}: {}"</span>,
                                         bar.argument <span class="kw">as </span>i32, bar.value <span class="kw">as </span>i32
                                     )
                                 })),
@@ -733,35 +734,35 @@
                         });
 
                     <span class="kw">for </span>(player_handle, stats) <span class="kw">in </span>diagnostics.network_stats.iter() {
-                        <span class="comment">// let label = format!(&quot;{} {}&quot;, localization.get(&quot;player&quot;), player_handle);
-                        </span><span class="kw">let </span>label = <span class="macro">format!</span>(<span class="string">&quot;{} {}&quot;</span>, <span class="string">&quot;player&quot;</span>, player_handle);
+                        <span class="comment">// let label = format!("{} {}", localization.get("player"), player_handle);
+                        </span><span class="kw">let </span>label = <span class="macro">format!</span>(<span class="string">"{} {}"</span>, <span class="string">"player"</span>, player_handle);
                         CollapsingHeader::new(label)
                             .default_open(<span class="bool-val">true</span>)
                             .show(ui, |ui| {
                                 <span class="kw">if </span>diagnostics.disconnected_players.contains(player_handle) {
-                                    ui.colored_label(Color::RED, <span class="string">&quot;Disconnected!&quot;</span>);
+                                    ui.colored_label(Color::RED, <span class="string">"Disconnected!"</span>);
                                 } <span class="kw">else </span>{
                                     <span class="kw">match </span>diagnostics.player_sync_state.get(player_handle) {
                                         <span class="prelude-val">Some</span>(sync_state) =&gt; <span class="kw">match </span>sync_state {
                                             PlayerSyncState::SyncInProgress =&gt; {
                                                 ui.colored_label(
                                                 Color::ORANGE,
-                                                <span class="string">&quot;GGRS synchronization with player in progress...&quot;</span>,
+                                                <span class="string">"GGRS synchronization with player in progress..."</span>,
                                             );
                                             }
                                             PlayerSyncState::Sychronized =&gt; {
-                                                ui.label(<span class="string">&quot;Synchronized with player.&quot;</span>);
+                                                ui.label(<span class="string">"Synchronized with player."</span>);
                                             }
                                         },
                                         <span class="prelude-val">None </span>=&gt; {
                                             ui.colored_label(
                                                 Color::RED,
-                                                <span class="string">&quot;Not synchronized with player.&quot;</span>,
+                                                <span class="string">"Not synchronized with player."</span>,
                                             );
                                         }
                                     }
                                 }
-                                ui.monospace(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{stats:?}&quot;</span>));
+                                ui.monospace(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{stats:?}"</span>));
                             });
                     }
                 });

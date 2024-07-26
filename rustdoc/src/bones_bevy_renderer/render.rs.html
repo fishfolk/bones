@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_bevy_renderer/src/render.rs`."><title>render.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_bevy_renderer" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_bevy_renderer/src/render.rs`."><title>render.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_bevy_renderer" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -641,7 +642,7 @@
         <span class="comment">// The image has already been loaded. This may happen if multiple asset handles use the same
         // image data. We will end up visiting the same data twice.
         </span>} <span class="kw">else </span>{
-            <span class="comment">// Swap the image back to it&#39;s previous value.
+            <span class="comment">// Swap the image back to it's previous value.
             </span>std::mem::swap(image, <span class="kw-2">&amp;mut </span>taken_image);
         }
     }
@@ -690,7 +691,7 @@
     <span class="kw-2">mut </span>commands: Commands,
     <span class="kw-2">mut </span>bevy_bones_cameras: Query&lt;Entity, (With&lt;BevyBonesEntity&gt;, With&lt;Camera&gt;)&gt;,
 ) {
-    <span class="comment">// Collect the bevy cameras that we&#39;ve created for the bones game
+    <span class="comment">// Collect the bevy cameras that we've created for the bones game
     </span><span class="kw">let </span><span class="kw-2">mut </span>bevy_bones_cameras = bevy_bones_cameras.iter_mut();
 
     <span class="comment">// Create a helper callback to add/update a bones camera into the bevy world
@@ -758,7 +759,7 @@
         }
     }
 
-    <span class="comment">// Delete any remaining bevy cameras that don&#39;t have bones equivalents.
+    <span class="comment">// Delete any remaining bevy cameras that don't have bones equivalents.
     </span><span class="kw">for </span>remaining_ent <span class="kw">in </span>bevy_bones_cameras {
         commands.entity(remaining_ent).despawn()
     }
@@ -822,11 +823,11 @@
             <span class="kw">let </span>sprite_image = <span class="kw">match </span>bones_assets.try_get(sprite.image) {
                 <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(image)) =&gt; image,
                 <span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(err)) =&gt; {
-                    <span class="macro">warn!</span>(<span class="string">&quot;Sprite {:?} has invalid handle: {err:?}&quot;</span>, sprite.image);
+                    <span class="macro">warn!</span>(<span class="string">"Sprite {:?} has invalid handle: {err:?}"</span>, sprite.image);
                     <span class="kw">continue</span>;
                 }
                 <span class="prelude-val">None </span>=&gt; {
-                    <span class="macro">warn!</span>(<span class="string">&quot;Sprite not loaded: {:?}&quot;</span>, sprite.image);
+                    <span class="macro">warn!</span>(<span class="string">"Sprite not loaded: {:?}"</span>, sprite.image);
                     <span class="kw">continue</span>;
                 }
             };
@@ -835,8 +836,8 @@
                 <span class="kw-2">*</span>id
             } <span class="kw">else </span>{
                 <span class="macro">panic!</span>(
-                    <span class="string">&quot;Images added at runtime not supported yet, \
-                please open an issue.&quot;
+                    <span class="string">"Images added at runtime not supported yet, \
+                please open an issue."
                 </span>);
             };
             extracted_sprites.sprites.push(ExtractedSprite {
@@ -866,8 +867,8 @@
                 <span class="kw-2">*</span>id
             } <span class="kw">else </span>{
                 <span class="macro">panic!</span>(
-                    <span class="string">&quot;Images added at runtime not supported yet, \
-                        please open an issue.&quot;
+                    <span class="string">"Images added at runtime not supported yet, \
+                        please open an issue."
                 </span>);
             };
             <span class="kw">let </span>index = atlas_sprite.index;
@@ -950,8 +951,8 @@
                 <span class="kw-2">*</span>id
             } <span class="kw">else </span>{
                 <span class="macro">panic!</span>(
-                    <span class="string">&quot;Images added at runtime not supported yet, \
-                        please open an issue.&quot;
+                    <span class="string">"Images added at runtime not supported yet, \
+                        please open an issue."
                 </span>);
             };
 
@@ -978,7 +979,7 @@
                 <span class="comment">// Scale up slightly to avoid bleeding between tiles.
                 // TODO: Improve tile rendering
                 // Currently we do a small hack here, scaling up the tiles a little bit, to prevent
-                // visible gaps between tiles. This solution isn&#39;t perfect and we probably need to
+                // visible gaps between tiles. This solution isn't perfect and we probably need to
                 // create a proper tile renderer. That can render multiple tiles on one quad instead
                 // of using a separate quad for each tile.
                 </span>transform.scale += Vec3::new(<span class="number">0.01</span>, <span class="number">0.01</span>, <span class="number">0.0</span>);
@@ -1006,7 +1007,7 @@
         With&lt;BevyBonesEntity&gt;,
     &gt;,
 ) {
-    <span class="comment">// Collect the bevy path2ds that we&#39;ve created for the bones game
+    <span class="comment">// Collect the bevy path2ds that we've created for the bones game
     </span><span class="kw">let </span><span class="kw-2">mut </span>bevy_bones_path2ds = bevy_bones_path2ds.iter_mut();
 
     <span class="comment">// Create a helper callback to add/update a bones path2d into the bevy world
@@ -1054,7 +1055,7 @@
         // sprite/etc. if it is applied to an entity with both a sprite and a path.
         </span>transform.translation.z += <span class="number">0.0001</span>;
 
-        <span class="comment">// Spawn the shape if it doesn&#39;t already exist
+        <span class="comment">// Spawn the shape if it doesn't already exist
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>((path, stroke, transform)) = new_components {
             commands
                 .spawn(lyon::ShapeBundle { path, ..default() })

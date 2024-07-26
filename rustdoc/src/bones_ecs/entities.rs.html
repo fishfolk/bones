@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_ecs/src/entities.rs`."><title>entities.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_ecs/src/entities.rs`."><title>entities.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -699,9 +700,9 @@
 /// They are created using the `Entities` struct. They are used as indices with `Components`
 /// structs.
 ///
-/// Entities are conceptual &quot;things&quot; which possess attributes (Components). As an exemple, a Car
+/// Entities are conceptual "things" which possess attributes (Components). As an exemple, a Car
 /// (Entity) has a Color (Component), a Position (Component) and a Speed (Component).
-</span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Serialize, serde::Deserialize))]
+</span><span class="attr">#[cfg_attr(feature = <span class="string">"serde"</span>, derive(serde::Serialize, serde::Deserialize))]
 #[derive(HasSchema, Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>Entity(u32, u32);
@@ -757,8 +758,8 @@
     </span>has_deleted: bool,
 }
 <span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>Entities {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        f.debug_struct(<span class="string">&quot;Entities&quot;</span>).finish_non_exhaustive()
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">"Entities"</span>).finish_non_exhaustive()
     }
 }
 
@@ -789,14 +790,14 @@
 /// Entities iterated over will not be filtered by [`OptionalQueryItem`].
 ///
 /// See [`Optional`] helper func for constructing `OptionalQueryItem` and usage.
-</span><span class="kw">pub struct </span>OptionalQueryItem&lt;<span class="lifetime">&#39;a</span>, T: HasSchema, S&gt;(<span class="kw">pub </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>S, <span class="kw">pub </span>PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T&gt;);
+</span><span class="kw">pub struct </span>OptionalQueryItem&lt;<span class="lifetime">'a</span>, T: HasSchema, S&gt;(<span class="kw">pub </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>S, <span class="kw">pub </span>PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>T&gt;);
 
 <span class="doccomment">/// Wrapper for the [`CompMut`] [`SystemParam`] used as [`QueryItem`] to iterate
 /// over entities optionally and mutably retrieving components from [`ComponentStore`].
 /// Entities iterated over will not be filtered by [`OptionalQueryItemMut`].
 ///
 /// See [`OptionalMut`] helper func for constructing `OptionalQueryItemMut` and usage
-</span><span class="kw">pub struct </span>OptionalQueryItemMut&lt;<span class="lifetime">&#39;a</span>, T: HasSchema, S&gt;(<span class="kw">pub </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>S, <span class="kw">pub </span>PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T&gt;);
+</span><span class="kw">pub struct </span>OptionalQueryItemMut&lt;<span class="lifetime">'a</span>, T: HasSchema, S&gt;(<span class="kw">pub </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>S, <span class="kw">pub </span>PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>T&gt;);
 
 <span class="doccomment">/// Helper func to construct a [`OptionalQueryItem`] wrapping a [`Comp`] [`SystemParam`].
 /// Used to iterate over enities optionally retrieving components from [`ComponentStore`].
@@ -810,10 +811,10 @@
 /// This will implement [`QueryItem`] as long as generic type implements [`std::ops::Deref`] for
 /// [`ComponentStore`], such as [`Comp`] and [`CompMut`].
 </span><span class="attr">#[allow(non_snake_case)]
-</span><span class="kw">pub fn </span>Optional&lt;<span class="lifetime">&#39;a</span>, T: HasSchema, C, S&gt;(component_ref: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>S) -&gt; OptionalQueryItem&lt;<span class="lifetime">&#39;a</span>, T, S&gt;
+</span><span class="kw">pub fn </span>Optional&lt;<span class="lifetime">'a</span>, T: HasSchema, C, S&gt;(component_ref: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>S) -&gt; OptionalQueryItem&lt;<span class="lifetime">'a</span>, T, S&gt;
 <span class="kw">where
-    </span>C: ComponentIterBitset&lt;<span class="lifetime">&#39;a</span>, T&gt; + <span class="lifetime">&#39;a</span>,
-    S: std::ops::Deref&lt;Target = C&gt; + <span class="lifetime">&#39;a</span>,
+    </span>C: ComponentIterBitset&lt;<span class="lifetime">'a</span>, T&gt; + <span class="lifetime">'a</span>,
+    S: std::ops::Deref&lt;Target = C&gt; + <span class="lifetime">'a</span>,
 {
     OptionalQueryItem(component_ref, PhantomData)
 }
@@ -830,18 +831,18 @@
 /// This will implement [`QueryItem`] as long as generic type implements [`std::ops::DerefMut`] for
 /// [`ComponentStore`], such as [`CompMut`].
 </span><span class="attr">#[allow(non_snake_case)]
-</span><span class="kw">pub fn </span>OptionalMut&lt;<span class="lifetime">&#39;a</span>, T: HasSchema, C, S&gt;(
-    component_ref: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>S,
-) -&gt; OptionalQueryItemMut&lt;<span class="lifetime">&#39;a</span>, T, S&gt;
+</span><span class="kw">pub fn </span>OptionalMut&lt;<span class="lifetime">'a</span>, T: HasSchema, C, S&gt;(
+    component_ref: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>S,
+) -&gt; OptionalQueryItemMut&lt;<span class="lifetime">'a</span>, T, S&gt;
 <span class="kw">where
-    </span>C: ComponentIterBitset&lt;<span class="lifetime">&#39;a</span>, T&gt; + <span class="lifetime">&#39;a</span>,
-    S: std::ops::DerefMut&lt;Target = C&gt; + <span class="lifetime">&#39;a</span>,
+    </span>C: ComponentIterBitset&lt;<span class="lifetime">'a</span>, T&gt; + <span class="lifetime">'a</span>,
+    S: std::ops::DerefMut&lt;Target = C&gt; + <span class="lifetime">'a</span>,
 {
     OptionalQueryItemMut(component_ref, PhantomData)
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Ref&lt;<span class="lifetime">&#39;a</span>, UntypedComponentStore&gt; {
-    <span class="kw">type </span>Iter = UntypedComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>Ref&lt;<span class="lifetime">'a</span>, UntypedComponentStore&gt; {
+    <span class="kw">type </span>Iter = UntypedComponentBitsetIterator&lt;<span class="lifetime">'a</span>&gt;;
     <span class="kw">fn </span>apply_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: <span class="kw-2">&amp;mut </span>BitSetVec) {
         bitset.bit_and(<span class="self">self</span>.bitset());
     }
@@ -851,8 +852,8 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;q</span>, T: HasSchema&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Comp&lt;<span class="lifetime">&#39;q</span>, T&gt; {
-    <span class="kw">type </span>Iter = ComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>, T&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'q</span>, T: HasSchema&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>Comp&lt;<span class="lifetime">'q</span>, T&gt; {
+    <span class="kw">type </span>Iter = ComponentBitsetIterator&lt;<span class="lifetime">'a</span>, T&gt;;
     <span class="kw">fn </span>apply_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: <span class="kw-2">&amp;mut </span>BitSetVec) {
         bitset.bit_and(<span class="self">self</span>.bitset());
     }
@@ -862,8 +863,8 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;q</span>, T: HasSchema&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>CompMut&lt;<span class="lifetime">&#39;q</span>, T&gt; {
-    <span class="kw">type </span>Iter = ComponentBitsetIterator&lt;<span class="lifetime">&#39;a</span>, T&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'q</span>, T: HasSchema&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>CompMut&lt;<span class="lifetime">'q</span>, T&gt; {
+    <span class="kw">type </span>Iter = ComponentBitsetIterator&lt;<span class="lifetime">'a</span>, T&gt;;
     <span class="kw">fn </span>apply_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: <span class="kw-2">&amp;mut </span>BitSetVec) {
         bitset.bit_and(<span class="self">self</span>.bitset());
     }
@@ -873,8 +874,8 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;q</span>, T: HasSchema&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>CompMut&lt;<span class="lifetime">&#39;q</span>, T&gt; {
-    <span class="kw">type </span>Iter = ComponentBitsetIteratorMut&lt;<span class="lifetime">&#39;a</span>, T&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'q</span>, T: HasSchema&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>CompMut&lt;<span class="lifetime">'q</span>, T&gt; {
+    <span class="kw">type </span>Iter = ComponentBitsetIteratorMut&lt;<span class="lifetime">'a</span>, T&gt;;
     <span class="kw">fn </span>apply_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: <span class="kw-2">&amp;mut </span>BitSetVec) {
         bitset.bit_and(<span class="self">self</span>.bitset());
     }
@@ -886,12 +887,12 @@
 
 <span class="doccomment">/// Immutably iterate over optional component with syntax: `&amp;Optional(&amp;Comp&lt;T&gt;)` / `&amp;Optional(&amp;CompMut&lt;T&gt;)`.
 /// (For mutable optional iteration we require `&amp;mut OptionalMut(&amp;mut CompMut&lt;T&gt;)`)
-</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema, S, C&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>OptionalQueryItem&lt;<span class="lifetime">&#39;a</span>, T, S&gt;
+</span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T: HasSchema, S, C&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>OptionalQueryItem&lt;<span class="lifetime">'a</span>, T, S&gt;
 <span class="kw">where
-    </span>C: ComponentIterBitset&lt;<span class="lifetime">&#39;a</span>, T&gt; + <span class="lifetime">&#39;a</span>,
-    S: std::ops::Deref&lt;Target = C&gt; + <span class="lifetime">&#39;a</span>,
+    </span>C: ComponentIterBitset&lt;<span class="lifetime">'a</span>, T&gt; + <span class="lifetime">'a</span>,
+    S: std::ops::Deref&lt;Target = C&gt; + <span class="lifetime">'a</span>,
 {
-    <span class="kw">type </span>Iter = ComponentBitsetOptionalIterator&lt;<span class="lifetime">&#39;a</span>, T&gt;;
+    <span class="kw">type </span>Iter = ComponentBitsetOptionalIterator&lt;<span class="lifetime">'a</span>, T&gt;;
     <span class="kw">fn </span>apply_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, _bitset: <span class="kw-2">&amp;mut </span>BitSetVec) {}
 
     <span class="kw">fn </span>iter_with_bitset(<span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; <span class="self">Self</span>::Iter {
@@ -900,12 +901,12 @@
 }
 
 <span class="doccomment">/// Mutably iterate over optional component with syntax: `&amp;mut OptionalMut(&amp;mut RefMut&lt;ComponentStore&lt;T&gt;&gt;)`
-</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: HasSchema, S, C&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>OptionalQueryItemMut&lt;<span class="lifetime">&#39;a</span>, T, S&gt;
+</span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T: HasSchema, S, C&gt; QueryItem <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>OptionalQueryItemMut&lt;<span class="lifetime">'a</span>, T, S&gt;
 <span class="kw">where
-    </span>C: ComponentIterBitset&lt;<span class="lifetime">&#39;a</span>, T&gt; + <span class="lifetime">&#39;a</span>,
-    S: std::ops::DerefMut&lt;Target = C&gt; + <span class="lifetime">&#39;a</span>,
+    </span>C: ComponentIterBitset&lt;<span class="lifetime">'a</span>, T&gt; + <span class="lifetime">'a</span>,
+    S: std::ops::DerefMut&lt;Target = C&gt; + <span class="lifetime">'a</span>,
 {
-    <span class="kw">type </span>Iter = ComponentBitsetOptionalIteratorMut&lt;<span class="lifetime">&#39;a</span>, T&gt;;
+    <span class="kw">type </span>Iter = ComponentBitsetOptionalIteratorMut&lt;<span class="lifetime">'a</span>, T&gt;;
     <span class="kw">fn </span>apply_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, _bitset: <span class="kw-2">&amp;mut </span>BitSetVec) {}
 
     <span class="kw">fn </span>iter_with_bitset(<span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; <span class="self">Self</span>::Iter {
@@ -921,7 +922,7 @@
 <span class="macro">macro_rules! </span>impl_query {
     ( $( <span class="macro-nonterminal">$args</span>:ident, )* ) =&gt; {
         <span class="kw">impl</span>&lt;
-            <span class="lifetime">&#39;q</span>,
+            <span class="lifetime">'q</span>,
             $(
                 <span class="macro-nonterminal">$args</span>: Iterator,
             )*
@@ -1024,15 +1025,15 @@
 <span class="macro">impl_queries!</span>(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,);
 
 <span class="doccomment">/// Iterator over entities returned by [`Entities::iter_with`].
-</span><span class="kw">pub struct </span>EntitiesIterWith&lt;<span class="lifetime">&#39;e</span>, I&gt; {
+</span><span class="kw">pub struct </span>EntitiesIterWith&lt;<span class="lifetime">'e</span>, I&gt; {
     current_id: usize,
     next_id: usize,
     bitset: Rc&lt;BitSetVec&gt;,
-    generations: <span class="kw-2">&amp;</span><span class="lifetime">&#39;e </span>Vec&lt;u32&gt;,
+    generations: <span class="kw-2">&amp;</span><span class="lifetime">'e </span>Vec&lt;u32&gt;,
     query: I,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, I: Iterator&gt; Iterator <span class="kw">for </span>EntitiesIterWith&lt;<span class="lifetime">&#39;a</span>, I&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, I: Iterator&gt; Iterator <span class="kw">for </span>EntitiesIterWith&lt;<span class="lifetime">'a</span>, I&gt; {
     <span class="kw">type </span>Item = (Entity, I::Item);
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
@@ -1137,14 +1138,14 @@
         <span class="kw">if </span>!<span class="self">self</span>.has_deleted {
             <span class="kw">let </span>i = <span class="self">self</span>.next_id;
             <span class="kw">if </span>i &gt;= BITSET_SIZE {
-                <span class="macro">panic!</span>(<span class="string">&quot;Exceeded maximum amount of concurrent entities.&quot;</span>);
+                <span class="macro">panic!</span>(<span class="string">"Exceeded maximum amount of concurrent entities."</span>);
             }
             <span class="self">self</span>.next_id += <span class="number">1</span>;
             <span class="self">self</span>.alive.bit_set(i);
             Entity::new(i <span class="kw">as </span>u32, <span class="self">self</span>.generation[i])
         } <span class="kw">else </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>section = <span class="number">0</span>;
-            <span class="comment">// Find section where at least one bit isn&#39;t set
+            <span class="comment">// Find section where at least one bit isn't set
             </span><span class="kw">while </span><span class="self">self</span>.alive[section].bit_all() {
                 section += <span class="number">1</span>;
             }
@@ -1158,13 +1159,13 @@
                 <span class="self">self</span>.has_deleted = <span class="bool-val">false</span>;
             }
             <span class="kw">if </span>i &gt;= BITSET_SIZE {
-                <span class="macro">panic!</span>(<span class="string">&quot;Exceeded maximum amount of concurrent entities.&quot;</span>);
+                <span class="macro">panic!</span>(<span class="string">"Exceeded maximum amount of concurrent entities."</span>);
             }
             <span class="kw">let </span>entity = Entity::new(i <span class="kw">as </span>u32, <span class="self">self</span>.generation[i]);
 
             <span class="comment">// Make sure we never return the invalid entity.
             </span><span class="kw">if </span>unlikely(entity == Entity::INVALID) {
-                <span class="macro">panic!</span>(<span class="string">&quot;Ran out of entity IDs&quot;</span>);
+                <span class="macro">panic!</span>(<span class="string">"Ran out of entity IDs"</span>);
             }
 
             entity
@@ -1208,7 +1209,7 @@
     }
 
     <span class="doccomment">/// Iterates over entities using the provided bitset.
-    </span><span class="kw">pub fn </span>iter_with_bitset&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec) -&gt; EntityIterator {
+    </span><span class="kw">pub fn </span>iter_with_bitset&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, bitset: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>BitSetVec) -&gt; EntityIterator {
         EntityIterator {
             current_id: <span class="number">0</span>,
             next_id: <span class="self">self</span>.next_id,
@@ -1220,16 +1221,16 @@
 }
 
 <span class="doccomment">/// Iterator over entities using the provided bitset.
-</span><span class="kw">pub struct </span>EntityIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>EntityIterator&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">pub</span>(<span class="kw">crate</span>) current_id: usize,
     <span class="kw">pub</span>(<span class="kw">crate</span>) next_id: usize,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) entities: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) generations: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vec&lt;u32&gt;,
-    <span class="comment">//pub(crate) bitset: &amp;&#39;a BitSetVec,
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) bitset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BitSetVec,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) entities: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>BitSetVec,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) generations: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vec&lt;u32&gt;,
+    <span class="comment">//pub(crate) bitset: &amp;'a BitSetVec,
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) bitset: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>BitSetVec,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>EntityIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>EntityIterator&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">type </span>Item = Entity;
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">while </span>!(<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id) &amp;&amp; <span class="self">self</span>.entities.bit_test(<span class="self">self</span>.current_id))
@@ -1316,7 +1317,7 @@
         </span><span class="attr">#[allow(clippy::clone_on_copy)]
         </span><span class="kw">let _ </span>= e1.clone();
         <span class="comment">// Debug
-        </span><span class="macro">println!</span>(<span class="string">&quot;{e1:?}&quot;</span>);
+        </span><span class="macro">println!</span>(<span class="string">"{e1:?}"</span>);
         <span class="comment">// Hash
         </span><span class="kw">let </span><span class="kw-2">mut </span>h = HashSet::new();
         h.insert(e1);
@@ -1342,7 +1343,7 @@
 
     <span class="attr">#[cfg(not(miri))] </span><span class="comment">// This test is very slow on miri and not critical to test for.
     </span><span class="attr">#[test]
-    #[should_panic(expected = <span class="string">&quot;Exceeded maximum amount&quot;</span>)]
+    #[should_panic(expected = <span class="string">"Exceeded maximum amount"</span>)]
     </span><span class="kw">fn </span>force_max_entity_panic() {
         <span class="kw">let </span><span class="kw-2">mut </span>entities = Entities::default();
         <span class="kw">for _ in </span><span class="number">0</span>..(BITSET_SIZE + <span class="number">1</span>) {
@@ -1352,7 +1353,7 @@
 
     <span class="attr">#[cfg(not(miri))] </span><span class="comment">// This test is very slow on miri and not critical to test for.
     </span><span class="attr">#[test]
-    #[should_panic(expected = <span class="string">&quot;Exceeded maximum amount&quot;</span>)]
+    #[should_panic(expected = <span class="string">"Exceeded maximum amount"</span>)]
     </span><span class="kw">fn </span>force_max_entity_panic2() {
         <span class="kw">let </span><span class="kw-2">mut </span>entities = Entities::default();
         <span class="kw">let </span><span class="kw-2">mut </span>e = <span class="prelude-val">None</span>;

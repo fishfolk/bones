@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `other_crates/bones_matchmaker/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_matchmaker" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `other_crates/bones_matchmaker/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_matchmaker" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -85,7 +86,10 @@
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
-</pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+</pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 </span><span class="comment">// This cfg_attr is needed because `rustdoc::all` includes lints not supported on stable
 </span><span class="attr">#![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
@@ -105,37 +109,40 @@
 #[command(author, version, about, long_about = <span class="prelude-val">None</span>)]
 </span><span class="kw">struct </span>Config {
     <span class="doccomment">/// The server address to listen on
-    </span><span class="attr">#[clap(short, long = <span class="string">&quot;listen&quot;</span>, default_value = <span class="string">&quot;0.0.0.0:8943&quot;</span>)]
+    </span><span class="attr">#[clap(short, long = <span class="string">"listen"</span>, default_value = <span class="string">"0.0.0.0:8943"</span>)]
     </span>listen_addr: SocketAddr,
     <span class="doccomment">/// If enabled, prints the current secret key. Use with caution.
     </span><span class="attr">#[clap(long)]
     </span>print_secret_key: bool,
+    <span class="doccomment">/// Use this secret key for the node
+    </span><span class="attr">#[clap(short, long, env = <span class="string">"BONES_MATCHMAKER_SECRET_KEY"</span>)]
+    </span>secret_key: <span class="prelude-ty">Option</span>&lt;iroh_net::key::SecretKey&gt;,
 }
 
-<span class="kw">async fn </span>server(args: Config, secret_key: <span class="prelude-ty">Option</span>&lt;SecretKey&gt;) -&gt; anyhow::Result&lt;()&gt; {
+<span class="kw">async fn </span>server(args: Config) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">let </span>port = args.listen_addr.port();
 
-    <span class="kw">match </span>secret_key {
+    <span class="kw">match </span>args.secret_key {
         <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>key) =&gt; {
-            <span class="macro">info!</span>(<span class="string">&quot;Using existing key: {}&quot;</span>, key.public());
+            <span class="macro">info!</span>(<span class="string">"Using existing key: {}"</span>, key.public());
         }
         <span class="prelude-val">None </span>=&gt; {
-            <span class="macro">info!</span>(<span class="string">&quot;Generating new key&quot;</span>);
+            <span class="macro">info!</span>(<span class="string">"Generating new key"</span>);
         }
     }
 
-    <span class="kw">let </span>secret_key = secret_key.unwrap_or_else(SecretKey::generate);
+    <span class="kw">let </span>secret_key = args.secret_key.unwrap_or_else(SecretKey::generate);
 
     <span class="kw">if </span>args.print_secret_key {
-        <span class="macro">println!</span>(<span class="string">&quot;Secret Key: {}&quot;</span>, secret_key);
+        <span class="macro">println!</span>(<span class="string">"Secret Key: {}"</span>, secret_key);
     }
 
-    <span class="kw">let </span>endpoint = iroh_net::MagicEndpoint::builder()
+    <span class="kw">let </span>endpoint = iroh_net::Endpoint::builder()
         .alpns(<span class="macro">vec!</span>[MATCH_ALPN.to_vec()])
         .discovery(Box::new(
             iroh_net::discovery::ConcurrentDiscovery::from_services(<span class="macro">vec!</span>[
                 Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
-                Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
+                Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
                     secret_key.clone(),
                 )),
             ]),
@@ -144,11 +151,11 @@
         .bind(port)
         .<span class="kw">await</span><span class="question-mark">?</span>;
 
-    <span class="kw">let </span>my_addr = endpoint.my_addr().<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>my_addr = endpoint.node_addr().<span class="kw">await</span><span class="question-mark">?</span>;
 
-    <span class="macro">info!</span>(address=<span class="question-mark">?</span>my_addr, <span class="string">&quot;Started server&quot;</span>);
+    <span class="macro">info!</span>(address=<span class="question-mark">?</span>my_addr, <span class="string">"Started server"</span>);
 
-    <span class="macro">println!</span>(<span class="string">&quot;Node ID: {}&quot;</span>, my_addr.node_id);
+    <span class="macro">println!</span>(<span class="string">"Node ID: {}"</span>, my_addr.node_id);
 
     <span class="comment">// Listen for incomming connections
     </span><span class="kw">while let </span><span class="prelude-val">Some</span>(connecting) = endpoint.accept().<span class="kw">await </span>{
@@ -158,17 +165,17 @@
             <span class="prelude-val">Ok</span>(conn) =&gt; {
                 <span class="macro">info!</span>(
                     connection_id = conn.stable_id(),
-                    <span class="string">&quot;Accepted connection from client&quot;
+                    <span class="string">"Accepted connection from client"
                 </span>);
 
                 <span class="comment">// Spawn a task to handle the new connection
                 </span>tokio::task::spawn(matchmaker::handle_connection(endpoint.clone(), conn));
             }
-            <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">error!</span>(<span class="string">&quot;Error opening client connection: {e:?}&quot;</span>),
+            <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">error!</span>(<span class="string">"Error opening client connection: {e:?}"</span>),
         }
     }
 
-    <span class="macro">info!</span>(<span class="string">&quot;Server shutdown&quot;</span>);
+    <span class="macro">info!</span>(<span class="string">"Server shutdown"</span>);
 
     <span class="prelude-val">Ok</span>(())
 }

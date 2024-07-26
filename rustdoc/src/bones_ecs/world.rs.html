@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_ecs/src/world.rs`."><title>world.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_ecs/src/world.rs`."><title>world.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_ecs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -343,8 +344,8 @@
     </span><span class="kw">pub </span>components: ComponentStores,
 }
 <span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>World {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        f.debug_struct(<span class="string">&quot;World&quot;</span>).finish()
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">"World"</span>).finish()
     }
 }
 
@@ -395,7 +396,7 @@
             <span class="kw">let </span><span class="kw-2">mut </span>components = components.borrow_mut();
             <span class="kw">let </span>killed = entities.killed();
             <span class="kw">for </span><span class="kw-2">&amp;</span>entity <span class="kw">in </span>killed {
-                <span class="comment">// Safe: We don&#39;t provide an out pointer, so it doesn&#39;t overlap the component&#39;s
+                <span class="comment">// Safe: We don't provide an out pointer, so it doesn't overlap the component's
                 // internal storage.
                 </span><span class="kw">unsafe </span>{
                     components.remove_raw(entity, <span class="prelude-val">None</span>);
@@ -408,18 +409,18 @@
     <span class="doccomment">/// Run a system once.
     ///
     /// This is good for initializing the world with setup systems.
-    </span><span class="kw">pub fn </span>run_system&lt;<span class="lifetime">&#39;system</span>, R, In, Out, S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, system: S, input: In) -&gt; Out
+    </span><span class="kw">pub fn </span>run_system&lt;<span class="lifetime">'system</span>, R, In, Out, S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, system: S, input: In) -&gt; Out
     <span class="kw">where
-        </span>In: <span class="lifetime">&#39;system</span>,
-        Out: <span class="lifetime">&#39;system</span>,
+        </span>In: <span class="lifetime">'system</span>,
+        Out: <span class="lifetime">'system</span>,
         S: IntoSystem&lt;R, In, Out&gt;,
-        S::Sys: <span class="lifetime">&#39;system</span>,
+        S::Sys: <span class="lifetime">'system</span>,
     {
         <span class="kw">let </span><span class="kw-2">mut </span>s = system.system();
         s.run(<span class="self">self</span>, input)
     }
 
-    <span class="doccomment">/// Initialize a resource of type `T` by inserting it&#39;s default value.
+    <span class="doccomment">/// Initialize a resource of type `T` by inserting it's default value.
     </span><span class="kw">pub fn </span>init_resource&lt;R: HasSchema + FromWorld&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;R&gt; {
         <span class="kw">if </span>unlikely(!<span class="self">self</span>.resources.contains::&lt;R&gt;()) {
             <span class="kw">let </span>value = R::from_world(<span class="self">self</span>);
@@ -441,8 +442,8 @@
         <span class="kw">match </span><span class="self">self</span>.resources.get::&lt;T&gt;() {
             <span class="prelude-val">Some</span>(r) =&gt; r,
             <span class="prelude-val">None </span>=&gt; <span class="macro">panic!</span>(
-                <span class="string">&quot;Requested resource {} does not exist in the `World`.
-                Did you forget to add it using `world.insert_resource` / `world.init_resource`?&quot;</span>,
+                <span class="string">"Requested resource {} does not exist in the `World`.
+                Did you forget to add it using `world.insert_resource` / `world.init_resource`?"</span>,
                 std::any::type_name::&lt;T&gt;()
             ),
         }
@@ -456,8 +457,8 @@
         <span class="kw">match </span><span class="self">self</span>.resources.get_mut::&lt;T&gt;() {
             <span class="prelude-val">Some</span>(r) =&gt; r,
             <span class="prelude-val">None </span>=&gt; <span class="macro">panic!</span>(
-                <span class="string">&quot;Requested resource {} does not exist in the `World`.
-                Did you forget to add it using `world.insert_resource` / `world.init_resource`?&quot;</span>,
+                <span class="string">"Requested resource {} does not exist in the `World`.
+                Did you forget to add it using `world.insert_resource` / `world.init_resource`?"</span>,
                 std::any::type_name::&lt;T&gt;()
             ),
         }
@@ -531,7 +532,7 @@
         }
     }
 
-    <span class="doccomment">/// Tests that the world&#39;s components matches the state it should after running `setup_world`.
+    <span class="doccomment">/// Tests that the world's components matches the state it should after running `setup_world`.
     </span><span class="kw">fn </span>test_after_setup_state(
         entities: Res&lt;Entities&gt;,
         pos: Comp&lt;Pos&gt;,
@@ -543,7 +544,7 @@
             <span class="kw">let </span>marker = marker.get(entity);
             <span class="kw">match </span>(i, pos, vel, marker) {
                 (<span class="number">0</span>, Pos(<span class="number">0</span>, <span class="number">100</span>), Vel(<span class="number">0</span>, -<span class="number">1</span>), <span class="prelude-val">None</span>) | (<span class="number">1</span>, Pos(<span class="number">0</span>, <span class="number">0</span>), Vel(<span class="number">1</span>, <span class="number">1</span>), <span class="prelude-val">Some</span>(Marker)) =&gt; (),
-                x =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;{:?}&quot;</span>, x),
+                x =&gt; <span class="macro">unreachable!</span>(<span class="string">"{:?}"</span>, x),
             }
             i += <span class="number">1</span>;
         }
@@ -564,7 +565,7 @@
             <span class="macro">dbg!</span>(i, entity);
             <span class="kw">match </span>(i, pos, vel, marker) {
                 (<span class="number">0</span>, Pos(<span class="number">0</span>, <span class="number">99</span>), Vel(<span class="number">0</span>, -<span class="number">1</span>), <span class="prelude-val">None</span>) | (<span class="number">1</span>, Pos(<span class="number">1</span>, <span class="number">1</span>), Vel(<span class="number">1</span>, <span class="number">1</span>), <span class="prelude-val">Some</span>(Marker)) =&gt; (),
-                x =&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;{:?}&quot;</span>, x),
+                x =&gt; <span class="macro">unreachable!</span>(<span class="string">"{:?}"</span>, x),
             }
             i += <span class="number">1</span>;
         }
@@ -596,7 +597,7 @@
         <span class="comment">// Snapshot world1
         </span><span class="kw">let </span>snap = world1.clone();
 
-        <span class="comment">// Make sure the snapshot represents world1&#39;s state
+        <span class="comment">// Make sure the snapshot represents world1's state
         </span>snap.run_system(test_after_setup_state, ());
 
         <span class="comment">// Run the pos_vel system on world1
@@ -605,7 +606,7 @@
         <span class="comment">// Make sure world1 has properly update
         </span>world1.run_system(test_pos_vel_1_run, ());
 
-        <span class="comment">// Make sure the snapshot hasn&#39;t changed
+        <span class="comment">// Make sure the snapshot hasn't changed
         </span>snap.run_system(test_after_setup_state, ());
 
         <span class="comment">// Run the pos vel system once on the snapshot

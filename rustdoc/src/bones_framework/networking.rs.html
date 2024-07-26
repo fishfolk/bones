@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_framework/src/networking.rs`."><title>networking.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_framework" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_framework/src/networking.rs`."><title>networking.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_framework" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -641,7 +642,7 @@
 <a href="#641" id="641">641</a>
 <a href="#642" id="642">642</a>
 <a href="#643" id="643">643</a>
-</pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;./networking.md&quot;</span>)]
+</pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"./networking.md"</span>)]
 
 </span><span class="kw">use </span>std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
@@ -670,7 +671,7 @@
 
 <span class="doccomment">/// Runtime, needed to execute network related calls.
 </span><span class="kw">pub static </span>RUNTIME: Lazy&lt;tokio::runtime::Runtime&gt; =
-    Lazy::new(|| tokio::runtime::Runtime::new().expect(<span class="string">&quot;unable to crate tokio runtime&quot;</span>));
+    Lazy::new(|| tokio::runtime::Runtime::new().expect(<span class="string">"unable to crate tokio runtime"</span>));
 
 <span class="doccomment">/// Indicates if input from networking is confirmed, predicted, or if player is disconnected.
 </span><span class="attr">#[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -738,20 +739,20 @@
 }
 
 <span class="doccomment">/// The network endpoint used for all network communications.
-</span><span class="kw">static </span>NETWORK_ENDPOINT: tokio::sync::OnceCell&lt;iroh_net::MagicEndpoint&gt; =
+</span><span class="kw">static </span>NETWORK_ENDPOINT: tokio::sync::OnceCell&lt;iroh_net::Endpoint&gt; =
     tokio::sync::OnceCell::const_new();
 
 <span class="doccomment">/// Get the network endpoint used for all communications.
-</span><span class="kw">pub async fn </span>get_network_endpoint() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>iroh_net::MagicEndpoint {
+</span><span class="kw">pub async fn </span>get_network_endpoint() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>iroh_net::Endpoint {
     NETWORK_ENDPOINT
         .get_or_init(|| <span class="kw">async move </span>{
             <span class="kw">let </span>secret_key = iroh_net::key::SecretKey::generate();
-            iroh_net::MagicEndpoint::builder()
+            iroh_net::Endpoint::builder()
                 .alpns(<span class="macro">vec!</span>[MATCH_ALPN.to_vec(), PLAY_ALPN.to_vec()])
                 .discovery(Box::new(
                     iroh_net::discovery::ConcurrentDiscovery::from_services(<span class="macro">vec!</span>[
                         Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
-                        Box::new(iroh_net::discovery::pkarr_publish::PkarrPublisher::n0_dns(
+                        Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
                             secret_key.clone(),
                         )),
                     ]),
@@ -846,7 +847,7 @@
 <span class="doccomment">/// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
 ///
 /// This is where the whole `ggrs` integration is implemented.
-</span><span class="kw">pub struct </span>GgrsSessionRunner&lt;<span class="lifetime">&#39;a</span>, InputTypes: NetworkInputConfig&lt;<span class="lifetime">&#39;a</span>&gt;&gt; {
+</span><span class="kw">pub struct </span>GgrsSessionRunner&lt;<span class="lifetime">'a</span>, InputTypes: NetworkInputConfig&lt;<span class="lifetime">'a</span>&gt;&gt; {
     <span class="doccomment">/// The last player input we detected.
     </span><span class="kw">pub </span>last_player_input: InputTypes::Dense,
 
@@ -871,7 +872,7 @@
     <span class="doccomment">/// FPS from game not adjusted with network factor.
     </span><span class="kw">pub </span>original_fps: f64,
 
-    <span class="doccomment">/// Session runner&#39;s input collector.
+    <span class="doccomment">/// Session runner's input collector.
     </span><span class="kw">pub </span>input_collector: InputTypes::InputCollector,
 
     <span class="doccomment">/// Is local input disabled? (No input will be used if set)
@@ -898,14 +899,14 @@
     </span><span class="kw">pub </span>player_count: u32,
 
     <span class="doccomment">/// Max prediction window (max number of frames client may predict ahead of last confirmed frame)
-    /// `None` will use Bone&#39;s default.
+    /// `None` will use Bone's default.
     </span><span class="kw">pub </span>max_prediction_window: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 
     <span class="doccomment">/// Local input delay (local inputs + remote inputs will be buffered and sampled this many frames later)
     /// Increasing helps with mitigating pops when remote user changes input quickly, and reduces amount of frames
     /// client will end up predicted ahead from others, helps with high latency.
     ///
-    /// `None` will use Bone&#39;s default.
+    /// `None` will use Bone's default.
     </span><span class="kw">pub </span>local_input_delay: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 
@@ -928,9 +929,9 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, InputTypes&gt; GgrsSessionRunner&lt;<span class="lifetime">&#39;a</span>, InputTypes&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, InputTypes&gt; GgrsSessionRunner&lt;<span class="lifetime">'a</span>, InputTypes&gt;
 <span class="kw">where
-    </span>InputTypes: NetworkInputConfig&lt;<span class="lifetime">&#39;a</span>&gt;,
+    </span>InputTypes: NetworkInputConfig&lt;<span class="lifetime">'a</span>&gt;,
 {
     <span class="doccomment">/// Create a new sessino runner.
     </span><span class="kw">pub fn </span>new(simulation_fps: f32, info: GgrsSessionRunnerInfo) -&gt; <span class="self">Self
@@ -945,7 +946,7 @@
             .min(std::usize::MAX <span class="kw">as </span>f64)
             .round() <span class="kw">as </span>usize;
 
-        <span class="comment">// There may be value in dynamically negotitaing these values based on client&#39;s pings
+        <span class="comment">// There may be value in dynamically negotitaing these values based on client's pings
         // before starting the match.
         </span><span class="kw">let </span>max_prediction = info
             .max_prediction_window
@@ -1003,12 +1004,12 @@
 
 <span class="doccomment">/// Helper for accessing nested associated types on [`NetworkInputConfig`].
 </span><span class="attr">#[allow(type_alias_bounds)]
-</span><span class="kw">type </span>ControlMapping&lt;<span class="lifetime">&#39;a</span>, C: NetworkInputConfig&lt;<span class="lifetime">&#39;a</span>&gt;&gt; =
-    &lt;C::PlayerControls <span class="kw">as </span>PlayerControls&lt;<span class="lifetime">&#39;a</span>, C::Control&gt;&gt;::ControlMapping;
+</span><span class="kw">type </span>ControlMapping&lt;<span class="lifetime">'a</span>, C: NetworkInputConfig&lt;<span class="lifetime">'a</span>&gt;&gt; =
+    &lt;C::PlayerControls <span class="kw">as </span>PlayerControls&lt;<span class="lifetime">'a</span>, C::Control&gt;&gt;::ControlMapping;
 
-<span class="kw">impl</span>&lt;InputTypes&gt; SessionRunner <span class="kw">for </span>GgrsSessionRunner&lt;<span class="lifetime">&#39;static</span>, InputTypes&gt;
+<span class="kw">impl</span>&lt;InputTypes&gt; SessionRunner <span class="kw">for </span>GgrsSessionRunner&lt;<span class="lifetime">'static</span>, InputTypes&gt;
 <span class="kw">where
-    </span>InputTypes: NetworkInputConfig&lt;<span class="lifetime">&#39;static</span>&gt; + <span class="lifetime">&#39;static</span>,
+    </span>InputTypes: NetworkInputConfig&lt;<span class="lifetime">'static</span>&gt; + <span class="lifetime">'static</span>,
 {
     <span class="kw">fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>, frame_start: Instant, world: <span class="kw-2">&amp;mut </span>World, stages: <span class="kw-2">&amp;mut </span>SystemStages) {
         <span class="kw">let </span>step: f64 = <span class="number">1.0 </span>/ <span class="self">self</span>.network_fps;
@@ -1042,7 +1043,7 @@
 
                     <span class="self">self</span>.last_player_input = control.get_dense_input();
                 },
-                <span class="prelude-val">None </span>=&gt; <span class="macro">warn!</span>(<span class="string">&quot;GgrsSessionRunner local_player_idx {} has no control source, no local input provided.&quot;</span>,
+                <span class="prelude-val">None </span>=&gt; <span class="macro">warn!</span>(<span class="string">"GgrsSessionRunner local_player_idx {} has no control source, no local input provided."</span>,
                     <span class="self">self</span>.local_player_idx)
             };
         }
@@ -1053,7 +1054,7 @@
         </span><span class="kw">for </span>event <span class="kw">in </span><span class="self">self</span>.session.events() {
             <span class="kw">match </span>event {
                 ggrs::GgrsEvent::Synchronizing { addr, total, count } =&gt; {
-                    <span class="macro">info!</span>(player=%addr, %total, progress=%count, <span class="string">&quot;Syncing network player&quot;</span>);
+                    <span class="macro">info!</span>(player=%addr, %total, progress=%count, <span class="string">"Syncing network player"</span>);
                     NETWORK_DEBUG_CHANNEL
                         .sender
                         .try_send(NetworkDebugMessage::PlayerSync((
@@ -1063,7 +1064,7 @@
                         .unwrap();
                 }
                 ggrs::GgrsEvent::Synchronized { addr } =&gt; {
-                    <span class="macro">info!</span>(player=%addr, <span class="string">&quot;Syncrhonized network client&quot;</span>);
+                    <span class="macro">info!</span>(player=%addr, <span class="string">"Syncrhonized network client"</span>);
                     NETWORK_DEBUG_CHANNEL
                         .sender
                         .try_send(NetworkDebugMessage::PlayerSync((
@@ -1073,7 +1074,7 @@
                         .unwrap();
                 }
                 ggrs::GgrsEvent::Disconnected { addr } =&gt; {
-                    <span class="macro">warn!</span>(player=%addr, <span class="string">&quot;Player Disconnected&quot;</span>);
+                    <span class="macro">warn!</span>(player=%addr, <span class="string">"Player Disconnected"</span>);
                     <span class="self">self</span>.disconnected_players.push(addr);
                     NETWORK_DEBUG_CHANNEL
                         .sender
@@ -1083,16 +1084,16 @@
                         .unwrap();
                 } <span class="comment">//return Err(SessionError::Disconnected)},
                 </span>ggrs::GgrsEvent::NetworkInterrupted { addr, .. } =&gt; {
-                    <span class="macro">info!</span>(player=%addr, <span class="string">&quot;Network player interrupted&quot;</span>);
+                    <span class="macro">info!</span>(player=%addr, <span class="string">"Network player interrupted"</span>);
                 }
                 ggrs::GgrsEvent::NetworkResumed { addr } =&gt; {
-                    <span class="macro">info!</span>(player=%addr, <span class="string">&quot;Network player re-connected&quot;</span>);
+                    <span class="macro">info!</span>(player=%addr, <span class="string">"Network player re-connected"</span>);
                 }
                 ggrs::GgrsEvent::WaitRecommendation {
                     skip_frames: skip_count,
                 } =&gt; {
                     <span class="macro">info!</span>(
-                        <span class="string">&quot;Skipping {skip_count} frames to give network players a chance to catch up&quot;
+                        <span class="string">"Skipping {skip_count} frames to give network players a chance to catch up"
                     </span>);
                     skip_frames = skip_count;
 
@@ -1110,7 +1111,7 @@
                     remote_checksum,
                     addr,
                 } =&gt; {
-                    <span class="macro">error!</span>(%frame, %local_checksum, %remote_checksum, player=%addr, <span class="string">&quot;Network de-sync detected&quot;</span>);
+                    <span class="macro">error!</span>(%frame, %local_checksum, %remote_checksum, player=%addr, <span class="string">"Network de-sync detected"</span>);
                 }
             }
         }
@@ -1207,7 +1208,7 @@
                                             </span>network_inputs.into_iter().enumerate()
                                         {
                                             <span class="macro">trace!</span>(
-                                                <span class="string">&quot;Net player({player_idx}) local: {}, status: {status:?}, input: {:?}&quot;</span>,
+                                                <span class="string">"Net player({player_idx}) local: {}, status: {status:?}, input: {:?}"</span>,
                                                 <span class="self">self</span>.local_player_idx <span class="kw">as </span>usize == player_idx,
                                                 input
                                             );
@@ -1227,10 +1228,10 @@
                     }
                     <span class="prelude-val">Err</span>(e) =&gt; <span class="kw">match </span>e {
                         ggrs::GgrsError::NotSynchronized =&gt; {
-                            <span class="macro">debug!</span>(<span class="string">&quot;Waiting for network clients to sync&quot;</span>)
+                            <span class="macro">debug!</span>(<span class="string">"Waiting for network clients to sync"</span>)
                         }
                         ggrs::GgrsError::PredictionThreshold =&gt; {
-                            <span class="macro">warn!</span>(<span class="string">&quot;Freezing game while waiting for network to catch-up.&quot;</span>);
+                            <span class="macro">warn!</span>(<span class="string">"Freezing game while waiting for network to catch-up."</span>);
                             NETWORK_DEBUG_CHANNEL
                                 .sender
                                 .try_send(NetworkDebugMessage::FrameFroze {
@@ -1238,7 +1239,7 @@
                                 })
                                 .unwrap();
                         }
-                        e =&gt; <span class="macro">error!</span>(<span class="string">&quot;Network protocol error: {e}&quot;</span>),
+                        e =&gt; <span class="macro">error!</span>(<span class="string">"Network protocol error: {e}"</span>),
                     },
                 }
             } <span class="kw">else </span>{

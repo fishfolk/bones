@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_schema/src/alloc/map.rs`."><title>map.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_schema" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_schema/src/alloc/map.rs`."><title>map.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_schema" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -749,20 +750,20 @@
     raw_fns::{RawClone, RawDefault, RawDrop},
 };
 
-<span class="doccomment">/// Untyped schema-aware &quot;HashMap&quot;.
+<span class="doccomment">/// Untyped schema-aware "HashMap".
 </span><span class="attr">#[derive(Clone, Debug)]
 </span><span class="kw">pub struct </span>SchemaMap {
     map: HashMap&lt;SchemaBox, SchemaBox&gt;,
-    key_schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
-    value_schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
+    key_schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
+    value_schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
 }
 
 <span class="kw">impl </span>SchemaMap {
     <span class="doccomment">/// Create a new map, with the given key and value schemas.
-    </span><span class="kw">pub fn </span>new(key_schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema, value_schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new(key_schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema, value_schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema) -&gt; <span class="self">Self </span>{
         <span class="macro">assert!</span>(
             key_schema.hash_fn.is_some() &amp;&amp; key_schema.eq_fn.is_some(),
-            <span class="string">&quot;Key schema must implement hash and eq&quot;
+            <span class="string">"Key schema must implement hash and eq"
         </span>);
         <span class="self">Self </span>{
             map: HashMap::default(),
@@ -784,18 +785,18 @@
     }
 
     <span class="doccomment">/// Get the schema for the map keys.
-    </span><span class="kw">pub fn </span>key_schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+    </span><span class="kw">pub fn </span>key_schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
         <span class="self">self</span>.key_schema
     }
 
     <span class="doccomment">/// Get the schema for the map values.
-    </span><span class="kw">pub fn </span>value_schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+    </span><span class="kw">pub fn </span>value_schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
         <span class="self">self</span>.value_schema
     }
 
     <span class="doccomment">/// Insert an item into the map.
     /// # Panics
-    /// Panics if the key or value schemas do not match the map&#39;s.
+    /// Panics if the key or value schemas do not match the map's.
     </span><span class="attr">#[inline]
     #[track_caller]
     </span><span class="kw">pub fn </span>insert&lt;K: HasSchema, V: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: K, value: V) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt; {
@@ -804,7 +805,7 @@
 
     <span class="doccomment">/// Insert an item into the map.
     /// # Errors
-    /// Errors if the key or value schemas do not match the map&#39;s.
+    /// Errors if the key or value schemas do not match the map's.
     </span><span class="kw">pub fn </span>try_insert&lt;K: HasSchema, V: HasSchema&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         key: K,
@@ -813,14 +814,14 @@
         <span class="kw">let </span>key = SchemaBox::new(key);
         <span class="kw">let </span>value = SchemaBox::new(value);
         <span class="self">self</span>.try_insert_box(key, value)
-            <span class="comment">// SOUND: try_insert_box won&#39;t succeed unless the schema&#39;s match, so we have already
+            <span class="comment">// SOUND: try_insert_box won't succeed unless the schema's match, so we have already
             // checked that the value schema matches.
             </span>.map(|value| value.map(|x| <span class="kw">unsafe </span>{ x.cast_into_unchecked() }))
     }
 
     <span class="doccomment">/// Insert an untyped item into the map.
     /// # Panics
-    /// Panics if the key or value schemas do not match the map&#39;s.
+    /// Panics if the key or value schemas do not match the map's.
     </span><span class="attr">#[track_caller]
     #[inline]
     </span><span class="kw">pub fn </span>insert_box(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SchemaBox, value: SchemaBox) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaBox&gt; {
@@ -829,7 +830,7 @@
 
     <span class="doccomment">/// Insert an untyped item into the map.
     /// # Errors
-    /// Errors if the key or value schemas do not match the map&#39;s.
+    /// Errors if the key or value schemas do not match the map's.
     </span><span class="kw">pub fn </span>try_insert_box(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         key: SchemaBox,
@@ -838,14 +839,14 @@
         <span class="kw">if </span>key.schema() != <span class="self">self</span>.key_schema || value.schema() != <span class="self">self</span>.value_schema {
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         } <span class="kw">else </span>{
-            <span class="comment">// SOUnD: we&#39;ve checked that the schemas are matching.
+            <span class="comment">// SOUnD: we've checked that the schemas are matching.
             </span><span class="kw">let </span>previous_value = <span class="kw">unsafe </span>{ <span class="self">self</span>.insert_box_unchecked(key, value) };
             <span class="prelude-val">Ok</span>(previous_value)
         }
     }
 
     <span class="doccomment">/// # Safety
-    /// Key schema and value schema must match the map&#39;s.
+    /// Key schema and value schema must match the map's.
     </span><span class="kw">pub unsafe fn </span>insert_box_unchecked(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         key: SchemaBox,
@@ -875,7 +876,7 @@
 
     <span class="doccomment">/// Get a value out of the map for the given key.
     /// # Panics
-    /// Panics if the schemas of the key and value don&#39;t match the schemas of the map.
+    /// Panics if the schemas of the key and value don't match the schemas of the map.
     </span><span class="attr">#[track_caller]
     #[inline]
     </span><span class="kw">pub fn </span>get&lt;K: HasSchema, V: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>K) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>V&gt; {
@@ -884,7 +885,7 @@
 
     <span class="doccomment">/// Get a value out of the map for the given key.
     /// # Errors
-    /// Errors if the schemas of the key and value don&#39;t match the schemas of the map.
+    /// Errors if the schemas of the key and value don't match the schemas of the map.
     </span><span class="attr">#[track_caller]
     </span><span class="kw">pub fn </span>try_get&lt;K: HasSchema, V: HasSchema&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -893,9 +894,9 @@
         <span class="kw">if </span>K::schema() != <span class="self">self</span>.key_schema || V::schema() != <span class="self">self</span>.value_schema {
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         } <span class="kw">else </span>{
-            <span class="comment">// SOUND: we&#39;ve veriried that they key schema matches the map&#39;s
+            <span class="comment">// SOUND: we've veriried that they key schema matches the map's
             </span><span class="kw">let </span>value = <span class="kw">unsafe </span>{ <span class="self">self</span>.get_ref_unchecked(SchemaRef::new(key)) }
-                <span class="comment">// SOUND: we&#39;ve verified that the value schema maches the map&#39;s
+                <span class="comment">// SOUND: we've verified that the value schema maches the map's
                 </span>.map(|x| <span class="kw">unsafe </span>{ x.cast_into_unchecked() });
 
             <span class="prelude-val">Ok</span>(value)
@@ -904,7 +905,7 @@
 
     <span class="doccomment">/// Get an untyped reference to an item in the map.
     /// # Panics
-    /// Panics if the schema of the key doesn&#39;t match.
+    /// Panics if the schema of the key doesn't match.
     </span><span class="attr">#[inline]
     #[track_caller]
     </span><span class="kw">pub fn </span>get_ref(<span class="kw-2">&amp;</span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&gt; {
@@ -913,24 +914,24 @@
 
     <span class="doccomment">/// Get an untyped reference to an item in the map.
     /// # Errors
-    /// Errors if the schema of the key doesn&#39;t match.
+    /// Errors if the schema of the key doesn't match.
     </span><span class="kw">pub fn </span>try_get_ref(<span class="kw-2">&amp;</span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SchemaRef&gt;, SchemaMismatchError&gt; {
         <span class="kw">if </span>key.schema() != <span class="self">self</span>.key_schema {
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         } <span class="kw">else </span>{
-            <span class="comment">// SOUND: we&#39;ve check the key schema matches.
+            <span class="comment">// SOUND: we've check the key schema matches.
             </span><span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.get_ref_unchecked(key) })
         }
     }
 
     <span class="doccomment">/// # Safety
-    /// The key&#39;s schema must match this map&#39;s key schema.
+    /// The key's schema must match this map's key schema.
     </span><span class="kw">pub unsafe fn </span>get_ref_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&gt; {
         <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.hash_fn <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Key schema doesn&#39;t implement hash&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Key schema doesn't implement hash"</span>);
         };
         <span class="kw">let </span><span class="prelude-val">Some</span>(eq_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.eq_fn <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Key schema doesn&#39;t implement eq&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Key schema doesn't implement eq"</span>);
         };
         <span class="kw">let </span>key_ptr = key.as_ptr();
         <span class="comment">// SOUND: caller asserts the key schema matches
@@ -952,7 +953,7 @@
 
     <span class="doccomment">/// Get an untyped reference to an item in the map.
     /// # Panics
-    /// Panics if the schema of the key doesn&#39;t match.
+    /// Panics if the schema of the key doesn't match.
     </span><span class="attr">#[inline]
     #[track_caller]
     </span><span class="kw">pub fn </span>get_ref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&gt; {
@@ -961,7 +962,7 @@
 
     <span class="doccomment">/// Get an untyped reference to an item in the map.
     /// # Errors
-    /// Errors if the schema of the key doesn&#39;t match.
+    /// Errors if the schema of the key doesn't match.
     </span><span class="kw">pub fn </span>try_get_ref_mut(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         key: SchemaRef,
@@ -969,19 +970,19 @@
         <span class="kw">if </span>key.schema() != <span class="self">self</span>.key_schema {
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         } <span class="kw">else </span>{
-            <span class="comment">// SOUND: we&#39;ve checked that the key schema matches.
+            <span class="comment">// SOUND: we've checked that the key schema matches.
             </span><span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.get_ref_unchecked_mut(key) })
         }
     }
 
     <span class="doccomment">/// # Safety
-    /// The key&#39;s schema must match this map&#39;s key schema.
+    /// The key's schema must match this map's key schema.
     </span><span class="kw">pub unsafe fn </span>get_ref_unchecked_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&gt; {
         <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.hash_fn <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Key schema doesn&#39;t implement hash&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Key schema doesn't implement hash"</span>);
         };
         <span class="kw">let </span><span class="prelude-val">Some</span>(eq_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.eq_fn <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Key schema doesn&#39;t implement eq&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Key schema doesn't implement eq"</span>);
         };
         <span class="kw">let </span>key_ptr = key.as_ptr();
         <span class="comment">// SOUND: caller asserts the key schema matches
@@ -1005,7 +1006,7 @@
 
     <span class="doccomment">/// Get a value out of the map for the given key.
     /// # Panics
-    /// Panics if the schemas of the key and value don&#39;t match the schemas of the map.
+    /// Panics if the schemas of the key and value don't match the schemas of the map.
     </span><span class="attr">#[track_caller]
     #[inline]
     </span><span class="kw">pub fn </span>get_mut&lt;K: HasSchema, V: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>K) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>V&gt; {
@@ -1014,7 +1015,7 @@
 
     <span class="doccomment">/// Get a value out of the map for the given key.
     /// # Errors
-    /// Errors if the schemas of the key and value don&#39;t match the schemas of the map.
+    /// Errors if the schemas of the key and value don't match the schemas of the map.
     </span><span class="attr">#[track_caller]
     </span><span class="kw">pub fn </span>try_get_mut&lt;K: HasSchema, V: HasSchema&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -1023,9 +1024,9 @@
         <span class="kw">if </span>K::schema() != <span class="self">self</span>.key_schema || V::schema() != <span class="self">self</span>.value_schema {
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         } <span class="kw">else </span>{
-            <span class="comment">// SOUND: we&#39;ve checked that the key schema matches.
+            <span class="comment">// SOUND: we've checked that the key schema matches.
             </span><span class="kw">let </span>value = <span class="kw">unsafe </span>{ <span class="self">self</span>.get_ref_unchecked_mut(SchemaRef::new(key)) }
-                <span class="comment">// SOUND: we&#39;ve checked that the value schema matches.
+                <span class="comment">// SOUND: we've checked that the value schema matches.
                 </span>.map(|x| <span class="kw">unsafe </span>{ x.cast_into_mut_unchecked() });
             <span class="prelude-val">Ok</span>(value)
         }
@@ -1033,7 +1034,7 @@
 
     <span class="doccomment">/// Remove an item.
     /// # Panics
-    /// Panics if the schemas of the key and value don&#39;t match the map.
+    /// Panics if the schemas of the key and value don't match the map.
     </span><span class="attr">#[inline]
     #[track_caller]
     </span><span class="kw">pub fn </span>remove&lt;K: HasSchema, V: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>K) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt; {
@@ -1042,7 +1043,7 @@
 
     <span class="doccomment">/// Remove an item.
     /// # Errors
-    /// Errors if the schemas of the key and value don&#39;t match the map.
+    /// Errors if the schemas of the key and value don't match the map.
     </span><span class="kw">pub fn </span>try_remove&lt;K: HasSchema, V: HasSchema&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         key: <span class="kw-2">&amp;</span>K,
@@ -1050,9 +1051,9 @@
         <span class="kw">if </span>K::schema() != <span class="self">self</span>.key_schema || V::schema() != <span class="self">self</span>.value_schema {
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         } <span class="kw">else </span>{
-            <span class="comment">// SOUND: we&#39;ve checked that the key schema matches.
+            <span class="comment">// SOUND: we've checked that the key schema matches.
             </span><span class="kw">let </span>value = <span class="kw">unsafe </span>{ <span class="self">self</span>.remove_unchecked(SchemaRef::new(key)) }
-                <span class="comment">// SOUND: we&#39;ve checked that the value schema matches.
+                <span class="comment">// SOUND: we've checked that the value schema matches.
                 </span>.map(|x| <span class="kw">unsafe </span>{ x.cast_into_unchecked() });
             <span class="prelude-val">Ok</span>(value)
         }
@@ -1060,7 +1061,7 @@
 
     <span class="doccomment">/// Untypededly remove an item.
     /// # Panics
-    /// Panics if the key schema does not match the map&#39;s.
+    /// Panics if the key schema does not match the map's.
     </span><span class="attr">#[inline]
     #[track_caller]
     </span><span class="kw">pub fn </span>remove_box(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaBox&gt; {
@@ -1069,7 +1070,7 @@
 
     <span class="doccomment">/// Untypededly remove an item.
     /// # Errors
-    /// Errors if the key schema does not match the map&#39;s.
+    /// Errors if the key schema does not match the map's.
     </span><span class="kw">pub fn </span>try_remove_box(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         key: SchemaRef,
@@ -1077,19 +1078,19 @@
         <span class="kw">if </span>key.schema() != <span class="self">self</span>.key_schema {
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         } <span class="kw">else </span>{
-            <span class="comment">// SOUND: we&#39;ve checked the key schema matches.
+            <span class="comment">// SOUND: we've checked the key schema matches.
             </span><span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.remove_unchecked(key) })
         }
     }
 
     <span class="doccomment">/// # Safety
-    /// The key schema must match the map&#39;s.
+    /// The key schema must match the map's.
     </span><span class="kw">pub unsafe fn </span>remove_unchecked(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaBox&gt; {
         <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.hash_fn <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Key schema doesn&#39;t implement hash&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Key schema doesn't implement hash"</span>);
         };
         <span class="kw">let </span><span class="prelude-val">Some</span>(eq_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.eq_fn <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Key schema doesn&#39;t implement eq&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Key schema doesn't implement eq"</span>);
         };
         <span class="kw">let </span>key_ptr = key.as_ptr();
         <span class="comment">// SOUND: caller asserts the key schema matches
@@ -1112,7 +1113,7 @@
 
     <span class="doccomment">/// Convert into a typed [`SMap`].
     /// # Panics
-    /// Panics if the schemas of K and V don&#39;t match the [`SchemaMap`].
+    /// Panics if the schemas of K and V don't match the [`SchemaMap`].
     </span><span class="attr">#[inline]
     #[track_caller]
     </span><span class="kw">pub fn </span>into_smap&lt;K: HasSchema, V: HasSchema&gt;(<span class="self">self</span>) -&gt; SMap&lt;K, V&gt; {
@@ -1121,7 +1122,7 @@
 
     <span class="doccomment">/// Convert into a typed [`SMap`].
     /// # Errors
-    /// Errors if the schemas of K and V don&#39;t match the [`SchemaMap`].
+    /// Errors if the schemas of K and V don't match the [`SchemaMap`].
     </span><span class="kw">pub fn </span>try_into_smap&lt;K: HasSchema, V: HasSchema&gt;(
         <span class="self">self</span>,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;SMap&lt;K, V&gt;, SchemaMismatchError&gt; {
@@ -1158,21 +1159,21 @@
     }
 }
 
-<span class="kw">type </span>SchemaMapIter&lt;<span class="lifetime">&#39;iter</span>&gt; = std::iter::Map&lt;
-    hash_map::Iter&lt;<span class="lifetime">&#39;iter</span>, SchemaBox, SchemaBox&gt;,
-    <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>((<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox)) -&gt; (SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;, SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;),
+<span class="kw">type </span>SchemaMapIter&lt;<span class="lifetime">'iter</span>&gt; = std::iter::Map&lt;
+    hash_map::Iter&lt;<span class="lifetime">'iter</span>, SchemaBox, SchemaBox&gt;,
+    <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>((<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox)) -&gt; (SchemaRef&lt;<span class="lifetime">'a</span>&gt;, SchemaRef&lt;<span class="lifetime">'a</span>&gt;),
 &gt;;
-<span class="kw">type </span>SchemaMapIterMut&lt;<span class="lifetime">&#39;iter</span>&gt; = std::iter::Map&lt;
-    hash_map::IterMut&lt;<span class="lifetime">&#39;iter</span>, SchemaBox, SchemaBox&gt;,
-    <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>((<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaBox)) -&gt; (SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;, SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;),
+<span class="kw">type </span>SchemaMapIterMut&lt;<span class="lifetime">'iter</span>&gt; = std::iter::Map&lt;
+    hash_map::IterMut&lt;<span class="lifetime">'iter</span>, SchemaBox, SchemaBox&gt;,
+    <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>((<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaBox)) -&gt; (SchemaRef&lt;<span class="lifetime">'a</span>&gt;, SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;),
 &gt;;
 <span class="kw">impl </span>SchemaMap {
     <span class="doccomment">/// Iterate over entries in the map.
     </span><span class="attr">#[allow(clippy::type_complexity)]
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaMapIter {
-        <span class="kw">fn </span>map_fn&lt;<span class="lifetime">&#39;a</span>&gt;(
-            (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox),
-        ) -&gt; (SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;, SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;) {
+        <span class="kw">fn </span>map_fn&lt;<span class="lifetime">'a</span>&gt;(
+            (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox),
+        ) -&gt; (SchemaRef&lt;<span class="lifetime">'a</span>&gt;, SchemaRef&lt;<span class="lifetime">'a</span>&gt;) {
             (key.as_ref(), value.as_ref())
         }
         <span class="self">self</span>.map.iter().map(map_fn)
@@ -1181,9 +1182,9 @@
     <span class="doccomment">/// Iterate over entries in the map.
     </span><span class="attr">#[allow(clippy::type_complexity)]
     </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaMapIterMut {
-        <span class="kw">fn </span>map_fn&lt;<span class="lifetime">&#39;a</span>&gt;(
-            (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaBox),
-        ) -&gt; (SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;, SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;) {
+        <span class="kw">fn </span>map_fn&lt;<span class="lifetime">'a</span>&gt;(
+            (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaBox),
+        ) -&gt; (SchemaRef&lt;<span class="lifetime">'a</span>&gt;, SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;) {
             (key.as_ref(), value.as_mut())
         }
         <span class="self">self</span>.map.iter_mut().map(map_fn)
@@ -1195,7 +1196,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
     ) -&gt; std::iter::Map&lt;
         hash_map::Keys&lt;SchemaBox, SchemaBox&gt;,
-        <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox) -&gt; SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;,
+        <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox) -&gt; SchemaRef&lt;<span class="lifetime">'a</span>&gt;,
     &gt; {
         <span class="kw">fn </span>map_fn(key: <span class="kw-2">&amp;</span>SchemaBox) -&gt; SchemaRef {
             key.as_ref()
@@ -1209,7 +1210,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
     ) -&gt; std::iter::Map&lt;
         hash_map::Values&lt;SchemaBox, SchemaBox&gt;,
-        <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox) -&gt; SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;,
+        <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox) -&gt; SchemaRef&lt;<span class="lifetime">'a</span>&gt;,
     &gt; {
         <span class="kw">fn </span>map_fn(key: <span class="kw-2">&amp;</span>SchemaBox) -&gt; SchemaRef {
             key.as_ref()
@@ -1223,7 +1224,7 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     ) -&gt; std::iter::Map&lt;
         hash_map::ValuesMut&lt;SchemaBox, SchemaBox&gt;,
-        <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaBox) -&gt; SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;,
+        <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaBox) -&gt; SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;,
     &gt; {
         <span class="kw">fn </span>map_fn(key: <span class="kw-2">&amp;mut </span>SchemaBox) -&gt; SchemaRefMut {
             key.as_mut()
@@ -1231,16 +1232,16 @@
         <span class="self">self</span>.map.values_mut().map(map_fn)
     }
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaMap {
-    <span class="kw">type </span>Item = (SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;, SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;);
-    <span class="kw">type </span>IntoIter = SchemaMapIter&lt;<span class="lifetime">&#39;a</span>&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaMap {
+    <span class="kw">type </span>Item = (SchemaRef&lt;<span class="lifetime">'a</span>&gt;, SchemaRef&lt;<span class="lifetime">'a</span>&gt;);
+    <span class="kw">type </span>IntoIter = SchemaMapIter&lt;<span class="lifetime">'a</span>&gt;;
     <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
         <span class="self">self</span>.iter()
     }
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaMap {
-    <span class="kw">type </span>Item = (SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;, SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;);
-    <span class="kw">type </span>IntoIter = SchemaMapIterMut&lt;<span class="lifetime">&#39;a</span>&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaMap {
+    <span class="kw">type </span>Item = (SchemaRef&lt;<span class="lifetime">'a</span>&gt;, SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;);
+    <span class="kw">type </span>IntoIter = SchemaMapIterMut&lt;<span class="lifetime">'a</span>&gt;;
     <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
         <span class="self">self</span>.iter_mut()
     }
@@ -1251,13 +1252,13 @@
 /// This works essentially like a [`HashMap`], but is compatible with the schema ecosystem.
 ///
 /// It is also slightly more efficient to access an [`SMap`] compared to a [`SchemaMap`] because it
-/// doesn&#39;t need to do a runtime schema check every time the map is accessed.
+/// doesn't need to do a runtime schema check every time the map is accessed.
 </span><span class="kw">pub struct </span>SMap&lt;K: HasSchema, V: HasSchema&gt; {
     map: SchemaMap,
     _phantom: PhantomData&lt;(K, V)&gt;,
 }
 <span class="kw">impl</span>&lt;K: HasSchema + Debug, V: HasSchema + Debug&gt; Debug <span class="kw">for </span>SMap&lt;K, V&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         <span class="kw">let </span><span class="kw-2">mut </span>f = f.debug_map();
         <span class="kw">for </span>(k, v) <span class="kw">in </span><span class="self">self </span>{
             f.entry(k, v);
@@ -1282,8 +1283,8 @@
     }
 }
 <span class="kw">unsafe impl</span>&lt;K: HasSchema, V: HasSchema&gt; HasSchema <span class="kw">for </span>SMap&lt;K, V&gt; {
-    <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
-        <span class="kw">static </span>S: OnceLock&lt;RwLock&lt;HashMap&lt;TypeId, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt;&gt;&gt; = OnceLock::new();
+    <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
+        <span class="kw">static </span>S: OnceLock&lt;RwLock&lt;HashMap&lt;TypeId, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema&gt;&gt;&gt; = OnceLock::new();
         <span class="kw">let </span>schema = {
             S.get_or_init(default)
                 .read()
@@ -1293,7 +1294,7 @@
         schema.unwrap_or_else(|| {
             <span class="kw">let </span>schema = SCHEMA_REGISTRY.register(SchemaData {
                 name: type_name::&lt;<span class="self">Self</span>&gt;().into(),
-                full_name: <span class="macro">format!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
+                full_name: <span class="macro">format!</span>(<span class="string">"{}::{}"</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
                 kind: SchemaKind::Map {
                     key: K::schema(),
                     value: V::schema(),
@@ -1372,20 +1373,20 @@
     }
 }
 
-<span class="kw">type </span>SMapIter&lt;<span class="lifetime">&#39;iter</span>, K, V&gt; = std::iter::Map&lt;
-    hash_map::Iter&lt;<span class="lifetime">&#39;iter</span>, SchemaBox, SchemaBox&gt;,
-    <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>((<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox)) -&gt; (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>V),
+<span class="kw">type </span>SMapIter&lt;<span class="lifetime">'iter</span>, K, V&gt; = std::iter::Map&lt;
+    hash_map::Iter&lt;<span class="lifetime">'iter</span>, SchemaBox, SchemaBox&gt;,
+    <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>((<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox)) -&gt; (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V),
 &gt;;
-<span class="kw">type </span>SMapIterMut&lt;<span class="lifetime">&#39;iter</span>, K, V&gt; = std::iter::Map&lt;
-    hash_map::IterMut&lt;<span class="lifetime">&#39;iter</span>, SchemaBox, SchemaBox&gt;,
-    <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>((<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaBox)) -&gt; (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V),
+<span class="kw">type </span>SMapIterMut&lt;<span class="lifetime">'iter</span>, K, V&gt; = std::iter::Map&lt;
+    hash_map::IterMut&lt;<span class="lifetime">'iter</span>, SchemaBox, SchemaBox&gt;,
+    <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>((<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaBox)) -&gt; (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V),
 &gt;;
 <span class="kw">impl</span>&lt;K: HasSchema, V: HasSchema&gt; SMap&lt;K, V&gt; {
     <span class="doccomment">/// Iterate over entries in the map.
     </span><span class="attr">#[allow(clippy::type_complexity)]
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SMapIter&lt;K, V&gt; {
-        <span class="kw">fn </span>map_fn&lt;<span class="lifetime">&#39;a</span>, K: HasSchema, V: HasSchema&gt;(
-            (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox),
+        <span class="kw">fn </span>map_fn&lt;<span class="lifetime">'a</span>, K: HasSchema, V: HasSchema&gt;(
+            (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox),
         ) -&gt; (<span class="kw-2">&amp;</span>K, <span class="kw-2">&amp;</span>V) {
             <span class="comment">// SOUND: SMap ensures K and V schemas always match.
             </span><span class="kw">unsafe </span>{
@@ -1401,9 +1402,9 @@
     <span class="doccomment">/// Iterate over entries in the map.
     </span><span class="attr">#[allow(clippy::type_complexity)]
     </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SMapIterMut&lt;K, V&gt; {
-        <span class="kw">fn </span>map_fn&lt;<span class="lifetime">&#39;a</span>, K: HasSchema, V: HasSchema&gt;(
-            (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaBox),
-        ) -&gt; (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V) {
+        <span class="kw">fn </span>map_fn&lt;<span class="lifetime">'a</span>, K: HasSchema, V: HasSchema&gt;(
+            (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaBox),
+        ) -&gt; (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V) {
             <span class="comment">// SOUND: SMap ensures K and V schemas always match.
             </span><span class="kw">unsafe </span>{
                 (
@@ -1419,7 +1420,7 @@
     </span><span class="attr">#[allow(clippy::type_complexity)]
     </span><span class="kw">pub fn </span>keys(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-    ) -&gt; std::iter::Map&lt;hash_map::Keys&lt;SchemaBox, SchemaBox&gt;, <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K&gt;
+    ) -&gt; std::iter::Map&lt;hash_map::Keys&lt;SchemaBox, SchemaBox&gt;, <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>K&gt;
     {
         <span class="kw">fn </span>map_fn&lt;K: HasSchema&gt;(key: <span class="kw-2">&amp;</span>SchemaBox) -&gt; <span class="kw-2">&amp;</span>K {
             <span class="comment">// SOUND: SMap ensures key schema always match
@@ -1432,7 +1433,7 @@
     </span><span class="attr">#[allow(clippy::type_complexity)]
     </span><span class="kw">pub fn </span>values(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-    ) -&gt; std::iter::Map&lt;hash_map::Values&lt;SchemaBox, SchemaBox&gt;, <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaBox) -&gt; <span class="kw-2">&amp;</span>V&gt;
+    ) -&gt; std::iter::Map&lt;hash_map::Values&lt;SchemaBox, SchemaBox&gt;, <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox) -&gt; <span class="kw-2">&amp;</span>V&gt;
     {
         <span class="kw">fn </span>map_fn&lt;V: HasSchema&gt;(value: <span class="kw-2">&amp;</span>SchemaBox) -&gt; <span class="kw-2">&amp;</span>V {
             <span class="comment">// SOUND: SMap ensures value schema always matches.
@@ -1447,7 +1448,7 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     ) -&gt; std::iter::Map&lt;
         hash_map::ValuesMut&lt;SchemaBox, SchemaBox&gt;,
-        <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaBox) -&gt; <span class="kw-2">&amp;mut </span>V,
+        <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaBox) -&gt; <span class="kw-2">&amp;mut </span>V,
     &gt; {
         <span class="kw">fn </span>map_fn&lt;V&gt;(value: <span class="kw-2">&amp;mut </span>SchemaBox) -&gt; <span class="kw-2">&amp;mut </span>V {
             <span class="comment">// SOUND: SMap ensures value schema always matches
@@ -1456,16 +1457,16 @@
         <span class="self">self</span>.map.map.values_mut().map(map_fn)
     }
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K: HasSchema, V: HasSchema&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SMap&lt;K, V&gt; {
-    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>V);
-    <span class="kw">type </span>IntoIter = SMapIter&lt;<span class="lifetime">&#39;a</span>, K, V&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K: HasSchema, V: HasSchema&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>SMap&lt;K, V&gt; {
+    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V);
+    <span class="kw">type </span>IntoIter = SMapIter&lt;<span class="lifetime">'a</span>, K, V&gt;;
     <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
         <span class="self">self</span>.iter()
     }
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, K: HasSchema, V: HasSchema&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SMap&lt;K, V&gt; {
-    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V);
-    <span class="kw">type </span>IntoIter = SMapIterMut&lt;<span class="lifetime">&#39;a</span>, K, V&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, K: HasSchema, V: HasSchema&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SMap&lt;K, V&gt; {
+    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V);
+    <span class="kw">type </span>IntoIter = SMapIterMut&lt;<span class="lifetime">'a</span>, K, V&gt;;
     <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
         <span class="self">self</span>.iter_mut()
     }

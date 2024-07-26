@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_framework/src/networking/lan.rs`."><title>lan.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_framework" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_framework/src/networking/lan.rs`."><title>lan.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="bones_framework" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -552,7 +553,7 @@
 //! ## Matchmaking
 //!
 //! The LAN matchmaker works by allowing the player to start a match and wait for people to join it,
-//! or to join player&#39;s started match.
+//! or to join player's started match.
 //!
 //! Communication happens directly between LAN peers over the QUIC protocol.
 
@@ -561,7 +562,7 @@
 
 </span><span class="kw">use </span>std::{net::IpAddr, time::Duration};
 
-<span class="kw">use </span>iroh_net::{magic_endpoint::get_remote_node_id, NodeAddr};
+<span class="kw">use </span>iroh_net::{endpoint::get_remote_node_id, NodeAddr};
 <span class="kw">use </span>mdns_sd::{ServiceDaemon, ServiceInfo};
 <span class="kw">use </span>smallvec::SmallVec;
 <span class="kw">use </span>tracing::warn;
@@ -593,7 +594,7 @@
 
     RUNTIME.spawn(<span class="kw">async move </span>{
         <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = lan_matchmaker(server).<span class="kw">await </span>{
-            <span class="macro">warn!</span>(<span class="string">&quot;lan matchmaker failed: {err:?}&quot;</span>);
+            <span class="macro">warn!</span>(<span class="string">"lan matchmaker failed: {err:?}"</span>);
         }
     });
 
@@ -601,9 +602,9 @@
 });
 
 <span class="kw">static </span>MDNS: Lazy&lt;ServiceDaemon&gt; =
-    Lazy::new(|| ServiceDaemon::new().expect(<span class="string">&quot;Couldn&#39;t start MDNS service discovery thread.&quot;</span>));
+    Lazy::new(|| ServiceDaemon::new().expect(<span class="string">"Couldn't start MDNS service discovery thread."</span>));
 
-<span class="kw">const </span>MDNS_SERVICE_TYPE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;_jumpy._udp.local.&quot;</span>;
+<span class="kw">const </span>MDNS_SERVICE_TYPE: <span class="kw-2">&amp;</span>str = <span class="string">"_jumpy._udp.local."</span>;
 
 <span class="attr">#[derive(DerefMut, Deref)]
 </span><span class="kw">struct </span>Pinger(BiChannelClient&lt;PingerRequest, PingerResponse&gt;);
@@ -624,7 +625,7 @@
 /// The number of players is limited to `u32::MAX`.
 </span><span class="kw">pub fn </span>start_server(server: ServerInfo, player_count: u32) {
     MDNS.register(server.service)
-        .expect(<span class="string">&quot;Could not register MDNS service.&quot;</span>);
+        .expect(<span class="string">"Could not register MDNS service."</span>);
     LAN_MATCHMAKER
         .try_send(LanMatchmakerRequest::StartServer { player_count })
         .unwrap();
@@ -633,7 +634,7 @@
 <span class="doccomment">/// Stop hosting a server.
 </span><span class="kw">pub fn </span>stop_server(server: <span class="kw-2">&amp;</span>ServerInfo) {
     <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = stop_server_by_name(server.service.get_fullname()) {
-        <span class="macro">warn!</span>(<span class="string">&quot;Lan: failed to stop server: {err:?}&quot;</span>);
+        <span class="macro">warn!</span>(<span class="string">"Lan: failed to stop server: {err:?}"</span>);
     }
 }
 
@@ -644,7 +645,7 @@
             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="kw">break</span>,
             <span class="prelude-val">Err</span>(mdns_sd::Error::Again) =&gt; (),
             <span class="prelude-val">Err</span>(e) =&gt; {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Error unregistering MDNS service: {e}&quot;</span>)
+                <span class="macro">anyhow::bail!</span>(<span class="string">"Error unregistering MDNS service: {e}"</span>)
             }
         }
     }
@@ -664,9 +665,9 @@
                 player_idx,
                 player_count: <span class="kw">_</span>,
             } =&gt; {
-                <span class="macro">info!</span>(<span class="question-mark">?</span>player_idx, <span class="string">&quot;Starting network game&quot;</span>);
+                <span class="macro">info!</span>(<span class="question-mark">?</span>player_idx, <span class="string">"Starting network game"</span>);
                 <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = stop_server_by_name(server.service.get_fullname()) {
-                    <span class="macro">warn!</span>(<span class="string">&quot;Lan: failed to stop server: {err:?}&quot;</span>);
+                    <span class="macro">warn!</span>(<span class="string">"Lan: failed to stop server: {err:?}"</span>);
                 }
                 <span class="kw">return </span><span class="prelude-val">Some</span>(NetworkMatchSocket(Arc::new(socket)));
             }
@@ -680,8 +681,8 @@
     <span class="kw">let </span>addr_raw = server
         .service
         .get_properties()
-        .get_property_val_str(<span class="string">&quot;node-addr&quot;</span>)
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;missing node-addr property from discovery&quot;</span>))<span class="question-mark">?</span>;
+        .get_property_val_str(<span class="string">"node-addr"</span>)
+        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"missing node-addr property from discovery"</span>))<span class="question-mark">?</span>;
     <span class="kw">let </span>addr_raw = hex::decode(addr_raw)<span class="question-mark">?</span>;
     <span class="kw">let </span>addr: NodeAddr = postcard::from_bytes(<span class="kw-2">&amp;</span>addr_raw)<span class="question-mark">?</span>;
     LAN_MATCHMAKER
@@ -707,7 +708,7 @@
                 player_idx,
                 player_count: <span class="kw">_</span>,
             } =&gt; {
-                <span class="macro">info!</span>(<span class="question-mark">?</span>player_idx, <span class="string">&quot;Starting network game&quot;</span>);
+                <span class="macro">info!</span>(<span class="question-mark">?</span>player_idx, <span class="string">"Starting network game"</span>);
                 <span class="kw">return </span><span class="prelude-val">Some</span>(NetworkMatchSocket(Arc::new(socket)));
             }
         }
@@ -745,14 +746,14 @@
     <span class="kw">let </span>events = service_discovery_recv.get_or_insert_with(|| {
         ServiceDiscoveryReceiver(
             MDNS.browse(MDNS_SERVICE_TYPE)
-                .expect(<span class="string">&quot;Couldn&#39;t start service discovery&quot;</span>),
+                .expect(<span class="string">"Couldn't start service discovery"</span>),
         )
     });
 
     <span class="kw">while let </span><span class="prelude-val">Ok</span>(event) = events.<span class="number">0</span>.try_recv() {
         <span class="kw">match </span>event {
             mdns_sd::ServiceEvent::ServiceResolved(info) =&gt; {
-                <span class="macro">info!</span>(<span class="string">&quot;Found lan service!&quot;</span>);
+                <span class="macro">info!</span>(<span class="string">"Found lan service!"</span>);
                 servers.push(lan::ServerInfo {
                     service: info,
                     ping: <span class="prelude-val">None</span>,
@@ -766,26 +767,26 @@
     }
 }
 
-<span class="doccomment">/// Get the current host info or create a new one. When there&#39;s an existing
+<span class="doccomment">/// Get the current host info or create a new one. When there's an existing
 /// service but its `service_name` is different, the service is recreated and
 /// only then the returned `bool` is `true`.
-</span><span class="kw">pub async fn </span>prepare_to_host&lt;<span class="lifetime">&#39;a</span>&gt;(
-    host_info: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="prelude-ty">Option</span>&lt;ServerInfo&gt;,
+</span><span class="kw">pub async fn </span>prepare_to_host&lt;<span class="lifetime">'a</span>&gt;(
+    host_info: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span><span class="prelude-ty">Option</span>&lt;ServerInfo&gt;,
     service_name: <span class="kw-2">&amp;</span>str,
-) -&gt; (bool, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>ServerInfo) {
+) -&gt; (bool, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>ServerInfo) {
     <span class="kw">let </span>create_service_info = || <span class="kw">async </span>{
-        <span class="macro">info!</span>(<span class="string">&quot;New service hosting&quot;</span>);
+        <span class="macro">info!</span>(<span class="string">"New service hosting"</span>);
         <span class="kw">let </span>ep = get_network_endpoint().<span class="kw">await</span>;
-        <span class="kw">let </span>my_addr = ep.my_addr().<span class="kw">await</span>.expect(<span class="string">&quot;network endpoint dead&quot;</span>);
-        <span class="kw">let </span>port = ep.local_addr().<span class="number">0</span>.port();
+        <span class="kw">let </span>my_addr = ep.node_addr().<span class="kw">await</span>.expect(<span class="string">"network endpoint dead"</span>);
+        <span class="kw">let </span>port = my_addr.info.direct_addresses.first().unwrap().port();
         <span class="kw">let </span><span class="kw-2">mut </span>props = std::collections::HashMap::default();
         <span class="kw">let </span>addr_encoded = hex::encode(postcard::to_stdvec(<span class="kw-2">&amp;</span>my_addr).unwrap());
-        props.insert(<span class="string">&quot;node-addr&quot;</span>.to_string(), addr_encoded);
+        props.insert(<span class="string">"node-addr"</span>.to_string(), addr_encoded);
         <span class="kw">let </span>service = mdns_sd::ServiceInfo::new(
             MDNS_SERVICE_TYPE,
             service_name,
             service_name,
-            <span class="string">&quot;&quot;</span>,
+            <span class="string">""</span>,
             port,
             props,
         )
@@ -824,7 +825,7 @@
             <span class="comment">// Start server
             </span>LanMatchmakerRequest::StartServer { player_count } =&gt; {
                 <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = lan_start_server(<span class="kw-2">&amp;</span>matchmaker_channel, player_count).<span class="kw">await </span>{
-                    <span class="macro">warn!</span>(<span class="string">&quot;lan server failed: {err:?}&quot;</span>);
+                    <span class="macro">warn!</span>(<span class="string">"lan server failed: {err:?}"</span>);
                 }
                 <span class="comment">// Once we are done with server matchmaking
             </span>}
@@ -835,7 +836,7 @@
             <span class="comment">// Join a hosted match
             </span>LanMatchmakerRequest::JoinServer { addr } =&gt; {
                 <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = lan_join_server(<span class="kw-2">&amp;</span>matchmaker_channel, addr).<span class="kw">await </span>{
-                    <span class="macro">warn!</span>(<span class="string">&quot;failed to join server: {err:?}&quot;</span>);
+                    <span class="macro">warn!</span>(<span class="string">"failed to join server: {err:?}"</span>);
                 }
             }
         }
@@ -848,7 +849,7 @@
     matchmaker_channel: <span class="kw-2">&amp;</span>BiChannelServer&lt;LanMatchmakerRequest, LanMatchmakerResponse&gt;,
     <span class="kw-2">mut </span>player_count: u32,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="macro">info!</span>(<span class="string">&quot;Starting LAN server&quot;</span>);
+    <span class="macro">info!</span>(<span class="string">"Starting LAN server"</span>);
     matchmaker_channel
         .send(LanMatchmakerResponse::ServerStarted)
         .<span class="kw">await</span><span class="question-mark">?</span>;
@@ -869,9 +870,9 @@
                     LanMatchmakerRequest::StopServer =&gt; {
                         <span class="kw">break</span>;
                     }
-                    LanMatchmakerRequest::StopJoin =&gt; {} <span class="comment">// Not joining, so don&#39;t do anything
+                    LanMatchmakerRequest::StopJoin =&gt; {} <span class="comment">// Not joining, so don't do anything
                     </span>LanMatchmakerRequest::JoinServer { .. } =&gt; {
-                        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Cannot join server while hosting server&quot;</span>);
+                        <span class="macro">anyhow::bail!</span>(<span class="string">"Cannot join server while hosting server"</span>);
                     }
                 }
             }
@@ -879,11 +880,11 @@
             <span class="comment">// Handle new connections
             </span>new_connection = ep.accept() =&gt; {
                 <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>new_connection) = new_connection <span class="kw">else </span>{
-                    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;unable to accept new connections&quot;</span>);
+                    <span class="macro">anyhow::bail!</span>(<span class="string">"unable to accept new connections"</span>);
                 };
                 <span class="kw">let </span>result = <span class="kw">async move </span>{
                     <span class="kw">let </span>alpn = new_connection.alpn().<span class="kw">await</span><span class="question-mark">?</span>;
-                    <span class="macro">anyhow::ensure!</span>(alpn.as_bytes() == PLAY_ALPN, <span class="string">&quot;unexpected ALPN&quot;</span>);
+                    <span class="macro">anyhow::ensure!</span>(alpn == PLAY_ALPN, <span class="string">"unexpected ALPN"</span>);
                     <span class="kw">let </span>conn = new_connection.<span class="kw">await</span><span class="question-mark">?</span>;
                     anyhow::Ok(conn)
                 };
@@ -892,10 +893,10 @@
                     <span class="prelude-val">Ok</span>(conn) =&gt; {
                         connections.push(conn);
                         <span class="kw">let </span>current_players = connections.len() + <span class="number">1</span>;
-                        <span class="macro">info!</span>(%current_players, <span class="string">&quot;New player connection&quot;</span>);
+                        <span class="macro">info!</span>(%current_players, <span class="string">"New player connection"</span>);
                     }
                     <span class="prelude-val">Err</span>(err) =&gt; {
-                        <span class="macro">warn!</span>(<span class="string">&quot;failed to accept connection: {:?}&quot;</span>, err);
+                        <span class="macro">warn!</span>(<span class="string">"failed to accept connection: {:?}"</span>, err);
                         <span class="kw">continue</span>;
                     }
                 }
@@ -905,7 +906,7 @@
         <span class="comment">// Discard closed connections
         </span>connections.retain(|conn| {
             <span class="kw">if </span>conn.close_reason().is_some() {
-                <span class="macro">info!</span>(<span class="string">&quot;Player closed connection&quot;</span>);
+                <span class="macro">info!</span>(<span class="string">"Player closed connection"</span>);
                 <span class="bool-val">false
             </span>} <span class="kw">else </span>{
                 <span class="bool-val">true
@@ -916,13 +917,13 @@
         <span class="kw">let </span>target_players = player_count;
         <span class="macro">info!</span>(%current_players, %target_players);
 
-        <span class="comment">// If we&#39;re ready to start a match
+        <span class="comment">// If we're ready to start a match
         </span><span class="kw">if </span>connections.len() == (player_count - <span class="number">1</span>) <span class="kw">as </span>usize {
-            <span class="macro">info!</span>(<span class="string">&quot;All players joined.&quot;</span>);
+            <span class="macro">info!</span>(<span class="string">"All players joined."</span>);
 
             <span class="kw">let </span>endpoint = get_network_endpoint().<span class="kw">await</span>;
 
-            <span class="comment">// Tell all clients we&#39;re ready
+            <span class="comment">// Tell all clients we're ready
             </span><span class="kw">for </span>(i, conn) <span class="kw">in </span>connections.iter().enumerate() {
                 <span class="kw">let </span><span class="kw-2">mut </span>peers = Vec::new();
                 connections
@@ -930,7 +931,7 @@
                     .enumerate()
                     .filter(|x| x.<span class="number">0 </span>!= i)
                     .for_each(|(i, conn)| {
-                        <span class="kw">let </span>id = get_remote_node_id(conn).expect(<span class="string">&quot;invalid connection&quot;</span>);
+                        <span class="kw">let </span>id = get_remote_node_id(conn).expect(<span class="string">"invalid connection"</span>);
                         <span class="kw">let </span><span class="kw-2">mut </span>addr = NodeAddr::new(id);
                         <span class="kw">if let </span><span class="prelude-val">Some</span>(info) = endpoint.connection_info(id) {
                             <span class="kw">if let </span><span class="prelude-val">Some</span>(relay_url) = info.relay_url {
@@ -968,12 +969,12 @@
                     player_count,
                 })
                 .<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="macro">info!</span>(player_idx=<span class="number">0</span>, %player_count, <span class="string">&quot;Matchmaking finished&quot;</span>);
+            <span class="macro">info!</span>(player_idx=<span class="number">0</span>, %player_count, <span class="string">"Matchmaking finished"</span>);
 
             <span class="comment">// Break out of the server loop
             </span><span class="kw">break</span>;
 
-            <span class="comment">// If we don&#39;t have enough players yet, send the updated player count to the game.
+            <span class="comment">// If we don't have enough players yet, send the updated player count to the game.
         </span>} <span class="kw">else </span>{
             matchmaker_channel
                 .send(LanMatchmakerResponse::PlayerCount(current_players))
@@ -1002,14 +1003,14 @@
             player_idx,
             player_count,
         } =&gt; {
-            <span class="macro">info!</span>(%player_count, %player_idx, <span class="question-mark">?</span>peer_addrs, <span class="string">&quot;Matchmaking finished&quot;</span>);
+            <span class="macro">info!</span>(%player_count, %player_idx, <span class="question-mark">?</span>peer_addrs, <span class="string">"Matchmaking finished"</span>);
 
             <span class="kw">let </span>peer_connections =
                 establish_peer_connections(player_idx, player_count, peer_addrs, <span class="prelude-val">Some</span>(conn))
                     .<span class="kw">await</span><span class="question-mark">?</span>;
 
             <span class="kw">let </span>socket = Socket::new(player_idx, peer_connections);
-            <span class="macro">info!</span>(<span class="string">&quot;Connections established.&quot;</span>);
+            <span class="macro">info!</span>(<span class="string">"Connections established."</span>);
 
             matchmaker_channel
                 .send(LanMatchmakerResponse::GameStarting {
@@ -1083,7 +1084,7 @@
                 ping_rs::send_ping(<span class="kw-2">&amp;</span>server, Duration::from_secs(<span class="number">2</span>), <span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="prelude-val">None</span>);
 
             <span class="kw">let </span>ping = <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = ping_result {
-                <span class="macro">warn!</span>(<span class="string">&quot;Error pinging {server}: {e:?}&quot;</span>);
+                <span class="macro">warn!</span>(<span class="string">"Error pinging {server}: {e:?}"</span>);
                 <span class="prelude-val">None
             </span>} <span class="kw">else </span>{
                 <span class="prelude-val">Some</span>((Instant::now() - start).as_millis() <span class="kw">as </span>u16)

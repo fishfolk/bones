@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_schema/src/ptr.rs`."><title>ptr.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_schema" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_schema/src/ptr.rs`."><title>ptr.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_schema" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1946,13 +1947,13 @@
 <span class="doccomment">/// An untyped reference that knows the [`Schema`] of the pointee and that can be cast to a matching
 /// type.
 </span><span class="attr">#[derive(Clone, Copy)]
-</span><span class="kw">pub struct </span>SchemaRef&lt;<span class="lifetime">&#39;pointer</span>&gt; {
+</span><span class="kw">pub struct </span>SchemaRef&lt;<span class="lifetime">'pointer</span>&gt; {
     ptr: NonNull&lt;c_void&gt;,
-    schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
-    _phantom: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span>()&gt;,
+    schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
+    _phantom: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'pointer </span>()&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;pointer</span>&gt; SchemaRef&lt;<span class="lifetime">&#39;pointer</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'pointer</span>&gt; SchemaRef&lt;<span class="lifetime">'pointer</span>&gt; {
     <span class="doccomment">/// Unsafely cast this pointer to a specifc Rust type.
     /// # Safety
     /// All of the safety requirements of [`NonNull::as_ref()`] must be met.
@@ -1963,7 +1964,7 @@
     <span class="doccomment">/// Unsafely cast this pointer to a specifc Rust type.
     /// # Safety
     /// All of the safety requirements of [`NonNull::as_ref()`] must be met.
-    </span><span class="kw">pub unsafe fn </span>cast_into_unchecked&lt;T&gt;(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span>T {
+    </span><span class="kw">pub unsafe fn </span>cast_into_unchecked&lt;T&gt;(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'pointer </span>T {
         <span class="self">self</span>.ptr.cast::&lt;T&gt;().as_ref()
     }
 
@@ -1973,7 +1974,7 @@
     ///
     /// Panics if the schema of the pointer does not match that of the type you are casting to.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>cast&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span>T {
+    </span><span class="kw">pub fn </span>cast&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'pointer </span>T {
         <span class="self">self</span>.try_cast().expect(SchemaMismatchError::MSG)
     }
 
@@ -1982,7 +1983,7 @@
     /// # Errors
     ///
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
-    </span><span class="kw">pub fn </span>try_cast&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span>T, SchemaMismatchError&gt; {
+    </span><span class="kw">pub fn </span>try_cast&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'pointer </span>T, SchemaMismatchError&gt; {
         <span class="kw">if </span><span class="self">self</span>.schema.represents(T::schema()) {
             <span class="comment">// SOUND: the schemas have the same memory representation.
             </span><span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.cast_into_unchecked() })
@@ -1992,7 +1993,7 @@
     }
 
     <span class="doccomment">/// Create a new [`SchemaRef`] from a reference to a type that implements [`HasSchema`].
-    </span><span class="kw">pub fn </span>new&lt;T: HasSchema&gt;(v: <span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span>T) -&gt; SchemaRef&lt;<span class="lifetime">&#39;pointer</span>&gt; {
+    </span><span class="kw">pub fn </span>new&lt;T: HasSchema&gt;(v: <span class="kw-2">&amp;</span><span class="lifetime">'pointer </span>T) -&gt; SchemaRef&lt;<span class="lifetime">'pointer</span>&gt; {
         <span class="kw">let </span>schema = T::schema();
         SchemaRef {
             <span class="comment">// SOUND: The &amp;T passed in cannot be null.
@@ -2002,14 +2003,14 @@
         }
     }
 
-    <span class="doccomment">/// Create a new [`SchemaRef`] from a raw pointer and it&#39;s schema.
+    <span class="doccomment">/// Create a new [`SchemaRef`] from a raw pointer and it's schema.
     ///
     /// # Safety
     /// - The pointee of `ptr` must be accurately described by the given `schema`.
     /// - `inner` must have correct provenance to allow read of the pointee type.
     /// - The pointer must be valid for the full lifetime of this [`SchemaRef`].
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub unsafe fn </span>from_ptr_schema(ptr: <span class="kw-2">*const </span>c_void, schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub unsafe fn </span>from_ptr_schema(ptr: <span class="kw-2">*const </span>c_void, schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             ptr: NonNull::new_unchecked(ptr <span class="kw">as </span><span class="kw-2">*mut </span>c_void),
             schema,
@@ -2023,7 +2024,7 @@
     }
 
     <span class="doccomment">/// Get the [`Schema`] for the pointer.
-    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
         <span class="self">self</span>.schema
     }
 
@@ -2036,21 +2037,21 @@
     }
 
     <span class="doccomment">/// Borrow the schema ref as a [`SchemaMap`] if it is one.
-    </span><span class="kw">pub fn </span>as_map(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span>SchemaMap&gt; {
+    </span><span class="kw">pub fn </span>as_map(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'pointer </span>SchemaMap&gt; {
         <span class="macro">matches!</span>(<span class="self">self</span>.schema.kind, SchemaKind::Map { .. })
             <span class="comment">// SOUND: Schema asserts this is a schema map
             </span>.then(|| <span class="kw">unsafe </span>{ <span class="self">self</span>.cast_into_unchecked::&lt;SchemaMap&gt;() })
     }
 
     <span class="doccomment">/// Borrow the schema ref as a [`SchemaVec`] if it is one.
-    </span><span class="kw">pub fn </span>as_vec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span>SchemaVec&gt; {
+    </span><span class="kw">pub fn </span>as_vec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'pointer </span>SchemaVec&gt; {
         <span class="macro">matches!</span>(<span class="self">self</span>.schema.kind, SchemaKind::Vec(<span class="kw">_</span>))
             <span class="comment">// SOUND: Schema asserts this is a schema map
             </span>.then(|| <span class="kw">unsafe </span>{ <span class="self">self</span>.cast_into_unchecked::&lt;SchemaVec&gt;() })
     }
 
     <span class="doccomment">/// Borrow the schema ref as a [`SchemaBox`] if it is one.
-    </span><span class="kw">pub fn </span>as_box(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&lt;<span class="lifetime">&#39;pointer</span>&gt;&gt; {
+    </span><span class="kw">pub fn </span>as_box(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&lt;<span class="lifetime">'pointer</span>&gt;&gt; {
         <span class="macro">matches!</span>(<span class="self">self</span>.schema.kind, SchemaKind::Vec(<span class="kw">_</span>))
             <span class="comment">// SOUND: Schema asserts this is a schema box
             </span>.then(|| <span class="kw">unsafe </span>{ <span class="self">self</span>.cast_into_unchecked::&lt;SchemaBox&gt;().as_ref() })
@@ -2060,11 +2061,11 @@
     ///
     /// This is used in the display and debug implementations.
     </span><span class="kw">pub fn </span>debug_format_value(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
-        f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.access_borrowed()))
+        f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{:?}"</span>, <span class="self">self</span>.access_borrowed()))
     }
 
     <span class="doccomment">/// Get a helper to access the inner data.
-    </span><span class="kw">pub fn </span>access(<span class="self">self</span>) -&gt; SchemaRefAccess&lt;<span class="lifetime">&#39;pointer</span>&gt; {
+    </span><span class="kw">pub fn </span>access(<span class="self">self</span>) -&gt; SchemaRefAccess&lt;<span class="lifetime">'pointer</span>&gt; {
         SchemaRefAccess::new(<span class="self">self</span>)
     }
 
@@ -2074,12 +2075,12 @@
     }
 
     <span class="doccomment">/// Get the reference to a field.
-    </span><span class="kw">pub fn </span>field&lt;<span class="lifetime">&#39;a</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt;(<span class="self">self</span>, field_idx: I) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&lt;<span class="lifetime">&#39;pointer</span>&gt;&gt; {
+    </span><span class="kw">pub fn </span>field&lt;<span class="lifetime">'a</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">'a</span>&gt;&gt;&gt;(<span class="self">self</span>, field_idx: I) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&lt;<span class="lifetime">'pointer</span>&gt;&gt; {
         <span class="prelude-val">Some</span>(<span class="self">self</span>.access().field(field_idx)<span class="question-mark">?</span>.into_schema_ref())
     }
 
     <span class="doccomment">/// Get the field pointed to by the given path.
-    </span><span class="kw">pub fn </span>field_path&lt;<span class="lifetime">&#39;a</span>, I: IntoIterator&lt;Item = FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt;(<span class="self">self</span>, path: I) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
+    </span><span class="kw">pub fn </span>field_path&lt;<span class="lifetime">'a</span>, I: IntoIterator&lt;Item = FieldIdx&lt;<span class="lifetime">'a</span>&gt;&gt;&gt;(<span class="self">self</span>, path: I) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>current_field = <span class="self">self</span>;
         <span class="kw">for </span>field_idx <span class="kw">in </span>path {
             current_field = current_field.field(field_idx)<span class="question-mark">?</span>;
@@ -2091,7 +2092,7 @@
     </span><span class="kw">pub fn </span>clone_into_box(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaBox {
         <span class="kw">let </span><span class="prelude-val">Some</span>(clone_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.schema.clone_fn <span class="kw">else </span>{
             <span class="macro">panic!</span>(
-                <span class="string">&quot;The schema for type `{}` does not allow cloning it.&quot;</span>,
+                <span class="string">"The schema for type `{}` does not allow cloning it."</span>,
                 <span class="self">self</span>.schema.full_name
             );
         };
@@ -2103,43 +2104,43 @@
     }
 }
 
-<span class="kw">struct </span>SchemaRefValueDebug&lt;<span class="lifetime">&#39;a</span>&gt;(SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;);
-<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>SchemaRefValueDebug&lt;<span class="lifetime">&#39;_</span>&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+<span class="kw">struct </span>SchemaRefValueDebug&lt;<span class="lifetime">'a</span>&gt;(SchemaRef&lt;<span class="lifetime">'a</span>&gt;);
+<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>SchemaRefValueDebug&lt;<span class="lifetime">'_</span>&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         <span class="self">self</span>.<span class="number">0</span>.debug_format_value(f)
     }
 }
 
-<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>SchemaRef&lt;<span class="lifetime">&#39;_</span>&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        f.debug_tuple(<span class="string">&quot;SchemaRef&lt;&#39;_&gt;&quot;</span>)
+<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>SchemaRef&lt;<span class="lifetime">'_</span>&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_tuple(<span class="string">"SchemaRef&lt;'_&gt;"</span>)
             .field(<span class="kw-2">&amp;</span>SchemaRefValueDebug(<span class="kw-2">*</span><span class="self">self</span>))
             .finish()
     }
 }
-<span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>SchemaRef&lt;<span class="lifetime">&#39;_</span>&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+<span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>SchemaRef&lt;<span class="lifetime">'_</span>&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         &lt;SchemaRefValueDebug <span class="kw">as </span>std::fmt::Debug&gt;::fmt(<span class="kw-2">&amp;</span>SchemaRefValueDebug(<span class="kw-2">*</span><span class="self">self</span>), f)
     }
 }
 
 <span class="doccomment">/// Helper for accessing the inner data of a schema ref at runtime.
 </span><span class="attr">#[derive(Clone, Copy)]
-</span><span class="kw">pub enum </span>SchemaRefAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub enum </span>SchemaRefAccess&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// Access a struct.
-    </span>Struct(StructRefAccess&lt;<span class="lifetime">&#39;a</span>&gt;),
+    </span>Struct(StructRefAccess&lt;<span class="lifetime">'a</span>&gt;),
     <span class="doccomment">/// Access a vec.
-    </span>Vec(SchemaVecAccess&lt;<span class="lifetime">&#39;a</span>&gt;),
+    </span>Vec(SchemaVecAccess&lt;<span class="lifetime">'a</span>&gt;),
     <span class="doccomment">/// Access an enum.
-    </span>Enum(EnumRefAccess&lt;<span class="lifetime">&#39;a</span>&gt;),
+    </span>Enum(EnumRefAccess&lt;<span class="lifetime">'a</span>&gt;),
     <span class="doccomment">/// Access a map.
-    </span>Map(SchemaMapAccess&lt;<span class="lifetime">&#39;a</span>&gt;),
+    </span>Map(SchemaMapAccess&lt;<span class="lifetime">'a</span>&gt;),
     <span class="doccomment">/// Access a struct.
-    </span>Primitive(PrimitiveRef&lt;<span class="lifetime">&#39;a</span>&gt;),
+    </span>Primitive(PrimitiveRef&lt;<span class="lifetime">'a</span>&gt;),
 }
 
-<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>SchemaRefAccess&lt;<span class="lifetime">&#39;_</span>&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>SchemaRefAccess&lt;<span class="lifetime">'_</span>&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         <span class="kw">match </span><span class="self">self </span>{
             SchemaRefAccess::Struct(s) =&gt; {
                 <span class="kw">let </span>is_tuple = s.fields().any(|x| x.name.is_none());
@@ -2165,7 +2166,7 @@
                 builder.finish()
             }
             SchemaRefAccess::Enum(e) =&gt; {
-                f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{:?}&quot;</span>, SchemaRefValueDebug(e.value().<span class="number">0</span>)))
+                f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{:?}"</span>, SchemaRefValueDebug(e.value().<span class="number">0</span>)))
             }
             SchemaRefAccess::Map(m) =&gt; {
                 <span class="kw">let </span><span class="kw-2">mut </span>builder = f.debug_map();
@@ -2176,20 +2177,20 @@
                 builder.finish()
             }
             SchemaRefAccess::Primitive(p) =&gt; <span class="kw">match </span>p {
-                PrimitiveRef::Bool(b) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{b}&quot;</span>)),
-                PrimitiveRef::U8(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{n}&quot;</span>)),
-                PrimitiveRef::U16(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{n}&quot;</span>)),
-                PrimitiveRef::U32(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{n}&quot;</span>)),
-                PrimitiveRef::U64(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{n}&quot;</span>)),
-                PrimitiveRef::U128(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{n}&quot;</span>)),
-                PrimitiveRef::I8(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{n}&quot;</span>)),
-                PrimitiveRef::I16(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{n}&quot;</span>)),
-                PrimitiveRef::I32(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{n}&quot;</span>)),
-                PrimitiveRef::I64(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{n}&quot;</span>)),
-                PrimitiveRef::I128(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{n}&quot;</span>)),
-                PrimitiveRef::F32(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{n}&quot;</span>)),
-                PrimitiveRef::F64(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{n}&quot;</span>)),
-                PrimitiveRef::String(s) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;{s:?}&quot;</span>)),
+                PrimitiveRef::Bool(b) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{b}"</span>)),
+                PrimitiveRef::U8(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{n}"</span>)),
+                PrimitiveRef::U16(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{n}"</span>)),
+                PrimitiveRef::U32(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{n}"</span>)),
+                PrimitiveRef::U64(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{n}"</span>)),
+                PrimitiveRef::U128(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{n}"</span>)),
+                PrimitiveRef::I8(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{n}"</span>)),
+                PrimitiveRef::I16(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{n}"</span>)),
+                PrimitiveRef::I32(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{n}"</span>)),
+                PrimitiveRef::I64(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{n}"</span>)),
+                PrimitiveRef::I128(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{n}"</span>)),
+                PrimitiveRef::F32(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{n}"</span>)),
+                PrimitiveRef::F64(n) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{n}"</span>)),
+                PrimitiveRef::String(s) =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"{s:?}"</span>)),
                 PrimitiveRef::Opaque {
                     size,
                     align,
@@ -2206,7 +2207,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;ptr</span>&gt; SchemaRefAccess&lt;<span class="lifetime">&#39;ptr</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'ptr</span>&gt; SchemaRefAccess&lt;<span class="lifetime">'ptr</span>&gt; {
     <span class="doccomment">/// Create a new [`SchemaRefAccess`] for the given [`SchemaRef`].
     ///
     /// This will create a new independent [`SchemaRefAccess`] that may be used even after
@@ -2236,7 +2237,7 @@
     /// a borrow to the original schema ref it was created from. This is specifically useful becuse
     /// it lets you create a [`SchemaRefAccess`] from a refeence to a schema ref, which is required
     /// when accessing a schema ref that is behind an atomic resource borrow, for example.
-    </span><span class="kw">pub fn </span>new_borrowed&lt;<span class="lifetime">&#39;borrow</span>&gt;(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;borrow </span>SchemaRef&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; SchemaRefAccess&lt;<span class="lifetime">&#39;borrow</span>&gt; {
+    </span><span class="kw">pub fn </span>new_borrowed&lt;<span class="lifetime">'borrow</span>&gt;(value: <span class="kw-2">&amp;</span><span class="lifetime">'borrow </span>SchemaRef&lt;<span class="lifetime">'_</span>&gt;) -&gt; SchemaRefAccess&lt;<span class="lifetime">'borrow</span>&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;</span>value.schema.kind {
             SchemaKind::Struct(<span class="kw">_</span>) =&gt; SchemaRefAccess::Struct(StructRefAccess(<span class="kw-2">*</span>value)),
             SchemaKind::Vec(<span class="kw">_</span>) =&gt; SchemaRefAccess::Vec(SchemaVecAccess {
@@ -2254,7 +2255,7 @@
     }
 
     <span class="doccomment">/// Get field with the given index.
-    </span><span class="kw">pub fn </span>field&lt;<span class="lifetime">&#39;a</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt;(<span class="self">self</span>, field_idx: I) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
+    </span><span class="kw">pub fn </span>field&lt;<span class="lifetime">'a</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">'a</span>&gt;&gt;&gt;(<span class="self">self</span>, field_idx: I) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>field_idx = field_idx.into();
         <span class="kw">match </span><span class="self">self </span>{
             SchemaRefAccess::Struct(s) =&gt; s.field(field_idx),
@@ -2266,7 +2267,7 @@
     }
 
     <span class="doccomment">/// Get the field pointed to by the given path.
-    </span><span class="kw">pub fn </span>field_path&lt;<span class="lifetime">&#39;a</span>, I: IntoIterator&lt;Item = FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt;(<span class="self">self</span>, path: I) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
+    </span><span class="kw">pub fn </span>field_path&lt;<span class="lifetime">'a</span>, I: IntoIterator&lt;Item = FieldIdx&lt;<span class="lifetime">'a</span>&gt;&gt;&gt;(<span class="self">self</span>, path: I) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>current_field = <span class="self">self</span>;
         <span class="kw">for </span>field_idx <span class="kw">in </span>path {
             current_field = current_field.field(field_idx)<span class="question-mark">?</span>;
@@ -2275,7 +2276,7 @@
     }
 
     <span class="doccomment">/// Borrow this [`SchemaRefMutAccess`] as a [`SchemaRefAccess`].
-    </span><span class="kw">pub fn </span>into_schema_ref(<span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">&#39;ptr</span>&gt; {
+    </span><span class="kw">pub fn </span>into_schema_ref(<span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">'ptr</span>&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             SchemaRefAccess::Struct(s) =&gt; s.<span class="number">0</span>,
             SchemaRefAccess::Vec(v) =&gt; v.into_schema_ref(),
@@ -2288,48 +2289,48 @@
 
 <span class="doccomment">/// Access helper for a [`SchemaVec`].
 </span><span class="attr">#[derive(Deref, DerefMut, Clone, Copy)]
-</span><span class="kw">pub struct </span>SchemaVecAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>SchemaVecAccess&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// The schema vec borrow.
     </span><span class="attr">#[deref]
-    </span>vec: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaVec,
-    orig_ref: SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;,
+    </span>vec: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaVec,
+    orig_ref: SchemaRef&lt;<span class="lifetime">'a</span>&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; SchemaVecAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; SchemaVecAccess&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// Convert back to a [`SchemaRefMut`]
-    </span><span class="kw">pub fn </span>into_schema_ref(<span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt; {
+    </span><span class="kw">pub fn </span>into_schema_ref(<span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">'a</span>&gt; {
         <span class="self">self</span>.orig_ref
     }
 }
 
 <span class="doccomment">/// Access helper for a [`SchemaMap`].
 </span><span class="attr">#[derive(Deref, DerefMut, Clone, Copy)]
-</span><span class="kw">pub struct </span>SchemaMapAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>SchemaMapAccess&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// The schema map borrow.
     </span><span class="attr">#[deref]
-    </span>map: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>SchemaMap,
-    orig_ref: SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;,
+    </span>map: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaMap,
+    orig_ref: SchemaRef&lt;<span class="lifetime">'a</span>&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; SchemaMapAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; SchemaMapAccess&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// Convert back to a [`SchemaRefMut`]
-    </span><span class="kw">pub fn </span>into_schema_ref(<span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt; {
+    </span><span class="kw">pub fn </span>into_schema_ref(<span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">'a</span>&gt; {
         <span class="self">self</span>.orig_ref
     }
 }
 
 <span class="doccomment">/// Helper for accessing the inner data of a schema ref at runtime.
 </span><span class="attr">#[derive(Clone, Copy)]
-</span><span class="kw">pub struct </span>StructRefAccess&lt;<span class="lifetime">&#39;a</span>&gt;(SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;);
+</span><span class="kw">pub struct </span>StructRefAccess&lt;<span class="lifetime">'a</span>&gt;(SchemaRef&lt;<span class="lifetime">'a</span>&gt;);
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; StructRefAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="doccomment">/// Get the struct&#39;s schema.
-    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; StructRefAccess&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="doccomment">/// Get the struct's schema.
+    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
         <span class="self">self</span>.<span class="number">0</span>.schema
     }
 
     <span class="doccomment">/// Get the [`StructSchemaInfo`] for this struct.
-    </span><span class="kw">pub fn </span>info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>StructSchemaInfo {
+    </span><span class="kw">pub fn </span>info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>StructSchemaInfo {
         <span class="self">self</span>.<span class="number">0</span>.schema.kind.as_struct().unwrap()
     }
 
@@ -2342,7 +2343,7 @@
     }
 
     <span class="doccomment">/// Access a field, if it exists.
-    </span><span class="kw">pub fn </span>field&lt;<span class="lifetime">&#39;i</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">&#39;i</span>&gt;&gt;&gt;(<span class="self">self</span>, field_idx: I) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefAccess&lt;<span class="lifetime">&#39;a</span>&gt;&gt; {
+    </span><span class="kw">pub fn </span>field&lt;<span class="lifetime">'i</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">'i</span>&gt;&gt;&gt;(<span class="self">self</span>, field_idx: I) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefAccess&lt;<span class="lifetime">'a</span>&gt;&gt; {
         <span class="kw">let </span>field_idx = field_idx.into();
         <span class="kw">let </span>field_idx = <span class="kw">match </span>field_idx {
             FieldIdx::Name(name) =&gt; <span class="self">self
@@ -2375,27 +2376,27 @@
     }
 
     <span class="doccomment">/// Convert to a [`SchemaRef`].
-    </span><span class="kw">pub fn </span>as_schema_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt; {
+    </span><span class="kw">pub fn </span>as_schema_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">'a</span>&gt; {
         <span class="self">self</span>.<span class="number">0
     </span>}
 }
 
 <span class="doccomment">/// Iterator for [`StructRefAccess::fields()`].
-</span><span class="kw">pub struct </span>StructRefFieldIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    ptr: SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;,
+</span><span class="kw">pub struct </span>StructRefFieldIter&lt;<span class="lifetime">'a</span>&gt; {
+    ptr: SchemaRef&lt;<span class="lifetime">'a</span>&gt;,
     field_idx: usize,
 }
 
 <span class="doccomment">/// A field returned by [`StructRefFieldIter`].
-</span><span class="kw">pub struct </span>StructRefFieldIterField&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>StructRefFieldIterField&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// The name of the field, if set.
-    </span><span class="kw">pub </span>name: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;,
-    <span class="doccomment">/// The field&#39;s value.
-    </span><span class="kw">pub </span>value: SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;,
+    </span><span class="kw">pub </span>name: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
+    <span class="doccomment">/// The field's value.
+    </span><span class="kw">pub </span>value: SchemaRef&lt;<span class="lifetime">'a</span>&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>StructRefFieldIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = StructRefFieldIterField&lt;<span class="lifetime">&#39;a</span>&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>StructRefFieldIter&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">type </span>Item = StructRefFieldIterField&lt;<span class="lifetime">'a</span>&gt;;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>(name, <span class="kw">_</span>) = <span class="self">self</span>.ptr.schema.field_offsets().get(<span class="self">self</span>.field_idx)<span class="question-mark">?</span>;
@@ -2415,29 +2416,29 @@
 
 <span class="doccomment">/// Helper for accessing the inner data of a schema ref at runtime.
 </span><span class="attr">#[derive(Clone, Copy)]
-</span><span class="kw">pub struct </span>EnumRefAccess&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw">pub </span>SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;);
+</span><span class="kw">pub struct </span>EnumRefAccess&lt;<span class="lifetime">'a</span>&gt;(<span class="kw">pub </span>SchemaRef&lt;<span class="lifetime">'a</span>&gt;);
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; EnumRefAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="doccomment">/// Get the enum&#39;s schema.
-    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; EnumRefAccess&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="doccomment">/// Get the enum's schema.
+    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
         <span class="self">self</span>.<span class="number">0</span>.schema
     }
 
     <span class="doccomment">/// Get the enum schema info.
-    </span><span class="kw">pub fn </span>info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>EnumSchemaInfo {
+    </span><span class="kw">pub fn </span>info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>EnumSchemaInfo {
         <span class="kw">let </span>SchemaKind::Enum(info) = <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.schema.kind <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Not an enum&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Not an enum"</span>);
         };
         info
     }
 
     <span class="doccomment">/// Get the [`VariantInfo`] for the current variant.
-    </span><span class="kw">pub fn </span>variant_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>VariantInfo {
+    </span><span class="kw">pub fn </span>variant_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>VariantInfo {
         <span class="kw-2">&amp;</span><span class="self">self</span>.info().variants[<span class="self">self</span>.variant_idx() <span class="kw">as </span>usize]
     }
 
     <span class="doccomment">/// Get the [`StructSchemaInfo`] for the current variant.
-    </span><span class="kw">pub fn </span>variant_struct_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>StructSchemaInfo {
+    </span><span class="kw">pub fn </span>variant_struct_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>StructSchemaInfo {
         <span class="self">self</span>.variant_info().schema.kind.as_struct().unwrap()
     }
 
@@ -2452,14 +2453,14 @@
     }
 
     <span class="doccomment">/// Get the name of the currently selected variant.
-    </span><span class="kw">pub fn </span>variant_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+    </span><span class="kw">pub fn </span>variant_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
         <span class="kw">let </span>info = <span class="self">self</span>.info();
         <span class="kw">let </span>idx = <span class="self">self</span>.variant_idx();
         info.variants[idx <span class="kw">as </span>usize].name.as_ref()
     }
 
-    <span class="doccomment">/// Get a reference to the enum&#39;s currently selected value.
-    </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; StructRefAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="doccomment">/// Get a reference to the enum's currently selected value.
+    </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; StructRefAccess&lt;<span class="lifetime">'a</span>&gt; {
         <span class="kw">let </span>info = <span class="self">self</span>.info();
         <span class="kw">let </span>variant_idx = <span class="self">self</span>.variant_idx();
         <span class="kw">let </span>variant_info = <span class="kw-2">&amp;</span>info.variants[variant_idx <span class="kw">as </span>usize];
@@ -2475,35 +2476,35 @@
 
 <span class="doccomment">/// Helper for accessing the inner data of a schema ref at runtime.
 </span><span class="attr">#[derive(Clone, Copy, Debug)]
-</span><span class="kw">pub enum </span>PrimitiveRef&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub enum </span>PrimitiveRef&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// A [`bool`]
-    </span>Bool(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>bool),
+    </span>Bool(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>bool),
     <span class="doccomment">/// A [`u8`]
-    </span>U8(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u8),
+    </span>U8(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>u8),
     <span class="doccomment">/// A [`u16`]
-    </span>U16(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u16),
+    </span>U16(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>u16),
     <span class="doccomment">/// A [`u32`]
-    </span>U32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u32),
+    </span>U32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>u32),
     <span class="doccomment">/// A [`u64`]
-    </span>U64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u64),
+    </span>U64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>u64),
     <span class="doccomment">/// A [`u128`]
-    </span>U128(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u128),
+    </span>U128(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>u128),
     <span class="doccomment">/// An [`i8`]
-    </span>I8(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>i8),
+    </span>I8(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>i8),
     <span class="doccomment">/// An [`i16`]
-    </span>I16(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>i16),
+    </span>I16(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>i16),
     <span class="doccomment">/// An [`i32`]
-    </span>I32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>i32),
+    </span>I32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>i32),
     <span class="doccomment">/// An [`i64`]
-    </span>I64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>i64),
+    </span>I64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>i64),
     <span class="doccomment">/// An [`i128`]
-    </span>I128(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>i128),
+    </span>I128(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>i128),
     <span class="doccomment">/// An [`f32`]
-    </span>F32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>f32),
+    </span>F32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>f32),
     <span class="doccomment">/// An [`f64`]
-    </span>F64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>f64),
+    </span>F64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>f64),
     <span class="doccomment">/// A [`String`]
-    </span>String(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>String),
+    </span>String(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>String),
     <span class="doccomment">/// An opaque type
     </span>Opaque {
         <span class="doccomment">/// The size of the opaque type.
@@ -2511,12 +2512,12 @@
         <span class="doccomment">/// The align of the opaque type.
         </span>align: usize,
         <span class="doccomment">/// The schema ref.
-        </span>schema_ref: SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;,
+        </span>schema_ref: SchemaRef&lt;<span class="lifetime">'a</span>&gt;,
     },
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;ptr</span>&gt; PrimitiveRef&lt;<span class="lifetime">&#39;ptr</span>&gt; {
-    <span class="kw">fn </span>into_schema_ref(<span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">&#39;ptr</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'ptr</span>&gt; PrimitiveRef&lt;<span class="lifetime">'ptr</span>&gt; {
+    <span class="kw">fn </span>into_schema_ref(<span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">'ptr</span>&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             PrimitiveRef::Bool(b) =&gt; SchemaRef::new(b),
             PrimitiveRef::U8(n) =&gt; SchemaRef::new(n),
@@ -2537,8 +2538,8 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;&gt; <span class="kw">for </span>PrimitiveRef&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">fn </span>from(value: SchemaRef&lt;<span class="lifetime">&#39;a</span>&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;SchemaRef&lt;<span class="lifetime">'a</span>&gt;&gt; <span class="kw">for </span>PrimitiveRef&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>from(value: SchemaRef&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span><span class="kw-2">&amp;</span>value.schema.kind {
             SchemaKind::Primitive(p) =&gt; <span class="kw">match </span>p {
                 Primitive::Bool =&gt; PrimitiveRef::Bool(value.cast()),
@@ -2561,30 +2562,30 @@
                     schema_ref: value,
                 },
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;Schema mismatch&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"Schema mismatch"</span>),
         }
     }
 }
 
 <span class="doccomment">/// An untyped mutable reference that knows the [`Schema`] of the pointee and that can be cast to a matching
 /// type.
-</span><span class="kw">pub struct </span>SchemaRefMut&lt;<span class="lifetime">&#39;pointer</span>&gt; {
+</span><span class="kw">pub struct </span>SchemaRefMut&lt;<span class="lifetime">'pointer</span>&gt; {
     ptr: NonNull&lt;c_void&gt;,
-    schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
-    _phantom: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span><span class="kw-2">mut </span>()&gt;,
+    schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
+    _phantom: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'pointer </span><span class="kw-2">mut </span>()&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;pointer</span>&gt; std::fmt::Debug <span class="kw">for </span>SchemaRefMut&lt;<span class="lifetime">&#39;pointer</span>&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        f.debug_struct(<span class="string">&quot;SchemaRefMut&quot;</span>)
-            <span class="comment">// .field(&quot;ptr&quot;, &amp;self.ptr)
-            </span>.field(<span class="string">&quot;schema&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.schema)
-            <span class="comment">// .field(&quot;parent_lifetime&quot;, &amp;self.parent_lifetime)
+<span class="kw">impl</span>&lt;<span class="lifetime">'pointer</span>&gt; std::fmt::Debug <span class="kw">for </span>SchemaRefMut&lt;<span class="lifetime">'pointer</span>&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">"SchemaRefMut"</span>)
+            <span class="comment">// .field("ptr", &amp;self.ptr)
+            </span>.field(<span class="string">"schema"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.schema)
+            <span class="comment">// .field("parent_lifetime", &amp;self.parent_lifetime)
             </span>.finish()
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;pointer</span>&gt; SchemaRefMut&lt;<span class="lifetime">&#39;pointer</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'pointer</span>&gt; SchemaRefMut&lt;<span class="lifetime">'pointer</span>&gt; {
     <span class="doccomment">/// Cast this pointer to a mutable reference.
     /// # Safety
     /// You must uphold all safety requirements of [`NonNull::as_mut()`].
@@ -2595,7 +2596,7 @@
     <span class="doccomment">/// Cast this pointer to a mutable reference.
     /// # Safety
     /// You must uphold all safety requirements of [`NonNull::as_mut()`].
-    </span><span class="kw">pub unsafe fn </span>cast_into_mut_unchecked&lt;T&gt;(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span><span class="kw-2">mut </span>T {
+    </span><span class="kw">pub unsafe fn </span>cast_into_mut_unchecked&lt;T&gt;(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'pointer </span><span class="kw-2">mut </span>T {
         <span class="self">self</span>.ptr.cast::&lt;T&gt;().as_mut()
     }
 
@@ -2605,7 +2606,7 @@
     ///
     /// Panics if the schema of the pointer does not match that of the type you are casting to.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>cast_mut&lt;T: HasSchema + <span class="lifetime">&#39;static</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>T {
+    </span><span class="kw">pub fn </span>cast_mut&lt;T: HasSchema + <span class="lifetime">'static</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>T {
         <span class="self">self</span>.try_cast_mut().expect(SchemaMismatchError::MSG)
     }
 
@@ -2630,7 +2631,7 @@
     /// # Panics
     /// Panics if the schema of the pointer does not match that of the type you are casting to.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>cast_into_mut&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span><span class="kw-2">mut </span>T {
+    </span><span class="kw">pub fn </span>cast_into_mut&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'pointer </span><span class="kw-2">mut </span>T {
         <span class="self">self</span>.try_cast_into_mut().unwrap()
     }
 
@@ -2641,9 +2642,9 @@
     ///
     /// # Errors
     /// Errors if the schema of the pointer does not match that of the type you are casting to.
-    </span><span class="kw">pub fn </span>try_cast_into_mut&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span><span class="kw-2">mut </span>T, SchemaMismatchError&gt; {
+    </span><span class="kw">pub fn </span>try_cast_into_mut&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'pointer </span><span class="kw-2">mut </span>T, SchemaMismatchError&gt; {
         <span class="kw">if </span><span class="self">self</span>.schema.represents(T::schema()) {
-            <span class="comment">// SOUND: We&#39;ve checked that the pointer represents T
+            <span class="comment">// SOUND: We've checked that the pointer represents T
             </span><span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.ptr.cast::&lt;T&gt;().as_mut() })
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(SchemaMismatchError)
@@ -2651,7 +2652,7 @@
     }
 
     <span class="doccomment">/// Create a new [`SchemaRefMut`] from a reference to a type that implements [`HasSchema`].
-    </span><span class="kw">pub fn </span>new&lt;T: HasSchema&gt;(v: <span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span><span class="kw-2">mut </span>T) -&gt; SchemaRefMut&lt;<span class="lifetime">&#39;pointer</span>&gt; {
+    </span><span class="kw">pub fn </span>new&lt;T: HasSchema&gt;(v: <span class="kw-2">&amp;</span><span class="lifetime">'pointer </span><span class="kw-2">mut </span>T) -&gt; SchemaRefMut&lt;<span class="lifetime">'pointer</span>&gt; {
         <span class="kw">let </span>schema = T::schema();
         SchemaRefMut {
             <span class="comment">// SOUND: the &amp;mut T reference cannot be null.
@@ -2661,7 +2662,7 @@
         }
     }
 
-    <span class="doccomment">/// Create a new [`SchemaRefMut`] from a raw pointer and it&#39;s schema.
+    <span class="doccomment">/// Create a new [`SchemaRefMut`] from a raw pointer and it's schema.
     ///
     /// # Safety
     /// - The pointee of `ptr` must be accurately described by the given `schema`.
@@ -2669,8 +2670,8 @@
     /// - The pointer must be valid for the full lifetime of this [`SchemaRef`].
     </span><span class="kw">pub unsafe fn </span>from_ptr_schema(
         ptr: <span class="kw-2">*mut </span>c_void,
-        schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
-    ) -&gt; SchemaRefMut&lt;<span class="lifetime">&#39;pointer</span>&gt; {
+        schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
+    ) -&gt; SchemaRefMut&lt;<span class="lifetime">'pointer</span>&gt; {
         <span class="self">Self </span>{
             ptr: NonNull::new_unchecked(ptr),
             schema,
@@ -2679,7 +2680,7 @@
     }
 
     <span class="doccomment">/// Borrow the schema ref as a [`SchemaMap`] if it is one.
-    </span><span class="kw">pub fn </span>into_map(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span><span class="kw-2">mut </span>SchemaMap, <span class="self">Self</span>&gt; {
+    </span><span class="kw">pub fn </span>into_map(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'pointer </span><span class="kw-2">mut </span>SchemaMap, <span class="self">Self</span>&gt; {
         <span class="macro">matches!</span>(<span class="self">self</span>.schema.kind, SchemaKind::Map { .. })
             <span class="comment">// SOUND: Schema asserts this is a schema map
             </span>.then(|| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>SchemaMap) })
@@ -2687,7 +2688,7 @@
     }
 
     <span class="doccomment">/// Borrow the schema ref as a [`SchemaVec`] if it is one.
-    </span><span class="kw">pub fn </span>into_vec(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;pointer </span><span class="kw-2">mut </span>SchemaVec, <span class="self">Self</span>&gt; {
+    </span><span class="kw">pub fn </span>into_vec(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'pointer </span><span class="kw-2">mut </span>SchemaVec, <span class="self">Self</span>&gt; {
         <span class="macro">matches!</span>(<span class="self">self</span>.schema.kind, SchemaKind::Vec(<span class="kw">_</span>))
             <span class="comment">// SOUND: Schema asserts this is a schema map
             </span>.then(|| <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(<span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>SchemaVec) })
@@ -2695,7 +2696,7 @@
     }
 
     <span class="doccomment">/// Borrow the schema ref as a [`SchemaBox`] if it is one.
-    </span><span class="kw">pub fn </span>into_box(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMut&lt;<span class="lifetime">&#39;pointer</span>&gt;, <span class="self">Self</span>&gt; {
+    </span><span class="kw">pub fn </span>into_box(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMut&lt;<span class="lifetime">'pointer</span>&gt;, <span class="self">Self</span>&gt; {
         <span class="macro">matches!</span>(<span class="self">self</span>.schema.kind, SchemaKind::Vec(<span class="kw">_</span>))
             <span class="comment">// SOUND: Schema asserts this is a schema box
             </span>.then(|| <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>(<span class="self">self</span>.ptr.as_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>SchemaBox)).as_mut() })
@@ -2703,12 +2704,12 @@
     }
 
     <span class="doccomment">/// Convert into an accessor for the inner data.
-    </span><span class="kw">pub fn </span>into_access_mut(<span class="self">self</span>) -&gt; SchemaRefMutAccess&lt;<span class="lifetime">&#39;pointer</span>&gt; {
+    </span><span class="kw">pub fn </span>into_access_mut(<span class="self">self</span>) -&gt; SchemaRefMutAccess&lt;<span class="lifetime">'pointer</span>&gt; {
         SchemaRefMutAccess::new(<span class="self">self</span>)
     }
 
     <span class="doccomment">/// Get a mutable access helper to this reference.
-    </span><span class="kw">pub fn </span>access_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaRefMutAccess&lt;<span class="lifetime">&#39;_</span>&gt; {
+    </span><span class="kw">pub fn </span>access_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaRefMutAccess&lt;<span class="lifetime">'_</span>&gt; {
         SchemaRefMutAccess::new_borrowed(<span class="self">self</span>)
     }
 
@@ -2718,7 +2719,7 @@
     }
 
     <span class="doccomment">/// Get the [`Schema`] for the pointer.
-    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
         <span class="self">self</span>.schema
     }
 
@@ -2731,7 +2732,7 @@
     }
 
     <span class="doccomment">/// Borrow this [`SchemaRefMut`] as a [`SchemaRef`].
-    </span><span class="kw">pub fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">&#39;_</span>&gt; {
+    </span><span class="kw">pub fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">'_</span>&gt; {
         SchemaRef {
             ptr: <span class="self">self</span>.ptr,
             schema: <span class="self">self</span>.schema,
@@ -2741,7 +2742,7 @@
 
     <span class="doccomment">/// Convert a borrowed [`SchemaRefMut`] to an owned [`SchemaRefMut`] with a lifetime matching
     /// That of the borrow.
-    </span><span class="kw">pub fn </span>reborrow(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">&#39;_</span>&gt; {
+    </span><span class="kw">pub fn </span>reborrow(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">'_</span>&gt; {
         SchemaRefMut {
             ptr: <span class="self">self</span>.ptr,
             schema: <span class="self">self</span>.schema,
@@ -2750,7 +2751,7 @@
     }
 
     <span class="doccomment">/// Get the reference to a field.
-    </span><span class="kw">pub fn </span>field&lt;<span class="lifetime">&#39;a</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, field_idx: I) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&gt; {
+    </span><span class="kw">pub fn </span>field&lt;<span class="lifetime">'a</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">'a</span>&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, field_idx: I) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&gt; {
         <span class="prelude-val">Some</span>(
             <span class="self">self</span>.access_mut()
                 .field(field_idx)
@@ -2760,7 +2761,7 @@
     }
 
     <span class="doccomment">/// Get the field pointed to by the given path.
-    </span><span class="kw">pub fn </span>field_path&lt;<span class="lifetime">&#39;a</span>, I: IntoIterator&lt;Item = FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt;(
+    </span><span class="kw">pub fn </span>field_path&lt;<span class="lifetime">'a</span>, I: IntoIterator&lt;Item = FieldIdx&lt;<span class="lifetime">'a</span>&gt;&gt;&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         path: I,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&gt; {
@@ -2770,7 +2771,7 @@
     }
 
     <span class="doccomment">/// Get the field pointed to by the given path.
-    </span><span class="kw">pub fn </span>into_field_path&lt;<span class="lifetime">&#39;a</span>, I: IntoIterator&lt;Item = FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt;(
+    </span><span class="kw">pub fn </span>into_field_path&lt;<span class="lifetime">'a</span>, I: IntoIterator&lt;Item = FieldIdx&lt;<span class="lifetime">'a</span>&gt;&gt;&gt;(
         <span class="self">self</span>,
         path: I,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
@@ -2780,26 +2781,26 @@
     }
 
     <span class="doccomment">/// Get the reference to a field.
-    </span><span class="kw">pub fn </span>into_field&lt;<span class="lifetime">&#39;a</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt;(
+    </span><span class="kw">pub fn </span>into_field&lt;<span class="lifetime">'a</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">'a</span>&gt;&gt;&gt;(
         <span class="self">self</span>,
         field_idx: I,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMut&lt;<span class="lifetime">&#39;pointer</span>&gt;, <span class="self">Self</span>&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMut&lt;<span class="lifetime">'pointer</span>&gt;, <span class="self">Self</span>&gt; {
         <span class="self">self</span>.into_access_mut()
             .field(field_idx)
             .map(|x| x.into_schema_ref_mut())
             .map_err(|access| access.into_schema_ref_mut())
     }
 
-    <span class="doccomment">/// Clone `other` and write it&#39;s data to `self`. Panics if this schema doesn&#39;t support cloning.
+    <span class="doccomment">/// Clone `other` and write it's data to `self`. Panics if this schema doesn't support cloning.
     </span><span class="kw">pub fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: SchemaRef) -&gt; <span class="prelude-ty">Result</span>&lt;(), SchemaMismatchError&gt; {
         <span class="kw">if </span><span class="self">self</span>.schema == other.schema {
             <span class="kw">let </span>clone_fn = <span class="self">self</span>.schema.clone_fn.as_ref().unwrap_or_else(|| {
                 <span class="macro">panic!</span>(
-                    <span class="string">&quot;Schema does not provide clone fn: {}&quot;</span>,
+                    <span class="string">"Schema does not provide clone fn: {}"</span>,
                     <span class="self">self</span>.schema.full_name
                 )
             });
-            <span class="comment">// SOUND: we&#39;ve verified the clone fn matches the schema of both values.
+            <span class="comment">// SOUND: we've verified the clone fn matches the schema of both values.
             </span><span class="kw">unsafe </span>{ clone_fn.get()(other.as_ptr(), <span class="self">self</span>.as_ptr()) }
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
@@ -2809,35 +2810,35 @@
 }
 
 <span class="doccomment">/// Access a schema
-</span><span class="kw">pub enum </span>SchemaRefMutAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub enum </span>SchemaRefMutAccess&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// Access a struct.
-    </span>Struct(StructRefMutAccess&lt;<span class="lifetime">&#39;a</span>&gt;),
+    </span>Struct(StructRefMutAccess&lt;<span class="lifetime">'a</span>&gt;),
     <span class="doccomment">/// Access a vec.
-    </span>Vec(SchemaVecMutAccess&lt;<span class="lifetime">&#39;a</span>&gt;),
+    </span>Vec(SchemaVecMutAccess&lt;<span class="lifetime">'a</span>&gt;),
     <span class="doccomment">/// Access an enum.
-    </span>Enum(EnumRefMutAccess&lt;<span class="lifetime">&#39;a</span>&gt;),
+    </span>Enum(EnumRefMutAccess&lt;<span class="lifetime">'a</span>&gt;),
     <span class="doccomment">/// Access a map.
-    </span>Map(SchemaMapMutAccess&lt;<span class="lifetime">&#39;a</span>&gt;),
+    </span>Map(SchemaMapMutAccess&lt;<span class="lifetime">'a</span>&gt;),
     <span class="doccomment">/// Access a struct.
-    </span>Primitive(PrimitiveRefMut&lt;<span class="lifetime">&#39;a</span>&gt;),
+    </span>Primitive(PrimitiveRefMut&lt;<span class="lifetime">'a</span>&gt;),
 }
 
 <span class="doccomment">/// Mutable [`SchemaVec`] access helper.
 </span><span class="attr">#[derive(Deref, DerefMut)]
-</span><span class="kw">pub struct </span>SchemaVecMutAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>SchemaVecMutAccess&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// The schema vec borrow.
     </span><span class="attr">#[deref]
-    </span>vec: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaVec,
+    </span>vec: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaVec,
     <span class="doccomment">/// The original pointer and schema to allow us to convert back to a [`SchemaRefMut`]
-    /// WARNING: This pointer aliases with the `vec: &amp;&#39;a SchemaVec` reference and mut not be used
+    /// WARNING: This pointer aliases with the `vec: &amp;'a SchemaVec` reference and mut not be used
     /// until the borrow to the schema vec is dropped.
     </span>orig_ptr: <span class="kw-2">*mut </span>c_void,
-    orig_schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
+    orig_schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; SchemaVecMutAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; SchemaVecMutAccess&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// Convert back to a [`SchemaRefMut`]
-    </span><span class="kw">pub fn </span>as_mut(<span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt; {
+    </span><span class="kw">pub fn </span>as_mut(<span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">'a</span>&gt; {
         <span class="comment">// SOUND: we are taking ownership of self and dropping the reference that aliases,
         // so that we can return a valid [`SchemaRefMut`].
         </span><span class="kw">unsafe </span>{ SchemaRefMut::from_ptr_schema(<span class="self">self</span>.orig_ptr, <span class="self">self</span>.orig_schema) }
@@ -2846,33 +2847,33 @@
 
 <span class="doccomment">/// Mutable [`SchemaMap`] access helper.
 </span><span class="attr">#[derive(Deref, DerefMut)]
-</span><span class="kw">pub struct </span>SchemaMapMutAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>SchemaMapMutAccess&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// The schema map borrow.
     </span><span class="attr">#[deref]
-    </span>map: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>SchemaMap,
+    </span>map: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaMap,
     <span class="doccomment">/// The original pointer and schema to allow us to convert back to a [`SchemaRefMut`]
-    /// WARNING: This pointer aliases with the `vec: &amp;&#39;a SchemaVec` reference and mut not be used
+    /// WARNING: This pointer aliases with the `vec: &amp;'a SchemaVec` reference and mut not be used
     /// until the borrow to the schema vec is dropped.
     </span>orig_ptr: <span class="kw-2">*mut </span>c_void,
-    orig_schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
+    orig_schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; SchemaMapMutAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; SchemaMapMutAccess&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// Convert back to a [`SchemaRefMut`]
-    </span><span class="kw">pub fn </span>into_schema_ref_mut(<span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt; {
+    </span><span class="kw">pub fn </span>into_schema_ref_mut(<span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">'a</span>&gt; {
         <span class="comment">// SOUND: we are taking ownership of self and dropping the reference that aliases,
         // so that we can return a valid [`SchemaRefMut`].
         </span><span class="kw">unsafe </span>{ SchemaRefMut::from_ptr_schema(<span class="self">self</span>.orig_ptr, <span class="self">self</span>.orig_schema) }
     }
 }
 
-<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>SchemaRefMutAccess&lt;<span class="lifetime">&#39;_</span>&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+<span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>SchemaRefMutAccess&lt;<span class="lifetime">'_</span>&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         <span class="self">self</span>.as_ref().fmt(f)
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;pointer</span>&gt; SchemaRefMutAccess&lt;<span class="lifetime">&#39;pointer</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'pointer</span>&gt; SchemaRefMutAccess&lt;<span class="lifetime">'pointer</span>&gt; {
     <span class="doccomment">/// Create a new [`SchemaRefAccess`] for the given [`SchemaRef`].
     ///
     /// This will create a new independent [`SchemaRefAccess`] that may be used even after
@@ -2904,9 +2905,9 @@
     /// a borrow to the original schema ref it was created from. This is specifically useful becuse
     /// it lets you create a [`SchemaRefAccess`] from a refeence to a schema ref, which is required
     /// when accessing a schema ref that is behind an atomic resource borrow, for example.
-    </span><span class="kw">pub fn </span>new_borrowed&lt;<span class="lifetime">&#39;borrow</span>&gt;(
-        value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;borrow </span><span class="kw-2">mut </span>SchemaRefMut&lt;<span class="lifetime">&#39;_</span>&gt;,
-    ) -&gt; SchemaRefMutAccess&lt;<span class="lifetime">&#39;borrow</span>&gt; {
+    </span><span class="kw">pub fn </span>new_borrowed&lt;<span class="lifetime">'borrow</span>&gt;(
+        value: <span class="kw-2">&amp;</span><span class="lifetime">'borrow </span><span class="kw-2">mut </span>SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;,
+    ) -&gt; SchemaRefMutAccess&lt;<span class="lifetime">'borrow</span>&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;</span>value.schema.kind {
             SchemaKind::Struct(<span class="kw">_</span>) =&gt; {
                 SchemaRefMutAccess::Struct(StructRefMutAccess(value.reborrow()))
@@ -2928,7 +2929,7 @@
     }
 
     <span class="doccomment">/// Convert this to a [`SchemaRefMut`].
-    </span><span class="kw">pub fn </span>into_schema_ref_mut(<span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">&#39;pointer</span>&gt; {
+    </span><span class="kw">pub fn </span>into_schema_ref_mut(<span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">'pointer</span>&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             SchemaRefMutAccess::Struct(s) =&gt; s.<span class="number">0</span>,
             SchemaRefMutAccess::Vec(v) =&gt; v.as_mut(),
@@ -2939,7 +2940,7 @@
     }
 
     <span class="doccomment">/// Get field with the given index.
-    </span><span class="kw">pub fn </span>field&lt;<span class="lifetime">&#39;a</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt;(<span class="self">self</span>, field_idx: I) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>&gt; {
+    </span><span class="kw">pub fn </span>field&lt;<span class="lifetime">'a</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">'a</span>&gt;&gt;&gt;(<span class="self">self</span>, field_idx: I) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>&gt; {
         <span class="kw">let </span>field_idx = field_idx.into();
         <span class="kw">match </span><span class="self">self </span>{
             SchemaRefMutAccess::Struct(s) =&gt; {
@@ -2953,7 +2954,7 @@
     }
 
     <span class="doccomment">/// Get the field pointed to by the given path.
-    </span><span class="kw">pub fn </span>field_path&lt;<span class="lifetime">&#39;a</span>, I: IntoIterator&lt;Item = FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt;&gt;&gt;(<span class="self">self</span>, path: I) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
+    </span><span class="kw">pub fn </span>field_path&lt;<span class="lifetime">'a</span>, I: IntoIterator&lt;Item = FieldIdx&lt;<span class="lifetime">'a</span>&gt;&gt;&gt;(<span class="self">self</span>, path: I) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>current_field = <span class="self">self</span>;
         <span class="kw">for </span>field_idx <span class="kw">in </span>path {
             current_field = current_field.field(field_idx).ok()<span class="question-mark">?</span>;
@@ -2992,24 +2993,24 @@
 }
 
 <span class="doccomment">/// Helper for accessing the inner data of a schema ref at runtime.
-</span><span class="kw">pub struct </span>StructRefMutAccess&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw">pub </span>SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;);
+</span><span class="kw">pub struct </span>StructRefMutAccess&lt;<span class="lifetime">'a</span>&gt;(<span class="kw">pub </span>SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;);
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; StructRefMutAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="doccomment">/// Get the struct&#39;s schema.
-    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; StructRefMutAccess&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="doccomment">/// Get the struct's schema.
+    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
         <span class="self">self</span>.<span class="number">0</span>.schema
     }
 
     <span class="doccomment">/// Get the [`StructSchemaInfo`] for this struct.
-    </span><span class="kw">pub fn </span>info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>StructSchemaInfo {
+    </span><span class="kw">pub fn </span>info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>StructSchemaInfo {
         <span class="self">self</span>.<span class="number">0</span>.schema.kind.as_struct().unwrap()
     }
 
     <span class="doccomment">/// Access a field, if it exists.
-    </span><span class="kw">pub fn </span>into_field&lt;<span class="lifetime">&#39;i</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">&#39;i</span>&gt;&gt;&gt;(
+    </span><span class="kw">pub fn </span>into_field&lt;<span class="lifetime">'i</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">'i</span>&gt;&gt;&gt;(
         <span class="self">self</span>,
         field_idx: I,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMutAccess&lt;<span class="lifetime">&#39;a</span>&gt;, <span class="self">Self</span>&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMutAccess&lt;<span class="lifetime">'a</span>&gt;, <span class="self">Self</span>&gt; {
         <span class="kw">let </span>field_idx = field_idx.into();
         <span class="kw">let </span>field_idx = <span class="kw">match </span>field_idx {
             FieldIdx::Name(name) =&gt; {
@@ -3049,7 +3050,7 @@
     }
 
     <span class="doccomment">/// Iterate over fields in the struct.
-    </span><span class="kw">pub fn </span>fields(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; StructRefMutFieldIter&lt;<span class="lifetime">&#39;_</span>&gt; {
+    </span><span class="kw">pub fn </span>fields(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; StructRefMutFieldIter&lt;<span class="lifetime">'_</span>&gt; {
         StructRefMutFieldIter {
             ptr: <span class="self">self</span>.<span class="number">0</span>.reborrow(),
             field_idx: <span class="number">0</span>,
@@ -3057,7 +3058,7 @@
     }
 
     <span class="doccomment">/// Consume to create an iterator over fields in the struct.
-    </span><span class="kw">pub fn </span>into_fields(<span class="self">self</span>) -&gt; StructRefMutFieldIter&lt;<span class="lifetime">&#39;a</span>&gt; {
+    </span><span class="kw">pub fn </span>into_fields(<span class="self">self</span>) -&gt; StructRefMutFieldIter&lt;<span class="lifetime">'a</span>&gt; {
         StructRefMutFieldIter {
             ptr: <span class="self">self</span>.<span class="number">0</span>,
             field_idx: <span class="number">0</span>,
@@ -3066,21 +3067,21 @@
 }
 
 <span class="doccomment">/// Iterator for [`StructRefAccess::fields()`].
-</span><span class="kw">pub struct </span>StructRefMutFieldIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    ptr: SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;,
+</span><span class="kw">pub struct </span>StructRefMutFieldIter&lt;<span class="lifetime">'a</span>&gt; {
+    ptr: SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;,
     field_idx: usize,
 }
 
 <span class="doccomment">/// A field returned by [`StructRefFieldIter`].
-</span><span class="kw">pub struct </span>StructRefMutFieldIterField&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>StructRefMutFieldIterField&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// The name of the field, if set.
-    </span><span class="kw">pub </span>name: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;,
-    <span class="doccomment">/// The field&#39;s value.
-    </span><span class="kw">pub </span>value: SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;,
+    </span><span class="kw">pub </span>name: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
+    <span class="doccomment">/// The field's value.
+    </span><span class="kw">pub </span>value: SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>StructRefMutFieldIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = StructRefMutFieldIterField&lt;<span class="lifetime">&#39;a</span>&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>StructRefMutFieldIter&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">type </span>Item = StructRefMutFieldIterField&lt;<span class="lifetime">'a</span>&gt;;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>field_schema = <span class="self">self
@@ -3097,8 +3098,8 @@
 
         <span class="prelude-val">Some</span>(StructRefMutFieldIterField {
             name: name.as_ref().map(|x| x.as_str()),
-            <span class="comment">// SOUND: Return a new SchemaRefMut with the &#39;a lifetime. This is sound because we
-            // don&#39;t return mutliple `SchemaRefMut`s to the same data.
+            <span class="comment">// SOUND: Return a new SchemaRefMut with the 'a lifetime. This is sound because we
+            // don't return mutliple `SchemaRefMut`s to the same data.
             </span>value: <span class="kw">unsafe </span>{
                 SchemaRefMut {
                     ptr: NonNull::new_unchecked(<span class="self">self</span>.ptr.as_ptr().add(<span class="kw-2">*</span>field_offset)),
@@ -3111,18 +3112,18 @@
 }
 
 <span class="doccomment">/// Helper for accessing the inner data of a schema ref at runtime.
-</span><span class="kw">pub struct </span>EnumRefMutAccess&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw">pub </span>SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;);
+</span><span class="kw">pub struct </span>EnumRefMutAccess&lt;<span class="lifetime">'a</span>&gt;(<span class="kw">pub </span>SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;);
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; EnumRefMutAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="doccomment">/// Get the enum&#39;s schema.
-    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; EnumRefMutAccess&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="doccomment">/// Get the enum's schema.
+    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
         <span class="self">self</span>.<span class="number">0</span>.schema
     }
 
     <span class="doccomment">/// Get the enum schema info.
-    </span><span class="kw">pub fn </span>info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>EnumSchemaInfo {
+    </span><span class="kw">pub fn </span>info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>EnumSchemaInfo {
         <span class="kw">let </span>SchemaKind::Enum(info) = <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.schema.kind <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Not an enum&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Not an enum"</span>);
         };
         info
     }
@@ -3138,14 +3139,14 @@
     }
 
     <span class="doccomment">/// Get the name of the currently selected variant.
-    </span><span class="kw">pub fn </span>variant_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+    </span><span class="kw">pub fn </span>variant_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
         <span class="kw">let </span>info = <span class="self">self</span>.info();
         <span class="kw">let </span>idx = <span class="self">self</span>.variant_idx();
         info.variants[idx <span class="kw">as </span>usize].name.as_ref()
     }
 
-    <span class="doccomment">/// Get a reference to the enum&#39;s currently selected value.
-    </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; StructRefMutAccess&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="doccomment">/// Get a reference to the enum's currently selected value.
+    </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; StructRefMutAccess&lt;<span class="lifetime">'a</span>&gt; {
         <span class="kw">let </span>info = <span class="self">self</span>.info();
         <span class="kw">let </span>variant_idx = <span class="self">self</span>.variant_idx();
         <span class="kw">let </span>variant_info = <span class="kw-2">&amp;</span>info.variants[variant_idx <span class="kw">as </span>usize];
@@ -3160,35 +3161,35 @@
 }
 
 <span class="doccomment">/// Helper for accessing the inner data of a schema ref at runtime.
-</span><span class="kw">pub enum </span>PrimitiveRefMut&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub enum </span>PrimitiveRefMut&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// A [`bool`]
-    </span>Bool(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>bool),
+    </span>Bool(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>bool),
     <span class="doccomment">/// A [`u8`]
-    </span>U8(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>u8),
+    </span>U8(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>u8),
     <span class="doccomment">/// A [`u16`]
-    </span>U16(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>u16),
+    </span>U16(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>u16),
     <span class="doccomment">/// A [`u32`]
-    </span>U32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>u32),
+    </span>U32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>u32),
     <span class="doccomment">/// A [`u64`]
-    </span>U64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>u64),
+    </span>U64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>u64),
     <span class="doccomment">/// A [`u128`]
-    </span>U128(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>u128),
+    </span>U128(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>u128),
     <span class="doccomment">/// An [`i8`]
-    </span>I8(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>i8),
+    </span>I8(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>i8),
     <span class="doccomment">/// An [`i16`]
-    </span>I16(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>i16),
+    </span>I16(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>i16),
     <span class="doccomment">/// An [`i32`]
-    </span>I32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>i32),
+    </span>I32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>i32),
     <span class="doccomment">/// An [`i64`]
-    </span>I64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>i64),
+    </span>I64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>i64),
     <span class="doccomment">/// An [`i128`]
-    </span>I128(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>i128),
+    </span>I128(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>i128),
     <span class="doccomment">/// An [`f32`]
-    </span>F32(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>f32),
+    </span>F32(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>f32),
     <span class="doccomment">/// An [`f64`]
-    </span>F64(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>f64),
+    </span>F64(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>f64),
     <span class="doccomment">/// A [`String`]
-    </span>String(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>String),
+    </span>String(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>String),
     <span class="doccomment">/// An opaque type
     </span>Opaque {
         <span class="doccomment">/// The size of the opaque type.
@@ -3196,11 +3197,11 @@
         <span class="doccomment">/// The align of the opaque type.
         </span>align: usize,
         <span class="doccomment">/// The schema ref.
-        </span>schema_ref: SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;,
+        </span>schema_ref: SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;,
     },
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;ptr</span>&gt; PrimitiveRefMut&lt;<span class="lifetime">&#39;ptr</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'ptr</span>&gt; PrimitiveRefMut&lt;<span class="lifetime">'ptr</span>&gt; {
     <span class="doccomment">/// Convert to an immutable [`PrimitiveRef`].
     </span><span class="kw">pub fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PrimitiveRef {
         <span class="kw">match </span><span class="self">self </span>{
@@ -3230,7 +3231,7 @@
         }
     }
 
-    <span class="kw">fn </span>into_schema_ref_mut(<span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">&#39;ptr</span>&gt; {
+    <span class="kw">fn </span>into_schema_ref_mut(<span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">'ptr</span>&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             PrimitiveRefMut::Bool(b) =&gt; SchemaRefMut::new(b),
             PrimitiveRefMut::U8(n) =&gt; SchemaRefMut::new(n),
@@ -3251,8 +3252,8 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;&gt; <span class="kw">for </span>PrimitiveRefMut&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">fn </span>from(value: SchemaRefMut&lt;<span class="lifetime">&#39;a</span>&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;&gt; <span class="kw">for </span>PrimitiveRefMut&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>from(value: SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span><span class="kw-2">&amp;</span>value.schema.kind {
             SchemaKind::Primitive(p) =&gt; <span class="kw">match </span>p {
                 Primitive::Bool =&gt; PrimitiveRefMut::Bool(value.cast_into_mut()),
@@ -3275,7 +3276,7 @@
                     schema_ref: value,
                 },
             },
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;Schema mismatch&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"Schema mismatch"</span>),
         }
     }
 }
@@ -3283,7 +3284,7 @@
 <span class="doccomment">/// A owning, type-erased [`Box`]-like container for types with a [`Schema`].
 </span><span class="kw">pub struct </span>SchemaBox {
     ptr: NonNull&lt;c_void&gt;,
-    schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
+    schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
 }
 <span class="kw">impl </span>Default <span class="kw">for </span>SchemaBox {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
@@ -3293,15 +3294,15 @@
 <span class="kw">unsafe impl </span>Sync <span class="kw">for </span>SchemaBox {}
 <span class="kw">unsafe impl </span>Send <span class="kw">for </span>SchemaBox {}
 <span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>SchemaBox {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        f.debug_struct(<span class="string">&quot;SchemaBox&quot;</span>)
-            .field(<span class="string">&quot;schema&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.schema.full_name)
-            .field(<span class="string">&quot;value&quot;</span>, <span class="kw-2">&amp;</span>SchemaRefValueDebug(<span class="self">self</span>.as_ref()))
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">"SchemaBox"</span>)
+            .field(<span class="string">"schema"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.schema.full_name)
+            .field(<span class="string">"value"</span>, <span class="kw-2">&amp;</span>SchemaRefValueDebug(<span class="self">self</span>.as_ref()))
             .finish_non_exhaustive()
     }
 }
 <span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>SchemaBox {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         <span class="self">self</span>.as_ref().fmt(f)
     }
 }
@@ -3310,7 +3311,7 @@
     <span class="attr">#[track_caller]
     </span><span class="kw">fn </span>hash&lt;H: std::hash::Hasher&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>H) {
         <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.schema.hash_fn <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Cannot hash schema box where schema doesn&#39;t provide hash_fn&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Cannot hash schema box where schema doesn't provide hash_fn"</span>);
         };
         <span class="kw">let </span>hash = <span class="kw">unsafe </span>{ (hash_fn.get())(<span class="self">self</span>.ptr.as_ptr()) };
         state.write_u64(hash);
@@ -3320,10 +3321,10 @@
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>SchemaBox {
     <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
         <span class="kw">if </span><span class="self">self</span>.schema != other.schema {
-            <span class="macro">panic!</span>(<span class="string">&quot;Cannot compare two `SchemaBox`s with different schemas.&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Cannot compare two `SchemaBox`s with different schemas."</span>);
         }
         <span class="kw">let </span><span class="prelude-val">Some</span>(eq_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.schema.eq_fn <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Cannot hash schema box where schema doesn&#39;t provide hash_fn.&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Cannot hash schema box where schema doesn't provide hash_fn."</span>);
         };
         <span class="kw">unsafe </span>{ (eq_fn.get())(<span class="self">self</span>.ptr.as_ptr(), other.ptr.as_ptr()) }
     }
@@ -3334,7 +3335,7 @@
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>clone_fn = <span class="self">self</span>.schema.clone_fn.as_ref().unwrap_or_else(|| {
             <span class="macro">panic!</span>(
-                <span class="string">&quot;The schema for this type does not allow cloning it.\nSchema: {:#?}&quot;</span>,
+                <span class="string">"The schema for this type does not allow cloning it.\nSchema: {:#?}"</span>,
                 <span class="self">self</span>.schema
             )
         });
@@ -3363,7 +3364,7 @@
         <span class="self">self</span>.ptr.as_ptr()
     }
 
-    <span class="doccomment">/// Cast this box to it&#39;s inner type and return it.
+    <span class="doccomment">/// Cast this box to it's inner type and return it.
     /// # Panics
     /// Panics if the schema of the box does not match that of the type you are casting to.
     </span><span class="attr">#[track_caller]
@@ -3371,12 +3372,12 @@
         <span class="self">self</span>.try_cast_into().unwrap()
     }
 
-    <span class="doccomment">/// Cast this box to it&#39;s inner type and return it.
+    <span class="doccomment">/// Cast this box to it's inner type and return it.
     /// # Errors
     /// Errors if the schema of the box does not match that of the type you are casting to.
     </span><span class="kw">pub fn </span>try_cast_into&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;T, SchemaMismatchError&gt; {
         <span class="kw">if </span><span class="self">self</span>.schema == T::schema() {
-            <span class="comment">// We&#39;ve validated that the schema of the box matches T
+            <span class="comment">// We've validated that the schema of the box matches T
             </span><span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ <span class="self">self</span>.cast_into_unchecked() })
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(SchemaMismatchError)
@@ -3391,7 +3392,7 @@
         </span><span class="kw">let </span><span class="kw-2">mut </span>ret = MaybeUninit::&lt;T&gt;::uninit();
 
         <span class="comment">// Copy the data from the box into the stack.
-        // SOUND: We&#39;ve validated that the box has the same schema as T
+        // SOUND: We've validated that the box has the same schema as T
         </span><span class="kw">unsafe </span>{
             (ret.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>c_void)
                 .copy_from_nonoverlapping(<span class="self">self</span>.ptr.as_ptr(), <span class="self">self</span>.schema.layout().size());
@@ -3445,7 +3446,7 @@
     }
 
     <span class="doccomment">/// Borrow this box as a [`SchemaRef`].
-    </span><span class="kw">pub fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">&#39;_</span>&gt; {
+    </span><span class="kw">pub fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">'_</span>&gt; {
         SchemaRef {
             ptr: <span class="self">self</span>.ptr,
             schema: <span class="self">self</span>.schema,
@@ -3454,7 +3455,7 @@
     }
 
     <span class="doccomment">/// Borrow this box as a [`SchemaRefMut`].
-    </span><span class="kw">pub fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">&#39;_</span>&gt; {
+    </span><span class="kw">pub fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">'_</span>&gt; {
         SchemaRefMut {
             ptr: <span class="self">self</span>.ptr,
             schema: <span class="self">self</span>.schema,
@@ -3474,13 +3475,13 @@
         }
     }
 
-    <span class="doccomment">/// Allocates a [`SchemaBox`] for the given [`Schema`], but **doesn&#39;t initialize the memory**.
+    <span class="doccomment">/// Allocates a [`SchemaBox`] for the given [`Schema`], but **doesn't initialize the memory**.
     ///
     /// # Safety
     ///
     /// Accessing the data in an unitinialized [`SchemaBox`] is undefined behavior. It is up to the
     /// user to initialize the memory pointed at by the box after creating it.
-    </span><span class="kw">pub unsafe fn </span>uninitialized(schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub unsafe fn </span>uninitialized(schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>layout = schema.layout();
 
         <span class="kw">let </span>ptr = <span class="kw">if </span>layout.size() == <span class="number">0 </span>{
@@ -3500,11 +3501,11 @@
     ///
     /// # Panics
     ///
-    /// Panics if the passed in schema doesn&#39;t have a `default_fn`.
+    /// Panics if the passed in schema doesn't have a `default_fn`.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>default(schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>default(schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="prelude-val">Some</span>(default_fn) = <span class="kw-2">&amp;</span>schema.default_fn <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Schema doesn&#39;t have `default_fn` to create default value with.&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Schema doesn't have `default_fn` to create default value with."</span>);
         };
 
         <span class="kw">unsafe </span>{
@@ -3516,15 +3517,15 @@
 
     <span class="doccomment">/// Convert into an [`SBox`] if the schema of T matches.
     /// # Panics
-    /// Panics if the schema of `T` doesn&#39;t match that of the box.
+    /// Panics if the schema of `T` doesn't match that of the box.
     </span><span class="kw">pub fn </span>into_sbox&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; SBox&lt;T&gt; {
         <span class="self">self</span>.try_into_sbox()
-            .unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;{:?}&quot;</span>, SchemaMismatchError))
+            .unwrap_or_else(|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">"{:?}"</span>, SchemaMismatchError))
     }
 
     <span class="doccomment">/// Convert into an [`SBox`] if the schema of T matches.
     /// # Errors
-    /// Returns an error with the orignal [`SchemaBox`] if the schema of `T` doesn&#39;t match.
+    /// Returns an error with the orignal [`SchemaBox`] if the schema of `T` doesn't match.
     </span><span class="kw">pub fn </span>try_into_sbox&lt;T: HasSchema&gt;(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SBox&lt;T&gt;, <span class="self">Self</span>&gt; {
         <span class="kw">if </span><span class="self">self</span>.schema == T::schema() {
             <span class="prelude-val">Ok</span>(SBox {
@@ -3537,7 +3538,7 @@
     }
 
     <span class="doccomment">/// Get the [`Schema`] for the pointer.
-    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+    </span><span class="kw">pub fn </span>schema(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
         <span class="self">self</span>.schema
     }
 
@@ -3549,11 +3550,11 @@
     /// # Safety
     ///
     /// - You must insure that the pointer is valid for the given schema.
-    </span><span class="kw">pub unsafe fn </span>from_raw_parts(ptr: NonNull&lt;c_void&gt;, schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub unsafe fn </span>from_raw_parts(ptr: NonNull&lt;c_void&gt;, schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ ptr, schema }
     }
 
-    <span class="doccomment">/// Deallocate the memory stored in the box, but don&#39;t run the destructor.
+    <span class="doccomment">/// Deallocate the memory stored in the box, but don't run the destructor.
     </span><span class="kw">pub fn </span>forget(<span class="kw-2">mut </span><span class="self">self</span>) {
         <span class="kw">unsafe </span>{
             <span class="self">self</span>.dealloc();
@@ -3571,10 +3572,10 @@
 
     <span class="doccomment">/// Get the hash of this schema box.
     /// # Panics
-    /// Panics if the schema doesn&#39;t implement hash.
+    /// Panics if the schema doesn't implement hash.
     </span><span class="attr">#[track_caller]
     </span><span class="kw">pub fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
-        <span class="self">self</span>.try_hash().expect(<span class="string">&quot;Schema doesn&#39;t implement hash&quot;</span>)
+        <span class="self">self</span>.try_hash().expect(<span class="string">"Schema doesn't implement hash"</span>)
     }
 
     <span class="doccomment">/// Deallocate the memory in the box.
@@ -3584,7 +3585,7 @@
         }
     }
 
-    <span class="doccomment">/// Drop the inner type, without dealocating the box&#39;s memory.
+    <span class="doccomment">/// Drop the inner type, without dealocating the box's memory.
     </span><span class="kw">unsafe fn </span>drop_inner(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(drop_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.schema.drop_fn {
             <span class="comment">// Drop the type
@@ -3594,15 +3595,15 @@
 }
 
 <span class="kw">unsafe impl </span>HasSchema <span class="kw">for </span>SchemaBox {
-    <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
+    <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
         <span class="kw">use </span><span class="kw">crate</span>::raw_fns::<span class="kw-2">*</span>;
         <span class="kw">use </span>std::alloc::Layout;
-        <span class="kw">static </span>S: OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt; = OnceLock::new();
+        <span class="kw">static </span>S: OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema&gt; = OnceLock::new();
         <span class="kw">let </span>layout = Layout::new::&lt;<span class="self">Self</span>&gt;();
         S.get_or_init(|| {
             SCHEMA_REGISTRY.register(SchemaData {
                 name: type_name::&lt;<span class="self">Self</span>&gt;().into(),
-                full_name: <span class="macro">format!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
+                full_name: <span class="macro">format!</span>(<span class="string">"{}::{}"</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
                 kind: SchemaKind::Primitive(Primitive::Opaque {
                     size: layout.size(),
                     align: layout.align(),
@@ -3634,7 +3635,7 @@
 /// to and from a [`SchemaBox`] for compatibility with the schema ecosystem.
 ///
 /// Also, compared to a [`SchemaBox`], it is more efficient to access, because it avoids extra
-/// runtime checks for a matching schema after it has been created, and doesn&#39;t need to be cast to
+/// runtime checks for a matching schema after it has been created, and doesn't need to be cast to
 /// `T` upon every access.
 </span><span class="attr">#[repr(transparent)]
 </span><span class="kw">pub struct </span>SBox&lt;T: HasSchema&gt; {
@@ -3646,7 +3647,7 @@
     </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>schema = T::schema();
         <span class="kw">let </span><span class="prelude-val">Some</span>(default_fn) = <span class="kw-2">&amp;</span>schema.default_fn <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;Schema doesn&#39;t implement default&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Schema doesn't implement default"</span>);
         };
         <span class="self">Self </span>{
             <span class="comment">// SOUND: we initialize the schema box immediately, and the schema asserts the default
@@ -3669,13 +3670,13 @@
     }
 }
 <span class="kw">impl</span>&lt;T: HasSchema + std::fmt::Debug&gt; std::fmt::Debug <span class="kw">for </span>SBox&lt;T&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        f.debug_struct(<span class="string">&quot;SBox&quot;</span>).field(<span class="string">&quot;b&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.b).finish()
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">"SBox"</span>).field(<span class="string">"b"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.b).finish()
     }
 }
 <span class="kw">unsafe impl</span>&lt;T: HasSchema&gt; HasSchema <span class="kw">for </span>SBox&lt;T&gt; {
-    <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema {
-        <span class="kw">static </span>S: OnceLock&lt;RwLock&lt;HashMap&lt;TypeId, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt;&gt;&gt; = OnceLock::new();
+    <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema {
+        <span class="kw">static </span>S: OnceLock&lt;RwLock&lt;HashMap&lt;TypeId, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema&gt;&gt;&gt; = OnceLock::new();
         <span class="kw">let </span>schema = {
             S.get_or_init(default)
                 .read()
@@ -3685,7 +3686,7 @@
         schema.unwrap_or_else(|| {
             <span class="kw">let </span>schema = SCHEMA_REGISTRY.register(SchemaData {
                 name: type_name::&lt;<span class="self">Self</span>&gt;().into(),
-                full_name: <span class="macro">format!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
+                full_name: <span class="macro">format!</span>(<span class="string">"{}::{}"</span>, <span class="macro">module_path!</span>(), type_name::&lt;<span class="self">Self</span>&gt;()).into(),
                 kind: SchemaKind::Box(T::schema()),
                 type_id: <span class="prelude-val">Some</span>(TypeId::of::&lt;<span class="self">Self</span>&gt;()),
                 clone_fn: <span class="prelude-val">Some</span>(&lt;<span class="self">Self </span><span class="kw">as </span>RawClone&gt;::raw_clone_cb()),
@@ -3754,32 +3755,32 @@
 
 <span class="doccomment">/// The index of a field in a struct in a [`Schema`].
 </span><span class="attr">#[derive(Debug, Clone, Copy)]
-</span><span class="kw">pub enum </span>FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub enum </span>FieldIdx&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// The name of a field.
-    </span>Name(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str),
+    </span>Name(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str),
     <span class="doccomment">/// The index of a field. Works for tuple fields and named fields.
     </span>Idx(usize),
 }
-<span class="kw">impl </span>From&lt;usize&gt; <span class="kw">for </span>FieldIdx&lt;<span class="lifetime">&#39;static</span>&gt; {
+<span class="kw">impl </span>From&lt;usize&gt; <span class="kw">for </span>FieldIdx&lt;<span class="lifetime">'static</span>&gt; {
     <span class="kw">fn </span>from(value: usize) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::Idx(value)
     }
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt; <span class="kw">for </span>FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt; <span class="kw">for </span>FieldIdx&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::Name(value)
     }
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>String&gt; <span class="kw">for </span>FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>String) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>String&gt; <span class="kw">for </span>FieldIdx&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>String) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::Name(value)
     }
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; std::fmt::Display <span class="kw">for </span>FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; std::fmt::Display <span class="kw">for </span>FieldIdx&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::Idx(i) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{i}&quot;</span>),
-            <span class="self">Self</span>::Name(n) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{n}&quot;</span>),
+            <span class="self">Self</span>::Idx(i) =&gt; <span class="macro">write!</span>(f, <span class="string">"{i}"</span>),
+            <span class="self">Self</span>::Name(n) =&gt; <span class="macro">write!</span>(f, <span class="string">"{n}"</span>),
         }
     }
 }
@@ -3787,9 +3788,9 @@
 <span class="doccomment">/// A wrapper type that implements [`IntoIterator&lt;Item = FieldIdx&gt;`] for an inner string to make
 /// it easier to use with [`SchemaRefAccess::field_path()`] and other field path methods.
 </span><span class="kw">pub struct </span>FieldPath&lt;T&gt;(<span class="kw">pub </span>T);
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; IntoIterator <span class="kw">for </span>FieldPath&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt; {
-    <span class="kw">type </span>Item = FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt;;
-    <span class="kw">type </span>IntoIter = Map&lt;Filter&lt;Split&lt;<span class="lifetime">&#39;a</span>, char&gt;, <span class="kw">fn</span>(&amp;&amp;str) -&gt; bool&gt;, <span class="kw">fn</span>(<span class="kw-2">&amp;</span>str) -&gt; FieldIdx&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; IntoIterator <span class="kw">for </span>FieldPath&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt; {
+    <span class="kw">type </span>Item = FieldIdx&lt;<span class="lifetime">'a</span>&gt;;
+    <span class="kw">type </span>IntoIter = Map&lt;Filter&lt;Split&lt;<span class="lifetime">'a</span>, char&gt;, <span class="kw">fn</span>(&amp;&amp;str) -&gt; bool&gt;, <span class="kw">fn</span>(<span class="kw-2">&amp;</span>str) -&gt; FieldIdx&gt;;
 
     <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
         <span class="kw">fn </span>flt(x: &amp;&amp;str) -&gt; bool {
@@ -3800,12 +3801,12 @@
                 .map(FieldIdx::Idx)
                 .unwrap_or(FieldIdx::Name(x))
         }
-        <span class="self">self</span>.<span class="number">0</span>.split(<span class="string">&#39;.&#39;</span>).filter(flt <span class="kw">as _</span>).map(mp <span class="kw">as _</span>)
+        <span class="self">self</span>.<span class="number">0</span>.split(<span class="string">'.'</span>).filter(flt <span class="kw">as _</span>).map(mp <span class="kw">as _</span>)
     }
 }
 <span class="kw">impl </span>IntoIterator <span class="kw">for </span>FieldPath&lt;Ustr&gt; {
-    <span class="kw">type </span>Item = FieldIdx&lt;<span class="lifetime">&#39;static</span>&gt;;
-    <span class="kw">type </span>IntoIter = Map&lt;Filter&lt;Split&lt;<span class="lifetime">&#39;static</span>, char&gt;, <span class="kw">fn</span>(&amp;&amp;str) -&gt; bool&gt;, <span class="kw">fn</span>(<span class="kw-2">&amp;</span>str) -&gt; FieldIdx&gt;;
+    <span class="kw">type </span>Item = FieldIdx&lt;<span class="lifetime">'static</span>&gt;;
+    <span class="kw">type </span>IntoIter = Map&lt;Filter&lt;Split&lt;<span class="lifetime">'static</span>, char&gt;, <span class="kw">fn</span>(&amp;&amp;str) -&gt; bool&gt;, <span class="kw">fn</span>(<span class="kw-2">&amp;</span>str) -&gt; FieldIdx&gt;;
 
     <span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
         <span class="kw">fn </span>flt(x: &amp;&amp;str) -&gt; bool {
@@ -3816,7 +3817,7 @@
                 .map(FieldIdx::Idx)
                 .unwrap_or(FieldIdx::Name(x))
         }
-        <span class="self">self</span>.<span class="number">0</span>.as_str().split(<span class="string">&#39;.&#39;</span>).filter(flt <span class="kw">as _</span>).map(mp <span class="kw">as _</span>)
+        <span class="self">self</span>.<span class="number">0</span>.as_str().split(<span class="string">'.'</span>).filter(flt <span class="kw">as _</span>).map(mp <span class="kw">as _</span>)
     }
 }
 
@@ -3825,25 +3826,25 @@
 </span><span class="kw">pub struct </span>SchemaMismatchError;
 <span class="kw">impl </span>SchemaMismatchError {
     <span class="doccomment">/// The display error message for this error type.
-    </span><span class="kw">pub const </span>MSG: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str =
-        <span class="string">&quot;Invalid cast: the schemas of the casted types are not compatible.&quot;</span>;
+    </span><span class="kw">pub const </span>MSG: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str =
+        <span class="string">"Invalid cast: the schemas of the casted types are not compatible."</span>;
 }
 <span class="kw">impl </span>std::error::Error <span class="kw">for </span>SchemaMismatchError {}
 <span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>SchemaMismatchError {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">Self</span>::MSG)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">Self</span>::MSG)
     }
 }
 
 <span class="doccomment">/// Error returned when a field is not found in a schema.
 </span><span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>SchemaFieldNotFoundError&lt;<span class="lifetime">&#39;a</span>&gt; {
-    idx: FieldIdx&lt;<span class="lifetime">&#39;a</span>&gt;,
+</span><span class="kw">pub struct </span>SchemaFieldNotFoundError&lt;<span class="lifetime">'a</span>&gt; {
+    idx: FieldIdx&lt;<span class="lifetime">'a</span>&gt;,
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; std::error::Error <span class="kw">for </span>SchemaFieldNotFoundError&lt;<span class="lifetime">&#39;a</span>&gt; {}
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; std::fmt::Display <span class="kw">for </span>SchemaFieldNotFoundError&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;Field not found in schema: {}&quot;</span>, <span class="self">self</span>.idx)
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; std::error::Error <span class="kw">for </span>SchemaFieldNotFoundError&lt;<span class="lifetime">'a</span>&gt; {}
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; std::fmt::Display <span class="kw">for </span>SchemaFieldNotFoundError&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">"Field not found in schema: {}"</span>, <span class="self">self</span>.idx)
     }
 }
 </code></pre></div></section></main></body></html>

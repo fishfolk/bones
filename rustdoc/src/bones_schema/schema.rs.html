@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_schema/src/schema.rs`."><title>schema.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_schema" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_schema/src/schema.rs`."><title>schema.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_schema" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -545,11 +546,11 @@
 ///
 /// If implemented manually, you must ensure that the schema accurately describes the memory layout
 /// of the type, or else accessing the type according to the schema would be unsound.
-</span><span class="kw">pub unsafe trait </span>HasSchema: Sync + Send + <span class="lifetime">&#39;static </span>{
-    <span class="doccomment">/// Get this type&#39;s [`Schema`].
-    </span><span class="attr">#[must_use = <span class="string">&quot;If you are only calling schema() for it&#39;s side-effect of registering the
-        schema, it is more clear to use register_schema() instead.&quot;</span>]
-    </span><span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema;
+</span><span class="kw">pub unsafe trait </span>HasSchema: Sync + Send + <span class="lifetime">'static </span>{
+    <span class="doccomment">/// Get this type's [`Schema`].
+    </span><span class="attr">#[must_use = <span class="string">"If you are only calling schema() for it's side-effect of registering the
+        schema, it is more clear to use register_schema() instead."</span>]
+    </span><span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema;
 
     <span class="doccomment">/// Register this schema with the global schema registry.
     ///
@@ -564,7 +565,7 @@
     ///
     /// # Panics
     ///
-    /// Panics if the schema of `T` doesn&#39;t match the schema of `Self`.
+    /// Panics if the schema of `T` doesn't match the schema of `Self`.
     </span><span class="attr">#[track_caller]
     </span><span class="kw">fn </span>cast&lt;T: HasSchema&gt;(this: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="kw-2">&amp;</span>T {
         HasSchema::try_cast(this).expect(SchemaMismatchError::MSG)
@@ -574,7 +575,7 @@
     ///
     /// # Errors
     ///
-    /// Errors if the schema of `T` doesn&#39;t match the schema of `Self`.
+    /// Errors if the schema of `T` doesn't match the schema of `Self`.
     </span><span class="kw">fn </span>try_cast&lt;T: HasSchema&gt;(this: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>T, SchemaMismatchError&gt; {
         <span class="kw">let </span>s1 = <span class="self">Self</span>::schema();
         <span class="kw">let </span>s2 = T::schema();
@@ -591,7 +592,7 @@
     ///
     /// # Panics
     ///
-    /// Panics if the schema of `T` doesn&#39;t match the schema of `Self`.
+    /// Panics if the schema of `T` doesn't match the schema of `Self`.
     </span><span class="attr">#[track_caller]
     </span><span class="kw">fn </span>cast_mut&lt;T: HasSchema&gt;(this: <span class="kw-2">&amp;mut </span><span class="self">Self</span>) -&gt; <span class="kw-2">&amp;mut </span>T {
         HasSchema::try_cast_mut(this).expect(SchemaMismatchError::MSG)
@@ -602,7 +603,7 @@
     ///
     /// # Errors
     ///
-    /// Errors if the schema of `T` doesn&#39;t match the schema of `Self`.
+    /// Errors if the schema of `T` doesn't match the schema of `Self`.
     </span><span class="kw">fn </span>try_cast_mut&lt;T: HasSchema&gt;(this: <span class="kw-2">&amp;mut </span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;mut </span>T, SchemaMismatchError&gt; {
         <span class="kw">let </span>s1 = <span class="self">Self</span>::schema();
         <span class="kw">let </span>s2 = T::schema();
@@ -642,7 +643,7 @@
     </span><span class="kw">pub fn </span>represents(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Schema) -&gt; bool {
         <span class="comment">// If these have equal type/schema ids.
         </span><span class="self">self </span>== other
-        <span class="comment">// If the schemas don&#39;t have any opaque fields, and are equal to each-other, then they
+        <span class="comment">// If the schemas don't have any opaque fields, and are equal to each-other, then they
         // have the same representation.
         </span>|| (!<span class="self">self</span>.kind.has_opaque() &amp;&amp; !other.kind.has_opaque() &amp;&amp; {
             <span class="kw">match </span>(<span class="kw-2">&amp;</span><span class="self">self</span>.kind, <span class="kw-2">&amp;</span>other.kind) {
@@ -665,13 +666,13 @@
 </span><span class="kw">pub struct </span>SchemaData {
     <span class="doccomment">/// The short name of the type.
     ///
-    /// **Note:** Currently bones isn&#39;t very standardized as far as name generation for Rust or
+    /// **Note:** Currently bones isn't very standardized as far as name generation for Rust or
     /// other language type names, and this is mostly for diagnostics. This may change in the future
     /// but for now there are no guarantees.
     </span><span class="kw">pub </span>name: Ustr,
     <span class="doccomment">/// The full name of the type, including any module specifiers.
     ///
-    /// **Note:** Currently bones isn&#39;t very standardized as far as name generation for Rust or
+    /// **Note:** Currently bones isn't very standardized as far as name generation for Rust or
     /// other language type names, and this is mostly for diagnostics. This may change in the future
     /// but for now there are no guarantees.
     </span><span class="kw">pub </span>full_name: Ustr,
@@ -679,7 +680,7 @@
     </span><span class="kw">pub </span>kind: SchemaKind,
     <span class="doccomment">/// Container for storing [`Schema`] type datas.
     ///
-    /// &quot;Type data&quot; is extra data that is stored in a type&#39;s [`Schema`] that may be used for any number
+    /// "Type data" is extra data that is stored in a type's [`Schema`] that may be used for any number
     /// of different purposes.
     ///
     /// Each type data is a type that implements [`HasSchema`] and usually describes something about the
@@ -708,35 +709,35 @@
 
     <span class="comment">// NOTE: The fields below could be implemented as type datas, and it would be nicely elegant to
     // do so, but for performance reasons, we put them right in the [`Schema`] struct because
-    // they&#39;re use is so common. If profiling does not reveal any performance issues with using them
+    // they're use is so common. If profiling does not reveal any performance issues with using them
     // as type datas, we may want to remove these fields in favor of the type data.
     </span><span class="doccomment">/// The Rust [`TypeId`] that this [`Schema`] was created from, if it was created from a Rust
     /// type.
     </span><span class="kw">pub </span>type_id: <span class="prelude-ty">Option</span>&lt;TypeId&gt;,
     <span class="doccomment">/// The function pointer that may be used to clone data with this schema.
     </span><span class="kw">pub </span>clone_fn:
-        <span class="prelude-ty">Option</span>&lt;Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void, <span class="kw-2">*mut </span>c_void) + Sync + Send + <span class="lifetime">&#39;static</span>)&gt;&gt;,
+        <span class="prelude-ty">Option</span>&lt;Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void, <span class="kw-2">*mut </span>c_void) + Sync + Send + <span class="lifetime">'static</span>)&gt;&gt;,
     <span class="doccomment">/// The function pointer that may be used to drop data with this schema.
-    </span><span class="kw">pub </span>drop_fn: <span class="prelude-ty">Option</span>&lt;Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*mut </span>c_void) + Sync + Send + <span class="lifetime">&#39;static</span>)&gt;&gt;,
+    </span><span class="kw">pub </span>drop_fn: <span class="prelude-ty">Option</span>&lt;Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*mut </span>c_void) + Sync + Send + <span class="lifetime">'static</span>)&gt;&gt;,
     <span class="doccomment">/// The function pointer that may be used to write a default value to a pointer.
-    </span><span class="kw">pub </span>default_fn: <span class="prelude-ty">Option</span>&lt;Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*mut </span>c_void) + Sync + Send + <span class="lifetime">&#39;static</span>)&gt;&gt;,
+    </span><span class="kw">pub </span>default_fn: <span class="prelude-ty">Option</span>&lt;Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*mut </span>c_void) + Sync + Send + <span class="lifetime">'static</span>)&gt;&gt;,
     <span class="doccomment">/// The function pointer that may be used to hash the value.
-    </span><span class="kw">pub </span>hash_fn: <span class="prelude-ty">Option</span>&lt;Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void) -&gt; u64 + Sync + Send + <span class="lifetime">&#39;static</span>)&gt;&gt;,
+    </span><span class="kw">pub </span>hash_fn: <span class="prelude-ty">Option</span>&lt;Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void) -&gt; u64 + Sync + Send + <span class="lifetime">'static</span>)&gt;&gt;,
     <span class="doccomment">/// The function pointer that may be used to compare two values for equality. Note that this is
     /// total equality, not partial equality.
     </span><span class="kw">pub </span>eq_fn: <span class="prelude-ty">Option</span>&lt;
-        Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void, <span class="kw-2">*const </span>c_void) -&gt; bool + Sync + Send + <span class="lifetime">&#39;static</span>)&gt;,
+        Unsafe&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>(<span class="kw">dyn </span>Fn(<span class="kw-2">*const </span>c_void, <span class="kw-2">*const </span>c_void) -&gt; bool + Sync + Send + <span class="lifetime">'static</span>)&gt;,
     &gt;,
 }
 
 <span class="kw">impl </span>std::fmt::Debug <span class="kw">for </span>SchemaData {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        f.debug_struct(<span class="string">&quot;SchemaData&quot;</span>)
-            .field(<span class="string">&quot;name&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name)
-            .field(<span class="string">&quot;full_name&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.full_name)
-            .field(<span class="string">&quot;kind&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.kind)
-            .field(<span class="string">&quot;type_data&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.type_data)
-            .field(<span class="string">&quot;type_id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.type_id)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">"SchemaData"</span>)
+            .field(<span class="string">"name"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name)
+            .field(<span class="string">"full_name"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.full_name)
+            .field(<span class="string">"kind"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.kind)
+            .field(<span class="string">"type_data"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.type_data)
+            .field(<span class="string">"type_id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.type_id)
             .finish_non_exhaustive()
     }
 }
@@ -761,7 +762,7 @@
     </span>}
 }
 
-<span class="doccomment">/// A schema describes the data layout of a type, to enable dynamic access to the type&#39;s data
+<span class="doccomment">/// A schema describes the data layout of a type, to enable dynamic access to the type's data
 /// through a pointer.
 </span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub enum </span>SchemaKind {
@@ -771,18 +772,18 @@
     ///
     /// The scripting solution must facilitate a way for scripts to access data in the [`Vec`] if it
     /// is to be readable/modifyable from scripts.
-    </span>Vec(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema),
+    </span>Vec(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema),
     <span class="doccomment">/// Type represents an enum, which in the C layout is called a tagged union.
     </span>Enum(EnumSchemaInfo),
     <span class="doccomment">/// Type represents a [`SchemaMap`].
     </span>Map {
         <span class="doccomment">/// The schema of the key type.
-        </span>key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
+        </span>key: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
         <span class="doccomment">/// The schema of the value type.
-        </span>value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
+        </span>value: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
     },
     <span class="doccomment">/// The represents a [`SchemaBox`] with given type inside.
-    </span>Box(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema),
+    </span>Box(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema),
     <span class="doccomment">/// The type represents a primitive value.
     </span>Primitive(Primitive),
 }
@@ -813,7 +814,7 @@
         </span>}
     }
     <span class="doccomment">/// Get the schema of the items in the vector, if this is a vector.
-    </span><span class="kw">pub fn </span>as_vec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema&gt; {
+    </span><span class="kw">pub fn </span>as_vec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema&gt; {
         <span class="kw">if let </span><span class="self">Self</span>::Vec(v) = <span class="self">self </span>{
             <span class="prelude-val">Some</span>(v)
         } <span class="kw">else </span>{
@@ -824,7 +825,7 @@
 
 <span class="doccomment">/// Layout information computed for [`SchemaData`].
 </span><span class="attr">#[derive(Debug, Clone)]
-</span><span class="kw">pub struct </span>SchemaLayoutInfo&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>SchemaLayoutInfo&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// The layout of the type.
     </span><span class="kw">pub </span>layout: Layout,
     <span class="doccomment">/// If this is a struct, then the field offsets will contain the byte offset from the front of
@@ -832,7 +833,7 @@
     ///
     /// If this is an enum, there will be exactly one entry specifying the offset from the beginning
     /// of the struct to the enum value.
-    </span><span class="kw">pub </span>field_offsets: Vec&lt;(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt;, usize)&gt;,
+    </span><span class="kw">pub </span>field_offsets: Vec&lt;(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str&gt;, usize)&gt;,
 }
 
 <span class="doccomment">/// Schema data for a struct.
@@ -877,9 +878,9 @@
 </span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>VariantInfo {
     <span class="doccomment">/// The name of the enum variant.
-    </span><span class="kw">pub </span>name: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;,
+    </span><span class="kw">pub </span>name: Cow&lt;<span class="lifetime">'static</span>, str&gt;,
     <span class="doccomment">/// The schema of this variant.
-    </span><span class="kw">pub </span>schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
+    </span><span class="kw">pub </span>schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
 }
 
 <span class="doccomment">/// A field in a [`StructSchemaInfo`].
@@ -888,7 +889,7 @@
     <span class="doccomment">/// The name of the field. Will be [`None`] if this is a field of a tuple struct.
     </span><span class="kw">pub </span>name: <span class="prelude-ty">Option</span>&lt;Ustr&gt;,
     <span class="doccomment">/// The schema of the field.
-    </span><span class="kw">pub </span>schema: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Schema,
+    </span><span class="kw">pub </span>schema: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema,
     <span class="comment">// TODO: Investigate adding attribute info to `StructFieldInfo`.
     // It could be very useful if the derive macro could capture custom attribute data for struct
     // fields and put it into the schema data. This would allow type data implementations that
@@ -948,9 +949,9 @@
 <span class="kw">impl </span>SchemaKind {
     <span class="doccomment">/// Calculate the layout of the type represented by the schema.
     ///
-    /// Usually you don&#39;t need to call this and should use the static, cached layout and field
+    /// Usually you don't need to call this and should use the static, cached layout and field
     /// offsets from [`Schema::layout()`] and [`Schema::field_offsets()`].
-    </span><span class="kw">pub fn </span>compute_layout_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaLayoutInfo&lt;<span class="lifetime">&#39;_</span>&gt; {
+    </span><span class="kw">pub fn </span>compute_layout_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaLayoutInfo&lt;<span class="lifetime">'_</span>&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>layout: <span class="prelude-ty">Option</span>&lt;Layout&gt; = <span class="prelude-val">None</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>field_offsets = Vec::new();
         <span class="kw">let </span><span class="kw-2">mut </span>offset;
@@ -988,7 +989,7 @@
                 extend_layout(<span class="kw-2">&amp;mut </span>layout, enum_tag_layout);
 
                 <span class="kw">let </span><span class="kw-2">mut </span>enum_value_layout = Layout::from_size_align(<span class="number">0</span>, <span class="number">1</span>).unwrap();
-                <span class="comment">// The enum layout is the greatest of it&#39;s variants sizes and aligments
+                <span class="comment">// The enum layout is the greatest of it's variants sizes and aligments
                 </span><span class="kw">for </span>var <span class="kw">in </span><span class="kw-2">&amp;</span>e.variants {
                     <span class="kw">let </span>var_layout = var.schema.layout();
                     <span class="kw">if </span>var_layout.size() &gt; enum_value_layout.size() {
