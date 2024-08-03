@@ -191,31 +191,6 @@ impl<T> Maybe<T> {
         self.option().zip(other.option()).into()
     }
 
-    /// Unzips a `Maybe` containing a tuple of two `Maybe`s.
-    pub fn unzip<T1, T2>(self) -> (Maybe<T1>, Maybe<T2>)
-    where
-        T: Into<(T1, T2)>,
-    {
-        let (a, b) = self.option().unzip();
-        (a.into(), b.into())
-    }
-
-    /// Transposes a `Maybe` of a `Result` into a `Result` of a `Maybe`.
-    pub fn transpose<E>(self) -> Result<Maybe<T>, E>
-    where
-        T: Into<Result<T, E>>,
-    {
-        self.option().transpose().map(Into::into)
-    }
-
-    /// Returns `Set` if the option is `Set` and the value inside of it matches a predicate.
-    pub fn is_some_and<F>(self, f: F) -> bool
-    where
-        F: FnOnce(&T) -> bool,
-    {
-        self.option().is_some_and(f)
-    }
-
     /// Returns the contained `Set` value, consuming the `self` value, without checking that the value is not `Unset`.
     pub unsafe fn unwrap_unchecked(self) -> T {
         self.option().unwrap_unchecked()
@@ -229,16 +204,6 @@ impl<T> Maybe<T> {
     /// Maps a `Maybe<T>` to `U` by applying a function to a contained value, or computes a default.
     pub fn map_or_else<U, D: FnOnce() -> U, F: FnOnce(T) -> U>(self, default: D, f: F) -> U {
         self.option().map_or_else(default, f)
-    }
-
-    /// Returns an iterator over the possibly contained value.
-    pub fn iter(&self) -> std::option::Iter<'_, T> {
-        self.option().iter()
-    }
-
-    /// Returns a mutable iterator over the possibly contained value.
-    pub fn iter_mut(&mut self) -> std::option::IterMut<'_, T> {
-        self.option().iter_mut()
     }
 
     /// Returns the contained `Set` value or a default.
