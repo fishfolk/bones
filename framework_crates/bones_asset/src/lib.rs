@@ -192,6 +192,10 @@ impl<T> Maybe<T> {
     }
 
     /// Returns the contained `Set` value, consuming the `self` value, without checking that the value is not `Unset`.
+    ///
+    /// # Safety
+    ///
+    /// Calling this method on an `Unset` value is undefined behavior.
     pub unsafe fn unwrap_unchecked(self) -> T {
         self.option().unwrap_unchecked()
     }
