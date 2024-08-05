@@ -11,6 +11,7 @@ use rand::{prelude::SliceRandom, SeedableRng};
 use scc::HashMap as SccHashMap;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::collections::HashMap;
 use tokio::sync::Mutex;
 
 /// Represents the lobbies for a specific game
