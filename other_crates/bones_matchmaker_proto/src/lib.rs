@@ -26,8 +26,8 @@ pub enum MatchmakerRequest {
     ListLobbies(String),
     /// Request to create a new lobby
     CreateLobby(LobbyInfo),
-    /// Request to join an existing lobby, optionally providing a password
-    JoinLobby(LobbyId, Option<String>),
+    /// Request to join an existing lobby for a specific gameid, optionally providing a password
+    JoinLobby(GameID, LobbyId, Option<String>),
 }
 
 /// Information about a match that is being requested
