@@ -58,6 +58,9 @@ pub struct LobbyInfo {
     pub game_id: String,
 }
 
+/// A unique identifier for a game
+pub type GameID = String;
+
 /// A unique identifier for a lobby
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
 pub struct LobbyId(pub String);
