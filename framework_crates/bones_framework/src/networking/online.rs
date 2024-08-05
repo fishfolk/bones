@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse, MATCH_ALPN};
+use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse, MATCH_ALPN, GameID};
 use iroh_net::NodeId;
 use once_cell::sync::Lazy;
 use tracing::{info, warn};
@@ -44,7 +44,7 @@ pub struct OnlineMatchmaker(BiChannelClient<OnlineMatchmakerRequest, OnlineMatch
 /// Online matchmaker request
 #[derive(Debug)]
 pub enum OnlineMatchmakerRequest {
-    SearchForGame { id: NodeId, player_count: u32 },
+    SearchForGame { id: NodeId, player_count: u32, game_id: GameID },
     StopSearch,
 }
 
@@ -65,8 +65,8 @@ async fn online_matchmaker(
 ) -> anyhow::Result<()> {
     while let Ok(message) = matchmaker_channel.recv().await {
         match message {
-            OnlineMatchmakerRequest::SearchForGame { id, player_count } => {
-                if let Err(err) = search_for_game(&matchmaker_channel, id, player_count).await {
+            OnlineMatchmakerRequest::SearchForGame { id, player_count, game_id } => {
+                if let Err(err) = search_for_game(&matchmaker_channel, id, player_count, game_id).await {
                     warn!("Online Game Search failed: {err:?}");
                 }
             }
@@ -81,6 +81,7 @@ async fn search_for_game(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     id: NodeId,
     player_count: u32,
+    game_id: GameID
 ) -> anyhow::Result<()> {
     info!("Connecting to online matchmaker");
     let ep = get_network_endpoint().await;
@@ -97,6 +98,7 @@ async fn search_for_game(
     let message = MatchmakerRequest::RequestMatch(MatchInfo {
         client_count: player_count,
         match_data: b"jumpy_default_game".to_vec(),
+        game_id: game_id,
     });
     info!(request=?message, "Sending match request");
 
@@ -176,13 +178,12 @@ async fn search_for_game(
 }
 
 /// Search for game with `matchmaking_server` and `player_count`
-pub fn start_search_for_game(matchmaking_server: NodeId, player_count: u32) {
-    // TODO remove
-    info!("Starting search for online game with player count {player_count}");
+pub fn start_search_for_game(matchmaking_server: NodeId, player_count: u32, game_id: GameID) {
     ONLINE_MATCHMAKER
         .try_send(OnlineMatchmakerRequest::SearchForGame {
             id: matchmaking_server,
             player_count,
+            game_id
         })
         .unwrap()
 }

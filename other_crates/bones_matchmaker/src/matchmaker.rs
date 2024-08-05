@@ -134,13 +134,13 @@ async fn handle_join_lobby(conn: Connection, lobby_id: LobbyId, password: Option
             });
 
             match player_count {
-                Some(count) => {
+                Some(Some(count)) => {
                     let message = postcard::to_allocvec(&MatchmakerResponse::LobbyJoined(lobby_id.clone()))?;
                     send.write_all(&message).await?;
                     send.finish().await?;
 
                     // Notify other players in the lobby
-                    let count_message = postcard::to_allocvec(&MatchmakerResponse::ClientCount(count.unwrap() as u32))?;
+                    let count_message = postcard::to_allocvec(&MatchmakerResponse::ClientCount(count as u32))?;
                     if let Some(connections_entry) = state.lobby_connections.get(&(game_id.clone(), lobby_id.clone())) {
                         let connections = connections_entry.get();
                         for connection in connections.iter() {
@@ -152,7 +152,7 @@ async fn handle_join_lobby(conn: Connection, lobby_id: LobbyId, password: Option
                         }
                     }
                 }
-                None => {
+                _ => {
                     let message = postcard::to_allocvec(&MatchmakerResponse::Error("Lobby is full".to_string()))?;
                     send.write_all(&message).await?;
                     send.finish().await?;
