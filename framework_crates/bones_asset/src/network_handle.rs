@@ -24,9 +24,9 @@ impl<T> NetworkHandle<T> {
     /// Create asset [`Handle`] by looking up [`NetworkHandle`]'s [`Cid`] in [`AssetServer`].
     /// Panics if Cid not found in asset server.
     pub fn into_handle(&self, asset_server: &AssetServer) -> Handle<T> {
-        asset_server
-            .try_get_handle_from_cid(&self.cid)
-            .expect("Failed to lookup NetworkHandle content id in AssetServer. Is asset loaded? Invalid Cid?")
+        asset_server.try_get_handle_from_cid(&self.cid).unwrap_or_else(||
+            panic!("Failed to lookup NetworkHandle content id: {} in AssetServer. Asset may not be loaded, or this client does not have exact copy of remote", &self.cid)
+        )
     }
 
     /// Convert into [`UntypedHandle`].
