@@ -41,13 +41,13 @@ fn _generate_system_param_impl(input: TokenStream) -> syn::Result<TokenStream> {
     let state_types: Punctuated<TokenStream, Token![,]> =
         Punctuated::from_iter(fields.named.iter().map(|field| {
             let ty = &field.ty;
-            quote! { <#ty as ::bones_framework::prelude::SystemParam>::State }
+            quote! { <#ty as ::bones_ecs::prelude::SystemParam>::State }
         }));
 
     let get_state_items: Punctuated<TokenStream, Token![,]> =
         Punctuated::from_iter(fields.named.iter().map(|field| {
             let ty = &field.ty;
-            quote! { <#ty as ::bones_framework::prelude::SystemParam>::get_state(world) }
+            quote! { <#ty as ::bones_ecs::prelude::SystemParam>::get_state(world) }
         }));
 
     let borrow_param_fields: Punctuated<TokenStream, Token![,]> = fields
@@ -59,20 +59,20 @@ fn _generate_system_param_impl(input: TokenStream) -> syn::Result<TokenStream> {
             let ty = &field.ty;
             let index = Index { index: index as u32, span: Span::call_site() };
             quote! {
-                #ident: <#ty as ::bones_framework::prelude::SystemParam>::borrow(world, &mut state.#index)
+                #ident: <#ty as ::bones_ecs::prelude::SystemParam>::borrow(world, &mut state.#index)
             }
         })
         .collect();
 
     Ok(quote! {
-        impl<#lifetime> ::bones_framework::prelude::SystemParam for #ident<#lifetime> {
+        impl<#lifetime> ::bones_ecs::prelude::SystemParam for #ident<#lifetime> {
             type State = ( #state_types );
             type Param<'p> = #ident<'p>;
-            fn get_state(world: &::bones_framework::prelude::World) -> Self::State {
+            fn get_state(world: &::bones_ecs::prelude::World) -> Self::State {
                 ( #get_state_items )
             }
             fn borrow<'s>(
-                world: &'s ::bones_framework::prelude::World,
+                world: &'s ::bones_ecs::prelude::World,
                 state: &'s mut Self::State,
             ) -> Self::Param<'s> {
                 Self::Param { #borrow_param_fields }
@@ -104,25 +104,25 @@ mod tests {
     #[test]
     fn correct_system_param_impl() {
         let expected = quote! {
-            impl<'a> ::bones_framework::prelude::SystemParam for MySystemParam<'a> {
+            impl<'a> ::bones_ecs::prelude::SystemParam for MySystemParam<'a> {
                 type State = (
-                    <Commands<'a> as ::bones_framework::prelude::SystemParam>::State,
-                    <ResMut<'a, Entities> as ::bones_framework::prelude::SystemParam>::State
+                    <Commands<'a> as ::bones_ecs::prelude::SystemParam>::State,
+                    <ResMut<'a, Entities> as ::bones_ecs::prelude::SystemParam>::State
                 );
                 type Param<'p> = MySystemParam<'p>;
-                fn get_state(world: &::bones_framework::prelude::World) -> Self::State {
+                fn get_state(world: &::bones_ecs::prelude::World) -> Self::State {
                     (
-                        <Commands<'a> as ::bones_framework::prelude::SystemParam>::get_state(world),
-                        <ResMut<'a, Entities> as ::bones_framework::prelude::SystemParam>::get_state(world)
+                        <Commands<'a> as ::bones_ecs::prelude::SystemParam>::get_state(world),
+                        <ResMut<'a, Entities> as ::bones_ecs::prelude::SystemParam>::get_state(world)
                     )
                 }
                 fn borrow<'s>(
-                    world: &'s ::bones_framework::prelude::World,
+                    world: &'s ::bones_ecs::prelude::World,
                     state: &'s mut Self::State,
                 ) -> Self::Param<'s> {
                     Self::Param {
-                        commands: <Commands<'a> as ::bones_framework::prelude::SystemParam>::borrow(world, &mut state.0),
-                        entities: <ResMut<'a, Entities> as ::bones_framework::prelude::SystemParam>::borrow(world, &mut state.1)
+                        commands: <Commands<'a> as ::bones_ecs::prelude::SystemParam>::borrow(world, &mut state.0),
+                        entities: <ResMut<'a, Entities> as ::bones_ecs::prelude::SystemParam>::borrow(world, &mut state.1)
                     }
                 }
             }
