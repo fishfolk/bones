@@ -57,7 +57,10 @@ fn _generate_system_param_impl(input: TokenStream) -> syn::Result<TokenStream> {
         .map(|(index, field)| {
             let ident = field.ident.as_ref().unwrap();
             let ty = &field.ty;
-            let index = Index { index: index as u32, span: Span::call_site() };
+            let index = Index {
+                index: index as u32,
+                span: Span::call_site(),
+            };
             quote! {
                 #ident: <#ty as ::bones_ecs::prelude::SystemParam>::borrow(world, &mut state.#index)
             }
