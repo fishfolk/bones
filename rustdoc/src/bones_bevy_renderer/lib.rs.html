@@ -385,6 +385,7 @@
 <a href="#384" id="384">384</a>
 <a href="#385" id="385">385</a>
 <a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -533,6 +534,7 @@
             .build();
         <span class="kw">if </span><span class="self">self</span>.pixel_art {
             plugins = plugins.set(ImagePlugin::default_nearest());
+            app.insert_resource(Msaa::Off);
         }
 
         app.add_plugins(plugins).add_plugins((
