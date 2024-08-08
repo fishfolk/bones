@@ -577,6 +577,23 @@ impl<T: HasSchema> SVec<T> {
         self.vec.hash()
     }
 }
+
+impl<T: HasSchema> From<Vec<T>> for SVec<T> {
+    fn from(vec: Vec<T>) -> Self {
+        let mut svec = SVec::new();
+        for item in vec {
+            svec.push(item);
+        }
+        svec
+    }
+}
+
+impl<T: HasSchema, const N: usize> From<[T; N]> for SVec<T> {
+    fn from(arr: [T; N]) -> Self {
+        arr.into_iter().collect()
+    }
+}
+
 impl<T: HasSchema> std::ops::Index<usize> for SVec<T> {
     type Output = T;
 
@@ -794,5 +811,19 @@ mod test {
         let mut iter = v.iter();
         assert_eq!(iter.next_back(), None);
         assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_vec_and_array_conversions() {
+        // Test vec![] conversion
+        let vec = vec![1, 2, 3, 4, 5];
+        let svec: SVec<i32> = vec.into();
+        assert_eq!(svec.len(), 5);
+
+        // Test direct array conversion
+        let svec_direct: SVec<i32> = [11, 12, 13].into();
+        assert_eq!(svec_direct.len(), 3);
+        assert_eq!(svec_direct[0], 11);
+        assert_eq!(svec_direct[2], 13);
     }
 }

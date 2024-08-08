@@ -634,6 +634,21 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     pub fn into_schema_map(self) -> SchemaMap {
         self.map
     }
+
+    /// Returns true if the map contains a value for the specified key.
+    pub fn contains_key(&self, key: &K) -> bool {
+        self.map.get::<K, V>(key).is_some()
+    }
+
+    /// Returns the number of elements in the map.
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
+    /// Returns true if the map contains no elements.
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
 }
 
 type SMapIter<'iter, K, V> = std::iter::Map<
