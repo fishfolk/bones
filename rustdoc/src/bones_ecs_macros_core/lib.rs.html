@@ -138,6 +138,9 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>proc_macro2::{Span, TokenStream};
 <span class="kw">use </span>quote::quote;
 <span class="kw">use </span>syn::{parse2, punctuated::Punctuated, Fields, GenericParam, Index, ItemStruct, Token};
@@ -181,13 +184,13 @@
     <span class="kw">let </span>state_types: Punctuated&lt;TokenStream, <span class="macro">Token!</span>[,]&gt; =
         Punctuated::from_iter(fields.named.iter().map(|field| {
             <span class="kw">let </span>ty = <span class="kw-2">&amp;</span>field.ty;
-            <span class="macro">quote! </span>{ &lt;#ty <span class="kw">as </span>::bones_framework::prelude::SystemParam&gt;::State }
+            <span class="macro">quote! </span>{ &lt;#ty <span class="kw">as </span>::bones_ecs::prelude::SystemParam&gt;::State }
         }));
 
     <span class="kw">let </span>get_state_items: Punctuated&lt;TokenStream, <span class="macro">Token!</span>[,]&gt; =
         Punctuated::from_iter(fields.named.iter().map(|field| {
             <span class="kw">let </span>ty = <span class="kw-2">&amp;</span>field.ty;
-            <span class="macro">quote! </span>{ &lt;#ty <span class="kw">as </span>::bones_framework::prelude::SystemParam&gt;::get_state(world) }
+            <span class="macro">quote! </span>{ &lt;#ty <span class="kw">as </span>::bones_ecs::prelude::SystemParam&gt;::get_state(world) }
         }));
 
     <span class="kw">let </span>borrow_param_fields: Punctuated&lt;TokenStream, <span class="macro">Token!</span>[,]&gt; = fields
@@ -197,22 +200,25 @@
         .map(|(index, field)| {
             <span class="kw">let </span>ident = field.ident.as_ref().unwrap();
             <span class="kw">let </span>ty = <span class="kw-2">&amp;</span>field.ty;
-            <span class="kw">let </span>index = Index { index: index <span class="kw">as </span>u32, span: Span::call_site() };
+            <span class="kw">let </span>index = Index {
+                index: index <span class="kw">as </span>u32,
+                span: Span::call_site(),
+            };
             <span class="macro">quote! </span>{
-                #ident: &lt;#ty <span class="kw">as </span>::bones_framework::prelude::SystemParam&gt;::borrow(world, <span class="kw-2">&amp;mut </span>state.#index)
+                #ident: &lt;#ty <span class="kw">as </span>::bones_ecs::prelude::SystemParam&gt;::borrow(world, <span class="kw-2">&amp;mut </span>state.#index)
             }
         })
         .collect();
 
     <span class="prelude-val">Ok</span>(<span class="macro">quote! </span>{
-        <span class="kw">impl</span>&lt;#lifetime&gt; ::bones_framework::prelude::SystemParam <span class="kw">for </span>#ident&lt;#lifetime&gt; {
+        <span class="kw">impl</span>&lt;#lifetime&gt; ::bones_ecs::prelude::SystemParam <span class="kw">for </span>#ident&lt;#lifetime&gt; {
             <span class="kw">type </span>State = ( #state_types );
             <span class="kw">type </span>Param&lt;<span class="lifetime">'p</span>&gt; = #ident&lt;<span class="lifetime">'p</span>&gt;;
-            <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>::bones_framework::prelude::World) -&gt; <span class="self">Self</span>::State {
+            <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>::bones_ecs::prelude::World) -&gt; <span class="self">Self</span>::State {
                 ( #get_state_items )
             }
             <span class="kw">fn </span>borrow&lt;<span class="lifetime">'s</span>&gt;(
-                world: <span class="kw-2">&amp;</span><span class="lifetime">'s </span>::bones_framework::prelude::World,
+                world: <span class="kw-2">&amp;</span><span class="lifetime">'s </span>::bones_ecs::prelude::World,
                 state: <span class="kw-2">&amp;</span><span class="lifetime">'s </span><span class="kw-2">mut </span><span class="self">Self</span>::State,
             ) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">'s</span>&gt; {
                 <span class="self">Self</span>::Param { #borrow_param_fields }
@@ -244,25 +250,25 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>correct_system_param_impl() {
         <span class="kw">let </span>expected = <span class="macro">quote! </span>{
-            <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ::bones_framework::prelude::SystemParam <span class="kw">for </span>MySystemParam&lt;<span class="lifetime">'a</span>&gt; {
+            <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ::bones_ecs::prelude::SystemParam <span class="kw">for </span>MySystemParam&lt;<span class="lifetime">'a</span>&gt; {
                 <span class="kw">type </span>State = (
-                    &lt;Commands&lt;<span class="lifetime">'a</span>&gt; <span class="kw">as </span>::bones_framework::prelude::SystemParam&gt;::State,
-                    &lt;ResMut&lt;<span class="lifetime">'a</span>, Entities&gt; <span class="kw">as </span>::bones_framework::prelude::SystemParam&gt;::State
+                    &lt;Commands&lt;<span class="lifetime">'a</span>&gt; <span class="kw">as </span>::bones_ecs::prelude::SystemParam&gt;::State,
+                    &lt;ResMut&lt;<span class="lifetime">'a</span>, Entities&gt; <span class="kw">as </span>::bones_ecs::prelude::SystemParam&gt;::State
                 );
                 <span class="kw">type </span>Param&lt;<span class="lifetime">'p</span>&gt; = MySystemParam&lt;<span class="lifetime">'p</span>&gt;;
-                <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>::bones_framework::prelude::World) -&gt; <span class="self">Self</span>::State {
+                <span class="kw">fn </span>get_state(world: <span class="kw-2">&amp;</span>::bones_ecs::prelude::World) -&gt; <span class="self">Self</span>::State {
                     (
-                        &lt;Commands&lt;<span class="lifetime">'a</span>&gt; <span class="kw">as </span>::bones_framework::prelude::SystemParam&gt;::get_state(world),
-                        &lt;ResMut&lt;<span class="lifetime">'a</span>, Entities&gt; <span class="kw">as </span>::bones_framework::prelude::SystemParam&gt;::get_state(world)
+                        &lt;Commands&lt;<span class="lifetime">'a</span>&gt; <span class="kw">as </span>::bones_ecs::prelude::SystemParam&gt;::get_state(world),
+                        &lt;ResMut&lt;<span class="lifetime">'a</span>, Entities&gt; <span class="kw">as </span>::bones_ecs::prelude::SystemParam&gt;::get_state(world)
                     )
                 }
                 <span class="kw">fn </span>borrow&lt;<span class="lifetime">'s</span>&gt;(
-                    world: <span class="kw-2">&amp;</span><span class="lifetime">'s </span>::bones_framework::prelude::World,
+                    world: <span class="kw-2">&amp;</span><span class="lifetime">'s </span>::bones_ecs::prelude::World,
                     state: <span class="kw-2">&amp;</span><span class="lifetime">'s </span><span class="kw-2">mut </span><span class="self">Self</span>::State,
                 ) -&gt; <span class="self">Self</span>::Param&lt;<span class="lifetime">'s</span>&gt; {
                     <span class="self">Self</span>::Param {
-                        commands: &lt;Commands&lt;<span class="lifetime">'a</span>&gt; <span class="kw">as </span>::bones_framework::prelude::SystemParam&gt;::borrow(world, <span class="kw-2">&amp;mut </span>state.<span class="number">0</span>),
-                        entities: &lt;ResMut&lt;<span class="lifetime">'a</span>, Entities&gt; <span class="kw">as </span>::bones_framework::prelude::SystemParam&gt;::borrow(world, <span class="kw-2">&amp;mut </span>state.<span class="number">1</span>)
+                        commands: &lt;Commands&lt;<span class="lifetime">'a</span>&gt; <span class="kw">as </span>::bones_ecs::prelude::SystemParam&gt;::borrow(world, <span class="kw-2">&amp;mut </span>state.<span class="number">0</span>),
+                        entities: &lt;ResMut&lt;<span class="lifetime">'a</span>, Entities&gt; <span class="kw">as </span>::bones_ecs::prelude::SystemParam&gt;::borrow(world, <span class="kw-2">&amp;mut </span>state.<span class="number">1</span>)
                     }
                 }
             }
