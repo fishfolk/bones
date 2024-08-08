@@ -44,11 +44,51 @@ pub struct AnimationBankSprite {
     pub current: Ustr,
     /// The collection of animations in this animation bank.
     // TODO: Put Animation Frames in an `Arc` to Avoid Snapshot Clone Cost.
-    // TODO: Use more economic key type such as `ustr`
     pub animations: SMap<Ustr, AnimatedSprite>,
     #[cfg_attr(feature = "serde", serde(default))]
     /// The last animation that was playing.
     pub last_animation: Ustr,
+}
+
+impl AnimationBankSprite {
+    /// Set the current animation if it exists inside of `animations` in the bank. Else does nothing.
+    pub fn set_current(&mut self, animation_name: impl Into<Ustr>) {
+        let animation_name = animation_name.into();
+        if self.animations.contains_key(&animation_name) {
+            self.current = animation_name;
+        }
+    }
+
+    /// Insert a new animation into the bank
+    pub fn insert_animation(&mut self, name: impl Into<Ustr>, animation: AnimatedSprite) {
+        let name = name.into();
+        self.animations.insert(name, animation);
+    }
+
+    /// Remove an animation from the bank
+    pub fn remove_animation(&mut self, name: &Ustr) -> Option<AnimatedSprite> {
+        self.animations.remove(name)
+    }
+
+    /// Get a reference to an animation in the bank
+    pub fn get_animation(&self, name: &Ustr) -> Option<&AnimatedSprite> {
+        self.animations.get(name)
+    }
+
+    /// Get a mutable reference to an animation in the bank
+    pub fn get_animation_mut(&mut self, name: &Ustr) -> Option<&mut AnimatedSprite> {
+        self.animations.get_mut(name)
+    }
+
+    /// Get the current animation
+    pub fn get_current_animation(&self) -> Option<&AnimatedSprite> {
+        self.animations.get(&self.current)
+    }
+
+    /// Get a mutable reference to the current animation
+    pub fn get_current_animation_mut(&mut self) -> Option<&mut AnimatedSprite> {
+        self.animations.get_mut(&self.current)
+    }
 }
 
 impl Default for AnimatedSprite {
@@ -111,8 +151,7 @@ pub fn update_animation_banks(
 
             // Get the selected animation from the bank
             let animated_sprite = animation_bank
-                .animations
-                .get(&animation_bank.current)
+                .get_current_animation()
                 .cloned()
                 .unwrap_or_else(|| {
                     panic!("Animation `{}` does not exist.", animation_bank.current)
