@@ -1,11 +1,11 @@
 #![allow(missing_docs)]
 
+use std::sync::Arc;
 use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse, MATCH_ALPN, GameID};
 use iroh_net::{NodeId, NodeAddr};
 use tracing::info;
-
 use crate::{
-    networking::{get_network_endpoint, socket::establish_peer_connections},
+    networking::{get_network_endpoint, socket::establish_peer_connections, NetworkMatchSocket},
     prelude::*,
     utils::BiChannelServer,
 };
@@ -102,7 +102,7 @@ pub async fn search_for_game(
                         let socket = super::socket::Socket::new(player_idx, peer_connections);
 
                         matchmaker_channel.try_send(OnlineMatchmakerResponse::GameStarting {
-                            socket,
+                            socket: NetworkMatchSocket(Arc::new(socket)),
                             player_idx: player_idx as _,
                             player_count: client_count as _,
                         })?;

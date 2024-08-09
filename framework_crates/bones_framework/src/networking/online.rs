@@ -21,18 +21,6 @@ pub enum SearchState {
     WaitingForPlayers(usize),
 }
 
-/// Online matchmaker channel
-pub static ONLINE_MATCHMAKER: Lazy<OnlineMatchmaker> = Lazy::new(|| {
-    let (client, server) = bi_channel();
-
-    RUNTIME.spawn(async move {
-        if let Err(err) = online_matchmaker(server).await {
-            warn!("online matchmaker failed: {err:?}");
-        }
-    });
-
-    OnlineMatchmaker(client)
-});
 
 /// Channel to exchange messages with matchmaking server
 #[derive(DerefMut, Deref)]
@@ -50,12 +38,11 @@ pub enum OnlineMatchmakerRequest {
 
 
 /// Online matchmaker response
-#[derive(Debug)]
 pub enum OnlineMatchmakerResponse {
     Searching,
     PlayerCount(usize),
     GameStarting {
-        socket: Socket,
+        socket: NetworkMatchSocket,
         player_idx: usize,
         player_count: usize,
     },
@@ -67,6 +54,20 @@ pub enum OnlineMatchmakerResponse {
     },
     Error(String),
 }
+
+
+/// Online matchmaker channel
+pub static ONLINE_MATCHMAKER: Lazy<OnlineMatchmaker> = Lazy::new(|| {
+    let (client, server) = bi_channel();
+
+    RUNTIME.spawn(async move {
+        if let Err(err) = online_matchmaker(server).await {
+            warn!("online matchmaker failed: {err:?}");
+        }
+    });
+
+    OnlineMatchmaker(client)
+});
 
 async fn online_matchmaker(
     matchmaker_channel: BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
@@ -100,38 +101,8 @@ async fn online_matchmaker(
     Ok(())
 }
 
-/// Update state of game matchmaking or lobby, update `search_state`, return [`NetworkMatchSocket`] once connected.
-pub fn update_online_state(search_state: &mut SearchState) -> Option<NetworkMatchSocket> {
-    while let Ok(message) = ONLINE_MATCHMAKER.try_recv() {
-        match message {
-            OnlineMatchmakerResponse::Searching => *search_state = SearchState::Searching,
-            OnlineMatchmakerResponse::PlayerCount(count) => {
-                warn!("Waiting for players: {count}");
-                *search_state = SearchState::WaitingForPlayers(count)
-            }
-            OnlineMatchmakerResponse::GameStarting { socket, player_idx, player_count: _ } => {
-                info!(?player_idx, "Starting network game");
-                *search_state = default();
-                return Some(NetworkMatchSocket(Arc::new(socket)));
-            }
-            OnlineMatchmakerResponse::LobbiesList(lobbies) => {
-                info!("Received lobbies list: {:?}", lobbies);
-                // Handle the lobbies list (e.g., update UI)
-            }
-            OnlineMatchmakerResponse::LobbyCreated(lobby_id) => {
-                info!("Lobby created: {:?}", lobby_id);
-                // Handle lobby creation (e.g., update UI, join the created lobby)
-            }
-            OnlineMatchmakerResponse::LobbyJoined { lobby_id, player_count } => {
-                info!("Joined lobby: {:?}, player count: {}", lobby_id, player_count);
-                *search_state = SearchState::WaitingForPlayers(player_count);
-            }
-            OnlineMatchmakerResponse::Error(err) => {
-                warn!("Online matchmaker error: {}", err);
-                // Handle error (e.g., show error message to user)
-            }
-        }
-    }
-
-    None
+/// Read and return the latest matchmaker response, if one exists.
+pub fn read_matchmaker_response() -> Option<OnlineMatchmakerResponse> {
+    ONLINE_MATCHMAKER.try_recv().ok()
 }
+
