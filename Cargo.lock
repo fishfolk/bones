@@ -351,6 +351,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-channel"
+version = "2.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89b47800b0be77592da0afd425cc03468052844aff33b84e33cc696f64e77b6a"
+dependencies = [
+ "concurrent-queue",
+ "event-listener-strategy",
+ "futures-core",
+ "pin-project-lite",
+]
+
+[[package]]
 name = "async-executor"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -512,7 +524,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9714af523da4cdf58c42a317e5ed40349708ad954a18533991fd64c8ae0a6f68"
 dependencies = [
  "anyhow",
- "async-channel",
+ "async-channel 1.9.0",
  "bevy_app",
  "bevy_diagnostic",
  "bevy_ecs 0.11.3",
@@ -601,7 +613,7 @@ version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "266144b36df7e834d5198049e037ecdf2a2310a76ce39ed937d1b0a6a2c4e8c6"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "bevy_ecs_macros 0.11.3",
  "bevy_ptr 0.11.3",
  "bevy_reflect 0.11.3",
@@ -622,7 +634,7 @@ version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7709fbd22f81fb681534cd913c41e1cd18b17143368743281195d7f024b61aea"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "bevy_ecs_macros 0.12.1",
  "bevy_ptr 0.12.1",
  "bevy_reflect 0.12.1",
@@ -959,7 +971,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39df4824b760928c27afc7b00fb649c7a63c9d76661ab014ff5c86537ee906cb"
 dependencies = [
  "anyhow",
- "async-channel",
+ "async-channel 1.9.0",
  "bevy_app",
  "bevy_asset",
  "bevy_core",
@@ -1065,7 +1077,7 @@ version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c73bbb847c83990d3927005090df52f8ac49332e1643d2ad9aac3cd2974e66bf"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-executor",
  "async-task",
  "concurrent-queue",
@@ -1079,7 +1091,7 @@ version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f4fefa7fe0da8923525f7500e274f1bd60dbd79918a25cf7d0dfa0a6ba15c1cf"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "async-executor",
  "async-task",
  "concurrent-queue",
@@ -1360,7 +1372,7 @@ version = "0.3.0"
 dependencies = [
  "anyhow",
  "append-only-vec",
- "async-channel",
+ "async-channel 1.9.0",
  "bevy_tasks 0.11.3",
  "bones_schema",
  "bones_utils",
@@ -1443,7 +1455,7 @@ name = "bones_framework"
 version = "0.3.0"
 dependencies = [
  "anyhow",
- "async-channel",
+ "async-channel 1.9.0",
  "bevy_tasks 0.11.3",
  "bones_asset",
  "bones_lib",
@@ -1558,7 +1570,7 @@ dependencies = [
 name = "bones_scripting"
 version = "0.3.0"
 dependencies = [
- "async-channel",
+ "async-channel 1.9.0",
  "bevy_tasks 0.11.3",
  "bones_asset",
  "bones_lib",
@@ -2268,18 +2280,18 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "1.0.0-beta.6"
+version = "1.0.0-beta.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7abbfc297053be59290e3152f8cbcd52c8642e0728b69ee187d991d4c1af08d"
+checksum = "3249c0372e72f5f93b5c0ca54c0ab76bbf6216b6f718925476fd9bc4ffabb4fe"
 dependencies = [
  "derive_more-impl",
 ]
 
 [[package]]
 name = "derive_more-impl"
-version = "1.0.0-beta.6"
+version = "1.0.0-beta.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bba3e9872d7c58ce7ef0fcf1844fcc3e23ef2a58377b50df35dd98e42a5726e"
+checksum = "27d919ced7590fc17b5d5a3c63b662e8a7d2324212c4e4dbbed975cafd22d16d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2677,6 +2689,27 @@ checksum = "67b215c49b2b248c855fb73579eb1f4f26c38ffdc12973e20e07b91d78d5646e"
 dependencies = [
  "concurrent-queue",
  "parking",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "event-listener"
+version = "5.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6032be9bd27023a771701cc49f9f053c751055f71efb2e0ae5c15809093675ba"
+dependencies = [
+ "concurrent-queue",
+ "parking",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "event-listener-strategy"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f214dc438f977e6d4e3500aaa277f5ad94ca83fbbd9b1a15713ce2344ccc5a1"
+dependencies = [
+ "event-listener 5.3.1",
  "pin-project-lite",
 ]
 
@@ -3893,9 +3926,9 @@ checksum = "8f518f335dce6725a761382244631d86cf0ccb2863413590b31338feb467f9c3"
 
 [[package]]
 name = "iroh-base"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f31f493beda1c4f8c7be999eff8a80cd1e2428da4c61f5cdd14990af8122342e"
+checksum = "24ddb47e8160fb1d563a6f541c813c2f185423a0ad1c9260a6c76891a2300c26"
 dependencies = [
  "aead",
  "anyhow",
@@ -3934,9 +3967,9 @@ dependencies = [
 
 [[package]]
 name = "iroh-metrics"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "472ec21d59b34c8fbebbd8fcecfdc0f4b00a7af2d6453b303a1e9c9499674f67"
+checksum = "3ab017d2786c0b77583371cef016d3e76bdbc7d13b66532023cb7e854f65d15a"
 dependencies = [
  "anyhow",
  "erased_set",
@@ -3955,18 +3988,18 @@ dependencies = [
 
 [[package]]
 name = "iroh-net"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a3e2e9b2a555736a82cb53d16037b0ba0233034ac5042efce129b1460b0a50a"
+checksum = "372fbf01dc303be5427b6ea33b80411b3cfb6443d6389ce1ffc43231f244a51c"
 dependencies = [
  "anyhow",
+ "async-channel 2.3.1",
  "backoff",
  "base64 0.22.1",
  "bytes",
  "der",
  "derive_more",
  "duct",
- "flume",
  "futures-buffered",
  "futures-concurrency",
  "futures-lite 2.3.0",

@@ -129,5 +129,5 @@ rcgen                  = "0.12"
 rustls                 = { version = "0.21", features = ["dangerous_configuration", "quic"] }
 smallvec               = "1.10"
 iroh-quinn             = { version = "0.10" }
-iroh-net               = { version = "0.21" }
+iroh-net               = { version = "0.22" }
 tokio                  = { version = "1", features = ["rt-multi-thread", "macros"] }
