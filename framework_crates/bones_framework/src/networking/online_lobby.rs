@@ -8,14 +8,14 @@ use crate::{
     utils::BiChannelServer,
 };
 use std::sync::Arc;
-use super::online::{OnlineMatchmakerResponse, OnlineMatchmakerRequest};
+use super::online::{OnlineMatchmakerResponse, OnlineMatchmakerRequest, OnlineMatchmaker};
 
 async fn connect_to_matchmaker(id: NodeId) -> anyhow::Result<iroh_quinn::Connection> {
     let ep = get_network_endpoint().await;
     Ok(ep.connect(id.into(), MATCH_ALPN).await?)
 }
 
-pub async fn list_lobbies(
+pub async fn _resolve_list_lobbies(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     id: NodeId,
     game_id: GameID,
@@ -42,7 +42,7 @@ pub async fn list_lobbies(
     Ok(())
 }
 
-pub async fn create_lobby(
+pub async fn _resolve_create_lobby(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     id: NodeId,
     lobby_info: LobbyInfo,
@@ -72,7 +72,7 @@ pub async fn create_lobby(
     Ok(())
 }
 
-pub async fn join_lobby(
+pub async fn _resolve_join_lobby(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     id: NodeId,
     game_id: GameID,
@@ -143,15 +143,20 @@ pub async fn join_lobby(
     Ok(())
 }
 
-// Public interface functions
-pub fn list_lobbies_request(matchmaking_server: NodeId, game_id: GameID) -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
-    super::online::ONLINE_MATCHMAKER.try_send(OnlineMatchmakerRequest::ListLobbies { id: matchmaking_server, game_id })
-}
 
-pub fn create_lobby_request(matchmaking_server: NodeId, lobby_info: LobbyInfo) -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
-    super::online::ONLINE_MATCHMAKER.try_send(OnlineMatchmakerRequest::CreateLobby { id: matchmaking_server, lobby_info })
-}
+impl OnlineMatchmaker {
+    /// Sends a request to the matchmaking server to provide a list of all available lobbies for game_id. Response is read via `read_matchmaker_response()`.
+    pub fn list_lobbies(matchmaking_server: NodeId, game_id: GameID) -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
+        super::online::ONLINE_MATCHMAKER.try_send(OnlineMatchmakerRequest::ListLobbies { id: matchmaking_server, game_id })
+    }
 
-pub fn join_lobby_request(matchmaking_server: NodeId,game_id: GameID, lobby_id: LobbyId, password: Option<String>) -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
-    super::online::ONLINE_MATCHMAKER.try_send(OnlineMatchmakerRequest::JoinLobby { id: matchmaking_server , game_id, lobby_id, password })
+    /// Sends a request to the matchmaking server to create a new lobby with the specified lobby_info.
+    pub fn create_lobby(matchmaking_server: NodeId, lobby_info: LobbyInfo) -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
+        super::online::ONLINE_MATCHMAKER.try_send(OnlineMatchmakerRequest::CreateLobby { id: matchmaking_server, lobby_info })
+    }
+
+    /// Sends a request to the matchmaking server to join a lobby with the specified game_id, lobby_id, and optional password.
+    pub fn join_lobby(matchmaking_server: NodeId, game_id: GameID, lobby_id: LobbyId, password: Option<String>) -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
+        super::online::ONLINE_MATCHMAKER.try_send(OnlineMatchmakerRequest::JoinLobby { id: matchmaking_server , game_id, lobby_id, password })
+    }
 }

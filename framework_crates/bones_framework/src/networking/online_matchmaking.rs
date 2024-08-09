@@ -2,16 +2,16 @@
 
 use std::sync::Arc;
 use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse, MATCH_ALPN, GameID};
-use iroh_net::{NodeId, NodeAddr};
+use iroh_net::{NodeId};
 use tracing::info;
 use crate::{
     networking::{get_network_endpoint, socket::establish_peer_connections, NetworkMatchSocket},
     prelude::*,
     utils::BiChannelServer,
 };
-use super::online::{OnlineMatchmakerResponse, OnlineMatchmakerRequest};
+use super::online::{OnlineMatchmakerResponse, OnlineMatchmakerRequest, OnlineMatchmaker};
 
-pub async fn search_for_game(
+pub async fn _resolve_search_for_game(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     id: NodeId,
     game_id: GameID,
@@ -118,19 +118,20 @@ pub async fn search_for_game(
     Ok(())
 }
 
-/// Search for a game via the matchmaker
-pub fn start_search_for_matchmaked_game(matchmaking_server: NodeId, game_id: GameID, player_count: u32, match_data: Vec<u8>) {
-    super::online::ONLINE_MATCHMAKER
-        .try_send(OnlineMatchmakerRequest::SearchForGame {
-            id: matchmaking_server,
-            player_count,
-            game_id,
-            match_data
-        })
-        .unwrap()
-}
+impl OnlineMatchmaker {
+    /// Sends a request to the matchmaking server to start searching for a matchmaked game. Response is read via `read_matchmaker_response()`.
+    pub fn start_search_for_matchmaked_game(matchmaking_server: NodeId, game_id: GameID, player_count: u32, match_data: Vec<u8>) -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
+        super::online::ONLINE_MATCHMAKER
+            .try_send(OnlineMatchmakerRequest::SearchForGame {
+                id: matchmaking_server,
+                player_count,
+                game_id,
+                match_data
+            })
+    }
 
-/// Stop searching for game
-pub fn stop_search_for_matchmaked_game() -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
-    super::online::ONLINE_MATCHMAKER.try_send(OnlineMatchmakerRequest::StopSearch)
+    /// Stops searching for a matchmaked game.
+    pub fn stop_search_for_matchmaked_game() -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
+        super::online::ONLINE_MATCHMAKER.try_send(OnlineMatchmakerRequest::StopSearch)
+    }
 }

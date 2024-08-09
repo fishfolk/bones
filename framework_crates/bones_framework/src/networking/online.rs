@@ -2,27 +2,18 @@
 // TODO
 #![allow(missing_docs)]
 
-use std::sync::Arc;
-use bones_matchmaker_proto::{LobbyId, LobbyInfo, LobbyListItem, GameID, MatchInfo, MATCH_ALPN};
+pub use bones_matchmaker_proto::{LobbyId, LobbyInfo, LobbyListItem, GameID};
+pub use super::online_matchmaking::*;
+pub use super::online_lobby::*;
 use iroh_net::NodeId;
 use once_cell::sync::Lazy;
-use tracing::{info, warn};
+use tracing::warn;
 use crate::{
-    networking::{get_network_endpoint, NetworkMatchSocket},
+    networking::NetworkMatchSocket,
     prelude::*,
 };
-use super::socket::Socket;
 
-#[derive(Default, PartialEq, Eq, Clone, Copy)]
-pub enum SearchState {
-    #[default]
-    Connecting,
-    Searching,
-    WaitingForPlayers(usize),
-}
-
-
-/// Channel to exchange messages with matchmaking server
+/// Struct that holds a channel which exchange messages with the matchmaking server.
 #[derive(DerefMut, Deref)]
 pub struct OnlineMatchmaker(BiChannelClient<OnlineMatchmakerRequest, OnlineMatchmakerResponse>);
 
@@ -76,23 +67,23 @@ async fn online_matchmaker(
     while let Ok(message) = matchmaker_channel.recv().await {
         match message {
             OnlineMatchmakerRequest::SearchForGame { id, player_count, game_id, match_data } => {
-                if let Err(err) = crate::networking::online_matchmaking::search_for_game(&matchmaker_channel, id, game_id, player_count, match_data).await {
+                if let Err(err) = crate::networking::online_matchmaking::_resolve_search_for_game(&matchmaker_channel, id, game_id, player_count, match_data).await {
                     warn!("Online Game Search failed: {err:?}");
                 }
             }
             OnlineMatchmakerRequest::StopSearch => (), // Not searching, don't do anything
             OnlineMatchmakerRequest::ListLobbies { id, game_id } => {
-                if let Err(err) = crate::networking::online_lobby::list_lobbies(&matchmaker_channel, id, game_id).await {
+                if let Err(err) = crate::networking::online_lobby::_resolve_list_lobbies(&matchmaker_channel, id, game_id).await {
                     warn!("Listing lobbies failed: {err:?}");
                 }
             }
             OnlineMatchmakerRequest::CreateLobby { id, lobby_info } => {
-                if let Err(err) = crate::networking::online_lobby::create_lobby(&matchmaker_channel, id, lobby_info).await {
+                if let Err(err) = crate::networking::online_lobby::_resolve_create_lobby(&matchmaker_channel, id, lobby_info).await {
                     warn!("Creating lobby failed: {err:?}");
                 }
             }
             OnlineMatchmakerRequest::JoinLobby { id, game_id, lobby_id, password } => {
-                if let Err(err) = crate::networking::online_lobby::join_lobby(&matchmaker_channel, id, game_id, lobby_id, password).await {
+                if let Err(err) = crate::networking::online_lobby::_resolve_join_lobby(&matchmaker_channel, id, game_id, lobby_id, password).await {
                     warn!("Joining lobby failed: {err:?}");
                 }
             }
@@ -102,8 +93,11 @@ async fn online_matchmaker(
     Ok(())
 }
 
-/// Read and return the latest matchmaker response, if one exists.
-pub fn read_matchmaker_response() -> Option<OnlineMatchmakerResponse> {
-    ONLINE_MATCHMAKER.try_recv().ok()
+
+impl OnlineMatchmaker {
+    /// Read and return the latest matchmaker response, if one exists.
+    pub fn read_matchmaker_response() -> Option<OnlineMatchmakerResponse> {
+        ONLINE_MATCHMAKER.try_recv().ok()
+    }
 }
 
