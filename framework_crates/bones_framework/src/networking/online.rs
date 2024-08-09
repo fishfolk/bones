@@ -45,6 +45,7 @@ pub enum OnlineMatchmakerResponse {
         socket: NetworkMatchSocket,
         player_idx: usize,
         player_count: usize,
+        random_seed: u64,
     },
     LobbiesList(Vec<LobbyListItem>),
     LobbyCreated(LobbyId),

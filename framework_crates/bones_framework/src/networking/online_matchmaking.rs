@@ -105,6 +105,7 @@ pub async fn search_for_game(
                             socket: NetworkMatchSocket(Arc::new(socket)),
                             player_idx: player_idx as _,
                             player_count: client_count as _,
+                            random_seed
                         })?;
                         break;
                     }
