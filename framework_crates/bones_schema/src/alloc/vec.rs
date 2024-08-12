@@ -337,6 +337,38 @@ impl SchemaVec {
         let b = &*(b as *const Self);
         a.eq(b)
     }
+
+    /// Remove and return the element at position `index` within the vector,
+    /// shifting all elements after it to the left.
+    /// # Panics
+    /// Panics if `index` is out of bounds.
+    pub fn remove(&mut self, index: usize) -> SchemaBox {
+        if index >= self.len {
+            panic!("index out of bounds");
+        }
+        let item = unsafe {
+            let ptr = self.buffer.unchecked_idx(index);
+            let mut boxed = SchemaBox::uninitialized(self.schema);
+            boxed
+                .as_mut()
+                .as_ptr()
+                .copy_from_nonoverlapping(ptr, self.schema.layout().size());
+
+            // Shift elements
+            let to_move = self.len - index - 1;
+            if to_move > 0 {
+                std::ptr::copy(
+                    self.buffer.unchecked_idx(index + 1),
+                    self.buffer.unchecked_idx(index),
+                    to_move * self.schema.layout().size(),
+                );
+            }
+
+            self.len -= 1;
+            boxed
+        };
+        item
+    }
 }
 
 impl<T: HasSchema> FromIterator<T> for SVec<T> {
@@ -474,16 +506,6 @@ pub struct SVec<T: HasSchema> {
     _phantom: PhantomData<T>,
 }
 
-impl<T: HasSchema + Debug> std::fmt::Debug for SVec<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut l = f.debug_list();
-        for item in self.iter() {
-            l.entry(item);
-        }
-        l.finish()
-    }
-}
-
 impl<T: HasSchema> SVec<T> {
     /// Create a new, empty [`SVec`].
     pub fn new() -> Self {
@@ -576,6 +598,42 @@ impl<T: HasSchema> SVec<T> {
     pub fn hash(&self) -> u64 {
         self.vec.hash()
     }
+
+    /// Remove and return the element at position `index` within the vector,
+    /// shifting all elements after it to the left.
+    /// # Panics
+    /// Panics if `index` is out of bounds.
+    pub fn remove(&mut self, index: usize) -> T {
+        let boxed = self.vec.remove(index);
+        // SAFETY: We know that the SchemaBox contains a value of type T
+        unsafe { boxed.cast_into_unchecked() }
+    }
+}
+
+/// Iterator over [`SVec`].
+pub struct SVecIntoIter<T: HasSchema> {
+    svec: SVec<T>,
+    index: usize,
+}
+
+impl<T: HasSchema + Debug> std::fmt::Debug for SVec<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut l = f.debug_list();
+        for item in self.iter() {
+            l.entry(item);
+        }
+        l.finish()
+    }
+}
+
+impl<T: HasSchema> From<SVec<T>> for Vec<T> {
+    fn from(svec: SVec<T>) -> Self {
+        let mut vec = Vec::with_capacity(svec.len());
+        for item in svec {
+            vec.push(item);
+        }
+        vec
+    }
 }
 
 impl<T: HasSchema> From<Vec<T>> for SVec<T> {
@@ -585,6 +643,44 @@ impl<T: HasSchema> From<Vec<T>> for SVec<T> {
             svec.push(item);
         }
         svec
+    }
+}
+
+// Implement IntoIterator for SVec<T>
+impl<T: HasSchema> IntoIterator for SVec<T> {
+    type Item = T;
+    type IntoIter = SVecIntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        SVecIntoIter {
+            svec: self,
+            index: 0,
+        }
+    }
+}
+
+impl<T: HasSchema> Iterator for SVecIntoIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.svec.len() {
+            let item = self.svec.remove(self.index);
+            Some(item)
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.svec.len() - self.index;
+        (remaining, Some(remaining))
+    }
+}
+
+impl<T: HasSchema> Drop for SVecIntoIter<T> {
+    fn drop(&mut self) {
+        // Ensure all remaining elements are properly dropped
+        while let Some(_) = self.next() {}
     }
 }
 
@@ -814,16 +910,53 @@ mod test {
     }
 
     #[test]
-    fn test_vec_and_array_conversions() {
-        // Test vec![] conversion
+    fn test_vec_and_svec_conversions() {
+        // Test Vec to SVec conversion
         let vec = vec![1, 2, 3, 4, 5];
-        let svec: SVec<i32> = vec.into();
+        let svec: SVec<i32> = vec.clone().into();
         assert_eq!(svec.len(), 5);
-
-        // Test direct array conversion
+        // Test SVec to Vec conversion
+        let vec_from_svec: Vec<i32> = svec.into();
+        assert_eq!(vec, vec_from_svec);
+        // Test direct array conversion to SVec
         let svec_direct: SVec<i32> = [11, 12, 13].into();
         assert_eq!(svec_direct.len(), 3);
-        assert_eq!(svec_direct[0], 11);
-        assert_eq!(svec_direct[2], 13);
+        // Test SVec to Vec conversion for array-created SVec
+        let vec_from_array_svec: Vec<i32> = svec_direct.into();
+        assert_eq!(vec_from_array_svec, vec![11, 12, 13]);
+    }
+
+    #[test]
+    fn test_remove() {
+        let mut svec: SVec<i32> = vec![10, 20, 30, 40, 50].into();
+
+        // Remove from the middle
+        let removed = svec.remove(2);
+        assert_eq!(removed, 30);
+        assert_eq!(svec.len(), 4);
+        assert_eq!(svec[0], 10);
+
+        // Remove from the beginning
+        let removed = svec.remove(0);
+        assert_eq!(removed, 10);
+        assert_eq!(svec.len(), 3);
+        assert_eq!(svec[0], 20);
+
+        // Remove from the end
+        let removed = svec.remove(2);
+        assert_eq!(removed, 50);
+        assert_eq!(svec.len(), 2);
+        assert_eq!(svec[1], 40);
+
+        // Test removing the last element
+        let removed = svec.remove(1);
+        assert_eq!(removed, 40);
+        assert_eq!(svec.len(), 1);
+        assert_eq!(svec[0], 20);
+
+        // Test removing the very last element
+        let removed = svec.remove(0);
+        assert_eq!(removed, 20);
+        assert_eq!(svec.len(), 0);
     }
 }
