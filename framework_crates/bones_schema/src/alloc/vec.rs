@@ -715,7 +715,7 @@ impl<T: HasSchema> Iterator for SVecIntoIter<T> {
 impl<T: HasSchema> Drop for SVecIntoIter<T> {
     fn drop(&mut self) {
         // Ensure all remaining elements are properly dropped
-        while let Some(_) = self.next() {}
+        for _ in self.by_ref() {}
     }
 }
 
