@@ -372,7 +372,7 @@ impl SchemaVec {
 
     /// Clears the vector, removing all values.
     pub fn clear(&mut self) {
-        while let Some(_) = self.pop_box() {}
+        while self.pop_box().is_some() {}
     }
 
     /// Shortens the vector, keeping the first `len` elements and dropping the rest.
