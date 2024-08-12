@@ -369,6 +369,22 @@ impl SchemaVec {
         };
         item
     }
+
+    /// Clears the vector, removing all values.
+    pub fn clear(&mut self) {
+        while let Some(_) = self.pop_box() {}
+    }
+
+    /// Shortens the vector, keeping the first `len` elements and dropping the rest.
+    ///
+    /// If `len` is greater than the vector's current length, this has no effect.
+    pub fn truncate(&mut self, len: usize) {
+        if len < self.len {
+            while self.len > len {
+                self.pop_box();
+            }
+        }
+    }
 }
 
 impl<T: HasSchema> FromIterator<T> for SVec<T> {
@@ -607,6 +623,25 @@ impl<T: HasSchema> SVec<T> {
         let boxed = self.vec.remove(index);
         // SAFETY: We know that the SchemaBox contains a value of type T
         unsafe { boxed.cast_into_unchecked() }
+    }
+
+    /// Clears the vector, removing all values.
+    pub fn clear(&mut self) {
+        self.vec.clear();
+    }
+
+    /// Shortens the vector, keeping the first `len` elements and dropping the rest.
+    ///
+    /// If `len` is greater than the vector's current length, this has no effect.
+    pub fn truncate(&mut self, len: usize) {
+        self.vec.truncate(len);
+    }
+
+    /// Extends the vector with the contents of an iterator.
+    pub fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        for item in iter {
+            self.push(item);
+        }
     }
 }
 
@@ -958,5 +993,55 @@ mod test {
         let removed = svec.remove(0);
         assert_eq!(removed, 20);
         assert_eq!(svec.len(), 0);
+    }
+
+    #[test]
+    fn test_svec_operations() {
+        let mut vec: SVec<i32> = SVec::new();
+
+        // Test push and len
+        vec.push(1);
+        vec.push(2);
+        vec.push(3);
+        assert_eq!(vec.len(), 3);
+
+        // Test get
+        assert_eq!(vec.get(1), Some(&2));
+        assert_eq!(vec.get(3), None);
+
+        // Test remove
+        let removed = vec.remove(2);
+        assert_eq!(removed, 3);
+        assert_eq!(vec.len(), 2);
+
+        // Test iteration
+        let sum: i32 = vec.iter().copied().sum();
+        assert_eq!(sum, 3); // 1 + 2
+
+        // Test extend
+        vec.extend(vec![5, 6]);
+        assert_eq!(vec.len(), 4);
+        assert_eq!(vec.get(2), Some(&5));
+        assert_eq!(vec.get(3), Some(&6));
+
+        // Test truncate
+        vec.truncate(3);
+        assert_eq!(vec.len(), 3);
+        assert_eq!(vec.get(2), Some(&5));
+        assert_eq!(vec.get(3), None);
+
+        // Test clear
+        vec.clear();
+        assert_eq!(vec.len(), 0);
+        assert!(vec.is_empty());
+
+        // Test pop on empty vector
+        assert_eq!(vec.pop(), None);
+
+        // Test Vec and SVec conversions
+        let original_vec = vec![1, 2, 3, 4, 5];
+        let svec: SVec<i32> = original_vec.clone().into();
+        let vec_from_svec: Vec<i32> = svec.into();
+        assert_eq!(original_vec, vec_from_svec);
     }
 }
