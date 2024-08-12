@@ -379,10 +379,8 @@ impl SchemaVec {
     ///
     /// If `len` is greater than the vector's current length, this has no effect.
     pub fn truncate(&mut self, len: usize) {
-        if len < self.len {
-            while self.len > len {
-                self.pop_box();
-            }
+        while self.len > len {
+            self.pop_box();
         }
     }
 }
