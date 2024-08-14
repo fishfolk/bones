@@ -43,6 +43,7 @@ pub(crate) const BITSET_SLICE_COUNT: usize = BITSET_SIZE / (32 * 8 / 8);
 
 /// The type of bitsets used to track entities in component storages.
 /// Mostly used to create caches.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Deref, DerefMut, Clone, Debug)]
 pub struct BitSetVec(pub Vec<[u32; 8]>);
 
