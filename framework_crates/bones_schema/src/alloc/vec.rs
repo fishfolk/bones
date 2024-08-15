@@ -707,6 +707,22 @@ impl<T: HasSchema> SVec<T> {
         let len = self.len();
         self.get_mut(len.wrapping_sub(1))
     }
+
+    /// Reverses the order of elements in the vector, in place.
+    pub fn reverse(&mut self) {
+        let mut i = 0;
+        let mut j = self.len().saturating_sub(1);
+        while i < j {
+            // SAFETY: We know that i and j are within bounds and not equal.
+            unsafe {
+                let ptr_i = self.get_mut(i).unwrap() as *mut T;
+                let ptr_j = self.get_mut(j).unwrap() as *mut T;
+                std::ptr::swap(ptr_i, ptr_j);
+            }
+            i += 1;
+            j -= 1;
+        }
+    }
 }
 
 /// Iterator over [`SVec`].
@@ -1145,6 +1161,11 @@ mod test {
         let svec: SVec<i32> = original_vec.clone().into();
         let vec_from_svec: Vec<i32> = svec.into();
         assert_eq!(original_vec, vec_from_svec);
+
+        // Test reverse
+        let mut reversed_vec = original_vec.clone();
+        reversed_vec.reverse();
+        assert_eq!(reversed_vec, vec![5, 4, 3, 2, 1]);
     }
 
     #[test]
