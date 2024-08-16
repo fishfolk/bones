@@ -543,8 +543,7 @@ impl<T: HasSchema> SVec<T> {
         unsafe {
             self.vec.raw_pop().map(|ptr| {
                 let mut ret = MaybeUninit::<T>::uninit();
-                ret.as_mut_ptr()
-                    .copy_from_nonoverlapping(ptr as *mut T, self.vec.schema.layout().size());
+                ret.as_mut_ptr().copy_from_nonoverlapping(ptr as *mut T, 1);
                 ret.assume_init()
             })
         }
@@ -1041,5 +1040,12 @@ mod test {
         let svec: SVec<i32> = original_vec.clone().into();
         let vec_from_svec: Vec<i32> = svec.into();
         assert_eq!(original_vec, vec_from_svec);
+    }
+
+    #[test]
+    fn miri_error_001() {
+        let mut vec: SVec<i32> = SVec::new();
+        vec.push(10);
+        vec.pop();
     }
 }
