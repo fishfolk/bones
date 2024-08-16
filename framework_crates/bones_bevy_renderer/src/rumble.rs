@@ -1,3 +1,4 @@
+use crate::bones::SVec;
 use crate::BonesGame;
 use bevy::input::gamepad::{
     GamepadRumbleIntensity as BevyGamepadRumbleIntensity,
@@ -12,7 +13,7 @@ pub fn handle_bones_rumble(
     mut rumble_requests: EventWriter<BevyGamepadRumbleRequest>,
 ) {
     if let Some(mut bones_rumble_requests) = game.shared_resource_mut::<bones::GamepadsRumble>() {
-        for request in bones_rumble_requests.requests.drain(..) {
+        for request in &bones_rumble_requests.requests {
             match request {
                 bones::GamepadRumbleRequest::Trigger {
                     gamepad,
@@ -24,16 +25,16 @@ pub fn handle_bones_rumble(
                         weak_motor: intensity.weak_motor(),
                     };
 
-                    let gamepad = Gamepad::new(gamepad as usize);
+                    let gamepad = Gamepad::new(gamepad.clone() as usize);
 
                     rumble_requests.send(BevyGamepadRumbleRequest::Add {
                         gamepad,
                         intensity: bevy_intensity,
-                        duration: Duration::from_secs_f32(duration),
+                        duration: Duration::from_secs_f32(duration.clone()),
                     });
                 }
                 bones::GamepadRumbleRequest::Stop { gamepad } => {
-                    let gamepad = Gamepad::new(gamepad as usize);
+                    let gamepad = Gamepad::new(gamepad.clone() as usize);
                     rumble_requests.send(BevyGamepadRumbleRequest::Stop { gamepad });
                 }
             }

@@ -337,6 +337,7 @@ impl GamepadsRumble {
         self.enabled_gamepads
             .get(gamepad as usize)
             .unwrap_or(&false)
+            .clone()
     }
 
     /// Checks if a specific gamepad is disabled for rumble (no rumble trigger requests will work).
