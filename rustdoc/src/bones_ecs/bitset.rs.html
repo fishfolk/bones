@@ -66,6 +66,7 @@
 <a href="#65" id="65">65</a>
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bitset implementation.
 //!
 //! Bitsets are powered by the [`bitset_core`] crate.
@@ -111,7 +112,8 @@
 
 <span class="doccomment">/// The type of bitsets used to track entities in component storages.
 /// Mostly used to create caches.
-</span><span class="attr">#[derive(Deref, DerefMut, Clone, Debug)]
+</span><span class="attr">#[cfg_attr(feature = <span class="string">"serde"</span>, derive(serde::Serialize, serde::Deserialize))]
+#[derive(Deref, DerefMut, Clone, Debug)]
 </span><span class="kw">pub struct </span>BitSetVec(<span class="kw">pub </span>Vec&lt;[u32; <span class="number">8</span>]&gt;);
 
 <span class="kw">impl </span>Default <span class="kw">for </span>BitSetVec {
