@@ -175,54 +175,67 @@ pub struct GamepadRumbleIntensity {
 }
 
 impl GamepadRumbleIntensity {
+    /// Represents no rumble intensity.
     pub const ZERO: Self = Self {
         strong_motor: 0.0,
         weak_motor: 0.0,
     };
+    /// Represents maximum rumble intensity for both motors.
     pub const MAX_BOTH: Self = Self {
         strong_motor: 1.0,
         weak_motor: 1.0,
     };
+    /// Represents maximum rumble intensity for the strong motor only.
     pub const MAX_STRONG: Self = Self {
         strong_motor: 1.0,
         weak_motor: 0.0,
     };
+    /// Represents maximum rumble intensity for the weak motor only.
     pub const MAX_WEAK: Self = Self {
         strong_motor: 0.0,
         weak_motor: 1.0,
     };
+    /// Represents medium rumble intensity for both motors.
     pub const MEDIUM_BOTH: Self = Self {
         strong_motor: 0.5,
         weak_motor: 0.5,
     };
+    /// Represents medium rumble intensity for the strong motor only.
     pub const MEDIUM_STRONG: Self = Self {
         strong_motor: 0.5,
         weak_motor: 0.0,
     };
+    /// Represents medium rumble intensity for the weak motor only.
     pub const MEDIUM_WEAK: Self = Self {
         strong_motor: 0.0,
         weak_motor: 0.5,
     };
+    /// Represents light rumble intensity for both motors.
     pub const LIGHT_BOTH: Self = Self {
         strong_motor: 0.25,
         weak_motor: 0.25,
     };
+    /// Represents light rumble intensity for the strong motor only.
     pub const LIGHT_STRONG: Self = Self {
         strong_motor: 0.25,
         weak_motor: 0.0,
     };
+    /// Represents light rumble intensity for the weak motor only.
     pub const LIGHT_WEAK: Self = Self {
         strong_motor: 0.0,
         weak_motor: 0.25,
     };
+    /// Represents very light rumble intensity for both motors.
     pub const VERY_LIGHT_BOTH: Self = Self {
         strong_motor: 0.1,
         weak_motor: 0.1,
     };
+    /// Represents very light rumble intensity for the strong motor only.
     pub const VERY_LIGHT_STRONG: Self = Self {
         strong_motor: 0.1,
         weak_motor: 0.0,
     };
+    /// Represents very light rumble intensity for the weak motor only.
     pub const VERY_LIGHT_WEAK: Self = Self {
         strong_motor: 0.0,
         weak_motor: 0.1,
@@ -274,6 +287,6 @@ impl Default for GamepadRumbleRequest {
     }
 }
 
-/// Struct that wraps a list of gamepad rumble requests as a resource
+/// Resource that holds the list of gamepad rumble requests to be processed
 #[derive(HasSchema, Default, Clone)]
 pub struct GamepadRumbleRequests(pub Vec<GamepadRumbleRequest>);
