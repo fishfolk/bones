@@ -13,6 +13,7 @@ use super::layout::*;
 /// it has room for.
 ///
 /// Dropping a [`ResizableAlloc`] will de-allocate it's memory.
+#[derive(Debug)]
 pub struct ResizableAlloc {
     /// The pointer to the allocation. May be dangling for a capacity of zero or for a zero-sized
     /// layout.
