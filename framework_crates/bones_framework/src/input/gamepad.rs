@@ -334,10 +334,12 @@ impl GamepadsRumble {
 
     /// Checks if a specific gamepad is enabled for rumble.
     pub fn is_enabled(&self, gamepad: u32) -> bool {
-        self.enabled_gamepads
-            .get(gamepad as usize)
-            .unwrap_or(&false)
-            .clone()
+        let gamepad_index = gamepad as usize;
+        if gamepad_index < self.enabled_gamepads.len() {
+            self.enabled_gamepads[gamepad_index]
+        } else {
+            false
+        }
     }
 
     /// Checks if a specific gamepad is disabled for rumble (no rumble trigger requests will work).
