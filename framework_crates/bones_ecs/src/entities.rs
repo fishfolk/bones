@@ -55,6 +55,7 @@ impl Default for Entity {
 ///
 /// It also holds a list of entities that were recently killed, which allows to remove components of
 /// deleted entities at the end of a game frame.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, HasSchema)]
 pub struct Entities {
     /// Bitset containing all living entities
