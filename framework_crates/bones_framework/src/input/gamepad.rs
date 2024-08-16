@@ -1,5 +1,4 @@
 //! Gamepad input resource.
-
 use crate::prelude::*;
 
 /// Resource containing the gamepad input events detected this frame.
@@ -163,5 +162,114 @@ impl std::fmt::Display for GamepadAxis {
                 GamepadAxis::Other(n) => return write!(f, "Axis {n}"),
             }
         )
+    }
+}
+
+/// Struct that represents intensity of a rumble
+#[derive(HasSchema, Default, Clone, Debug, Copy)]
+pub struct GamepadRumbleIntensity {
+    /// The intensity of the strong motor, between 0.0 - 1.0.
+    strong_motor: f32,
+    /// The intensity of the weak motor, between 0.0 - 1.0.
+    weak_motor: f32,
+}
+
+impl GamepadRumbleIntensity {
+    pub const ZERO: Self = Self {
+        strong_motor: 0.0,
+        weak_motor: 0.0,
+    };
+    pub const MAX_BOTH: Self = Self {
+        strong_motor: 1.0,
+        weak_motor: 1.0,
+    };
+    pub const MAX_STRONG: Self = Self {
+        strong_motor: 1.0,
+        weak_motor: 0.0,
+    };
+    pub const MAX_WEAK: Self = Self {
+        strong_motor: 0.0,
+        weak_motor: 1.0,
+    };
+    pub const MEDIUM_BOTH: Self = Self {
+        strong_motor: 0.5,
+        weak_motor: 0.5,
+    };
+    pub const MEDIUM_STRONG: Self = Self {
+        strong_motor: 0.5,
+        weak_motor: 0.0,
+    };
+    pub const MEDIUM_WEAK: Self = Self {
+        strong_motor: 0.0,
+        weak_motor: 0.5,
+    };
+    pub const LIGHT_BOTH: Self = Self {
+        strong_motor: 0.25,
+        weak_motor: 0.25,
+    };
+    pub const LIGHT_STRONG: Self = Self {
+        strong_motor: 0.25,
+        weak_motor: 0.0,
+    };
+    pub const LIGHT_WEAK: Self = Self {
+        strong_motor: 0.0,
+        weak_motor: 0.25,
+    };
+    pub const VERY_LIGHT_BOTH: Self = Self {
+        strong_motor: 0.1,
+        weak_motor: 0.1,
+    };
+    pub const VERY_LIGHT_STRONG: Self = Self {
+        strong_motor: 0.1,
+        weak_motor: 0.0,
+    };
+    pub const VERY_LIGHT_WEAK: Self = Self {
+        strong_motor: 0.0,
+        weak_motor: 0.1,
+    };
+
+    /// Get the intensity of the strong motor.
+    pub fn strong_motor(&self) -> f32 {
+        self.strong_motor
+    }
+
+    /// Set the intensity of the strong motor, clamping it between 0.0 and 1.0.
+    pub fn set_strong_motor(&mut self, value: f32) {
+        self.strong_motor = value.clamp(0.0, 1.0);
+    }
+
+    /// Get the intensity of the weak motor.
+    pub fn weak_motor(&self) -> f32 {
+        self.weak_motor
+    }
+
+    /// Set the intensity of the weak motor, clamping it between 0.0 and 1.0.
+    pub fn set_weak_motor(&mut self, value: f32) {
+        self.weak_motor = value.clamp(0.0, 1.0);
+    }
+}
+
+/// Represents a request to either add or stop rumble on a specific gamepad
+#[derive(HasSchema, Clone, Debug)]
+pub enum GamepadRumbleRequest {
+    /// Request to add rumble to a gamepad.
+    Add {
+        /// The ID of the gamepad to rumble.
+        gamepad: u32,
+        /// The intensity of the rumble.
+        intensity: GamepadRumbleIntensity,
+        /// The duration of the rumble in seconds.
+        duration: f32,
+    },
+    /// Request to stop rumble on a gamepad.
+    Stop {
+        /// The ID of the gamepad to stop rumbling.
+        gamepad: u32,
+    },
+}
+
+impl Default for GamepadRumbleRequest {
+    fn default() -> Self {
+        GamepadRumbleRequest::Stop { gamepad: 0 }
     }
 }

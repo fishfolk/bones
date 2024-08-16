@@ -23,6 +23,8 @@ mod render;
 use render::*;
 mod ui;
 use ui::*;
+mod rumble;
+use rumble::*;
 
 use bevy::prelude::*;
 use bones_framework::prelude as bones;
@@ -222,6 +224,13 @@ impl BonesBevyRenderer {
                 .after(bevy_egui::EguiSet::ProcessInput)
                 .before(bevy_egui::EguiSet::BeginFrame),
         );
+        // Insert rumble resource and add system
+        app.init_resource::<GamepadRumbleRequests>();
+        app.add_systems(
+            Update,
+            handle_bones_rumble.run_if(assets_are_loaded.or_else(move || !self.preload)),
+        );
+
         if self.preload {
             app.add_systems(Update, asset_load_status.run_if(assets_not_loaded));
         }
