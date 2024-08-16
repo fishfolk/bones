@@ -386,6 +386,15 @@
 <a href="#385" id="385">385</a>
 <a href="#386" id="386">386</a>
 <a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -411,9 +420,11 @@
 <span class="kw">use </span>render::<span class="kw-2">*</span>;
 <span class="kw">mod </span>ui;
 <span class="kw">use </span>ui::<span class="kw-2">*</span>;
-
+<span class="kw">mod </span>rumble;
 <span class="kw">use </span>bevy::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>bones::GamepadsRumble;
 <span class="kw">use </span>bones_framework::prelude <span class="kw">as </span>bones;
+<span class="kw">use </span>rumble::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>bevy::{
     input::InputSystem,
@@ -577,9 +588,15 @@
         )));
         storage.load();
         <span class="self">self</span>.game.insert_shared_resource(storage);
-
         <span class="self">self</span>.game
             .insert_shared_resource(bones::EguiTextures::default());
+
+        <span class="comment">// Insert rumble resource and add system
+        </span><span class="self">self</span>.game.init_shared_resource::&lt;GamepadsRumble&gt;();
+        app.add_systems(
+            Update,
+            handle_bones_rumble.run_if(assets_are_loaded.or_else(<span class="kw">move </span>|| !<span class="self">self</span>.preload)),
+        );
 
         <span class="comment">// Insert empty inputs that will be updated by the `insert_bones_input` system later.
         </span><span class="self">self</span>.game.init_shared_resource::&lt;bones::KeyboardInputs&gt;();
@@ -610,6 +627,7 @@
                 .after(bevy_egui::EguiSet::ProcessInput)
                 .before(bevy_egui::EguiSet::BeginFrame),
         );
+
         <span class="kw">if </span><span class="self">self</span>.preload {
             app.add_systems(Update, asset_load_status.run_if(assets_not_loaded));
         }
