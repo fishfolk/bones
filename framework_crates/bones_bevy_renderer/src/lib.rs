@@ -23,9 +23,11 @@ mod render;
 use render::*;
 mod ui;
 use ui::*;
-
+mod rumble;
 use bevy::prelude::*;
+use bones::GamepadsRumble;
 use bones_framework::prelude as bones;
+use rumble::*;
 
 use bevy::{
     input::InputSystem,
@@ -189,9 +191,15 @@ impl BonesBevyRenderer {
         )));
         storage.load();
         self.game.insert_shared_resource(storage);
-
         self.game
             .insert_shared_resource(bones::EguiTextures::default());
+
+        // Insert rumble resource and add system
+        self.game.init_shared_resource::<GamepadsRumble>();
+        app.add_systems(
+            Update,
+            handle_bones_rumble.run_if(assets_are_loaded.or_else(move || !self.preload)),
+        );
 
         // Insert empty inputs that will be updated by the `insert_bones_input` system later.
         self.game.init_shared_resource::<bones::KeyboardInputs>();
@@ -222,6 +230,7 @@ impl BonesBevyRenderer {
                 .after(bevy_egui::EguiSet::ProcessInput)
                 .before(bevy_egui::EguiSet::BeginFrame),
         );
+
         if self.preload {
             app.add_systems(Update, asset_load_status.run_if(assets_not_loaded));
         }
