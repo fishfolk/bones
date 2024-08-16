@@ -261,7 +261,6 @@ impl GamepadRumbleIntensity {
         self.weak_motor = value.clamp(0.0, 1.0);
     }
 }
-
 /// Represents a request to either add or stop rumble on a specific gamepad
 #[derive(HasSchema, Clone, Debug)]
 pub enum GamepadRumbleRequest {
@@ -290,3 +289,35 @@ impl Default for GamepadRumbleRequest {
 /// Resource that holds the list of gamepad rumble requests to be processed
 #[derive(HasSchema, Default, Clone)]
 pub struct GamepadRumbleRequests(pub Vec<GamepadRumbleRequest>);
+
+impl GamepadRumbleRequests {
+    /// Adds rumble to a specific gamepad.
+    pub fn add(&mut self, gamepad: u32, intensity: GamepadRumbleIntensity, duration: f32) {
+        self.0.push(GamepadRumbleRequest::Add {
+            gamepad,
+            intensity,
+            duration,
+        });
+    }
+
+    /// Stops rumble on a specific gamepad.
+    pub fn stop(&mut self, gamepad: u32) {
+        self.0.push(GamepadRumbleRequest::Stop { gamepad });
+    }
+
+    /// Adds rumble to all gamepads (0-3).
+    pub fn add_all(&mut self, intensity: GamepadRumbleIntensity, duration: f32) {
+        self.0
+            .extend((0..4).map(|gamepad| GamepadRumbleRequest::Add {
+                gamepad,
+                intensity: intensity.clone(),
+                duration,
+            }));
+    }
+
+    /// Stops rumble on all gamepads (0-3).
+    pub fn stop_all(&mut self) {
+        self.0
+            .extend((0..4).map(|gamepad| GamepadRumbleRequest::Stop { gamepad }));
+    }
+}
