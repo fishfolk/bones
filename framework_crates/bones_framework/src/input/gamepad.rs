@@ -273,3 +273,7 @@ impl Default for GamepadRumbleRequest {
         GamepadRumbleRequest::Stop { gamepad: 0 }
     }
 }
+
+/// Struct that wraps a list of gamepad rumble requests as a resource
+#[derive(HasSchema, Default, Clone)]
+pub struct GamepadRumbleRequests(pub Vec<GamepadRumbleRequest>);
