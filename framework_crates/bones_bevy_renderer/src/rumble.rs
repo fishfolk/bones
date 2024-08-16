@@ -12,7 +12,7 @@ pub fn handle_bones_rumble(
     mut rumble_requests: EventWriter<BevyGamepadRumbleRequest>,
 ) {
     if let Some(mut bones_rumble_requests) = game.shared_resource_mut::<bones::GamepadsRumble>() {
-        while let Some(request) = bones_rumble_requests.requests.pop() {
+        for request in bones_rumble_requests.requests.drain(..) {
             match request {
                 bones::GamepadRumbleRequest::Trigger {
                     gamepad,
@@ -38,5 +38,6 @@ pub fn handle_bones_rumble(
                 }
             }
         }
+        bones_rumble_requests.requests = SVec::new();
     }
 }

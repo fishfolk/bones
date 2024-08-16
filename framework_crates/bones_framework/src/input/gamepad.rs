@@ -318,7 +318,7 @@ impl GamepadsRumble {
     pub fn trigger_all(&mut self, intensity: GamepadRumbleIntensity, duration: f32) {
         for gamepad in 0..self.enabled_gamepads.len() {
             if self.is_enabled(gamepad as u32) {
-                self.trigger(gamepad as u32, intensity.clone(), duration);
+                self.trigger(gamepad as u32, intensity, duration);
             }
         }
     }
@@ -337,7 +337,6 @@ impl GamepadsRumble {
         self.enabled_gamepads
             .get(gamepad as usize)
             .unwrap_or(&false)
-            .clone()
     }
 
     /// Checks if a specific gamepad is disabled for rumble (no rumble trigger requests will work).
