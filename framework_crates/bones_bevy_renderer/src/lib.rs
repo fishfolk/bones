@@ -25,7 +25,7 @@ mod ui;
 use ui::*;
 mod rumble;
 use bevy::prelude::*;
-use bones::GamepadRumbleRequests;
+use bones::GamepadsRumble;
 use bones_framework::prelude as bones;
 use rumble::*;
 
@@ -195,7 +195,7 @@ impl BonesBevyRenderer {
             .insert_shared_resource(bones::EguiTextures::default());
 
         // Insert rumble resource and add system
-        self.game.init_shared_resource::<GamepadRumbleRequests>();
+        self.game.init_shared_resource::<GamepadsRumble>();
         app.add_systems(
             Update,
             handle_bones_rumble.run_if(assets_are_loaded.or_else(move || !self.preload)),
