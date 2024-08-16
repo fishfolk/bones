@@ -1044,6 +1044,12 @@
 <a href="#1043" id="1043">1043</a>
 <a href="#1044" id="1044">1044</a>
 <a href="#1045" id="1045">1045</a>
+<a href="#1046" id="1046">1046</a>
+<a href="#1047" id="1047">1047</a>
+<a href="#1048" id="1048">1048</a>
+<a href="#1049" id="1049">1049</a>
+<a href="#1050" id="1050">1050</a>
+<a href="#1051" id="1051">1051</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     any::{type_name, TypeId},
     ffi::c_void,
@@ -1589,8 +1595,7 @@
         <span class="kw">unsafe </span>{
             <span class="self">self</span>.vec.raw_pop().map(|ptr| {
                 <span class="kw">let </span><span class="kw-2">mut </span>ret = MaybeUninit::&lt;T&gt;::uninit();
-                ret.as_mut_ptr()
-                    .copy_from_nonoverlapping(ptr <span class="kw">as </span><span class="kw-2">*mut </span>T, <span class="self">self</span>.vec.schema.layout().size());
+                ret.as_mut_ptr().copy_from_nonoverlapping(ptr <span class="kw">as </span><span class="kw-2">*mut </span>T, <span class="number">1</span>);
                 ret.assume_init()
             })
         }
@@ -2087,6 +2092,13 @@
         <span class="kw">let </span>svec: SVec&lt;i32&gt; = original_vec.clone().into();
         <span class="kw">let </span>vec_from_svec: Vec&lt;i32&gt; = svec.into();
         <span class="macro">assert_eq!</span>(original_vec, vec_from_svec);
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>miri_error_001() {
+        <span class="kw">let </span><span class="kw-2">mut </span>vec: SVec&lt;i32&gt; = SVec::new();
+        vec.push(<span class="number">10</span>);
+        vec.pop();
     }
 }
 </code></pre></div></section></main></body></html>

@@ -324,6 +324,7 @@
 <a href="#323" id="323">323</a>
 <a href="#324" id="324">324</a>
 <a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     alloc::{<span class="self">self</span>, handle_alloc_error, Layout, LayoutError},
     ffi::c_void,
@@ -339,6 +340,7 @@
 /// it has room for.
 ///
 /// Dropping a [`ResizableAlloc`] will de-allocate it's memory.
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>ResizableAlloc {
     <span class="doccomment">/// The pointer to the allocation. May be dangling for a capacity of zero or for a zero-sized
     /// layout.
