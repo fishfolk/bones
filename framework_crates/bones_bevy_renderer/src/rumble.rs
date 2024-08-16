@@ -25,16 +25,16 @@ pub fn handle_bones_rumble(
                         weak_motor: intensity.weak_motor(),
                     };
 
-                    let gamepad = Gamepad::new(gamepad.clone() as usize);
+                    let gamepad = Gamepad::new(*gamepad as usize);
 
                     rumble_requests.send(BevyGamepadRumbleRequest::Add {
                         gamepad,
                         intensity: bevy_intensity,
-                        duration: Duration::from_secs_f32(duration.clone()),
+                        duration: Duration::from_secs_f32(*duration),
                     });
                 }
                 bones::GamepadRumbleRequest::Stop { gamepad } => {
-                    let gamepad = Gamepad::new(gamepad.clone() as usize);
+                    let gamepad = Gamepad::new(*gamepad as usize);
                     rumble_requests.send(BevyGamepadRumbleRequest::Stop { gamepad });
                 }
             }
