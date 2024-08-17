@@ -640,6 +640,89 @@ impl<T: HasSchema> SVec<T> {
             self.push(item);
         }
     }
+
+    /// Retains only the elements specified by the predicate.
+    pub fn retain<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&T) -> bool,
+    {
+        let mut i = 0;
+        while i < self.len() {
+            if !f(&self[i]) {
+                self.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    /// Retains only the elements specified by the predicate, passing a mutable reference to it.
+    pub fn retain_mut<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&mut T) -> bool,
+    {
+        let mut i = 0;
+        while i < self.len() {
+            if !f(self.get_mut(i).unwrap()) {
+                self.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    /// Removes and returns the last element of the vector if the predicate returns true.
+    pub fn pop_if<F>(&mut self, f: F) -> Option<T>
+    where
+        F: FnOnce(&T) -> bool,
+    {
+        if let Some(last) = self.last() {
+            if f(last) {
+                self.pop()
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Returns a reference to the first element of the vector, or None if it is empty.
+    pub fn first(&self) -> Option<&T> {
+        self.get(0)
+    }
+
+    /// Returns a mutable reference to the first element of the vector, or None if it is empty.
+    pub fn first_mut(&mut self) -> Option<&mut T> {
+        self.get_mut(0)
+    }
+
+    /// Returns a reference to the last element of the vector, or None if it is empty.
+    pub fn last(&self) -> Option<&T> {
+        self.get(self.len().wrapping_sub(1))
+    }
+
+    /// Returns a mutable reference to the last element of the vector, or None if it is empty.
+    pub fn last_mut(&mut self) -> Option<&mut T> {
+        let len = self.len();
+        self.get_mut(len.wrapping_sub(1))
+    }
+
+    /// Reverses the order of elements in the vector, in place.
+    pub fn reverse(&mut self) {
+        let mut i = 0;
+        let mut j = self.len().saturating_sub(1);
+        while i < j {
+            // SAFETY: We know that i and j are within bounds and not equal.
+            unsafe {
+                let ptr_i = self.get_mut(i).unwrap() as *mut T;
+                let ptr_j = self.get_mut(j).unwrap() as *mut T;
+                std::ptr::swap(ptr_i, ptr_j);
+            }
+            i += 1;
+            j -= 1;
+        }
+    }
 }
 
 /// Iterator over [`SVec`].
@@ -1021,11 +1104,49 @@ mod test {
         assert_eq!(vec.get(2), Some(&5));
         assert_eq!(vec.get(3), Some(&6));
 
+        // Test retain
+        vec.retain(|&x| x % 2 == 0);
+        assert_eq!(vec.len(), 2);
+        assert_eq!(vec[0], 2);
+        assert_eq!(vec[1], 6);
+
+        // Test retain_mut
+        vec.retain_mut(|x| {
+            *x *= 2;
+            true
+        });
+        assert_eq!(vec.len(), 2);
+        assert_eq!(vec[0], 4);
+        assert_eq!(vec[1], 12);
+
         // Test truncate
-        vec.truncate(3);
+        vec.truncate(1);
+        assert_eq!(vec.len(), 1);
+        assert_eq!(vec[0], 4);
+        assert_eq!(vec.get(1), None);
+
+        // Prepare for further tests
+        vec.extend(vec![7, 9, 11]);
+
+        // Test first() and first_mut()
+        assert_eq!(vec.first(), Some(&4));
+        if let Some(first) = vec.first_mut() {
+            *first = 1;
+        }
+        assert_eq!(vec[0], 1);
+
+        // Test last() and last_mut()
+        assert_eq!(vec.last(), Some(&11));
+        if let Some(last) = vec.last_mut() {
+            *last = 15;
+        }
+        assert_eq!(vec[3], 15);
+
+        // Test pop_if()
+        assert_eq!(vec.pop_if(|&x| x > 10), Some(15));
         assert_eq!(vec.len(), 3);
-        assert_eq!(vec.get(2), Some(&5));
-        assert_eq!(vec.get(3), None);
+        assert_eq!(vec.pop_if(|&x| x < 0), None);
+        assert_eq!(vec.len(), 3);
 
         // Test clear
         vec.clear();
@@ -1040,6 +1161,11 @@ mod test {
         let svec: SVec<i32> = original_vec.clone().into();
         let vec_from_svec: Vec<i32> = svec.into();
         assert_eq!(original_vec, vec_from_svec);
+
+        // Test reverse
+        let mut reversed_vec = original_vec.clone();
+        reversed_vec.reverse();
+        assert_eq!(reversed_vec, vec![5, 4, 3, 2, 1]);
     }
 
     #[test]
