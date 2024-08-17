@@ -85,7 +85,9 @@ impl lib::SessionPlugin for DefaultSessionPlugin {
 /// Default plugins for bones framework games.
 pub struct DefaultGamePlugin;
 impl lib::GamePlugin for DefaultGamePlugin {
+    #[allow(unused_variables)]
     fn install(self, game: &mut lib::Game) {
+        #[cfg(feature = "audio")]
         game.install_plugin(render::audio::game_plugin);
 
         #[cfg(feature = "scripting")]
