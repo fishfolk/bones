@@ -545,8 +545,8 @@
             .build();
         <span class="kw">if </span><span class="self">self</span>.pixel_art {
             plugins = plugins.set(ImagePlugin::default_nearest());
-            app.insert_resource(Msaa::Off);
-        }
+            <span class="comment">// app.insert_resource(Msaa::Off);
+        </span>}
 
         app.add_plugins(plugins).add_plugins((
             bevy_egui::EguiPlugin,
