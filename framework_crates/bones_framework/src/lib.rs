@@ -20,9 +20,12 @@ pub use glam;
 /// The prelude.
 pub mod prelude {
     pub use crate::{
-        animation::*, debug, input::prelude::*, params::*, render::prelude::*, storage::*, time::*,
+        animation::*, input::prelude::*, params::*, render::prelude::*, storage::*, time::*,
         utils::*, AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin, ExitBones,
     };
+
+    #[cfg(feature = "ui")]
+    pub use crate::debug;
 
     #[cfg(not(target_arch = "wasm32"))]
     pub use crate::networking::prelude::*;
@@ -42,13 +45,15 @@ pub mod prelude {
 }
 
 pub mod animation;
-pub mod debug;
 pub mod input;
 pub mod params;
 pub mod render;
 pub mod storage;
 pub mod time;
 pub mod utils;
+
+#[cfg(feature = "ui")]
+pub mod debug;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod networking;
@@ -85,7 +90,9 @@ impl lib::SessionPlugin for DefaultSessionPlugin {
 /// Default plugins for bones framework games.
 pub struct DefaultGamePlugin;
 impl lib::GamePlugin for DefaultGamePlugin {
+    #[allow(unused_variables)]
     fn install(self, game: &mut lib::Game) {
+        #[cfg(feature = "audio")]
         game.install_plugin(render::audio::game_plugin);
 
         #[cfg(feature = "scripting")]

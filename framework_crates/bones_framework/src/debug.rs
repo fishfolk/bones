@@ -1,4 +1,4 @@
-//! Implements bones egui debug windows and tools.
+//! Implements bones egui debug windows and tools. Requires 'ui' feature flag.
 
 use crate::prelude::*;
 

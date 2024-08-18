@@ -30,6 +30,8 @@ pub mod ui;
 pub fn render_plugin(session: &mut Session) {
     session
         .install_plugin(sprite::sprite_plugin)
-        .install_plugin(ui::ui_plugin)
         .install_plugin(camera::plugin);
+
+    #[cfg(feature = "ui")]
+    session.install_plugin(ui::ui_plugin);
 }

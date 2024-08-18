@@ -5,6 +5,8 @@
 //! - Displays last frame with skips and how many frames were skipped.
 //!
 //! To display window, use `egui_ctx.set_state::<NetworkDebugMenuState>();` ( after setting open = true ).
+//!
+//! `net-debug` feature flag is required.
 #![allow(missing_docs)]
 
 use async_channel::{Receiver, Sender};

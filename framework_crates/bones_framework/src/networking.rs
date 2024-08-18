@@ -3,8 +3,7 @@
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
 use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
-use debug::PlayerSyncState;
-use ggrs::{NetworkStats, P2PSession, PlayerHandle};
+use ggrs::P2PSession;
 use instant::Duration;
 use once_cell::sync::Lazy;
 use tracing::{debug, error, info, trace, warn};
@@ -12,18 +11,26 @@ use tracing::{debug, error, info, trace, warn};
 use crate::prelude::*;
 
 use self::{
-    debug::{NetworkDebugMessage, NETWORK_DEBUG_CHANNEL},
     input::{DenseInput, NetworkInputConfig, NetworkPlayerControl, NetworkPlayerControls},
     socket::Socket,
 };
+
+#[cfg(feature = "net-debug")]
+use {
+    self::debug::{NetworkDebugMessage, PlayerSyncState, NETWORK_DEBUG_CHANNEL},
+    ggrs::{NetworkStats, PlayerHandle},
+};
+
 use crate::input::PlayerControls as PlayerControlsTrait;
 
-pub mod debug;
 pub mod input;
 pub mod lan;
 pub mod online;
 pub mod proto;
 pub mod socket;
+
+#[cfg(feature = "net-debug")]
+pub mod debug;
 
 /// Runtime, needed to execute network related calls.
 pub static RUNTIME: Lazy<tokio::runtime::Runtime> =
@@ -52,9 +59,10 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{
-        debug::prelude::*, input, lan, online, proto, DisconnectedPlayers, NetworkInfo, RUNTIME,
-    };
+    pub use super::{input, lan, online, proto, DisconnectedPlayers, NetworkInfo, RUNTIME};
+
+    #[cfg(feature = "net-debug")]
+    pub use super::debug::prelude::*;
 }
 
 /// Muliplier for framerate that will be used when playing an online match.
@@ -312,6 +320,7 @@ where
             .unwrap_or(NETWORK_LOCAL_INPUT_DELAY_DEFAULT);
 
         // Notify debugger of setting
+        #[cfg(feature = "net-debug")]
         NETWORK_DEBUG_CHANNEL
             .sender
             .try_send(NetworkDebugMessage::SetMaxPrediction(max_prediction))
@@ -404,13 +413,16 @@ where
             };
         }
 
-        let current_frame_original = self.session.current_frame();
+        #[cfg(feature = "net-debug")]
         // Current frame before we start network update loop
-        // let current_frame_original = self.session.current_frame();
+        let current_frame_original = self.session.current_frame();
+
         for event in self.session.events() {
             match event {
                 ggrs::GgrsEvent::Synchronizing { addr, total, count } => {
                     info!(player=%addr, %total, progress=%count, "Syncing network player");
+
+                    #[cfg(feature = "net-debug")]
                     NETWORK_DEBUG_CHANNEL
                         .sender
                         .try_send(NetworkDebugMessage::PlayerSync((
@@ -421,6 +433,8 @@ where
                 }
                 ggrs::GgrsEvent::Synchronized { addr } => {
                     info!(player=%addr, "Syncrhonized network client");
+
+                    #[cfg(feature = "net-debug")]
                     NETWORK_DEBUG_CHANNEL
                         .sender
                         .try_send(NetworkDebugMessage::PlayerSync((
@@ -432,6 +446,8 @@ where
                 ggrs::GgrsEvent::Disconnected { addr } => {
                     warn!(player=%addr, "Player Disconnected");
                     self.disconnected_players.push(addr);
+
+                    #[cfg(feature = "net-debug")]
                     NETWORK_DEBUG_CHANNEL
                         .sender
                         .try_send(NetworkDebugMessage::DisconnectedPlayers(
@@ -453,6 +469,7 @@ where
                     );
                     skip_frames = skip_count;
 
+                    #[cfg(feature = "net-debug")]
                     NETWORK_DEBUG_CHANNEL
                         .sender
                         .try_send(NetworkDebugMessage::SkipFrame {
@@ -491,15 +508,19 @@ where
                         .unwrap();
                 }
 
-                let current_frame = self.session.current_frame();
-                let confirmed_frame = self.session.confirmed_frame();
-                NETWORK_DEBUG_CHANNEL
-                    .sender
-                    .try_send(NetworkDebugMessage::FrameUpdate {
-                        current: current_frame,
-                        last_confirmed: confirmed_frame,
-                    })
-                    .unwrap();
+                #[cfg(feature = "net-debug")]
+                {
+                    let current_frame = self.session.current_frame();
+                    let confirmed_frame = self.session.confirmed_frame();
+
+                    NETWORK_DEBUG_CHANNEL
+                        .sender
+                        .try_send(NetworkDebugMessage::FrameUpdate {
+                            current: current_frame,
+                            last_confirmed: confirmed_frame,
+                        })
+                        .unwrap();
+                }
 
                 if skip_frames > 0 {
                     skip_frames = skip_frames.saturating_sub(1);
@@ -588,6 +609,8 @@ where
                         }
                         ggrs::GgrsError::PredictionThreshold => {
                             warn!("Freezing game while waiting for network to catch-up.");
+
+                            #[cfg(feature = "net-debug")]
                             NETWORK_DEBUG_CHANNEL
                                 .sender
                                 .try_send(NetworkDebugMessage::FrameFroze {
@@ -606,17 +629,20 @@ where
         self.last_run = Some(frame_start);
 
         // Fetch GGRS network stats of remote players and send to net debug tool
-        let mut network_stats: Vec<(PlayerHandle, NetworkStats)> = vec![];
-        for handle in self.session.remote_player_handles().iter() {
-            if let Ok(stats) = self.session.network_stats(*handle) {
-                network_stats.push((*handle, stats));
+        #[cfg(feature = "net-debug")]
+        {
+            let mut network_stats: Vec<(PlayerHandle, NetworkStats)> = vec![];
+            for handle in self.session.remote_player_handles().iter() {
+                if let Ok(stats) = self.session.network_stats(*handle) {
+                    network_stats.push((*handle, stats));
+                }
             }
-        }
-        if !network_stats.is_empty() {
-            NETWORK_DEBUG_CHANNEL
-                .sender
-                .try_send(NetworkDebugMessage::NetworkStats { network_stats })
-                .unwrap();
+            if !network_stats.is_empty() {
+                NETWORK_DEBUG_CHANNEL
+                    .sender
+                    .try_send(NetworkDebugMessage::NetworkStats { network_stats })
+                    .unwrap();
+            }
         }
     }
 
