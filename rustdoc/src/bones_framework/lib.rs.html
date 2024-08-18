@@ -143,6 +143,13 @@
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The bones framework for game development.
 //!
 </span><span class="attr">#![cfg_attr(feature = <span class="string">"document-features"</span>, doc = <span class="string">"## Features"</span>)]
@@ -165,9 +172,12 @@
 <span class="doccomment">/// The prelude.
 </span><span class="kw">pub mod </span>prelude {
     <span class="kw">pub use crate</span>::{
-        animation::<span class="kw-2">*</span>, debug, input::prelude::<span class="kw-2">*</span>, params::<span class="kw-2">*</span>, render::prelude::<span class="kw-2">*</span>, storage::<span class="kw-2">*</span>, time::<span class="kw-2">*</span>,
+        animation::<span class="kw-2">*</span>, input::prelude::<span class="kw-2">*</span>, params::<span class="kw-2">*</span>, render::prelude::<span class="kw-2">*</span>, storage::<span class="kw-2">*</span>, time::<span class="kw-2">*</span>,
         utils::<span class="kw-2">*</span>, AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin, ExitBones,
     };
+
+    <span class="attr">#[cfg(feature = <span class="string">"ui"</span>)]
+    </span><span class="kw">pub use </span><span class="kw">crate</span>::debug;
 
     <span class="attr">#[cfg(not(target_arch = <span class="string">"wasm32"</span>))]
     </span><span class="kw">pub use </span><span class="kw">crate</span>::networking::prelude::<span class="kw-2">*</span>;
@@ -187,13 +197,15 @@
 }
 
 <span class="kw">pub mod </span>animation;
-<span class="kw">pub mod </span>debug;
 <span class="kw">pub mod </span>input;
 <span class="kw">pub mod </span>params;
 <span class="kw">pub mod </span>render;
 <span class="kw">pub mod </span>storage;
 <span class="kw">pub mod </span>time;
 <span class="kw">pub mod </span>utils;
+
+<span class="attr">#[cfg(feature = <span class="string">"ui"</span>)]
+</span><span class="kw">pub mod </span>debug;
 
 <span class="attr">#[cfg(not(target_arch = <span class="string">"wasm32"</span>))]
 </span><span class="kw">pub mod </span>networking;
@@ -230,8 +242,10 @@
 <span class="doccomment">/// Default plugins for bones framework games.
 </span><span class="kw">pub struct </span>DefaultGamePlugin;
 <span class="kw">impl </span>lib::GamePlugin <span class="kw">for </span>DefaultGamePlugin {
-    <span class="kw">fn </span>install(<span class="self">self</span>, game: <span class="kw-2">&amp;mut </span>lib::Game) {
-        game.install_plugin(render::audio::game_plugin);
+    <span class="attr">#[allow(unused_variables)]
+    </span><span class="kw">fn </span>install(<span class="self">self</span>, game: <span class="kw-2">&amp;mut </span>lib::Game) {
+        <span class="attr">#[cfg(feature = <span class="string">"audio"</span>)]
+        </span>game.install_plugin(render::audio::game_plugin);
 
         <span class="attr">#[cfg(feature = <span class="string">"scripting"</span>)]
         </span>game.install_plugin(bones_scripting::ScriptingGamePlugin::default());
