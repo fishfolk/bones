@@ -21,8 +21,6 @@ use std::time::Duration;
 
 /// The amount of time to spend fading the music in and out.
 pub const MUSIC_FADE_DURATION: Duration = Duration::from_millis(500);
-/// Default music volume
-pub const DEFAULT_MUSIC_VOLUME: f64 = 0.1;
 /// Name of the default bones audio session
 pub const DEFAULT_BONES_AUDIO_SESSION: &'static str  = "BONES_AUDIO";
 
@@ -124,10 +122,10 @@ impl AudioCenter {
         self.set_main_volume_scale(main);
         self.set_music_volume_scale(music);
         self.set_effects_volume_scale(effects);
-        self.events.push_back(AudioEvent::VolumeScaleChange {
-            main_volume: self.main_volume_scale,
-            music_volume: self.music_volume_scale,
-            effects_volume: self.effects_volume_scale,
+        self.events.push_back(AudioEvent::VolumeScaleUpdate {
+            main_volume_scale: self.main_volume_scale,
+            music_volume_scale: self.music_volume_scale,
+            effects_volume_scale: self.effects_volume_scale,
         });
     }
 }
@@ -138,13 +136,13 @@ impl AudioCenter {
 pub enum AudioEvent {
     /// Update the volume of all audios using the new scale values.
     /// This event is used to adjust the overall volume of the application.
-    VolumeScaleChange {
+    VolumeScaleUpdate {
         /// The main volume scale factor.
-        main_volume: f32,
+        main_volume_scale: f32,
         /// The music volume scale factor.
-        music_volume: f32,
+        music_volume_scale: f32,
         /// The effects volume scale factor.
-        effects_volume: f32,
+        effects_volume_scale: f32,
     },
     /// Play some music.
     ///
@@ -184,22 +182,22 @@ fn process_audio_events(
 ) {
     for event in audio_center.events.drain(..).collect::<Vec<_>>() {
         match event {
-            AudioEvent::VolumeScaleChange {
-                main_volume,
-                music_volume,
-                effects_volume,
+            AudioEvent::VolumeScaleUpdate {
+                main_volume_scale,
+                music_volume_scale,
+                effects_volume_scale,
             } => {
                 let tween = Tween::default();
                 // Update music volume
                 if let Some(music) = &mut audio_center.music {
-                    let volume = (main_volume as f64) * (music_volume as f64) * music.volume;
+                    let volume = (main_volume_scale as f64) * (music_volume_scale as f64) * music.volume;
                     if let Err(err) = music.handle.set_volume(volume, tween) {
                         warn!("Error setting music volume: {err}");
                     }
                 }
                 // Update sound volumes
                 for audio in audios.iter_mut() {
-                    let volume = (main_volume as f64) * (effects_volume as f64) * audio.volume;
+                    let volume = (main_volume_scale as f64) * (effects_volume_scale as f64) * audio.volume;
                     if let Err(err) = audio.handle.set_volume(volume, tween) {
                         warn!("Error setting audio volume: {err}");
                     }
@@ -221,7 +219,7 @@ fn process_audio_events(
                 // Scale the requested volume by the volume scales
                 let volume = match sound_settings.volume {
                     tween::Value::Fixed(vol) => vol.as_amplitude(),
-                    _ => DEFAULT_MUSIC_VOLUME,
+                    _ => 1.0,
                 };
                 let scaled_volume = (audio_center.main_volume_scale as f64) * (audio_center.music_volume_scale as f64) * volume;
                 sound_settings.volume = tween::Value::Fixed(Volume::Amplitude(scaled_volume));
