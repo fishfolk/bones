@@ -148,7 +148,7 @@ impl BonesBevyRenderer {
             .build();
         if self.pixel_art {
             plugins = plugins.set(ImagePlugin::default_nearest());
-            app.insert_resource(Msaa::Off);
+            // app.insert_resource(Msaa::Off);
         }
 
         app.add_plugins(plugins).add_plugins((

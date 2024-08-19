@@ -25,6 +25,9 @@ audio = ["dep:kira"]
 ## Enable the scripting system.
 scripting = ["dep:bones_scripting"]
 
+## Enable networking debug window + frame prediction history.
+net-debug = ["ui"]
+
 #! ### Audio formats
 #! These features enable different audio formats
 
