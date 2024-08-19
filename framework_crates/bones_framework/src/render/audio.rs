@@ -14,10 +14,11 @@ use kira::{
     },
     sound::SoundData,
     tween::Tween,
-    sound::static_sound::{StaticSoundHandle, StaticSoundSettings},
+    sound::static_sound::StaticSoundHandle,
 };
 use kira::{Volume, tween};
 use std::time::Duration;
+pub use kira::sound::static_sound::StaticSoundSettings;
 
 /// The amount of time to spend fading the music in and out.
 pub const MUSIC_FADE_DURATION: Duration = Duration::from_millis(500);
@@ -89,33 +90,34 @@ impl AudioCenter {
         })
     }
 
-    /// Play some music, forcibly stopping any current music.
-    /// Volume is scaled by both main_volume_scale, and music_volume_scale.
-    pub fn play_music(
-        &mut self,
-        sound_source: Handle<AudioSource>,
-        sound_settings: StaticSoundSettings,
-    ) {
+    /// Play music, forcibly stopping any current music.
+    /// Volume is scaled by both main_volume_scale and music_volume_scale.
+    pub fn play_music(&mut self, sound_source: Handle<AudioSource>, volume: f64) {
+        let clamped_volume = volume.clamp(0.0, 1.0);
+        let settings = StaticSoundSettings::new().volume(Volume::Amplitude(clamped_volume));
         self.events.push_back(AudioEvent::PlayMusic {
             sound_source,
-            sound_settings: Box::new(sound_settings),
+            sound_settings: Box::new(settings),
             force_restart: true,
         });
     }
 
-    /// Play some music, but only if it's different from the currently playing music.
-    /// Volume is scaled by both main_volume_scale, and music_volume_scale.
-    pub fn play_music_checked(
+    /// Play music with advanced settings.
+    /// * `sound_settings`: Custom StaticSoundSettings for the music.
+    /// * `skip_restart`: Skips restarting the music from the beginning if playing same track again.
+    pub fn play_music_advanced(
         &mut self,
         sound_source: Handle<AudioSource>,
         sound_settings: StaticSoundSettings,
+        skip_restart: bool,
     ) {
         self.events.push_back(AudioEvent::PlayMusic {
             sound_source,
             sound_settings: Box::new(sound_settings),
-            force_restart: false,
+            force_restart: !skip_restart,
         });
     }
+
 
     /// Sets the volume scale for main audio within the range of 0.0 to 1.0.
     pub fn set_main_volume_scale(&mut self, main: f32) {
