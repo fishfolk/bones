@@ -23,7 +23,7 @@ pub use kira::sound::static_sound::StaticSoundSettings;
 /// The amount of time to spend fading the music in and out.
 pub const MUSIC_FADE_DURATION: Duration = Duration::from_millis(500);
 /// Name of the default bones audio session
-pub const DEFAULT_BONES_AUDIO_SESSION: &'static str  = "BONES_AUDIO";
+pub const DEFAULT_BONES_AUDIO_SESSION: &str  = "BONES_AUDIO";
 
 /// Sets up audio-related resources and the default bones audio session
 pub fn game_plugin(game: &mut Game) {
@@ -281,7 +281,7 @@ fn process_audio_events(
                     let scaled_volume = (audio_center.main_volume_scale as f64) * (audio_center.music_volume_scale as f64) * volume;
                     sound_settings.volume = tween::Value::Fixed(Volume::Amplitude(scaled_volume));
                     // Play the new music
-                    let sound_data = assets.get(sound_source.clone()).with_settings(*sound_settings);
+                    let sound_data = assets.get(sound_source).with_settings(*sound_settings);
                     match audio_manager.play(sound_data) {
                         Err(err) => warn!("Error playing music: {err}"),
                         Ok(handle) => audio_center.music = Some(Audio { handle, volume, bones_handle: sound_source }),
@@ -294,7 +294,7 @@ fn process_audio_events(
             } => {
                 let scaled_volume = (audio_center.main_volume_scale as f64) * (audio_center.effects_volume_scale as f64) * volume;
                 let sound_data = assets
-                    .get(sound_source.clone())
+                    .get(sound_source)
                     .with_settings(StaticSoundSettings::default().volume(scaled_volume));
                 match audio_manager.play(sound_data) {
                     Err(err) => warn!("Error playing sound: {err}"),
