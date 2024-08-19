@@ -107,17 +107,27 @@ impl AudioCenter {
         });
     }
 
-
     /// Plays music with advanced settings.
     /// Volume is scaled by both main_volume_scale and music_volume_scale.
+    ///
+    /// # Parameters
+    ///
+    /// * `sound_source` - The handle for the audio source to play
+    /// * `volume` - The volume to play the music at (0.0 to 1.0)
+    /// * `loop_music` - Whether the music should loop indefinitely
+    /// * `reverse` - Whether to play the audio in reverse
+    /// * `start_position` - The position in seconds to start playback from
+    /// * `playback_rate` - The playback rate (1.0 is normal speed, 0.5 is half speed, 2.0 is double speed)
+    /// * `skip_restart` - If true, won't restart the music if it's already playing the same track
+   #[allow(clippy::too_many_arguments)]
     pub fn play_music_advanced(
         &mut self,
         sound_source: Handle<AudioSource>,
         volume: f64,
         loop_music: bool,
-        start_position: f64,
         reverse: bool,
-        playback_rate: f64,
+        start_position: f64,
+        playback_rate: f64, 
         skip_restart: bool,
     ) {
         let clamped_volume = volume.clamp(0.0, 1.0);
