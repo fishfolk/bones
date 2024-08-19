@@ -5,6 +5,8 @@ use std::io::Cursor;
 use std::time::Duration;
 
 use crate::prelude::*;
+use kira;
+pub use kira::sound::static_sound::StaticSoundData;
 use kira::{
     manager::{
         backend::{cpal::CpalBackend, mock::MockBackend, Backend},
@@ -19,9 +21,6 @@ use kira::{
     Volume,
 };
 use tracing::warn;
-use kira;
-pub use kira::sound::static_sound::StaticSoundData;
-
 
 /// The amount of time to spend fading the music in and out.
 pub const MUSIC_FADE_DURATION: Duration = Duration::from_millis(500);
@@ -98,7 +97,7 @@ impl AudioCenter {
     pub fn play_music(&mut self, sound_source: Handle<AudioSource>, volume: f64, loop_music: bool) {
         let clamped_volume = volume.clamp(0.0, 1.0);
         let mut settings = StaticSoundSettings::new().volume(Volume::Amplitude(clamped_volume));
-        
+
         if loop_music {
             settings = settings.loop_region(kira::sound::Region {
                 start: 0.0.into(),
@@ -234,7 +233,7 @@ pub enum AudioEvent {
     },
 }
 
-/// Holds the handle and the volume to be played for a piece of Audio. 
+/// Holds the handle and the volume to be played for a piece of Audio.
 #[derive(HasSchema)]
 #[schema(no_clone, no_default, opaque)]
 #[repr(C)]
@@ -264,12 +263,14 @@ fn process_audio_events(
                 let tween = Tween::default();
                 // Update music volume
                 if let Some(music) = &mut audio_center.music {
-                    let volume = (main_volume_scale as f64) * (music_volume_scale as f64) * music.volume;
+                    let volume =
+                        (main_volume_scale as f64) * (music_volume_scale as f64) * music.volume;
                     music.handle.set_volume(volume, tween);
                 }
                 // Update sound volumes
                 for audio in audios.iter_mut() {
-                    let volume = (main_volume_scale as f64) * (effects_volume_scale as f64) * audio.volume;
+                    let volume =
+                        (main_volume_scale as f64) * (effects_volume_scale as f64) * audio.volume;
                     audio.handle.set_volume(volume, tween);
                 }
             }
@@ -278,9 +279,10 @@ fn process_audio_events(
                 mut sound_settings,
                 force_restart,
             } => {
-                let should_play = force_restart || audio_center.music.as_ref().map_or(true, |current_music| {
-                    sound_source != current_music.bones_handle
-                });
+                let should_play = force_restart
+                    || audio_center.music.as_ref().map_or(true, |current_music| {
+                        sound_source != current_music.bones_handle
+                    });
 
                 if should_play {
                     // Stop the current music
@@ -297,13 +299,21 @@ fn process_audio_events(
                         tween::Value::Fixed(vol) => vol.as_amplitude(),
                         _ => 1.0,
                     };
-                    let scaled_volume = (audio_center.main_volume_scale as f64) * (audio_center.music_volume_scale as f64) * volume;
+                    let scaled_volume = (audio_center.main_volume_scale as f64)
+                        * (audio_center.music_volume_scale as f64)
+                        * volume;
                     sound_settings.volume = tween::Value::Fixed(Volume::Amplitude(scaled_volume));
                     // Play the new music
                     let sound_data = assets.get(sound_source).with_settings(*sound_settings);
                     match audio_manager.play(sound_data) {
                         Err(err) => warn!("Error playing music: {err}"),
-                        Ok(handle) => audio_center.music = Some(Audio { handle, volume, bones_handle: sound_source }),
+                        Ok(handle) => {
+                            audio_center.music = Some(Audio {
+                                handle,
+                                volume,
+                                bones_handle: sound_source,
+                            })
+                        }
                     }
                 }
             }
@@ -311,7 +321,9 @@ fn process_audio_events(
                 sound_source,
                 volume,
             } => {
-                let scaled_volume = (audio_center.main_volume_scale as f64) * (audio_center.effects_volume_scale as f64) * volume;
+                let scaled_volume = (audio_center.main_volume_scale as f64)
+                    * (audio_center.effects_volume_scale as f64)
+                    * volume;
                 let sound_data = assets
                     .get(sound_source)
                     .with_settings(StaticSoundSettings::default().volume(scaled_volume));
@@ -319,7 +331,14 @@ fn process_audio_events(
                     Err(err) => warn!("Error playing sound: {err}"),
                     Ok(handle) => {
                         let audio_ent = entities.create();
-                        audios.insert(audio_ent, Audio { handle, volume, bones_handle: sound_source });
+                        audios.insert(
+                            audio_ent,
+                            Audio {
+                                handle,
+                                volume,
+                                bones_handle: sound_source,
+                            },
+                        );
                     }
                 }
             }
