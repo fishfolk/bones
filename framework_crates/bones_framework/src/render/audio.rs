@@ -1,29 +1,32 @@
 //! Audio components.
-//! 
 
 use std::collections::VecDeque;
-use kira::sound::PlaybackState;
 use std::io::Cursor;
-use tracing::warn;
+use std::time::Duration;
+
 use crate::prelude::*;
-pub use kira::{self, sound::static_sound::StaticSoundData};
 use kira::{
     manager::{
         backend::{cpal::CpalBackend, mock::MockBackend, Backend},
         AudioManager as KiraAudioManager,
     },
-    sound::SoundData,
+    sound::{
+        static_sound::{StaticSoundHandle, StaticSoundSettings},
+        PlaybackState, SoundData,
+    },
+    tween,
     tween::Tween,
-    sound::static_sound::StaticSoundHandle,
+    Volume,
 };
-use kira::{Volume, tween};
-use std::time::Duration;
-pub use kira::sound::static_sound::StaticSoundSettings;
+use tracing::warn;
+use kira;
+pub use kira::sound::static_sound::StaticSoundData;
+
 
 /// The amount of time to spend fading the music in and out.
 pub const MUSIC_FADE_DURATION: Duration = Duration::from_millis(500);
 /// Name of the default bones audio session
-pub const DEFAULT_BONES_AUDIO_SESSION: &str  = "BONES_AUDIO";
+pub const DEFAULT_BONES_AUDIO_SESSION: &str = "BONES_AUDIO";
 
 /// Sets up audio-related resources and the default bones audio session
 pub fn game_plugin(game: &mut Game) {
@@ -92,12 +95,15 @@ impl AudioCenter {
 
     /// Plays music, forcibly stopping any current music.
     /// Volume is scaled by both main_volume_scale and music_volume_scale.
-  pub fn play_music(&mut self, sound_source: Handle<AudioSource>, volume: f64, loop_music: bool) {
+    pub fn play_music(&mut self, sound_source: Handle<AudioSource>, volume: f64, loop_music: bool) {
         let clamped_volume = volume.clamp(0.0, 1.0);
         let mut settings = StaticSoundSettings::new().volume(Volume::Amplitude(clamped_volume));
         
         if loop_music {
-            settings = settings.loop_region(kira::sound::Region{start: 0.0.into(), end: kira::sound::EndPosition::EndOfAudio});
+            settings = settings.loop_region(kira::sound::Region {
+                start: 0.0.into(),
+                end: kira::sound::EndPosition::EndOfAudio,
+            });
         }
 
         self.events.push_back(AudioEvent::PlayMusic {
@@ -119,7 +125,7 @@ impl AudioCenter {
     /// * `start_position` - The position in seconds to start playback from
     /// * `playback_rate` - The playback rate (1.0 is normal speed, 0.5 is half speed, 2.0 is double speed)
     /// * `skip_restart` - If true, won't restart the music if it's already playing the same track
-   #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)]
     pub fn play_music_advanced(
         &mut self,
         sound_source: Handle<AudioSource>,
@@ -127,7 +133,7 @@ impl AudioCenter {
         loop_music: bool,
         reverse: bool,
         start_position: f64,
-        playback_rate: f64, 
+        playback_rate: f64,
         skip_restart: bool,
     ) {
         let clamped_volume = volume.clamp(0.0, 1.0);
@@ -138,7 +144,10 @@ impl AudioCenter {
             .playback_rate(playback_rate);
 
         if loop_music {
-            settings = settings.loop_region(kira::sound::Region{start: 0.0.into(), end: kira::sound::EndPosition::EndOfAudio});
+            settings = settings.loop_region(kira::sound::Region {
+                start: 0.0.into(),
+                end: kira::sound::EndPosition::EndOfAudio,
+            });
         }
 
         self.events.push_back(AudioEvent::PlayMusic {
@@ -256,12 +265,12 @@ fn process_audio_events(
                 // Update music volume
                 if let Some(music) = &mut audio_center.music {
                     let volume = (main_volume_scale as f64) * (music_volume_scale as f64) * music.volume;
-                   music.handle.set_volume(volume, tween);
+                    music.handle.set_volume(volume, tween);
                 }
                 // Update sound volumes
                 for audio in audios.iter_mut() {
                     let volume = (main_volume_scale as f64) * (effects_volume_scale as f64) * audio.volume;
-                   audio.handle.set_volume(volume, tween);
+                    audio.handle.set_volume(volume, tween);
                 }
             }
             AudioEvent::PlayMusic {
@@ -330,6 +339,7 @@ fn kill_finished_audios(entities: Res<Entities>, audios: Comp<Audio>, mut comman
 #[derive(HasSchema, Deref, DerefMut)]
 #[schema(no_clone)]
 pub struct AudioManager(KiraAudioManager<CpalWithFallbackBackend>);
+
 impl Default for AudioManager {
     fn default() -> Self {
         Self(KiraAudioManager::<CpalWithFallbackBackend>::new(default()).unwrap())
