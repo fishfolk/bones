@@ -90,11 +90,16 @@ impl AudioCenter {
         })
     }
 
-    /// Play music, forcibly stopping any current music.
+    /// Plays music, forcibly stopping any current music.
     /// Volume is scaled by both main_volume_scale and music_volume_scale.
-    pub fn play_music(&mut self, sound_source: Handle<AudioSource>, volume: f64) {
+  pub fn play_music(&mut self, sound_source: Handle<AudioSource>, volume: f64, loop_music: bool) {
         let clamped_volume = volume.clamp(0.0, 1.0);
-        let settings = StaticSoundSettings::new().volume(Volume::Amplitude(clamped_volume));
+        let mut settings = StaticSoundSettings::new().volume(Volume::Amplitude(clamped_volume));
+        
+        if loop_music {
+            settings = settings.loop_region(kira::sound::Region{start: 0.0.into(), end: kira::sound::EndPosition::EndOfAudio});
+        }
+
         self.events.push_back(AudioEvent::PlayMusic {
             sound_source,
             sound_settings: Box::new(settings),
@@ -102,10 +107,40 @@ impl AudioCenter {
         });
     }
 
-    /// Play music with advanced settings.
-    /// * `sound_settings`: Custom StaticSoundSettings for the music.
-    /// * `skip_restart`: Skips restarting the music from the beginning if playing same track again.
+
+    /// Plays music with advanced settings.
+    /// Volume is scaled by both main_volume_scale and music_volume_scale.
     pub fn play_music_advanced(
+        &mut self,
+        sound_source: Handle<AudioSource>,
+        volume: f64,
+        loop_music: bool,
+        start_position: f64,
+        reverse: bool,
+        playback_rate: f64,
+        skip_restart: bool,
+    ) {
+        let clamped_volume = volume.clamp(0.0, 1.0);
+        let mut settings = StaticSoundSettings::new()
+            .volume(Volume::Amplitude(clamped_volume))
+            .start_position(kira::sound::PlaybackPosition::Seconds(start_position))
+            .reverse(reverse)
+            .playback_rate(playback_rate);
+
+        if loop_music {
+            settings = settings.loop_region(kira::sound::Region{start: 0.0.into(), end: kira::sound::EndPosition::EndOfAudio});
+        }
+
+        self.events.push_back(AudioEvent::PlayMusic {
+            sound_source,
+            sound_settings: Box::new(settings),
+            force_restart: !skip_restart,
+        });
+    }
+
+    /// Plays music with custom StaticSoundSettings.
+    /// Volume is scaled by both main_volume_scale and music_volume_scale.
+    pub fn play_music_custom(
         &mut self,
         sound_source: Handle<AudioSource>,
         sound_settings: StaticSoundSettings,
@@ -117,7 +152,6 @@ impl AudioCenter {
             force_restart: !skip_restart,
         });
     }
-
 
     /// Sets the volume scale for main audio within the range of 0.0 to 1.0.
     pub fn set_main_volume_scale(&mut self, main: f32) {
@@ -212,16 +246,12 @@ fn process_audio_events(
                 // Update music volume
                 if let Some(music) = &mut audio_center.music {
                     let volume = (main_volume_scale as f64) * (music_volume_scale as f64) * music.volume;
-                    if let Err(err) = music.handle.set_volume(volume, tween) {
-                        warn!("Error setting music volume: {err}");
-                    }
+                   music.handle.set_volume(volume, tween);
                 }
                 // Update sound volumes
                 for audio in audios.iter_mut() {
                     let volume = (main_volume_scale as f64) * (effects_volume_scale as f64) * audio.volume;
-                    if let Err(err) = audio.handle.set_volume(volume, tween) {
-                        warn!("Error setting audio volume: {err}");
-                    }
+                   audio.handle.set_volume(volume, tween);
                 }
             }
             AudioEvent::PlayMusic {
@@ -241,7 +271,7 @@ fn process_audio_events(
                             duration: MUSIC_FADE_DURATION,
                             easing: tween::Easing::Linear,
                         };
-                        music.handle.stop(tween).unwrap();
+                        music.handle.stop(tween);
                     }
                     // Scale the requested volume by the volume scales
                     let volume = match sound_settings.volume {
@@ -359,7 +389,7 @@ impl AssetLoader for AudioLoader {
     ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
         let bytes = bytes.to_vec();
         Box::pin(async move {
-            let data = StaticSoundData::from_cursor(Cursor::new(bytes), default())?;
+            let data = StaticSoundData::from_cursor(Cursor::new(bytes))?;
             Ok(SchemaBox::new(AudioSource(data)))
         })
     }
