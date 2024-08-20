@@ -1,6 +1,5 @@
 //! Audio Manager resource and systems.
 
-use std::io::Cursor;
 use crate::prelude::*;
 use kira;
 use kira::{
@@ -8,13 +7,9 @@ use kira::{
         backend::{cpal::CpalBackend, mock::MockBackend, Backend},
         AudioManager as KiraAudioManager,
     },
-    sound::{
-        static_sound::StaticSoundData,
-       SoundData,
-    },
+    sound::{static_sound::StaticSoundData, SoundData},
 };
-
-
+use std::io::Cursor;
 
 /// The audio manager resource which can be used to play sounds.
 #[derive(HasSchema, Deref, DerefMut)]
