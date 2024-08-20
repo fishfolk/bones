@@ -7,14 +7,11 @@ pub mod prelude {
     pub use super::{camera::*, color::*, line::*, sprite::*, tilemap::*, transform::*};
 
     #[cfg(feature = "audio")]
-    pub use super::audio::*;
+    pub use super::super::audio::*;
 
     #[cfg(feature = "ui")]
     pub use super::ui::{widgets::*, *};
 }
-
-#[cfg(feature = "audio")]
-pub mod audio;
 
 pub mod camera;
 pub mod color;

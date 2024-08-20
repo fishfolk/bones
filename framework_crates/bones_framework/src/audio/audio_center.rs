@@ -1,47 +1,17 @@
-//! Audio components.
+//! Audio Center resource and systems.
 
-use std::collections::VecDeque;
-use std::io::Cursor;
-use std::time::Duration;
-
+use super::{Audio, AudioManager, AudioSource, MUSIC_FADE_DURATION};
 use crate::prelude::*;
 use kira;
 pub use kira::sound::static_sound::StaticSoundData;
 use kira::{
-    manager::{
-        backend::{cpal::CpalBackend, mock::MockBackend, Backend},
-        AudioManager as KiraAudioManager,
-    },
-    sound::{
-        static_sound::{StaticSoundHandle, StaticSoundSettings},
-        PlaybackState, SoundData,
-    },
+    sound::{static_sound::StaticSoundSettings, PlaybackState},
     tween,
     tween::Tween,
     Volume,
 };
+use std::collections::VecDeque;
 use tracing::warn;
-
-/// The amount of time to spend fading the music in and out.
-pub const MUSIC_FADE_DURATION: Duration = Duration::from_millis(500);
-/// Name of the default bones audio session
-pub const DEFAULT_BONES_AUDIO_SESSION: &str = "BONES_AUDIO";
-
-/// Sets up audio-related resources and the default bones audio session
-pub fn game_plugin(game: &mut Game) {
-    AudioSource::register_schema();
-    game.init_shared_resource::<AudioCenter>();
-    game.insert_shared_resource(AudioManager::default());
-    game.init_shared_resource::<AssetServer>();
-
-    let session = game.sessions.create(DEFAULT_BONES_AUDIO_SESSION);
-    // Audio doesn't do any rendering
-    session.visible = false;
-    session
-        .stages
-        .add_system_to_stage(First, process_audio_events)
-        .add_system_to_stage(Last, kill_finished_audios);
-}
 
 /// A resource that can be used to control game audios.
 #[derive(HasSchema)]
@@ -233,20 +203,8 @@ pub enum AudioEvent {
     },
 }
 
-/// Holds the handle and the volume to be played for a piece of Audio.
-#[derive(HasSchema)]
-#[schema(no_clone, no_default, opaque)]
-#[repr(C)]
-pub struct Audio {
-    /// The handle for the audio.
-    handle: StaticSoundHandle,
-    /// The original volume requested for the audio.
-    volume: f64,
-    /// The bones handle for the audio source.
-    bones_handle: Handle<AudioSource>,
-}
-
-fn process_audio_events(
+/// Internally used sytem for processing audio events in the bones audio session.
+pub fn _process_audio_events(
     mut audio_manager: ResMut<AudioManager>,
     mut audio_center: ResMut<AudioCenter>,
     assets: ResInit<AssetServer>,
@@ -346,90 +304,12 @@ fn process_audio_events(
     }
 }
 
-fn kill_finished_audios(entities: Res<Entities>, audios: Comp<Audio>, mut commands: Commands) {
+/// Internally used sytem for killing finished audios (generally sounds) which were emitted as separate entities.
+/// Used in the bones audio session.
+pub fn _kill_finished_audios(entities: Res<Entities>, audios: Comp<Audio>, mut commands: Commands) {
     for (audio_ent, audio) in entities.iter_with(&audios) {
         if audio.handle.state() == PlaybackState::Stopped {
             commands.add(move |mut entities: ResMut<Entities>| entities.kill(audio_ent));
         }
-    }
-}
-
-/// The audio manager resource which can be used to play sounds.
-#[derive(HasSchema, Deref, DerefMut)]
-#[schema(no_clone)]
-pub struct AudioManager(KiraAudioManager<CpalWithFallbackBackend>);
-
-impl Default for AudioManager {
-    fn default() -> Self {
-        Self(KiraAudioManager::<CpalWithFallbackBackend>::new(default()).unwrap())
-    }
-}
-
-/// Kira audio backend that will fall back to a dummy backend if setting up the Cpal backend
-/// fails with an error.
-#[allow(clippy::large_enum_variant)]
-pub enum CpalWithFallbackBackend {
-    /// This is a working Cpal backend.
-    Cpal(CpalBackend),
-    /// This is a dummy backend since Cpal didn't work.
-    Dummy(MockBackend),
-}
-
-impl Backend for CpalWithFallbackBackend {
-    type Settings = <CpalBackend as Backend>::Settings;
-    type Error = <CpalBackend as Backend>::Error;
-
-    fn setup(settings: Self::Settings) -> Result<(Self, u32), Self::Error> {
-        match CpalBackend::setup(settings) {
-            Ok((back, bit)) => Ok((Self::Cpal(back), bit)),
-            Err(e) => {
-                tracing::error!("Error starting audio backend, using dummy backend instead: {e}");
-                Ok(MockBackend::setup(default())
-                    .map(|(back, bit)| (Self::Dummy(back), bit))
-                    .unwrap())
-            }
-        }
-    }
-
-    fn start(&mut self, renderer: kira::manager::backend::Renderer) -> Result<(), Self::Error> {
-        match self {
-            CpalWithFallbackBackend::Cpal(cpal) => cpal.start(renderer),
-            CpalWithFallbackBackend::Dummy(dummy) => {
-                dummy.start(renderer).unwrap();
-                Ok(())
-            }
-        }
-    }
-}
-
-/// The audio source asset type, contains no data, but [`Handle<AudioSource>`] is still useful
-/// because it uniquely represents a sound/music that may be played outside of bones.
-#[derive(Clone, HasSchema, Debug, Deref, DerefMut)]
-#[schema(no_default)]
-#[type_data(asset_loader(["ogg", "mp3", "flac", "wav"], AudioLoader))]
-pub struct AudioSource(pub StaticSoundData);
-
-impl SoundData for &AudioSource {
-    type Error = <StaticSoundData as SoundData>::Error;
-    type Handle = <StaticSoundData as SoundData>::Handle;
-
-    fn into_sound(self) -> Result<(Box<dyn kira::sound::Sound>, Self::Handle), Self::Error> {
-        self.0.clone().into_sound()
-    }
-}
-
-/// The audio file asset loader.
-pub struct AudioLoader;
-impl AssetLoader for AudioLoader {
-    fn load(
-        &self,
-        _ctx: AssetLoadCtx,
-        bytes: &[u8],
-    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
-        let bytes = bytes.to_vec();
-        Box::pin(async move {
-            let data = StaticSoundData::from_cursor(Cursor::new(bytes))?;
-            Ok(SchemaBox::new(AudioSource(data)))
-        })
     }
 }
