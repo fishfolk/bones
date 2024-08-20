@@ -1,9 +1,8 @@
 //! Audio Center resource and systems.
 
-use super::{Audio, AudioManager, AudioSource, MUSIC_FADE_DURATION};
+use super::{Audio, AudioManager, AudioSource};
 use crate::prelude::*;
 use kira;
-pub use kira::sound::static_sound::StaticSoundData;
 use kira::{
     sound::{static_sound::StaticSoundSettings, PlaybackState},
     tween,
@@ -11,6 +10,7 @@ use kira::{
     Volume,
 };
 use std::collections::VecDeque;
+use std::time::Duration;
 use tracing::warn;
 
 /// A resource that can be used to control game audios.
@@ -27,6 +27,8 @@ pub struct AudioCenter {
     music_volume_scale: f32,
     /// The volume scale for sound effects.
     effects_volume_scale: f32,
+    /// How long music should fade out for when stopping.
+    music_fade_duration: Duration,
 }
 
 impl Default for AudioCenter {
@@ -37,6 +39,7 @@ impl Default for AudioCenter {
             main_volume_scale: 1.0,
             music_volume_scale: 1.0,
             effects_volume_scale: 1.0,
+            music_fade_duration: Duration::from_millis(500),
         }
     }
 }
@@ -47,9 +50,14 @@ impl AudioCenter {
         self.events.push_back(event);
     }
 
-    /// Get the playback state of the music.
+    /// Returns the currently played music.
+    pub fn music(&self) -> Option<&Audio> {
+        self.music.as_ref()
+    }
+
+    /// Get the playback state of the current music.
     pub fn music_state(&self) -> Option<PlaybackState> {
-        self.music.as_ref().map(|m| m.handle.state())
+        self.music().map(|m| m.handle.state())
     }
 
     /// Play a sound. These are usually short audios that indicate something
@@ -142,6 +150,7 @@ impl AudioCenter {
     }
 
     /// Sets the volume scale for main audio within the range of 0.0 to 1.0.
+    /// The main volume scale impacts all other volume scales.
     pub fn set_main_volume_scale(&mut self, main: f32) {
         self.main_volume_scale = main.clamp(0.0, 1.0);
     }
@@ -166,6 +175,30 @@ impl AudioCenter {
             music_volume_scale: self.music_volume_scale,
             effects_volume_scale: self.effects_volume_scale,
         });
+    }
+
+    /// Returns the main volume scale (which impacts all other volume scales).
+    pub fn main_volume_scale(&self) -> f32 {
+        self.main_volume_scale
+    }
+
+    /// Returns the music volume scale.
+    pub fn music_volume_scale(&self) -> f32 {
+        self.music_volume_scale
+    }
+
+    /// Returns the volume scale for sound effects.
+    pub fn effects_volume_scale(&self) -> f32 {
+        self.effects_volume_scale
+    }
+    /// Returns the duration for music fade out.
+    pub fn music_fade_duration(&self) -> Duration {
+        self.music_fade_duration
+    }
+
+    /// Sets the duration for music fade out.
+    pub fn set_music_fade_duration(&mut self, duration: Duration) {
+        self.music_fade_duration = duration;
     }
 }
 
@@ -247,7 +280,7 @@ pub fn _process_audio_events(
                     if let Some(mut music) = audio_center.music.take() {
                         let tween = Tween {
                             start_time: kira::StartTime::Immediate,
-                            duration: MUSIC_FADE_DURATION,
+                            duration: audio_center.music_fade_duration,
                             easing: tween::Easing::Linear,
                         };
                         music.handle.stop(tween);

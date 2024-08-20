@@ -6,11 +6,10 @@ pub mod audio_manager;
 use crate::prelude::*;
 pub use audio_center::*;
 pub use audio_manager::*;
+pub use kira;
+pub use kira::sound::static_sound::StaticSoundData;
 use kira::sound::static_sound::StaticSoundHandle;
-use std::time::Duration;
 
-/// The amount of time to spend fading the music in and out.
-pub const MUSIC_FADE_DURATION: Duration = Duration::from_millis(500);
 /// Name of the default bones audio session
 pub const DEFAULT_BONES_AUDIO_SESSION: &str = "BONES_AUDIO";
 
