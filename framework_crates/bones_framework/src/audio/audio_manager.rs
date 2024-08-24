@@ -1,29 +1,21 @@
-//! Audio components.
-
-use std::io::Cursor;
+//! Audio Manager resource and systems.
 
 use crate::prelude::*;
-
-pub use kira::{self, sound::static_sound::StaticSoundData};
+use kira;
 use kira::{
     manager::{
         backend::{cpal::CpalBackend, mock::MockBackend, Backend},
         AudioManager as KiraAudioManager,
     },
-    sound::SoundData,
+    sound::{static_sound::StaticSoundData, SoundData},
 };
-
-/// The game plugin for the audio system.
-pub fn game_plugin(game: &mut Game) {
-    AudioSource::register_schema();
-    game.insert_shared_resource(AudioManager::default());
-    game.init_shared_resource::<AssetServer>();
-}
+use std::io::Cursor;
 
 /// The audio manager resource which can be used to play sounds.
 #[derive(HasSchema, Deref, DerefMut)]
 #[schema(no_clone)]
 pub struct AudioManager(KiraAudioManager<CpalWithFallbackBackend>);
+
 impl Default for AudioManager {
     fn default() -> Self {
         Self(KiraAudioManager::<CpalWithFallbackBackend>::new(default()).unwrap())
@@ -93,7 +85,7 @@ impl AssetLoader for AudioLoader {
     ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
         let bytes = bytes.to_vec();
         Box::pin(async move {
-            let data = StaticSoundData::from_cursor(Cursor::new(bytes), default())?;
+            let data = StaticSoundData::from_cursor(Cursor::new(bytes))?;
             Ok(SchemaBox::new(AudioSource(data)))
         })
     }
