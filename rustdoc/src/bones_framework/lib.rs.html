@@ -150,6 +150,9 @@
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The bones framework for game development.
 //!
 </span><span class="attr">#![cfg_attr(feature = <span class="string">"document-features"</span>, doc = <span class="string">"## Features"</span>)]
@@ -204,6 +207,9 @@
 <span class="kw">pub mod </span>time;
 <span class="kw">pub mod </span>utils;
 
+<span class="attr">#[cfg(feature = <span class="string">"audio"</span>)]
+</span><span class="kw">pub mod </span>audio;
+
 <span class="attr">#[cfg(feature = <span class="string">"ui"</span>)]
 </span><span class="kw">pub mod </span>debug;
 
@@ -245,7 +251,7 @@
     <span class="attr">#[allow(unused_variables)]
     </span><span class="kw">fn </span>install(<span class="self">self</span>, game: <span class="kw-2">&amp;mut </span>lib::Game) {
         <span class="attr">#[cfg(feature = <span class="string">"audio"</span>)]
-        </span>game.install_plugin(render::audio::game_plugin);
+        </span>game.install_plugin(audio::game_plugin);
 
         <span class="attr">#[cfg(feature = <span class="string">"scripting"</span>)]
         </span>game.install_plugin(bones_scripting::ScriptingGamePlugin::default());

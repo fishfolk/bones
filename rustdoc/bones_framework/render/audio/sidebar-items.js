@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["CpalWithFallbackBackend"],"fn":["game_plugin"],"struct":["AudioLoader","AudioManager","AudioSource","StaticSoundData"]};
