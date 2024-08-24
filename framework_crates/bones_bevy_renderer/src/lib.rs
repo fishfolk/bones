@@ -24,7 +24,7 @@ use render::*;
 mod ui;
 use ui::*;
 mod rumble;
-use bevy::prelude::*;
+use bevy::{log::LogPlugin, prelude::*};
 use bones::GamepadsRumble;
 use bones_framework::prelude as bones;
 use rumble::*;
@@ -145,6 +145,7 @@ impl BonesBevyRenderer {
                 }),
                 ..default()
             })
+            .disable::<LogPlugin>()
             .build();
         if self.pixel_art {
             plugins = plugins.set(ImagePlugin::default_nearest());

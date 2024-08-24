@@ -1483,6 +1483,8 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+ "tracing-subscriber",
+ "tracing-wasm",
  "ttf-parser",
  "unic-langid",
 ]
