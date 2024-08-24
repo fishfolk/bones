@@ -30,7 +30,7 @@ pub struct LogPlugin {
     /// Because [`BoxedLayer`] takes a `dyn Layer`, `Vec<Layer>` is also an acceptable return value.
     ///
     /// Access to [`Game`] is also provided to allow for communication between the
-    /// [`Subscriber`] and the [`Game`].
+    /// `Subscriber` and the [`Game`].
     ///
     /// Please see the `examples/log_layers.rs` for a complete example.
     pub custom_layer: fn(game: &mut Game) -> Option<BoxedLayer>,
