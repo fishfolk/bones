@@ -19,7 +19,7 @@ ui = ["dep:egui", "dep:ttf-parser"]
 ## Enable the localization module, powered by [`fluent`](https://github.com/projectfluent/fluent-rs).
 localization = ["dep:fluent", "dep:fluent-langneg", "dep:intl-memoizer", "dep:unic-langid", "dep:sys-locale"]
 
-logging = ["dep:tracing-subscriber", "dep:tracing-wasm"]
+logging = ["dep:tracing-subscriber", "dep:tracing-wasm", "dep:tracing-appender"]
 
 ## Enable the audio system.
 audio = ["dep:kira"]
@@ -97,6 +97,7 @@ once_cell     = "1.17"
 thiserror     = "1.0"
 tracing       = "0.1"
 tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter"] }
+tracing-appender   = { version = "0.2", optional = true, features = ["parking_lot"] }
 
 # Render
 csscolorparser = "0.6"
@@ -144,6 +145,8 @@ iroh-quinn             = { version = "0.10" }
 iroh-net               = { version = "0.22" }
 tokio                  = { version = "1", features = ["rt-multi-thread", "macros"] }
 
+
+directories = "5.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 tracing-wasm = { version = "0.2.1", optional = true }

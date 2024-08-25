@@ -44,7 +44,7 @@ pub mod prelude {
     pub use crate::localization::*;
 
     #[cfg(feature = "logging")]
-    pub use crate::logging::*;
+    pub use crate::logging::prelude::*;
 }
 
 pub mod animation;
@@ -98,9 +98,6 @@ pub struct DefaultGamePlugin;
 impl lib::GamePlugin for DefaultGamePlugin {
     #[allow(unused_variables)]
     fn install(self, game: &mut lib::Game) {
-        #[cfg(feature = "logging")]
-        game.install_plugin(logging::LogPlugin::default());
-
         #[cfg(feature = "audio")]
         game.install_plugin(render::audio::game_plugin);
 
