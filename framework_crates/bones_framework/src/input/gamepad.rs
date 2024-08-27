@@ -1,4 +1,6 @@
 //! Gamepad input resource.
+use std::collections::VecDeque;
+
 use crate::prelude::*;
 
 /// Resource containing the gamepad input events detected this frame.
@@ -262,11 +264,20 @@ impl GamepadRumbleIntensity {
     }
 }
 
-/// Represents a request to either add or stop rumble on a specific gamepad
+/// Represents a request to either add, set, or stop rumble on a specific gamepad
 #[derive(HasSchema, Clone, Debug)]
 pub enum GamepadRumbleRequest {
     /// Request to add rumble to a gamepad.
-    Trigger {
+    AddRumble {
+        /// The ID of the gamepad to rumble.
+        gamepad: u32,
+        /// The intensity of the rumble.
+        intensity: GamepadRumbleIntensity,
+        /// The duration of the rumble in seconds.
+        duration: f32,
+    },
+    /// Request to set rumble on a gamepad, replacing any existing rumble.
+    SetRumble {
         /// The ID of the gamepad to rumble.
         gamepad: u32,
         /// The intensity of the rumble.
@@ -286,20 +297,32 @@ impl Default for GamepadRumbleRequest {
         GamepadRumbleRequest::Stop { gamepad: 0 }
     }
 }
+
 /// Resource that provides an interface for triggering rumble on connected gamepads
 #[derive(HasSchema, Clone)]
 pub struct GamepadsRumble {
-    /// A vector to hold all the gamepad rumble requests to be processed.
-    pub requests: SVec<GamepadRumbleRequest>,
+    /// A queue to hold all the gamepad rumble requests to be processed.
+    pub requests: VecDeque<GamepadRumbleRequest>,
     /// A vector to keep track of which gamepads are enabled for rumble.
     enabled_gamepads: SVec<bool>,
 }
 
 impl GamepadsRumble {
-    /// Triggers rumble on a specific gamepad. Ignores if the gamepad is disabled (enabled by default).
-    pub fn trigger(&mut self, gamepad: u32, intensity: GamepadRumbleIntensity, duration: f32) {
+    /// Adds rumble to a specific gamepad. Ignores if the gamepad is disabled (enabled by default).
+    pub fn add_rumble(&mut self, gamepad: u32, intensity: GamepadRumbleIntensity, duration: f32) {
         if self.is_enabled(gamepad) {
-            self.requests.push(GamepadRumbleRequest::Trigger {
+            self.requests.push_back(GamepadRumbleRequest::AddRumble {
+                gamepad,
+                intensity,
+                duration,
+            });
+        }
+    }
+
+    /// Sets rumble on a specific gamepad, replacing any existing rumble. Ignores if the gamepad is disabled.
+    pub fn set_rumble(&mut self, gamepad: u32, intensity: GamepadRumbleIntensity, duration: f32) {
+        if self.is_enabled(gamepad) {
+            self.requests.push_back(GamepadRumbleRequest::SetRumble {
                 gamepad,
                 intensity,
                 duration,
@@ -310,15 +333,25 @@ impl GamepadsRumble {
     /// Stops rumble on a specific gamepad.
     pub fn stop(&mut self, gamepad: u32) {
         if self.is_enabled(gamepad) {
-            self.requests.push(GamepadRumbleRequest::Stop { gamepad });
+            self.requests
+                .push_back(GamepadRumbleRequest::Stop { gamepad });
         }
     }
 
-    /// Triggers rumble on all enabled gamepads.
-    pub fn trigger_all(&mut self, intensity: GamepadRumbleIntensity, duration: f32) {
+    /// Adds rumble to all enabled gamepads.
+    pub fn add_rumble_all(&mut self, intensity: GamepadRumbleIntensity, duration: f32) {
         for gamepad in 0..self.enabled_gamepads.len() {
             if self.is_enabled(gamepad as u32) {
-                self.trigger(gamepad as u32, intensity, duration);
+                self.add_rumble(gamepad as u32, intensity, duration);
+            }
+        }
+    }
+
+    /// Sets rumble on all enabled gamepads, replacing any existing rumble.
+    pub fn set_rumble_all(&mut self, intensity: GamepadRumbleIntensity, duration: f32) {
+        for gamepad in 0..self.enabled_gamepads.len() {
+            if self.is_enabled(gamepad as u32) {
+                self.set_rumble(gamepad as u32, intensity, duration);
             }
         }
     }
@@ -342,7 +375,7 @@ impl GamepadsRumble {
         }
     }
 
-    /// Checks if a specific gamepad is disabled for rumble (no rumble trigger requests will work).
+    /// Checks if a specific gamepad is disabled for rumble (no rumble requests will work).
     pub fn is_disabled(&self, gamepad: u32) -> bool {
         !self.is_enabled(gamepad)
     }
@@ -354,7 +387,7 @@ impl GamepadsRumble {
         }
     }
 
-    /// Disables rumble for a specific gamepad (no rumble trigger requests will work).
+    /// Disables rumble for a specific gamepad (no rumble requests will work).
     pub fn disable(&mut self, gamepad: u32) {
         self.stop(gamepad);
         if let Some(enabled) = self.enabled_gamepads.get_mut(gamepad as usize) {
@@ -369,7 +402,7 @@ impl GamepadsRumble {
         }
     }
 
-    /// Disables rumble for all gamepads (no rumble trigger requests will work).
+    /// Disables rumble for all gamepads (no rumble requests will work).
     pub fn disable_all(&mut self) {
         for gamepad in 0..self.enabled_gamepads.len() {
             self.disable(gamepad as u32);
@@ -380,7 +413,7 @@ impl GamepadsRumble {
 impl Default for GamepadsRumble {
     fn default() -> Self {
         GamepadsRumble {
-            requests: SVec::new(),
+            requests: VecDeque::new(),
             enabled_gamepads: vec![true; 4].into(),
         }
     }
