@@ -386,8 +386,43 @@
 <a href="#385" id="385">385</a>
 <a href="#386" id="386">386</a>
 <a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Gamepad input resource.
-</span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+</span><span class="kw">use </span>std::collections::VecDeque;
+
+<span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// Resource containing the gamepad input events detected this frame.
 </span><span class="attr">#[derive(HasSchema, Clone, Default, Debug)]
@@ -650,11 +685,20 @@
     }
 }
 
-<span class="doccomment">/// Represents a request to either add or stop rumble on a specific gamepad
+<span class="doccomment">/// Represents a request to either add, set, or stop rumble on a specific gamepad
 </span><span class="attr">#[derive(HasSchema, Clone, Debug)]
 </span><span class="kw">pub enum </span>GamepadRumbleRequest {
     <span class="doccomment">/// Request to add rumble to a gamepad.
-    </span>Trigger {
+    </span>AddRumble {
+        <span class="doccomment">/// The ID of the gamepad to rumble.
+        </span>gamepad: u32,
+        <span class="doccomment">/// The intensity of the rumble.
+        </span>intensity: GamepadRumbleIntensity,
+        <span class="doccomment">/// The duration of the rumble in seconds.
+        </span>duration: f32,
+    },
+    <span class="doccomment">/// Request to set rumble on a gamepad, replacing any existing rumble.
+    </span>SetRumble {
         <span class="doccomment">/// The ID of the gamepad to rumble.
         </span>gamepad: u32,
         <span class="doccomment">/// The intensity of the rumble.
@@ -674,20 +718,32 @@
         GamepadRumbleRequest::Stop { gamepad: <span class="number">0 </span>}
     }
 }
+
 <span class="doccomment">/// Resource that provides an interface for triggering rumble on connected gamepads
 </span><span class="attr">#[derive(HasSchema, Clone)]
 </span><span class="kw">pub struct </span>GamepadsRumble {
-    <span class="doccomment">/// A vector to hold all the gamepad rumble requests to be processed.
-    </span><span class="kw">pub </span>requests: SVec&lt;GamepadRumbleRequest&gt;,
+    <span class="doccomment">/// A queue to hold all the gamepad rumble requests to be processed.
+    </span><span class="kw">pub </span>requests: VecDeque&lt;GamepadRumbleRequest&gt;,
     <span class="doccomment">/// A vector to keep track of which gamepads are enabled for rumble.
     </span>enabled_gamepads: SVec&lt;bool&gt;,
 }
 
 <span class="kw">impl </span>GamepadsRumble {
-    <span class="doccomment">/// Triggers rumble on a specific gamepad. Ignores if the gamepad is disabled (enabled by default).
-    </span><span class="kw">pub fn </span>trigger(<span class="kw-2">&amp;mut </span><span class="self">self</span>, gamepad: u32, intensity: GamepadRumbleIntensity, duration: f32) {
+    <span class="doccomment">/// Adds rumble to a specific gamepad. Ignores if the gamepad is disabled (enabled by default).
+    </span><span class="kw">pub fn </span>add_rumble(<span class="kw-2">&amp;mut </span><span class="self">self</span>, gamepad: u32, intensity: GamepadRumbleIntensity, duration: f32) {
         <span class="kw">if </span><span class="self">self</span>.is_enabled(gamepad) {
-            <span class="self">self</span>.requests.push(GamepadRumbleRequest::Trigger {
+            <span class="self">self</span>.requests.push_back(GamepadRumbleRequest::AddRumble {
+                gamepad,
+                intensity,
+                duration,
+            });
+        }
+    }
+
+    <span class="doccomment">/// Sets rumble on a specific gamepad, replacing any existing rumble. Ignores if the gamepad is disabled.
+    </span><span class="kw">pub fn </span>set_rumble(<span class="kw-2">&amp;mut </span><span class="self">self</span>, gamepad: u32, intensity: GamepadRumbleIntensity, duration: f32) {
+        <span class="kw">if </span><span class="self">self</span>.is_enabled(gamepad) {
+            <span class="self">self</span>.requests.push_back(GamepadRumbleRequest::SetRumble {
                 gamepad,
                 intensity,
                 duration,
@@ -698,15 +754,25 @@
     <span class="doccomment">/// Stops rumble on a specific gamepad.
     </span><span class="kw">pub fn </span>stop(<span class="kw-2">&amp;mut </span><span class="self">self</span>, gamepad: u32) {
         <span class="kw">if </span><span class="self">self</span>.is_enabled(gamepad) {
-            <span class="self">self</span>.requests.push(GamepadRumbleRequest::Stop { gamepad });
+            <span class="self">self</span>.requests
+                .push_back(GamepadRumbleRequest::Stop { gamepad });
         }
     }
 
-    <span class="doccomment">/// Triggers rumble on all enabled gamepads.
-    </span><span class="kw">pub fn </span>trigger_all(<span class="kw-2">&amp;mut </span><span class="self">self</span>, intensity: GamepadRumbleIntensity, duration: f32) {
+    <span class="doccomment">/// Adds rumble to all enabled gamepads.
+    </span><span class="kw">pub fn </span>add_rumble_all(<span class="kw-2">&amp;mut </span><span class="self">self</span>, intensity: GamepadRumbleIntensity, duration: f32) {
         <span class="kw">for </span>gamepad <span class="kw">in </span><span class="number">0</span>..<span class="self">self</span>.enabled_gamepads.len() {
             <span class="kw">if </span><span class="self">self</span>.is_enabled(gamepad <span class="kw">as </span>u32) {
-                <span class="self">self</span>.trigger(gamepad <span class="kw">as </span>u32, intensity, duration);
+                <span class="self">self</span>.add_rumble(gamepad <span class="kw">as </span>u32, intensity, duration);
+            }
+        }
+    }
+
+    <span class="doccomment">/// Sets rumble on all enabled gamepads, replacing any existing rumble.
+    </span><span class="kw">pub fn </span>set_rumble_all(<span class="kw-2">&amp;mut </span><span class="self">self</span>, intensity: GamepadRumbleIntensity, duration: f32) {
+        <span class="kw">for </span>gamepad <span class="kw">in </span><span class="number">0</span>..<span class="self">self</span>.enabled_gamepads.len() {
+            <span class="kw">if </span><span class="self">self</span>.is_enabled(gamepad <span class="kw">as </span>u32) {
+                <span class="self">self</span>.set_rumble(gamepad <span class="kw">as </span>u32, intensity, duration);
             }
         }
     }
@@ -730,7 +796,7 @@
         </span>}
     }
 
-    <span class="doccomment">/// Checks if a specific gamepad is disabled for rumble (no rumble trigger requests will work).
+    <span class="doccomment">/// Checks if a specific gamepad is disabled for rumble (no rumble requests will work).
     </span><span class="kw">pub fn </span>is_disabled(<span class="kw-2">&amp;</span><span class="self">self</span>, gamepad: u32) -&gt; bool {
         !<span class="self">self</span>.is_enabled(gamepad)
     }
@@ -742,7 +808,7 @@
         }
     }
 
-    <span class="doccomment">/// Disables rumble for a specific gamepad (no rumble trigger requests will work).
+    <span class="doccomment">/// Disables rumble for a specific gamepad (no rumble requests will work).
     </span><span class="kw">pub fn </span>disable(<span class="kw-2">&amp;mut </span><span class="self">self</span>, gamepad: u32) {
         <span class="self">self</span>.stop(gamepad);
         <span class="kw">if let </span><span class="prelude-val">Some</span>(enabled) = <span class="self">self</span>.enabled_gamepads.get_mut(gamepad <span class="kw">as </span>usize) {
@@ -757,7 +823,7 @@
         }
     }
 
-    <span class="doccomment">/// Disables rumble for all gamepads (no rumble trigger requests will work).
+    <span class="doccomment">/// Disables rumble for all gamepads (no rumble requests will work).
     </span><span class="kw">pub fn </span>disable_all(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">for </span>gamepad <span class="kw">in </span><span class="number">0</span>..<span class="self">self</span>.enabled_gamepads.len() {
             <span class="self">self</span>.disable(gamepad <span class="kw">as </span>u32);
@@ -768,7 +834,7 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>GamepadsRumble {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         GamepadsRumble {
-            requests: SVec::new(),
+            requests: VecDeque::new(),
             enabled_gamepads: <span class="macro">vec!</span>[<span class="bool-val">true</span>; <span class="number">4</span>].into(),
         }
     }
