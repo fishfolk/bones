@@ -1,4 +1,3 @@
-use crate::bones::SVec;
 use crate::BonesGame;
 use bevy::input::gamepad::{
     GamepadRumbleIntensity as BevyGamepadRumbleIntensity,
@@ -14,14 +13,14 @@ pub fn handle_bones_rumble(
     mut rumble_requests: EventWriter<BevyGamepadRumbleRequest>,
 ) {
     if let Some(mut bones_rumble_requests) = game.shared_resource_mut::<bones::GamepadsRumble>() {
-        for request in &bones_rumble_requests.requests {
+        while let Some(request) = bones_rumble_requests.requests.pop_front() {
             match request {
                 bones::GamepadRumbleRequest::AddRumble {
                     gamepad,
                     intensity,
                     duration,
                 } => {
-                    send_rumble_request(gamepad, intensity, duration, &mut rumble_requests);
+                    send_rumble_request(&gamepad, &intensity, &duration, &mut rumble_requests);
                 }
                 bones::GamepadRumbleRequest::SetRumble {
                     gamepad,
@@ -29,21 +28,20 @@ pub fn handle_bones_rumble(
                     duration,
                 } => {
                     // First, stop the current rumble
-                    let stop_gamepad = Gamepad::new(*gamepad as usize);
+                    let stop_gamepad = Gamepad::new(gamepad as usize);
                     rumble_requests.send(BevyGamepadRumbleRequest::Stop {
                         gamepad: stop_gamepad,
                     });
 
                     // Then, add the new rumble
-                    send_rumble_request(gamepad, intensity, duration, &mut rumble_requests);
+                    send_rumble_request(&gamepad, &intensity, &duration, &mut rumble_requests);
                 }
                 bones::GamepadRumbleRequest::Stop { gamepad } => {
-                    let gamepad = Gamepad::new(*gamepad as usize);
+                    let gamepad = Gamepad::new(gamepad as usize);
                     rumble_requests.send(BevyGamepadRumbleRequest::Stop { gamepad });
                 }
             }
         }
-        bones_rumble_requests.requests = SVec::new();
     }
 }
 
