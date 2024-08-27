@@ -12,6 +12,9 @@ struct GameMeta {
 }
 
 fn main() {
+    // Setup logging
+    let _log_guard = bones_framework::logging::setup_logging(LogSettings::default());
+
     let mut game = Game::new();
     game.install_plugin(DefaultGamePlugin);
     game.shared_resource_mut::<AssetServer>()
