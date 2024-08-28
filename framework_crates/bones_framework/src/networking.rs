@@ -193,7 +193,7 @@ pub enum SyncingInfo {
         last_confirmed_frame: i32,
         /// Socket
         socket: Socket,
-        /// Networking stats for each connected player, stored at the [player_idx] index for each respective player.
+        /// Networking stats for each connected player, stored at the \[player_idx\] index for each respective player.
         player_network_stats: SVec<PlayerNetworkStats>,
     },
     /// Holds data for an offline session
