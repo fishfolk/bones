@@ -18,10 +18,11 @@ pub struct ResizableAlloc {
     /// The pointer to the allocation. May be dangling for a capacity of zero or for a zero-sized
     /// layout.
     ptr: NonNull<c_void>,
-    /// The layout of the items stored
+    /// The layout of the items stored, it's size is padded to it's alignment.
     layout: Layout,
-    /// The layout of the items stored, with it's size padded to its alignment.
-    padded: Layout,
+    /// The original layout the alloc was created with, without it's size necessarily padded to it's
+    /// alignment.
+    original_layout: Layout,
     /// The current capacity measured in items.
     cap: usize,
 }
@@ -62,10 +63,11 @@ impl ResizableAlloc {
     /// The capacity will be 0 and the pointer will be dangling.
     #[inline]
     pub fn new(layout: Layout) -> Self {
+        let padded = layout.pad_to_align();
         Self {
-            ptr: Self::dangling(&layout),
-            layout,
-            padded: layout.pad_to_align(),
+            ptr: Self::dangling(&padded),
+            layout: padded,
+            original_layout: layout,
             cap: 0,
         }
     }
@@ -137,10 +139,11 @@ impl ResizableAlloc {
         Ok(())
     }
 
-    /// Get the layout.
+    /// Get the layout that this [`ResizableAlloc`] was created with.
     #[inline]
+    #[allow(clippy::misnamed_getters)]
     pub fn layout(&self) -> Layout {
-        self.layout
+        self.original_layout
     }
 
     /// Get the capacity.
@@ -175,7 +178,7 @@ impl ResizableAlloc {
     /// This does no checks that the index is within bounds or that the returne dpointer is unaliased.
     #[inline]
     pub unsafe fn unchecked_idx(&self, idx: usize) -> *mut c_void {
-        self.ptr.as_ptr().add(self.padded.size() * idx)
+        self.ptr.as_ptr().add(self.layout.size() * idx)
     }
 
     /// Helper to create a dangling pointer that is properly aligned for our layout.
