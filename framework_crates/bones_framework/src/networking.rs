@@ -56,7 +56,7 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{input, lan, online, proto, DisconnectedPlayers, NetworkInfo, RUNTIME};
+    pub use super::{input, lan, online, proto, DisconnectedPlayers, SyncingInfo, RUNTIME};
 
     #[cfg(feature = "net-debug")]
     pub use super::debug::prelude::*;
@@ -180,48 +180,68 @@ pub enum SocketTarget {
     All,
 }
 
-/// Resource updated each frame exposing current frame and last confirmed of online session.
+/// Resource updated each frame exposing syncing/networking information in the current session.
 #[derive(HasSchema, Clone)]
 #[schema(no_default)]
-pub struct NetworkInfo {
-    /// Current frame of simulation step
-    current_frame: i32,
-
-    /// Last confirmed frame by all clients.
-    /// Anything that occurred on this frame is agreed upon by all clients.
-    last_confirmed_frame: i32,
-
-    /// Socket
-    socket: Socket,
-
-    /// Networking stats for each connected player, stored at the [player_idx] index for each respective player.
-    player_network_stats: SVec<PlayerNetworkStats>,
+pub enum SyncingInfo {
+    /// Holds data for an online session
+    Online {
+        /// Current frame of simulation step
+        current_frame: i32,
+        /// Last confirmed frame by all clients.
+        /// Anything that occurred on this frame is agreed upon by all clients.
+        last_confirmed_frame: i32,
+        /// Socket
+        socket: Socket,
+        /// Networking stats for each connected player, stored at the [player_idx] index for each respective player.
+        player_network_stats: SVec<PlayerNetworkStats>,
+    },
+    /// Holds data for an offline session
+    Offline {
+        /// Current frame of simulation step
+        current_frame: i32,
+    },
 }
 
-impl NetworkInfo {
-    /// Getter for the current frame number.
+impl SyncingInfo {
+    /// Getter for the current frame (number).
     pub fn current_frame(&self) -> i32 {
-        self.current_frame
+        match self {
+            SyncingInfo::Online { current_frame, .. } => *current_frame,
+            SyncingInfo::Offline { current_frame } => *current_frame,
+        }
     }
 
-    /// Getter for the last confirmed frame.
+    /// Getter for the last confirmed frame (number).
     pub fn last_confirmed_frame(&self) -> i32 {
-        self.last_confirmed_frame
+        match self {
+            SyncingInfo::Online { last_confirmed_frame, .. } => *last_confirmed_frame,
+            SyncingInfo::Offline { current_frame } => *current_frame,
+        }
     }
 
     /// Getter for player_network_stats.
-    pub fn player_network_stats(&self) -> &SVec<PlayerNetworkStats> {
-        &self.player_network_stats
+    pub fn player_network_stats(&self) -> SVec<PlayerNetworkStats> {
+        match self {
+            SyncingInfo::Online { player_network_stats, .. } => player_network_stats.clone(),
+            SyncingInfo::Offline { .. } => SVec::new(),
+        }
     }
 
     /// Getter for socket.
     pub fn socket(&self) -> Maybe<&Socket> {
-        Maybe::Set(&self.socket)
+        match self {
+            SyncingInfo::Online { socket, .. } => Maybe::Set(socket),
+            SyncingInfo::Offline { .. } => Maybe::Unset,
+        }
     }
 
     /// Mutable getter for socket.
     pub fn socket_mut(&mut self) -> Maybe<&mut Socket> {
-        Maybe::Set(&mut self.socket)
+        match self {
+            SyncingInfo::Online { socket, .. } => Maybe::Set(socket),
+            SyncingInfo::Offline { .. } => Maybe::Unset,
+        }
     }
 }
 
@@ -602,7 +622,7 @@ where
                                     //
                                     // The existance of this resource may be used to determine if in an online match, and there could
                                     // be race if expected it to exist but testing before first frame advance.
-                                    world.insert_resource(NetworkInfo {
+                                    world.insert_resource(SyncingInfo::Online {
                                         current_frame: self.session.current_frame(),
                                         last_confirmed_frame: self.session.confirmed_frame(),
                                         socket: self.socket.clone(),
