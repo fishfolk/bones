@@ -1,19 +1,16 @@
 #![doc = include_str!("./networking.md")]
 
-use std::{fmt::Debug, marker::PhantomData, sync::Arc};
-
-use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
-use ggrs::P2PSession;
-use instant::Duration;
-use once_cell::sync::Lazy;
-use tracing::{debug, error, info, trace, warn};
-
-use crate::prelude::*;
-
 use self::{
     input::{DenseInput, NetworkInputConfig, NetworkPlayerControl, NetworkPlayerControls},
     socket::Socket,
 };
+use crate::prelude::*;
+use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
+use ggrs::P2PSession;
+use instant::Duration;
+use once_cell::sync::Lazy;
+use std::{fmt::Debug, marker::PhantomData, sync::Arc};
+use tracing::{debug, error, info, trace, warn};
 
 #[cfg(feature = "net-debug")]
 use {
@@ -196,6 +193,9 @@ pub struct NetworkInfo {
 
     /// Socket
     pub socket: Socket,
+
+    /// Networking stats for each connected player, stored at the [player_idx] index for each respective player.
+    pub player_network_stats: SVec<PlayerNetworkStats>,
 }
 
 /// Resource tracking which players have been disconnected.
@@ -556,6 +556,20 @@ where
                                     // Input has been consumed, signal that we are in new input frame
                                     self.input_collector.advance_frame();
 
+                                    // Fetch the PlayerNetworkStats for each remote player, guaranteeing each one is inserted into the index matching its handle
+                                    let mut player_network_stats: Vec<PlayerNetworkStats> = vec![
+                                        PlayerNetworkStats::default();
+                                        self.session.remote_player_handles().len()
+                                    ];
+                                    for handle in self.session.remote_player_handles().iter() {
+                                        if let Ok(stats) = self.session.network_stats(*handle) {
+                                            player_network_stats[*handle] =
+                                                PlayerNetworkStats::from_ggrs_network_stats(
+                                                    *handle, stats,
+                                                );
+                                        }
+                                    }
+
                                     // TODO: Make sure NetworkInfo is initialized immediately when session is created,
                                     // even before a frame has advanced.
                                     //
@@ -565,6 +579,7 @@ where
                                         current_frame: self.session.current_frame(),
                                         last_confirmed_frame: self.session.confirmed_frame(),
                                         socket: self.socket.clone(),
+                                        player_network_stats: player_network_stats.into(),
                                     });
 
                                     // Disconnected players persisted on session runner, and updated each frame.
@@ -665,5 +680,43 @@ where
 
     fn disable_local_input(&mut self, input_disabled: bool) {
         self.local_input_disabled = input_disabled;
+    }
+}
+
+/// A schema-compatible wrapper for ggrs `NetworkStats` struct contains networking stats.
+#[derive(Debug, Default, Clone, Copy, HasSchema)]
+pub struct PlayerNetworkStats {
+    /// The idx of the player these stats are for. Included here for self-attesting/ease-of-access.
+    pub player_idx: usize,
+    /// The length of the queue containing UDP packets which have not yet been acknowledged by the end client.
+    /// The length of the send queue is a rough indication of the quality of the connection. The longer the send queue, the higher the round-trip time between the
+    /// clients. The send queue will also be longer than usual during high packet loss situations.
+    pub send_queue_len: usize,
+    /// The roundtrip packet transmission time as calculated by GGRS.
+    pub ping: u128,
+    /// The estimated bandwidth used between the two clients, in kilobits per second.
+    pub kbps_sent: usize,
+
+    /// The number of frames GGRS calculates that the local client is behind the remote client at this instant in time.
+    /// For example, if at this instant the current game client is running frame 1002 and the remote game client is running frame 1009,
+    /// this value will mostly likely roughly equal 7.
+    pub local_frames_behind: i32,
+    /// The same as [`local_frames_behind`], but calculated from the perspective of the remote player.
+    ///
+    /// [`local_frames_behind`]: #structfield.local_frames_behind
+    pub remote_frames_behind: i32,
+}
+
+impl PlayerNetworkStats {
+    /// Creates a new PlayerNetworkStats from a player index and a ggrs NetworkStats.
+    pub fn from_ggrs_network_stats(player_idx: usize, stats: ggrs::NetworkStats) -> Self {
+        Self {
+            player_idx,
+            send_queue_len: stats.send_queue_len,
+            ping: stats.ping,
+            kbps_sent: stats.kbps_sent,
+            local_frames_behind: stats.local_frames_behind,
+            remote_frames_behind: stats.remote_frames_behind,
+        }
     }
 }
