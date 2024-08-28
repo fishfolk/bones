@@ -215,7 +215,10 @@ impl SyncingInfo {
     /// Getter for the last confirmed frame (number).
     pub fn last_confirmed_frame(&self) -> i32 {
         match self {
-            SyncingInfo::Online { last_confirmed_frame, .. } => *last_confirmed_frame,
+            SyncingInfo::Online {
+                last_confirmed_frame,
+                ..
+            } => *last_confirmed_frame,
             SyncingInfo::Offline { current_frame } => *current_frame,
         }
     }
@@ -223,7 +226,10 @@ impl SyncingInfo {
     /// Getter for player_network_stats.
     pub fn player_network_stats(&self) -> SVec<PlayerNetworkStats> {
         match self {
-            SyncingInfo::Online { player_network_stats, .. } => player_network_stats.clone(),
+            SyncingInfo::Online {
+                player_network_stats,
+                ..
+            } => player_network_stats.clone(),
             SyncingInfo::Offline { .. } => SVec::new(),
         }
     }
@@ -241,6 +247,120 @@ impl SyncingInfo {
         match self {
             SyncingInfo::Online { socket, .. } => Maybe::Set(socket),
             SyncingInfo::Offline { .. } => Maybe::Unset,
+        }
+    }
+
+    /// Calculates the total kilobits per second sent across all players. Returns 0 if offline.
+    pub fn total_kbps_sent(&self) -> usize {
+        match self {
+            SyncingInfo::Online {
+                player_network_stats,
+                ..
+            } => player_network_stats
+                .iter()
+                .map(|stats| stats.kbps_sent)
+                .sum(),
+            SyncingInfo::Offline { .. } => 0,
+        }
+    }
+
+    /// Calculates the average kilobits per second sent across all players. Returns 0 if offline.
+    pub fn averaged_kbps_sent(&self) -> f32 {
+        match self {
+            SyncingInfo::Online {
+                player_network_stats,
+                ..
+            } => {
+                if player_network_stats.is_empty() {
+                    0.0
+                } else {
+                    let total_kbps: usize = player_network_stats
+                        .iter()
+                        .map(|stats| stats.kbps_sent)
+                        .sum();
+                    total_kbps as f32 / player_network_stats.len() as f32
+                }
+            }
+            SyncingInfo::Offline { .. } => 0.0,
+        }
+    }
+
+    /// Returns the highest number of local frames behind across all players. Returns 0 if offline.
+    pub fn highest_local_frames_behind(&self) -> i32 {
+        match self {
+            SyncingInfo::Online {
+                player_network_stats,
+                ..
+            } => player_network_stats
+                .iter()
+                .map(|stats| stats.local_frames_behind)
+                .max()
+                .unwrap_or(0),
+            SyncingInfo::Offline { .. } => 0,
+        }
+    }
+
+    /// Returns the highest number of remote frames behind across all players. Returns 0 if offline.
+    pub fn highest_remote_frames_behind(&self) -> i32 {
+        match self {
+            SyncingInfo::Online {
+                player_network_stats,
+                ..
+            } => player_network_stats
+                .iter()
+                .map(|stats| stats.remote_frames_behind)
+                .max()
+                .unwrap_or(0),
+            SyncingInfo::Offline { .. } => 0,
+        }
+    }
+
+    /// Calculates the average ping across all players. Returns 0 if offline.
+    pub fn averaged_ping(&self) -> u128 {
+        match self {
+            SyncingInfo::Online {
+                player_network_stats,
+                ..
+            } => {
+                if player_network_stats.is_empty() {
+                    0
+                } else {
+                    let total_ping: u128 =
+                        player_network_stats.iter().map(|stats| stats.ping).sum();
+                    total_ping / player_network_stats.len() as u128
+                }
+            }
+            SyncingInfo::Offline { .. } => 0,
+        }
+    }
+
+    /// Returns the lowest ping across all players. Returns 0 if offline.
+    pub fn lowest_ping(&self) -> u128 {
+        match self {
+            SyncingInfo::Online {
+                player_network_stats,
+                ..
+            } => player_network_stats
+                .iter()
+                .map(|stats| stats.ping)
+                .min()
+                .unwrap_or(0),
+            SyncingInfo::Offline { .. } => 0,
+        }
+    }
+
+    /// Returns the highest ping across all players. Returns 0 if offline.
+    pub fn highest_ping(&self) -> u128 {
+        match self {
+            SyncingInfo::Online {
+                player_network_stats,
+                ..
+            } => player_network_stats
+                .iter()
+                .map(|stats| stats.ping)
+                .max()
+                .unwrap_or(0),
+            SyncingInfo::Offline { .. } => 0,
         }
     }
 }
