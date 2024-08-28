@@ -185,17 +185,44 @@ pub enum SocketTarget {
 #[schema(no_default)]
 pub struct NetworkInfo {
     /// Current frame of simulation step
-    pub current_frame: i32,
+    current_frame: i32,
 
     /// Last confirmed frame by all clients.
     /// Anything that occurred on this frame is agreed upon by all clients.
-    pub last_confirmed_frame: i32,
+    last_confirmed_frame: i32,
 
     /// Socket
-    pub socket: Socket,
+    socket: Socket,
 
     /// Networking stats for each connected player, stored at the [player_idx] index for each respective player.
-    pub player_network_stats: SVec<PlayerNetworkStats>,
+    player_network_stats: SVec<PlayerNetworkStats>,
+}
+
+impl NetworkInfo {
+    /// Getter for the current frame number.
+    pub fn current_frame(&self) -> i32 {
+        self.current_frame
+    }
+
+    /// Getter for the last confirmed frame.
+    pub fn last_confirmed_frame(&self) -> i32 {
+        self.last_confirmed_frame
+    }
+
+    /// Getter for player_network_stats.
+    pub fn player_network_stats(&self) -> &SVec<PlayerNetworkStats> {
+        &self.player_network_stats
+    }
+
+    /// Getter for socket.
+    pub fn socket(&self) -> Maybe<&Socket> {
+        Maybe::Set(&self.socket)
+    }
+
+    /// Mutable getter for socket.
+    pub fn socket_mut(&mut self) -> Maybe<&mut Socket> {
+        Maybe::Set(&mut self.socket)
+    }
 }
 
 /// Resource tracking which players have been disconnected.
