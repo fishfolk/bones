@@ -199,6 +199,8 @@ pub enum SyncingInfo {
         local_player_idx: usize,
         /// The local input delay set for this session
         local_frame_delay: usize,
+        /// List of disconnected players (their idx)
+        disconnected_players: SVec<usize>,
     },
     /// Holds data for an offline session
     Offline {
@@ -236,20 +238,19 @@ impl SyncingInfo {
             SyncingInfo::Offline { current_frame } => *current_frame,
         }
     }
-
     /// Getter for socket.
-    pub fn socket(&self) -> Maybe<&Socket> {
+    pub fn socket(&self) -> Option<&Socket> {
         match self {
-            SyncingInfo::Online { socket, .. } => Maybe::Set(socket),
-            SyncingInfo::Offline { .. } => Maybe::Unset,
+            SyncingInfo::Online { socket, .. } => Some(socket),
+            SyncingInfo::Offline { .. } => None,
         }
     }
 
     /// Mutable getter for socket.
-    pub fn socket_mut(&mut self) -> Maybe<&mut Socket> {
+    pub fn socket_mut(&mut self) -> Option<&mut Socket> {
         match self {
-            SyncingInfo::Online { socket, .. } => Maybe::Set(socket),
-            SyncingInfo::Offline { .. } => Maybe::Unset,
+            SyncingInfo::Online { socket, .. } => Some(socket),
+            SyncingInfo::Offline { .. } => None,
         }
     }
 
@@ -404,6 +405,63 @@ impl SyncingInfo {
                 players_network_stats,
                 ..
             } => Some(players_network_stats.len()),
+            SyncingInfo::Offline { .. } => None,
+        }
+    }
+
+    /// Getter for the list of active players (idx) which are connected. Offline returns empty list.
+    pub fn active_players(&self) -> SVec<usize> {
+        match self {
+            SyncingInfo::Online {
+                players_network_stats,
+                disconnected_players,
+                ..
+            } => {
+                let total_players = players_network_stats.len();
+                (0..total_players)
+                    .filter(|&id| !disconnected_players.contains(&id))
+                    .collect()
+            }
+            SyncingInfo::Offline { .. } => SVec::new(),
+        }
+    }
+
+    /// Getter for the list of active players (idx) which are connected. Offline returns None.
+    pub fn active_players_checked(&self) -> Option<SVec<usize>> {
+        match self {
+            SyncingInfo::Online {
+                players_network_stats,
+                disconnected_players,
+                ..
+            } => {
+                let total_players = players_network_stats.len();
+                let active = (0..total_players)
+                    .filter(|&id| !disconnected_players.contains(&id))
+                    .collect();
+                Some(active)
+            }
+            SyncingInfo::Offline { .. } => None,
+        }
+    }
+
+    /// Getter for the list of players which have been disconnected (their idx). Offline returns empty list.
+    pub fn disconnected_players(&self) -> SVec<usize> {
+        match self {
+            SyncingInfo::Online {
+                disconnected_players,
+                ..
+            } => disconnected_players.clone(),
+            SyncingInfo::Offline { .. } => SVec::new(),
+        }
+    }
+
+    /// Getter for the list of players which have been disconnected (their idx). Offline returns None.
+    pub fn disconnected_players_checked(&self) -> Option<SVec<usize>> {
+        match self {
+            SyncingInfo::Online {
+                disconnected_players,
+                ..
+            } => Some(disconnected_players.clone()),
             SyncingInfo::Offline { .. } => None,
         }
     }
@@ -793,6 +851,10 @@ where
                                         players_network_stats: players_network_stats.into(),
                                         local_player_idx: self.local_player_idx as usize,
                                         local_frame_delay: self.local_input_delay,
+                                        disconnected_players: self
+                                            .disconnected_players
+                                            .clone()
+                                            .into(),
                                     });
 
                                     // Disconnected players persisted on session runner, and updated each frame.
