@@ -55,6 +55,9 @@ pub mod storage;
 pub mod time;
 pub mod utils;
 
+#[cfg(feature = "audio")]
+pub mod audio;
+
 #[cfg(feature = "ui")]
 pub mod debug;
 
@@ -99,7 +102,7 @@ impl lib::GamePlugin for DefaultGamePlugin {
     #[allow(unused_variables)]
     fn install(self, game: &mut lib::Game) {
         #[cfg(feature = "audio")]
-        game.install_plugin(render::audio::game_plugin);
+        game.install_plugin(audio::game_plugin);
 
         #[cfg(feature = "scripting")]
         game.install_plugin(bones_scripting::ScriptingGamePlugin::default());
