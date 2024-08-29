@@ -194,7 +194,7 @@ pub enum SyncingInfo {
         /// Socket
         socket: Socket,
         /// Networking stats for each connected player, stored at the \[player_idx\] index for each respective player.
-        player_network_stats: SVec<PlayerNetworkStats>,
+        players_network_stats: SVec<PlayerNetworkStats>,
     },
     /// Holds data for an offline session
     Offline {
@@ -233,17 +233,6 @@ impl SyncingInfo {
         }
     }
 
-    /// Getter for player_network_stats.
-    pub fn player_network_stats(&self) -> SVec<PlayerNetworkStats> {
-        match self {
-            SyncingInfo::Online {
-                player_network_stats,
-                ..
-            } => player_network_stats.clone(),
-            SyncingInfo::Offline { .. } => SVec::new(),
-        }
-    }
-
     /// Getter for socket.
     pub fn socket(&self) -> Maybe<&Socket> {
         match self {
@@ -260,118 +249,107 @@ impl SyncingInfo {
         }
     }
 
-    /// Calculates the total kilobits per second sent across all players. Returns 0 if offline.
+    /// Getter for a single player's network stats using their player_idx
+    pub fn player_network_stats(&self, player_idx: usize) -> Option<PlayerNetworkStats> {
+        match self {
+            SyncingInfo::Online {
+                players_network_stats,
+                ..
+            } => players_network_stats.get(player_idx).cloned(),
+            SyncingInfo::Offline { .. } => None,
+        }
+    }
+
+    /// Getter for all players' network stats, including local player (set to default). This maintains index == player_idx.
+    pub fn players_network_stats(&self) -> SVec<PlayerNetworkStats> {
+        match self {
+            SyncingInfo::Online {
+                players_network_stats,
+                ..
+            } => players_network_stats.clone(),
+            SyncingInfo::Offline { .. } => SVec::new(),
+        }
+    }
+
+    /// Getter for remote player network stats (filtering out local player). This does not maintain index == player_idx.
+    pub fn remote_players_network_stats(&self) -> SVec<PlayerNetworkStats> {
+        match self {
+            SyncingInfo::Online {
+                players_network_stats,
+                ..
+            } => players_network_stats
+                .iter()
+                .filter(|&stats| stats.ping != 0 || stats.kbps_sent != 0)
+                .cloned()
+                .collect(),
+            SyncingInfo::Offline { .. } => SVec::new(),
+        }
+    }
+
+    /// Calculates the total kilobits per second sent across all remote players.
     pub fn total_kbps_sent(&self) -> usize {
-        match self {
-            SyncingInfo::Online {
-                player_network_stats,
-                ..
-            } => player_network_stats
-                .iter()
-                .map(|stats| stats.kbps_sent)
-                .sum(),
-            SyncingInfo::Offline { .. } => 0,
-        }
+        self.remote_players_network_stats()
+            .iter()
+            .map(|stats| stats.kbps_sent)
+            .sum()
     }
 
-    /// Calculates the average kilobits per second sent across all players. Returns 0 if offline.
+    /// Calculates the average kilobits per second sent across all remote players.
     pub fn averaged_kbps_sent(&self) -> f32 {
-        match self {
-            SyncingInfo::Online {
-                player_network_stats,
-                ..
-            } => {
-                if player_network_stats.is_empty() {
-                    0.0
-                } else {
-                    let total_kbps: usize = player_network_stats
-                        .iter()
-                        .map(|stats| stats.kbps_sent)
-                        .sum();
-                    total_kbps as f32 / player_network_stats.len() as f32
-                }
-            }
-            SyncingInfo::Offline { .. } => 0.0,
+        let remote_stats = self.remote_players_network_stats();
+        if remote_stats.is_empty() {
+            0.0
+        } else {
+            let total_kbps: usize = remote_stats.iter().map(|stats| stats.kbps_sent).sum();
+            total_kbps as f32 / remote_stats.len() as f32
         }
     }
 
-    /// Returns the highest number of local frames behind across all players. Returns 0 if offline.
+    /// Returns the highest number of local frames behind across all remote players.
     pub fn highest_local_frames_behind(&self) -> i32 {
-        match self {
-            SyncingInfo::Online {
-                player_network_stats,
-                ..
-            } => player_network_stats
-                .iter()
-                .map(|stats| stats.local_frames_behind)
-                .max()
-                .unwrap_or(0),
-            SyncingInfo::Offline { .. } => 0,
-        }
+        self.remote_players_network_stats()
+            .iter()
+            .map(|stats| stats.local_frames_behind)
+            .max()
+            .unwrap_or(0)
     }
 
-    /// Returns the highest number of remote frames behind across all players. Returns 0 if offline.
+    /// Returns the highest number of remote frames behind across all remote players.
     pub fn highest_remote_frames_behind(&self) -> i32 {
-        match self {
-            SyncingInfo::Online {
-                player_network_stats,
-                ..
-            } => player_network_stats
-                .iter()
-                .map(|stats| stats.remote_frames_behind)
-                .max()
-                .unwrap_or(0),
-            SyncingInfo::Offline { .. } => 0,
-        }
+        self.remote_players_network_stats()
+            .iter()
+            .map(|stats| stats.remote_frames_behind)
+            .max()
+            .unwrap_or(0)
     }
 
-    /// Calculates the average ping across all players. Returns 0 if offline.
+    /// Calculates the average ping across all remote players.
     pub fn averaged_ping(&self) -> u128 {
-        match self {
-            SyncingInfo::Online {
-                player_network_stats,
-                ..
-            } => {
-                if player_network_stats.is_empty() {
-                    0
-                } else {
-                    let total_ping: u128 =
-                        player_network_stats.iter().map(|stats| stats.ping).sum();
-                    total_ping / player_network_stats.len() as u128
-                }
-            }
-            SyncingInfo::Offline { .. } => 0,
+        let remote_stats = self.remote_players_network_stats();
+        if remote_stats.is_empty() {
+            0
+        } else {
+            let total_ping: u128 = remote_stats.iter().map(|stats| stats.ping).sum();
+            total_ping / remote_stats.len() as u128
         }
     }
 
-    /// Returns the lowest ping across all players. Returns 0 if offline.
+    /// Returns the lowest ping across all remote players.
     pub fn lowest_ping(&self) -> u128 {
-        match self {
-            SyncingInfo::Online {
-                player_network_stats,
-                ..
-            } => player_network_stats
-                .iter()
-                .map(|stats| stats.ping)
-                .min()
-                .unwrap_or(0),
-            SyncingInfo::Offline { .. } => 0,
-        }
+        self.remote_players_network_stats()
+            .iter()
+            .map(|stats| stats.ping)
+            .min()
+            .unwrap_or(0)
     }
 
-    /// Returns the highest ping across all players. Returns 0 if offline.
+    /// Returns the highest ping across all remote players.
     pub fn highest_ping(&self) -> u128 {
-        match self {
-            SyncingInfo::Online {
-                player_network_stats,
-                ..
-            } => player_network_stats
-                .iter()
-                .map(|stats| stats.ping)
-                .max()
-                .unwrap_or(0),
-            SyncingInfo::Offline { .. } => 0,
-        }
+        self.remote_players_network_stats()
+            .iter()
+            .map(|stats| stats.ping)
+            .max()
+            .unwrap_or(0)
     }
 }
 
@@ -734,13 +712,13 @@ where
                                     self.input_collector.advance_frame();
 
                                     // Fetch the PlayerNetworkStats for each remote player, guaranteeing each one is inserted into the index matching its handle
-                                    let mut player_network_stats: Vec<PlayerNetworkStats> = vec![
+                                    let mut players_network_stats: Vec<PlayerNetworkStats> = vec![
                                         PlayerNetworkStats::default();
-                                        self.session.remote_player_handles().len()
+                                        self.session.remote_player_handles().len() + 1 // + 1 for the local player to maintain correct length
                                     ];
                                     for handle in self.session.remote_player_handles().iter() {
                                         if let Ok(stats) = self.session.network_stats(*handle) {
-                                            player_network_stats[*handle] =
+                                            players_network_stats[*handle] =
                                                 PlayerNetworkStats::from_ggrs_network_stats(
                                                     *handle, stats,
                                                 );
@@ -756,7 +734,7 @@ where
                                         current_frame: self.session.current_frame(),
                                         last_confirmed_frame: self.session.confirmed_frame(),
                                         socket: self.socket.clone(),
-                                        player_network_stats: player_network_stats.into(),
+                                        players_network_stats: players_network_stats.into(),
                                     });
 
                                     // Disconnected players persisted on session runner, and updated each frame.
