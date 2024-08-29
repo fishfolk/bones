@@ -10,6 +10,7 @@ use std::{
     path::PathBuf,
 };
 
+#[allow(unused_imports)]
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
     filter::{FromEnvError, ParseError},
