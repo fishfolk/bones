@@ -195,6 +195,10 @@ pub enum SyncingInfo {
         socket: Socket,
         /// Networking stats for each connected player, stored at the \[player_idx\] index for each respective player.
         players_network_stats: SVec<PlayerNetworkStats>,
+        /// The local player's index
+        local_player_idx: usize,
+        /// The local input delay set for this session
+        local_frame_delay: usize,
     },
     /// Holds data for an offline session
     Offline {
@@ -350,6 +354,36 @@ impl SyncingInfo {
             .map(|stats| stats.ping)
             .max()
             .unwrap_or(0)
+    }
+
+    /// Getter for the local player index, if offline defaults to None.
+    pub fn local_player_idx_checked(&self) -> Option<usize> {
+        match self {
+            SyncingInfo::Online {
+                local_player_idx, ..
+            } => Some(*local_player_idx),
+            SyncingInfo::Offline { .. } => None,
+        }
+    }
+
+    /// Getter for the local player index, if offline defaults to 0.
+    pub fn local_player_idx(&self) -> usize {
+        match self {
+            SyncingInfo::Online {
+                local_player_idx, ..
+            } => *local_player_idx,
+            SyncingInfo::Offline { .. } => 0,
+        }
+    }
+
+    /// Getter for the local frame delay.
+    pub fn local_frame_delay(&self) -> usize {
+        match self {
+            SyncingInfo::Online {
+                local_frame_delay, ..
+            } => *local_frame_delay,
+            SyncingInfo::Offline { .. } => 0,
+        }
     }
 }
 
@@ -735,6 +769,8 @@ where
                                         last_confirmed_frame: self.session.confirmed_frame(),
                                         socket: self.socket.clone(),
                                         players_network_stats: players_network_stats.into(),
+                                        local_player_idx: self.local_player_idx as usize,
+                                        local_frame_delay: self.local_input_delay,
                                     });
 
                                     // Disconnected players persisted on session runner, and updated each frame.
