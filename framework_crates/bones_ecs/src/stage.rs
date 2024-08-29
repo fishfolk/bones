@@ -170,6 +170,27 @@ impl SystemStages {
 
         self
     }
+
+    /// Remove all systems from all stages, including startup and single success systems. Resets has_started as well, allowing for startup systems to run once again.
+    pub fn reset_remove_all_systems(&mut self) {
+        // Reset the has_started flag
+        self.has_started = false;
+        self.remove_all_systems();
+    }
+
+    /// Remove all systems from all stages, including startup and single success systems. Does not reset has_started.
+    pub fn remove_all_systems(&mut self) {
+        // Clear startup systems
+        self.startup_systems.clear();
+
+        // Clear single success systems
+        self.single_success_systems.clear();
+
+        // Clear systems from each stage
+        for stage in &mut self.stages {
+            stage.remove_all_systems();
+        }
+    }
 }
 
 /// Trait for system stages. A stage is a
@@ -183,6 +204,8 @@ pub trait SystemStage: Sync + Send {
 
     /// Add a system to this stage.
     fn add_system(&mut self, system: StaticSystem<(), ()>);
+    /// Remove all systems from this stage.
+    fn remove_all_systems(&mut self);
 }
 
 /// A collection of systems that will be run in order.
@@ -234,6 +257,10 @@ impl SystemStage for SimpleSystemStage {
 
     fn add_system(&mut self, system: StaticSystem<(), ()>) {
         self.systems.push(system);
+    }
+
+    fn remove_all_systems(&mut self) {
+        self.systems.clear();
     }
 }
 
