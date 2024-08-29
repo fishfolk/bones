@@ -204,6 +204,16 @@ pub enum SyncingInfo {
 }
 
 impl SyncingInfo {
+    /// Checks if the session is online.
+    pub fn is_online(&self) -> bool {
+        matches!(self, SyncingInfo::Online { .. })
+    }
+
+    /// Checks if the session is offline.
+    pub fn is_offline(&self) -> bool {
+        matches!(self, SyncingInfo::Offline { .. })
+    }
+
     /// Getter for the current frame (number).
     pub fn current_frame(&self) -> i32 {
         match self {
