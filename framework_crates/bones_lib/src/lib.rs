@@ -92,6 +92,27 @@ impl Session {
     pub fn restore(&mut self, world: &mut World) {
         std::mem::swap(&mut self.world, world)
     }
+
+    /// Set the session runner for this session.
+    pub fn set_session_runner(&mut self, runner: Box<dyn SessionRunner>) {
+        self.runner = runner;
+    }
+
+    /// Provides an interface for resetting various internal parts of the Session.
+    /// Note this does not fully reset the entire Session.
+    pub fn reset_internals(
+        &mut self,
+        reset_entities: bool,
+        reset_resources: bool,
+        reset_components: bool,
+        reset_systems: bool,
+    ) {
+        self.world
+            .reset_internals(reset_entities, reset_resources, reset_components);
+        if reset_systems {
+            self.reset_remove_all_systems();
+        }
+    }
 }
 
 impl Default for Session {
