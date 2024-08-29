@@ -19,7 +19,10 @@ pub struct SystemStages {
     pub has_started: bool,
     /// The systems that should run at startup.
     pub startup_systems: Vec<StaticSystem<(), ()>>,
+    /// Systems that are continously run until they succeed(return true). These run before all stages.
+    pub single_success_systems: Vec<StaticSystem<(), bool>>,
 }
+
 impl std::fmt::Debug for SystemStages {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SystemStages")
@@ -54,6 +57,12 @@ impl SystemStages {
             self.has_started = true;
         }
 
+        // Run single success systems
+        self.single_success_systems.retain_mut(|system| {
+            let success = system.run(world, ());
+            !success // Keep the system if it didn't succeed
+        });
+
         // Run each stage
         for stage in &mut self.stages {
             // Set the current stage resource
@@ -82,6 +91,7 @@ impl SystemStages {
             ],
             has_started: false,
             startup_systems: default(),
+            single_success_systems: Vec::new(),
         }
     }
 
@@ -91,6 +101,15 @@ impl SystemStages {
         S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
     {
         self.startup_systems.push(system.system());
+        self
+    }
+
+    /// Add a system that will run each frame until it succeeds (returns true). Runs before all stages.
+    pub fn add_single_success_system<Args, S>(&mut self, system: S) -> &mut Self
+    where
+        S: IntoSystem<Args, (), bool, Sys = StaticSystem<(), bool>>,
+    {
+        self.single_success_systems.push(system.system());
         self
     }
 
