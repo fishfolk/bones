@@ -183,6 +183,7 @@ pub struct LogFileGuard(tracing_appender::non_blocking::WorkerGuard);
 ///
 /// Default without logging to file
 /// ```
+/// use bones_framework::logging::prelude::*;
 /// fn main() {
 ///     let _log_guard = bones_framework::logging::setup_logging(LogSettings::default());
 /// }
@@ -190,6 +191,7 @@ pub struct LogFileGuard(tracing_appender::non_blocking::WorkerGuard);
 ///
 /// Enable tracing to log files:
 /// ```
+/// use bones_framework::prelude::*;
 /// fn main() {
 ///     let log_file =
 ///         match LogPath::find_app_data_dir(("org".into(), "fishfolk".into(), "jumpy".into())) {
