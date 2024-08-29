@@ -3,7 +3,12 @@
 //! Enabled with feature "logging".
 #![allow(clippy::needless_doctest_main)]
 
-use std::{error::Error, path::PathBuf};
+use std::{
+    backtrace::{Backtrace, BacktraceStatus},
+    error::Error,
+    panic::PanicInfo,
+    path::PathBuf,
+};
 
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
@@ -165,7 +170,10 @@ pub struct LogFileConfig {
 #[schema(no_clone, no_default)]
 pub struct LogFileGuard(tracing_appender::non_blocking::WorkerGuard);
 
-/// Setup the global tracing subscriber, and optionally enable logging to file system.
+/// Setup the global tracing subscriber, add hook for tracing panics, and optionally enable logging to file system.
+///
+/// This function sets panic hook to call [`tracing_panic_hook`], and then call previous hook. This writes panics to
+/// tracing subscribers. This is helpful for recording panics when logging to file system.
 ///
 /// if [`LogFileConfig`] was provided in settings and is supported on this platform (cannot log to file system on wasm),
 /// this function will return a [`LogFileGuard`]. This must be kept alive for duration of process to capture all logs,
@@ -209,6 +217,14 @@ pub struct LogFileGuard(tracing_appender::non_blocking::WorkerGuard);
 ///
 #[must_use]
 pub fn setup_logging(settings: LogSettings) -> Option<LogFileGuard> {
+    // Preserve current panic hook, and call `tracing_panic_hook` to send panic and possibly backtrace to
+    // tracing subscribers, and not just stderr.
+    let prev_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        tracing_panic_hook(panic_info);
+        prev_hook(panic_info);
+    }));
+
     let finished_subscriber;
     let subscriber = Registry::default();
 
@@ -317,4 +333,33 @@ pub fn setup_logging(settings: LogSettings) -> Option<LogFileGuard> {
     }
 
     log_file_guard
+}
+
+/// Panic hook that sends panic payload to [`tracing::error`], and backtrace if available.
+///
+/// This hook is enabled in [`setup_logging`] to make sure panics are traced.
+pub fn tracing_panic_hook(panic_info: &PanicInfo) {
+    let payload = panic_info.payload();
+
+    let payload = if let Some(s) = payload.downcast_ref::<&str>() {
+        Some(*s)
+    } else {
+        payload.downcast_ref::<String>().map(|s| s.as_str())
+    };
+
+    let location = panic_info.location().map(|l| l.to_string());
+    let (backtrace, note) = {
+        let backtrace = Backtrace::capture();
+        let note = (backtrace.status() == BacktraceStatus::Disabled)
+            .then_some("run with RUST_BACKTRACE=1 environment variable to display a backtrace");
+        (Some(backtrace), note)
+    };
+
+    tracing::error!(
+        panic.payload = payload,
+        panic.location = location,
+        panic.backtrace = backtrace.map(tracing::field::display),
+        panic.note = note,
+        "A panic occurred",
+    );
 }
