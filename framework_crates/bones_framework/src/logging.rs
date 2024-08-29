@@ -1,6 +1,6 @@
-//! Logging module for bones. Configures global tracing subscriber.
+//! Logging module for bones. Provides implementation of global tracing subscriber and panic hook.
 //!
-//! Enabled with feature "logging".
+//! Enabled with feature "logging". See docs of [`setup_logging`] for details + usage.
 #![allow(clippy::needless_doctest_main)]
 
 use std::{
