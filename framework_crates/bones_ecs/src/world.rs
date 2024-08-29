@@ -167,9 +167,9 @@ impl World {
     /// Maintains the entities resource if resetting resources but not entities.
     pub fn reset_internals(
         &mut self,
+        reset_components: bool,
         reset_entities: bool,
         reset_resources: bool,
-        reset_components: bool,
     ) {
         if reset_entities {
             let mut entities = self.resource_mut::<Entities>();

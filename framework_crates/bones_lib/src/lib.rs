@@ -102,13 +102,13 @@ impl Session {
     /// Note this does not fully reset the entire Session.
     pub fn reset_internals(
         &mut self,
+        reset_components: bool,
         reset_entities: bool,
         reset_resources: bool,
-        reset_components: bool,
         reset_systems: bool,
     ) {
         self.world
-            .reset_internals(reset_entities, reset_resources, reset_components);
+            .reset_internals(reset_components, reset_entities, reset_resources);
         if reset_systems {
             self.reset_remove_all_systems();
         }
