@@ -502,10 +502,10 @@ impl Entities {
 
     /// Returns a list of all `Entity`s cloned into a new vec.
     pub fn all_cloned(&self) -> Vec<Entity> {
-        self.iter().map(|e| e).collect()
+        self.iter().collect()
     }
 
-    /// Kills all entities (without extra cleanup after the fact).
+    /// Kills all entities.
     pub fn kill_all(&mut self) {
         let entities: Vec<Entity> = self.all_cloned();
         for entity in entities {
