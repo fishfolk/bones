@@ -385,6 +385,28 @@ impl SyncingInfo {
             SyncingInfo::Offline { .. } => 0,
         }
     }
+
+    /// Getter for the number of players, if offline defaults to 0.
+    pub fn players_count(&self) -> usize {
+        match self {
+            SyncingInfo::Online {
+                players_network_stats,
+                ..
+            } => players_network_stats.len(),
+            SyncingInfo::Offline { .. } => 0,
+        }
+    }
+
+    /// Getter for the number of players, if offline defaults to None.
+    pub fn players_count_checked(&self) -> Option<usize> {
+        match self {
+            SyncingInfo::Online {
+                players_network_stats,
+                ..
+            } => Some(players_network_stats.len()),
+            SyncingInfo::Offline { .. } => None,
+        }
+    }
 }
 
 /// Resource tracking which players have been disconnected.
