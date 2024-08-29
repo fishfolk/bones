@@ -146,6 +146,22 @@ impl World {
     pub fn get_resource_mut<T: HasSchema>(&mut self) -> Option<RefMut<T>> {
         self.resources.get_mut()
     }
+
+    /// Borrow a component store from the world.
+    /// # Panics
+    /// Panics if the component store does not exist in the world.
+    #[track_caller]
+    pub fn component<T: HasSchema>(&self) -> Ref<ComponentStore<T>> {
+        self.components.get::<T>().borrow()
+    }
+
+    /// Mutably borrow a component store from the world.
+    /// # Panics
+    /// Panics if the component store does not exist in the world.
+    #[track_caller]
+    pub fn component_mut<T: HasSchema>(&self) -> RefMut<ComponentStore<T>> {
+        self.components.get::<T>().borrow_mut()
+    }
 }
 
 /// Creates an instance of the type this trait is implemented for
