@@ -338,6 +338,37 @@ pub fn setup_logging(settings: LogSettings) -> Option<LogFileGuard> {
     log_file_guard
 }
 
+/// Helper to call [`setup_logging`] conciseably with reasonable defaults for logging to console and file system.
+///
+/// This uses default [`LogSettings`] with addition of enabling logging to files. If logging to file is not desired,
+/// you can call `setup_logging(LogSettings::default())` instead.
+///
+/// See [`setup_logging`] docs for details.
+#[must_use]
+pub fn setup_logging_default(app_namespace: (String, String, String)) -> Option<LogFileGuard> {
+    let file_name_prefix = format!("{}.log", app_namespace.2);
+    let log_file =
+        match LogPath::find_app_data_dir((app_namespace.0, app_namespace.1, app_namespace.2)) {
+            Ok(log_path) => Some(LogFileConfig {
+                log_path,
+                rotation: LogFileRotation::Daily,
+                file_name_prefix,
+                max_log_files: Some(7),
+            }),
+            Err(err) => {
+                // Cannot use error! macro as logging not configured yet.
+                eprintln!("Failed to configure file logging: {err}");
+                None
+            }
+        };
+
+    // _log_guard will be dropped when main exits, remains alive for duration of program.
+    setup_logging(LogSettings {
+        log_file,
+        ..Default::default()
+    })
+}
+
 /// Panic hook that sends panic payload to [`tracing::error`], and backtrace if available.
 ///
 /// This hook is enabled in [`setup_logging`] to make sure panics are traced.
