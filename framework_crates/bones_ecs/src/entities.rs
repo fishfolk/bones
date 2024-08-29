@@ -500,6 +500,19 @@ impl Entities {
         }
     }
 
+    /// Returns a list of all `Entity`s cloned into a new vec.
+    pub fn all_cloned(&self) -> Vec<Entity> {
+        self.iter().collect()
+    }
+
+    /// Kills all entities.
+    pub fn kill_all(&mut self) {
+        let entities: Vec<Entity> = self.all_cloned();
+        for entity in entities {
+            self.kill(entity);
+        }
+    }
+
     /// Returns entities in the killed list.
     pub fn killed(&self) -> &Vec<Entity> {
         &self.killed
@@ -526,6 +539,17 @@ impl Entities {
             entities: &self.alive,
             generations: &self.generation,
             bitset,
+        }
+    }
+
+    /// Iterates over all alive entities.
+    pub fn iter(&self) -> EntityIterator {
+        EntityIterator {
+            current_id: 0,
+            next_id: self.next_id,
+            entities: self.bitset(),
+            generations: &self.generation,
+            bitset: self.bitset(),
         }
     }
 }
