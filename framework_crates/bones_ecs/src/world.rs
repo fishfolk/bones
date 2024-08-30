@@ -163,37 +163,11 @@ impl World {
         self.components.get::<T>().borrow_mut()
     }
 
-    /// Provides an interface for resetting entities, resources, and components.
-    /// Maintains the entities resource if resetting resources but not entities.
-    pub fn reset_internals(
-        &mut self,
-        reset_components: bool,
-        reset_entities: bool,
-        reset_resources: bool,
-    ) {
+    /// Provides an interface for resetting entities, and components.
+    pub fn reset_internals(&mut self, reset_components: bool, reset_entities: bool) {
         if reset_entities {
             let mut entities = self.resource_mut::<Entities>();
             entities.kill_all();
-        }
-
-        if reset_resources {
-            // Temporarily take out the Entities resource if we're not resetting entities
-            let entities = if !reset_entities {
-                self.resources.remove::<Entities>()
-            } else {
-                None
-            };
-
-            // Clear all resources
-            self.resources = Resources::new();
-
-            // If we didn't reset entities, put the Entities resource back
-            if let Some(entities) = entities {
-                self.resources.insert(entities);
-            } else {
-                // If we did reset entities, ensure we have a new Entities resource
-                self.resources.insert(Entities::default());
-            }
         }
 
         if reset_components {

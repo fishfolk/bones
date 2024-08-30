@@ -104,11 +104,9 @@ impl Session {
         &mut self,
         reset_components: bool,
         reset_entities: bool,
-        reset_resources: bool,
         reset_systems: bool,
     ) {
-        self.world
-            .reset_internals(reset_components, reset_entities, reset_resources);
+        self.world.reset_internals(reset_components, reset_entities);
         if reset_systems {
             self.reset_remove_all_systems();
         }
