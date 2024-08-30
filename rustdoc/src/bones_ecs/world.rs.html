@@ -325,6 +325,38 @@
 <a href="#324" id="324">324</a>
 <a href="#325" id="325">325</a>
 <a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Contains the ECS [`World`].
 
 </span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -472,6 +504,38 @@
     <span class="doccomment">/// Borrow a resource from the world, if it exists.
     </span><span class="kw">pub fn </span>get_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
         <span class="self">self</span>.resources.get_mut()
+    }
+
+    <span class="doccomment">/// Borrow a component store from the world.
+    /// # Panics
+    /// Panics if the component store does not exist in the world.
+    </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>component&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ref&lt;ComponentStore&lt;T&gt;&gt; {
+        <span class="self">self</span>.components.get::&lt;T&gt;().borrow()
+    }
+
+    <span class="doccomment">/// Mutably borrow a component store from the world.
+    /// # Panics
+    /// Panics if the component store does not exist in the world.
+    </span><span class="attr">#[track_caller]
+    </span><span class="kw">pub fn </span>component_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;ComponentStore&lt;T&gt;&gt; {
+        <span class="self">self</span>.components.get::&lt;T&gt;().borrow_mut()
+    }
+
+    <span class="doccomment">/// Provides an interface for resetting entities, and components.
+    </span><span class="kw">pub fn </span>reset_internals(<span class="kw-2">&amp;mut </span><span class="self">self</span>, reset_components: bool, reset_entities: bool) {
+        <span class="kw">if </span>reset_entities {
+            <span class="kw">let </span><span class="kw-2">mut </span>entities = <span class="self">self</span>.resource_mut::&lt;Entities&gt;();
+            entities.kill_all();
+        }
+
+        <span class="kw">if </span>reset_components {
+            <span class="comment">// Clear all component stores
+            </span><span class="self">self</span>.components = ComponentStores::default();
+        }
+
+        <span class="comment">// Always maintain to clean up any killed entities
+        </span><span class="self">self</span>.maintain();
     }
 }
 
