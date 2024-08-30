@@ -146,6 +146,38 @@ impl World {
     pub fn get_resource_mut<T: HasSchema>(&mut self) -> Option<RefMut<T>> {
         self.resources.get_mut()
     }
+
+    /// Borrow a component store from the world.
+    /// # Panics
+    /// Panics if the component store does not exist in the world.
+    #[track_caller]
+    pub fn component<T: HasSchema>(&self) -> Ref<ComponentStore<T>> {
+        self.components.get::<T>().borrow()
+    }
+
+    /// Mutably borrow a component store from the world.
+    /// # Panics
+    /// Panics if the component store does not exist in the world.
+    #[track_caller]
+    pub fn component_mut<T: HasSchema>(&self) -> RefMut<ComponentStore<T>> {
+        self.components.get::<T>().borrow_mut()
+    }
+
+    /// Provides an interface for resetting entities, and components.
+    pub fn reset_internals(&mut self, reset_components: bool, reset_entities: bool) {
+        if reset_entities {
+            let mut entities = self.resource_mut::<Entities>();
+            entities.kill_all();
+        }
+
+        if reset_components {
+            // Clear all component stores
+            self.components = ComponentStores::default();
+        }
+
+        // Always maintain to clean up any killed entities
+        self.maintain();
+    }
 }
 
 /// Creates an instance of the type this trait is implemented for
