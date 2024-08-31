@@ -29,6 +29,8 @@ pub struct AudioCenter {
     effects_volume_scale: f32,
     /// How long music should fade out for when stopping.
     music_fade_duration: Duration,
+    /// How long music should fade out for when stopping.
+    sounds_fade_duration: Duration,
 }
 
 impl Default for AudioCenter {
@@ -40,6 +42,7 @@ impl Default for AudioCenter {
             music_volume_scale: 1.0,
             effects_volume_scale: 1.0,
             music_fade_duration: Duration::from_millis(500),
+            sounds_fade_duration: Duration::from_millis(500),
         }
     }
 }
@@ -191,6 +194,7 @@ impl AudioCenter {
     pub fn effects_volume_scale(&self) -> f32 {
         self.effects_volume_scale
     }
+
     /// Returns the duration for music fade out.
     pub fn music_fade_duration(&self) -> Duration {
         self.music_fade_duration
@@ -201,14 +205,24 @@ impl AudioCenter {
         self.music_fade_duration = duration;
     }
 
+    /// Returns the duration for audio fade out.
+    pub fn sounds_fade_duration(&self) -> Duration {
+        self.sounds_fade_duration
+    }
+
+    /// Sets the duration for audio fade out.
+    pub fn set_sounds_fade_duration(&mut self, duration: Duration) {
+        self.sounds_fade_duration = duration;
+    }
+
     /// Stops the currently playing music
-    /// * `fade_out` - If true, fades out the music using the music fade duration. If false, stops the sounds instantly.
+    /// * `fade_out` - If true, fades out the music using the Audio Center's music fade duration. If false, stops the sounds instantly.
     pub fn stop_music(&mut self, fade_out: bool) {
         self.events.push_back(AudioEvent::StopMusic { fade_out });
     }
 
     /// Stops all currently playing sounds.
-    /// * `fade_out` - If true, fades out the sounds using the music fade duration. If false, stops the sounds instantly.
+    /// * `fade_out` - If true, fades out the sounds using the Audio Center's sounds fade duration. If false, stops the sounds instantly.
     pub fn stop_all_sounds(&mut self, fade_out: bool) {
         self.events
             .push_back(AudioEvent::StopAllSounds { fade_out });
@@ -349,7 +363,7 @@ pub fn _process_audio_events(
                 let tween = if fade_out {
                     Tween {
                         start_time: kira::StartTime::Immediate,
-                        duration: audio_center.music_fade_duration,
+                        duration: audio_center.sounds_fade_duration,
                         easing: tween::Easing::Linear,
                     }
                 } else {
