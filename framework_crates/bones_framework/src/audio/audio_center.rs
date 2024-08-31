@@ -201,9 +201,16 @@ impl AudioCenter {
         self.music_fade_duration = duration;
     }
 
-    /// Stops the currently playing music.
+    /// Stops the currently playing music
     pub fn stop_music(&mut self) {
         self.events.push_back(AudioEvent::StopMusic);
+    }
+
+    /// Stops all currently playing sounds.
+    /// * `fade_out` - If true, fades out the sounds using the music fade duration. If false, stops the sounds instantly.
+    pub fn stop_all_sounds(&mut self, fade_out: bool) {
+        self.events
+            .push_back(AudioEvent::StopAllSounds { fade_out });
     }
 }
 
@@ -240,6 +247,11 @@ pub enum AudioEvent {
         sound_source: Handle<AudioSource>,
         /// The volume to play the sound at.
         volume: f64,
+    },
+    /// Stop all currently playing sounds.
+    StopAllSounds {
+        /// Whether to fade out the sounds or stop them instantly.
+        fade_out: bool,
     },
 }
 
@@ -323,6 +335,25 @@ pub fn _process_audio_events(
                         easing: tween::Easing::Linear,
                     };
                     music.handle.stop(tween);
+                }
+            }
+            AudioEvent::StopAllSounds { fade_out } => {
+                let tween = if fade_out {
+                    Tween {
+                        start_time: kira::StartTime::Immediate,
+                        duration: audio_center.music_fade_duration,
+                        easing: tween::Easing::Linear,
+                    }
+                } else {
+                    Tween {
+                        start_time: kira::StartTime::Immediate,
+                        duration: Duration::from_secs_f64(0.001),
+                        easing: tween::Easing::Linear,
+                    }
+                };
+
+                for (_, audio) in entities.iter_with(&mut audios) {
+                    audio.handle.stop(tween);
                 }
             }
             AudioEvent::PlaySound {
