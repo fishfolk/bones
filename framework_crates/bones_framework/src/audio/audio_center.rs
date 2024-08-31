@@ -202,8 +202,9 @@ impl AudioCenter {
     }
 
     /// Stops the currently playing music
-    pub fn stop_music(&mut self) {
-        self.events.push_back(AudioEvent::StopMusic);
+    /// * `fade_out` - If true, fades out the music using the music fade duration. If false, stops the sounds instantly.
+    pub fn stop_music(&mut self, fade_out: bool) {
+        self.events.push_back(AudioEvent::StopMusic { fade_out });
     }
 
     /// Stops all currently playing sounds.
@@ -240,7 +241,10 @@ pub enum AudioEvent {
         force_restart: bool,
     },
     /// Stop the currently playing music.
-    StopMusic,
+    StopMusic {
+        /// Whether to fade out the sounds or stop them instantly.
+        fade_out: bool,
+    },
     /// Play a sound.
     PlaySound {
         /// The handle to the sound to play.
@@ -327,14 +331,18 @@ pub fn _process_audio_events(
                     }
                 }
             }
-            AudioEvent::StopMusic => {
+            AudioEvent::StopMusic { fade_out } => {
                 if let Some(mut music) = audio_center.music.take() {
-                    let tween = Tween {
-                        start_time: kira::StartTime::Immediate,
-                        duration: audio_center.music_fade_duration,
-                        easing: tween::Easing::Linear,
-                    };
-                    music.handle.stop(tween);
+                    if fade_out {
+                        let tween = Tween {
+                            start_time: kira::StartTime::Immediate,
+                            duration: audio_center.music_fade_duration,
+                            easing: tween::Easing::Linear,
+                        };
+                        music.handle.stop(tween);
+                    } else {
+                        music.handle.stop(Tween::default());
+                    }
                 }
             }
             AudioEvent::StopAllSounds { fade_out } => {
@@ -345,11 +353,7 @@ pub fn _process_audio_events(
                         easing: tween::Easing::Linear,
                     }
                 } else {
-                    Tween {
-                        start_time: kira::StartTime::Immediate,
-                        duration: Duration::from_secs_f64(0.001),
-                        easing: tween::Easing::Linear,
-                    }
+                    Tween::default()
                 };
 
                 for (_, audio) in entities.iter_with(&mut audios) {
