@@ -200,6 +200,11 @@ impl AudioCenter {
     pub fn set_music_fade_duration(&mut self, duration: Duration) {
         self.music_fade_duration = duration;
     }
+
+    /// Stops the currently playing music.
+    pub fn stop_music(&mut self) {
+        self.events.push_back(AudioEvent::StopMusic);
+    }
 }
 
 /// An audio event that may be sent to the [`AudioCenter`] resource for
@@ -227,6 +232,8 @@ pub enum AudioEvent {
         /// Whether to force restart the music even if it's the same as the current music.
         force_restart: bool,
     },
+    /// Stop the currently playing music.
+    StopMusic,
     /// Play a sound.
     PlaySound {
         /// The handle to the sound to play.
@@ -306,6 +313,16 @@ pub fn _process_audio_events(
                             })
                         }
                     }
+                }
+            }
+            AudioEvent::StopMusic => {
+                if let Some(mut music) = audio_center.music.take() {
+                    let tween = Tween {
+                        start_time: kira::StartTime::Immediate,
+                        duration: audio_center.music_fade_duration,
+                        easing: tween::Easing::Linear,
+                    };
+                    music.handle.stop(tween);
                 }
             }
             AudioEvent::PlaySound {
