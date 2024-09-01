@@ -124,7 +124,8 @@ impl LogPath {
     ///      ~/Library/Application Support/org.fishfolk.jumpy/logs
     #[allow(unused_variables)]
     pub fn find_app_data_dir(app_namespace: (&str, &str, &str)) -> Result<Self, LogFileError> {
-        #[cfg(not(target_arch = "wasm32"))]
+        // Don't run this during tests, as Miri CI does not support the syscall.
+        #[cfg(all(not(target_arch = "wasm32"), not(test)))]
         {
             directories::ProjectDirs::from(app_namespace.0, app_namespace.1, app_namespace.2)
                 // error message from `ProjectDirs::from` docs
@@ -138,6 +139,11 @@ impl LogPath {
         #[cfg(target_arch = "wasm32")]
         {
             Err(LogFileError::Unsupported("wasm32".to_string()))
+        }
+
+        #[cfg(test)]
+        {
+            Err(LogFileError::Unsupported("test".to_string()))
         }
     }
 }
