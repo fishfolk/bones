@@ -120,22 +120,16 @@ impl LogPath {
     //       C:\Users\<User>\Appdata\Roaming\org.fishfolk.jumpy\logs,
     ///      ~/Library/Application Support/org.fishfolk.jumpy/logs
     #[allow(unused_variables)]
-    pub fn find_app_data_dir(
-        app_namespace: (String, String, String),
-    ) -> Result<Self, LogFileError> {
+    pub fn find_app_data_dir(app_namespace: (&str, &str, &str)) -> Result<Self, LogFileError> {
         #[cfg(not(target_arch = "wasm32"))]
         {
-            directories::ProjectDirs::from(
-                app_namespace.0.as_str(),
-                app_namespace.1.as_str(),
-                app_namespace.2.as_str(),
-            )
-            // error message from `ProjectDirs::from` docs
-            .ok_or(LogFileError::LogDirFail(
-                "no valid home directory path could be retrieved from the operating system"
-                    .to_string(),
-            ))
-            .map(|dirs| LogPath(dirs.data_dir().join("logs")))
+            directories::ProjectDirs::from(app_namespace.0, app_namespace.1, app_namespace.2)
+                // error message from `ProjectDirs::from` docs
+                .ok_or(LogFileError::LogDirFail(
+                    "no valid home directory path could be retrieved from the operating system"
+                        .to_string(),
+                ))
+                .map(|dirs| LogPath(dirs.data_dir().join("logs")))
         }
 
         #[cfg(target_arch = "wasm32")]
@@ -195,7 +189,7 @@ pub struct LogFileGuard(tracing_appender::non_blocking::WorkerGuard);
 /// use bones_framework::prelude::*;
 /// fn main() {
 ///     let log_file =
-///         match LogPath::find_app_data_dir(("org".into(), "fishfolk".into(), "jumpy".into())) {
+///         match LogPath::find_app_data_dir(("org", "fishfolk", "jumpy")) {
 ///             Ok(log_path) => Some(LogFileConfig {
 ///                 log_path,
 ///                 rotation: LogFileRotation::Daily,
@@ -345,7 +339,7 @@ pub fn setup_logging(settings: LogSettings) -> Option<LogFileGuard> {
 ///
 /// See [`setup_logging`] docs for details.
 #[must_use]
-pub fn setup_logging_default(app_namespace: (String, String, String)) -> Option<LogFileGuard> {
+pub fn setup_logging_default(app_namespace: (&str, &str, &str)) -> Option<LogFileGuard> {
     let file_name_prefix = format!("{}.log", app_namespace.2);
     let log_file =
         match LogPath::find_app_data_dir((app_namespace.0, app_namespace.1, app_namespace.2)) {
