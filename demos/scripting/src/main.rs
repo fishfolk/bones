@@ -13,7 +13,7 @@ struct GameMeta {
 
 fn main() {
     // Setup logging
-    let _log_guard = bones_framework::logging::setup_logging(LogSettings::default());
+    setup_logs!();
 
     let mut game = Game::new();
     game.install_plugin(DefaultGamePlugin);

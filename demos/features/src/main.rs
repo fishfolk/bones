@@ -85,7 +85,7 @@ struct PersistedTextData(String);
 
 fn main() {
     // Setup logging
-    let _log_guard = bones_framework::logging::setup_logging(LogSettings::default());
+    setup_logs!();
 
     // Register persistent data's schema so that it can be loaded by the storage loader.
     PersistedTextData::register_schema();
