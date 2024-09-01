@@ -27,9 +27,12 @@ use bones_lib::prelude::Deref;
 /// Logging prelude
 pub mod prelude {
     pub use super::{
-        setup_logging, LogFileConfig, LogFileError, LogFileRotation, LogPath, LogSettings,
+        macros::setup_logs, setup_logging, setup_logging_default, LogFileConfig, LogFileError,
+        LogFileRotation, LogPath, LogSettings,
     };
 }
+
+pub use macros::setup_logs;
 
 /// A boxed [`Layer`] that can be used with [`setup_logging`].
 pub type BoxedLayer = Box<dyn Layer<Registry> + Send + Sync + 'static>;
@@ -165,6 +168,12 @@ pub struct LogFileConfig {
 #[schema(no_clone, no_default)]
 pub struct LogFileGuard(tracing_appender::non_blocking::WorkerGuard);
 
+impl Drop for LogFileGuard {
+    fn drop(&mut self) {
+        warn!("LogFileGuard dropped - flushing buffered tracing to file, no further tracing will be written to file. If unexpected, make sure bones logging init is done in root scope of app.");
+    }
+}
+
 /// Setup the global tracing subscriber, add hook for tracing panics, and optionally enable logging to file system.
 ///
 /// This function sets panic hook to call [`tracing_panic_hook`], and then call previous hook. This writes panics to
@@ -174,17 +183,26 @@ pub struct LogFileGuard(tracing_appender::non_blocking::WorkerGuard);
 /// this function will return a [`LogFileGuard`]. This must be kept alive for duration of process to capture all logs,
 /// see [`LogFileGuard`] docs.
 ///
+/// Examples below show direct usage and short-hand with [`setup_logs`] macro.
+///
 /// # Examples
 ///
-/// Default without logging to file
+/// ### Default without logging to file
 /// ```
 /// use bones_framework::logging::prelude::*;
 /// fn main() {
 ///     let _log_guard = bones_framework::logging::setup_logging(LogSettings::default());
 /// }
 /// ```
+/// or
+/// ```
+/// use bones_framework::logging::prelude::*;
+/// fn main() {
+///     setup_logs!();
+/// }
+/// ```
 ///
-/// Enable tracing to log files:
+/// ### Enable logging including logging to files:
 /// ```
 /// use bones_framework::prelude::*;
 /// fn main() {
@@ -208,6 +226,20 @@ pub struct LogFileGuard(tracing_appender::non_blocking::WorkerGuard);
 ///         log_file,
 ///         ..default()
 ///     });
+/// }
+/// ```
+/// or logging to file with defaults:
+/// ```
+/// use bones_framework::logging::prelude::*;
+/// fn main() {
+///     let _log_guard = bones_framework::logging::setup_logging_default(("org", "fishfolk", "jumpy"));
+/// }
+/// ```
+/// same with [`macros::setup_logs`] macro:
+/// ```
+/// use bones_framework::prelude::*;
+/// fn main() {
+///     setup_logs!("org", "fishfolk", "jumpy");
 /// }
 /// ```
 ///
@@ -361,6 +393,61 @@ pub fn setup_logging_default(app_namespace: (&str, &str, &str)) -> Option<LogFil
         log_file,
         ..Default::default()
     })
+}
+
+/// Logging macros
+#[macro_use]
+pub mod macros {
+
+    /// [`setup_logs`] is a macro for initializing logging in bones.
+    ///
+    /// It wraps a call to [`super::setup_logging`] (see docs for details on configuration options).
+    ///
+    /// Warning: There may be issues if not called in root scope of app (e.g. in `main()`).
+    /// Macro expands to: `let _guard = setup_logging(...);`, if `_guard` is dropped, any logging to
+    /// file system will stop (console logging unimpacted).
+    ///
+    /// Usage for log defaults (logging to file system included):
+    /// ```
+    /// use bones_framework::prelude::*;
+    /// setup_logs!("org", "fishfolk", "jumpy");
+    /// ```
+    ///
+    /// Usage for log defaults (without logging to file system):
+    /// ```
+    /// use bones_framework::prelude::*;
+    /// setup_logs!();
+    /// ```
+    #[macro_export]
+    macro_rules! setup_logs {
+        // LogSettings::default() -
+        //   setup_logs!();
+        () => {
+            use bones_framework::logging::setup_logging;
+            use bones_framework::logging::LogSettings;
+            let _log_file_guard = setup_logging(LogSettings::default());
+        };
+        // With LogSettings identifier -
+        //   let settings = LogSettings::{...};
+        //   setup_logs!(settings);
+        ($settings:ident) => {
+            use bones_framework::logging::setup_logging;
+            let _log_file_guard = setup_logging($settings);
+        };
+        // setup_logging_default from app namespace -
+        //   setup_logs!(("org", "fishfolk", "jumpy"));
+        ($app_namespace:expr) => {
+            use bones_framework::logging::setup_logging_default;
+            let _log_file_guard = setup_logging_default($app_namespace);
+        };
+        // setup_logging_default from app namespace -
+        //   setup_logs!("org", "fishfolk", "jumpy");
+        ($app_ns1:expr, $app_ns2:expr, $app_ns3:expr) => {
+            use bones_framework::logging::setup_logging_default;
+            let _log_file_guard = setup_logging_default(($app_ns1, $app_ns2, $app_ns3));
+        };
+    }
+    pub use setup_logs;
 }
 
 /// Panic hook that sends panic payload to [`tracing::error`], and backtrace if available.
