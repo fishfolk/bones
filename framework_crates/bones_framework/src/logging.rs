@@ -125,7 +125,7 @@ impl LogPath {
     #[allow(unused_variables)]
     pub fn find_app_data_dir(app_namespace: (&str, &str, &str)) -> Result<Self, LogFileError> {
         // Don't run this during tests, as Miri CI does not support the syscall.
-        #[cfg(all(not(target_arch = "wasm32"), not(test)))]
+        #[cfg(not(target_arch = "wasm32"))]
         {
             directories::ProjectDirs::from(app_namespace.0, app_namespace.1, app_namespace.2)
                 // error message from `ProjectDirs::from` docs
@@ -139,11 +139,6 @@ impl LogPath {
         #[cfg(target_arch = "wasm32")]
         {
             Err(LogFileError::Unsupported("wasm32".to_string()))
-        }
-
-        #[cfg(test)]
-        {
-            Err(LogFileError::Unsupported("test".to_string()))
         }
     }
 }
@@ -209,7 +204,7 @@ impl Drop for LogFileGuard {
 /// ```
 ///
 /// ### Enable logging including logging to files:
-/// ```
+/// ```no_run
 /// use bones_framework::prelude::*;
 /// fn main() {
 ///     let log_file =
@@ -235,14 +230,14 @@ impl Drop for LogFileGuard {
 /// }
 /// ```
 /// or logging to file with defaults:
-/// ```
+/// ```no_run
 /// use bones_framework::logging::prelude::*;
 /// fn main() {
 ///     let _log_guard = bones_framework::logging::setup_logging_default(("org", "fishfolk", "jumpy"));
 /// }
 /// ```
 /// same with [`macros::setup_logs`] macro:
-/// ```
+/// ```no_run
 /// use bones_framework::prelude::*;
 /// fn main() {
 ///     setup_logs!("org", "fishfolk", "jumpy");
@@ -414,7 +409,7 @@ pub mod macros {
     /// file system will stop (console logging unimpacted).
     ///
     /// Usage for log defaults (logging to file system included):
-    /// ```
+    /// ```no_run
     /// use bones_framework::prelude::*;
     /// setup_logs!("org", "fishfolk", "jumpy");
     /// ```
