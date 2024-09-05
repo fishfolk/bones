@@ -171,8 +171,16 @@ where
 
 impl<'a> QueryItem for &'a Ref<'a, UntypedComponentStore> {
     type Iter = UntypedComponentBitsetIterator<'a>;
+
     fn apply_bitset(&self, bitset: &mut BitSetVec) {
         bitset.bit_and(self.bitset());
+    }
+
+    fn get_single_with_bitset(
+        self,
+        bitset: Rc<BitSetVec>,
+    ) -> Result<<Self::Iter as Iterator>::Item, QuerySingleError> {
+        UntypedComponentStore::get_single_with_bitset(self, bitset)
     }
 
     fn iter_with_bitset(self, bitset: Rc<BitSetVec>) -> Self::Iter {
