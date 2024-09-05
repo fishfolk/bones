@@ -1029,7 +1029,7 @@ mod tests {
     }
 
     #[test]
-    fn entities__get_single__with_one_required() {
+    fn entities__get_single__with_one_required__ok() {
         let mut entities = Entities::default();
         (0..3).map(|_| entities.create()).count();
         let e = entities.create();
@@ -1041,6 +1041,39 @@ mod tests {
         let comp = state.borrow();
 
         assert_eq!(entities.get_single_with(&comp), Ok((e, &a)));
+    }
+
+    #[test]
+    fn entities__get_single__with_one_required__none() {
+        let mut entities = Entities::default();
+        (0..3).map(|_| entities.create()).count();
+
+        let state = AtomicCell::new(ComponentStore::<A>::default());
+        let comp = state.borrow();
+
+        assert_eq!(
+            entities.get_single_with(&comp),
+            Err(QuerySingleError::NoEntities)
+        );
+    }
+
+    #[test]
+    fn entities__get_single__with_one_required__too_many() {
+        let mut entities = Entities::default();
+        let state = AtomicCell::new(ComponentStore::<A>::default());
+
+        for i in 0..3 {
+            let e = entities.create();
+            let a = A(i.to_string());
+            state.borrow_mut().insert(e, a.clone());
+        }
+
+        let comp = state.borrow();
+
+        assert_eq!(
+            entities.get_single_with(&comp),
+            Err(QuerySingleError::MultipleEntities)
+        );
     }
 
     #[test]
