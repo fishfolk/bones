@@ -845,9 +845,10 @@ where
                         .unwrap();
                 }
 
+                let current_frame = self.session.current_frame();
+
                 #[cfg(feature = "net-debug")]
                 {
-                    let current_frame = self.session.current_frame();
                     let confirmed_frame = self.session.confirmed_frame();
 
                     NETWORK_DEBUG_CHANNEL
@@ -871,7 +872,7 @@ where
                                 ggrs::GgrsRequest::SaveGameState { cell, frame } => {
                                     cell.save(frame, Some(world.clone()), None)
                                 }
-                                ggrs::GgrsRequest::LoadGameState { cell, .. } => {
+                                ggrs::GgrsRequest::LoadGameState { cell, frame } => {
                                     // Swap out sessions to preserve them after world save.
                                     // Sessions clone makes empty copy, so saved snapshots do not include sessions.
                                     // Sessions are borrowed from Game for execution of this session,
@@ -886,6 +887,8 @@ where
                                         &mut sessions,
                                         &mut world.resource_mut::<Sessions>(),
                                     );
+
+                                    trace!("Loading (rollback) frame: {frame}");
                                 }
                                 ggrs::GgrsRequest::AdvanceFrame {
                                     inputs: network_inputs,
@@ -949,8 +952,8 @@ where
                                             network_inputs.into_iter().enumerate()
                                         {
                                             trace!(
-                                                "Net player({player_idx}) local: {}, status: {status:?}, input: {:?}",
-                                                self.local_player_idx as usize == player_idx,
+                                                "Net player({player_idx}) local: {}, status: {status:?}, frame: {current_frame} input: {:?}",
+                                                self.local_player_idx == player_idx as u32,
                                                 input
                                             );
                                             player_inputs.network_update(
