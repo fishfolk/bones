@@ -444,6 +444,31 @@
 <a href="#443" id="443">443</a>
 <a href="#444" id="444">444</a>
 <a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>proc_macro2::{Punct, Spacing, TokenStream <span class="kw">as </span>TokenStream2, TokenTree <span class="kw">as </span>TokenTree2};
 <span class="kw">use </span>quote::{format_ident, quote, quote_spanned, spanned::Spanned};
@@ -459,44 +484,69 @@
     };
 }
 
-<span class="doccomment">/// Derive macro for the `HasSchema` trait.
+<span class="doccomment">/// Derive macro for the HasSchema trait.
 ///
-/// ## Example
+/// ## Usage with #[repr(C)]
+/// HasSchema works with the #[repr(C)] annotation to fully implement its features.
 ///
+/// If there is no #[repr(C)] annotation, the SchemaKind of your type's schema will be Opaque.
+///
+/// This means if you don't know the kind of type, like in the case of a SchemaBox, you'll be unable
+/// to read the fields.
+///
+/// This applies to bones' lua scripting since SchemaBox is effectively the "lua type".
+/// See SchemaBox.
+///
+/// If you intend a type to be opaque even though it has #[repr(C)] you can use #[schema(opaque)]
+/// to force an opaque schema representation.
+///
+/// Keep in mind, enums deriving HasSchema with a #[repr(C)] annotation must also specify an
+/// enum tag type like #[repr(C, u8)] where u8 could be either u16 or u32 if you need
+/// more than 256 enum variants.
+///
+/// ## no_default &amp; no_clone attributes
+/// HasSchema derive requires the type to implement Default &amp; Clone, if either of these cannot be
+/// implemented you can use the no_default &amp; no_clone schema attributes respectively to ignore
+/// these requirements.
 /// ```ignore
-/// /// This is a custom type data.
-/// ///
-/// /// While it must implement [`HasSchema`] it is fine to just make it opaque.
-/// ///
-/// /// In this case we want to store the name of the type in our custom type data.
-/// #[derive(HasSchema, Clone, Default)]
-/// /// struct TypeName(String);
+/// #[derive(HasSchema, Default)]
+/// #[schema(no_clone)]
+/// struct DoesntImplClone;
 ///
-/// /// In order to make [`TypeName`] derivable, we must implement [`FromType`] for it.
-/// impl&lt;T&gt; FromType&lt;T&gt; for TypeName {
-///     fn from_type() -&gt; Self {
-///         Self(std::any::type_name::&lt;T&gt;().to_string())
-///     }
-/// }
-///
-/// /// Finally we can derive our type data on other types that implement [`HasSchema`] by using the
-/// /// `#[derive_type_data()]` attribute with one or more type datas to derive.
-/// #[derive(HasSchema, Debug, Default, Clone)]
-/// #[derive_type_data(TypeName)]
-/// #[repr(C)]
-/// struct MyStruct {
-///     x: f32,
-///     y: f32,
-/// }
-///
-/// /// It is also possible to add type data that may or may not implement [`FromType`] by passing in an
-/// /// expression for the type data into a `type_data` attribute.
-/// #[derive(HasSchema, Clone, Default, Debug)]
-/// #[type_data(TypeName("CustomName".into()))]
-/// #[repr(C)]
-/// struct MyOtherStruct;
+/// #[derive(HasSchema, Clone)]
+/// #[schema(no_default)]
+/// struct DoesntImplDefault;
 /// ```
+/// The caveat for putting no_default on your type is that it cannot be created from a Schema.
+/// This is necessary if you want to create your type within a bones lua script.
 ///
+/// Since the fields that need to be initialized to create a complete version of your type cannot be
+/// determined, Schema needs a default function to initialize the data properly.
+///
+/// The caveat for putting no_clone on your type is that it cannot be cloned in the form of a
+/// SchemaBox.
+///
+/// This is critical in the case of bones' networking which will panic if your type is in the world
+/// and does not implement clone during the network rollback.
+///
+/// ## type_data attribute
+/// This attribute takes an expression and stores that value in what is basically
+/// a type keyed map accessible from your type's Schema.
+///
+/// ## derive_type_data attribute
+/// This attribute is simply a shortcut equivalent to using the type_data attribute
+/// with any type's FromType&lt;YourHasSchemaType&gt; implementation like so:
+/// ```ignore
+/// #[derive(HasSchema, Clone, Default)]
+/// #[type_data(&lt;OtherType as FromType&lt;Data&gt;&gt;::from_type())]
+/// struct Data;
+/// ```
+/// Simply specify a type instead of an expression:
+/// ```ignore
+/// #[derive(HasSchema, Clone, Default)]
+/// #[derive_type_data(OtherType)] // OtherType implements FromType&lt;Data&gt;
+/// struct Data;
+/// ```
 /// ## Known Limitations
 ///
 /// Currently it isn't possible to construct a struct that contains itself. For example, this will
