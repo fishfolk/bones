@@ -300,6 +300,7 @@
 <a href="#299" id="299">299</a>
 <a href="#300" id="300">300</a>
 <a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -307,7 +308,8 @@
 <span class="kw">use </span><span class="kw">super</span>::untyped::UntypedComponentStore;
 
 <span class="doccomment">/// A typed wrapper around [`UntypedComponentStore`].
-</span><span class="attr">#[repr(transparent)]
+</span><span class="attr">#[derive(Clone)]
+#[repr(transparent)]
 </span><span class="kw">pub struct </span>ComponentStore&lt;T: HasSchema&gt; {
     untyped: UntypedComponentStore,
     _phantom: PhantomData&lt;T&gt;,
