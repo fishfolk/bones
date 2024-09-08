@@ -10,6 +10,8 @@ anything yet.hing.</p>
 able to fit <code>new_capacity</code> items of the this <a href="struct.ResizableAlloc.html" title="struct bones_lib::ecs::prelude::bones_schema::alloc::ResizableAlloc"><code>ResizableAlloc</code></a>’s layout.</p>
 <p>If the new capacity is lower, it will reallocate and remove all items</p>
 <p>The capacity will be 0 and the pointer will be dangling.</p>
+<h5 id="panics"><a href="#panics">Panics</a></h5>
+<p>Panics if the provided layout is not already padded to it’s alignment.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.with_capacity" class="method"><h4 class="code-header">pub fn <a href="#method.with_capacity" class="fn">with_capacity</a>(
     layout: <a class="struct" href="../prelude/bones_utils/prelude/alloc/alloc/struct.Layout.html" title="struct bones_lib::ecs::prelude::bones_schema::prelude::bones_utils::prelude::alloc::alloc::Layout">Layout</a>,
     capacity: <a class="primitive" href="https://doc.rust-lang.org/1.76.0/std/primitive.usize.html">usize</a>

@@ -325,6 +325,12 @@
 <a href="#324" id="324">324</a>
 <a href="#325" id="325">325</a>
 <a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     alloc::{<span class="self">self</span>, handle_alloc_error, Layout, LayoutError},
     ffi::c_void,
@@ -347,8 +353,6 @@
     </span>ptr: NonNull&lt;c_void&gt;,
     <span class="doccomment">/// The layout of the items stored
     </span>layout: Layout,
-    <span class="doccomment">/// The layout of the items stored, with it's size padded to its alignment.
-    </span>padded: Layout,
     <span class="doccomment">/// The current capacity measured in items.
     </span>cap: usize,
 }
@@ -387,12 +391,20 @@
     /// If the new capacity is lower, it will reallocate and remove all items
     ///
     /// The capacity will be 0 and the pointer will be dangling.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the provided layout is not already padded to it's alignment.
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(layout: Layout) -&gt; <span class="self">Self </span>{
+        <span class="macro">assert_eq!</span>(
+            layout,
+            layout.pad_to_align(),
+            <span class="string">"Layout must be padded to it's alignment"
+        </span>);
         <span class="self">Self </span>{
             ptr: <span class="self">Self</span>::dangling(<span class="kw-2">&amp;</span>layout),
             layout,
-            padded: layout.pad_to_align(),
             cap: <span class="number">0</span>,
         }
     }
@@ -502,7 +514,7 @@
     /// This does no checks that the index is within bounds or that the returne dpointer is unaliased.
     </span><span class="attr">#[inline]
     </span><span class="kw">pub unsafe fn </span>unchecked_idx(<span class="kw-2">&amp;</span><span class="self">self</span>, idx: usize) -&gt; <span class="kw-2">*mut </span>c_void {
-        <span class="self">self</span>.ptr.as_ptr().add(<span class="self">self</span>.padded.size() * idx)
+        <span class="self">self</span>.ptr.as_ptr().add(<span class="self">self</span>.layout.size() * idx)
     }
 
     <span class="doccomment">/// Helper to create a dangling pointer that is properly aligned for our layout.
