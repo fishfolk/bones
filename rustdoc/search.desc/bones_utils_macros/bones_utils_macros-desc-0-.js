@@ -1,0 +1,1 @@
+searchState.loadedDescShard("bones_utils_macros", 0, "Derive macro for deriving <code>Deref</code> on structs with one field.\nDerive macro for deriving <code>DerefMut</code> on structs with one …")

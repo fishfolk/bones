@@ -1,5 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_schema/macros/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_schema_macros" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `framework_crates/bones_schema/macros/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-c5d6553a23f1e5a6.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bones_schema_macros" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0 (eeb90cda1 2024-09-04)" data-channel="1.81.0" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-d2fab2bf619172d3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -475,7 +474,7 @@
 <span class="kw">use </span>venial::{GenericBound, StructFields};
 
 <span class="doccomment">/// Helper macro to bail out of the macro with a compile error.
-</span><span class="macro">macro_rules! </span>throw {
+</span><span class="macro">macro_rules!</span> throw {
     (<span class="macro-nonterminal">$hasSpan</span>:expr, <span class="macro-nonterminal">$err</span>:literal) =&gt; {
         <span class="kw">let </span>span = <span class="macro-nonterminal">$hasSpan</span>.__span();
         <span class="kw">return </span><span class="macro">quote_spanned!</span>(span =&gt;
@@ -535,7 +534,7 @@
 ///
 /// ## derive_type_data attribute
 /// This attribute is simply a shortcut equivalent to using the type_data attribute
-/// with any type's FromType&lt;YourHasSchemaType&gt; implementation like so:
+/// with any type's `FromType&lt;YourHasSchemaType&gt;` implementation like so:
 /// ```ignore
 /// #[derive(HasSchema, Clone, Default)]
 /// #[type_data(&lt;OtherType as FromType&lt;Data&gt;&gt;::from_type())]
@@ -589,7 +588,7 @@
     <span class="kw">let </span>type_datas = {
         <span class="kw">let </span>add_derive_type_datas = derive_type_data_flags.into_iter().map(|ty| {
             <span class="kw">let </span>ty = <span class="macro">format_ident!</span>(<span class="string">"{ty}"</span>);
-            <span class="macro">quote! </span>{
+            <span class="macro">quote!</span> {
                 tds.insert(&lt;#ty <span class="kw">as </span>#schema_mod::FromType&lt;#name&gt;&gt;::from_type()).unwrap();
             }
         });
@@ -600,7 +599,7 @@
             .map(|x| x.get_value_tokens())
             .map(|x| x.iter().cloned().collect::&lt;TokenStream2&gt;());
 
-        <span class="macro">quote! </span>{
+        <span class="macro">quote!</span> {
             {
                 <span class="kw">let </span>tds = #schema_mod::alloc::TypeDatas::default();
                 #(#add_derive_type_datas),*
@@ -645,7 +644,7 @@
     <span class="comment">// Get the schema kind
     </span><span class="kw">let </span>schema_kind = (|| {
         <span class="kw">if </span>is_opaque {
-            <span class="kw">return </span><span class="macro">quote! </span>{
+            <span class="kw">return </span><span class="macro">quote!</span> {
                 {
                     <span class="kw">let </span>layout = ::std::alloc::Layout::new::&lt;<span class="self">Self</span>&gt;();
                     #schema_mod::SchemaKind::Primitive(#schema_mod::Primitive::Opaque {
@@ -664,7 +663,7 @@
                     .iter()
                     .map(|(field, <span class="kw">_</span>)| {
                         <span class="kw">let </span>ty = <span class="kw-2">&amp;</span>field.ty;
-                        <span class="macro">quote_spanned! </span>{field.ty.__span() =&gt;
+                        <span class="macro">quote_spanned!</span> {field.ty.__span() =&gt;
                             #schema_mod::StructFieldInfo {
                                 name: <span class="prelude-val">None</span>,
                                 schema: &lt;#ty <span class="kw">as </span>#schema_mod::HasSchema&gt;::schema(),
@@ -684,7 +683,7 @@
                         </span>});
 
                         <span class="kw">if </span>opaque {
-                            <span class="macro">quote_spanned! </span>{field.ty.__span() =&gt;
+                            <span class="macro">quote_spanned!</span> {field.ty.__span() =&gt;
                                 #schema_mod::StructFieldInfo {
                                     name: <span class="prelude-val">Some</span>(<span class="macro">stringify!</span>(#name).into()),
                                     schema: {
@@ -708,7 +707,7 @@
                                 }
                             }
                         } <span class="kw">else </span>{
-                            <span class="macro">quote_spanned! </span>{field.ty.__span() =&gt;
+                            <span class="macro">quote_spanned!</span> {field.ty.__span() =&gt;
                                 #schema_mod::StructFieldInfo {
                                     name: <span class="prelude-val">Some</span>(<span class="macro">stringify!</span>(#name).into()),
                                     schema: &lt;#ty <span class="kw">as </span>#schema_mod::HasSchema&gt;::schema(),
@@ -726,7 +725,7 @@
             venial::Declaration::Struct(s) =&gt; {
                 <span class="kw">let </span>fields = parse_struct_fields(<span class="kw-2">&amp;</span>s.fields);
 
-                <span class="macro">quote! </span>{
+                <span class="macro">quote!</span> {
                     #schema_mod::SchemaKind::Struct(#schema_mod::StructSchemaInfo {
                         fields: <span class="macro">vec!</span>[
                             #(#fields),*
@@ -752,7 +751,7 @@
                     <span class="kw">let </span>fields = parse_struct_fields(<span class="kw-2">&amp;</span>v.contents);
 
                     <span class="kw">let </span>register_schema = <span class="kw">if </span>input.generic_params().is_some() {
-                        <span class="macro">quote! </span>{
+                        <span class="macro">quote!</span> {
                             <span class="kw">static </span>S: OnceLock&lt;RwLock&lt;HashMap&lt;TypeId, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema&gt;&gt;&gt; = OnceLock::new();
                             <span class="kw">let </span>schema = {
                                 S.get_or_init(Default::default)
@@ -771,13 +770,13 @@
                             })
                         }
                     } <span class="kw">else </span>{
-                        <span class="macro">quote! </span>{
+                        <span class="macro">quote!</span> {
                             <span class="kw">static </span>S: ::std::sync::OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>#schema_mod::Schema&gt; = ::std::sync::OnceLock::new();
                             S.get_or_init(compute_schema)
                         }
                     };
 
-                    variants.push(<span class="macro">quote! </span>{
+                    variants.push(<span class="macro">quote!</span> {
                         #schema_mod::VariantInfo {
                             name: #name.into(),
                             schema: {
@@ -805,7 +804,7 @@
                     })
                 }
 
-                <span class="macro">quote! </span>{
+                <span class="macro">quote!</span> {
                     #schema_mod::SchemaKind::Enum(#schema_mod::EnumSchemaInfo {
                         tag_type: #schema_mod::EnumTagType::#tag_type,
                         variants: <span class="macro">vec!</span>[#(#variants),<span class="kw-2">*</span>],
@@ -821,7 +820,7 @@
         }
     })();
 
-    <span class="kw">let </span>schema_register = <span class="macro">quote! </span>{
+    <span class="kw">let </span>schema_register = <span class="macro">quote!</span> {
         #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
             name: <span class="macro">stringify!</span>(#name).into(),
             full_name: <span class="macro">concat!</span>(<span class="macro">module_path!</span>(), <span class="string">"::"</span>, <span class="macro">stringify!</span>(#name)).into(),
@@ -845,7 +844,7 @@
                 tokens: <span class="macro">quote!</span>(HasSchema #clone_bound ).into_iter().collect(),
             });
         }
-        <span class="macro">quote! </span>{
+        <span class="macro">quote!</span> {
             <span class="kw">unsafe impl </span>#sync_send_generic_params #schema_mod::HasSchema <span class="kw">for </span>#name #generic_params {
                 <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>#schema_mod::Schema {
                     <span class="kw">use </span>::std::sync::{OnceLock};
@@ -872,7 +871,7 @@
             }
         }
     } <span class="kw">else </span>{
-        <span class="macro">quote! </span>{
+        <span class="macro">quote!</span> {
             <span class="kw">unsafe impl </span>#schema_mod::HasSchema <span class="kw">for </span>#name {
                 <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>#schema_mod::Schema {
                     <span class="kw">static </span>S: ::std::sync::OnceLock&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>#schema_mod::Schema&gt; = ::std::sync::OnceLock::new();

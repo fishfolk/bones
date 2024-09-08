@@ -1,0 +1,1 @@
+searchState.loadedDescShard("demo_assets_minimal", 0, "Create our “root” asset type.\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.\nSystem to render the home menu.")
