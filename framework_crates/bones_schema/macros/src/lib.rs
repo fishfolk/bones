@@ -254,12 +254,38 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                     let name = v.name.to_string();
                     let variant_schema_name = format!("{}::{}", e.name, name);
                     let fields = parse_struct_fields(&v.contents);
+
+                    let register_schema = if input.generic_params().is_some() {
+                        quote! {
+                            static S: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
+                            let schema = {
+                                S.get_or_init(Default::default)
+                                    .read()
+                                    .get(&TypeId::of::<Self>())
+                                    .copied()
+                            };
+                            schema.unwrap_or_else(|| {
+                                let schema = compute_schema();
+
+                                S.get_or_init(Default::default)
+                                    .write()
+                                    .insert(TypeId::of::<Self>(), schema);
+
+                                schema
+                            })
+                        }
+                    } else {
+                        quote! {
+                            static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();
+                            S.get_or_init(compute_schema)
+                        }
+                    };
+
                     variants.push(quote! {
                         #schema_mod::VariantInfo {
                             name: #name.into(),
                             schema: {
-                                static S: ::std::sync::OnceLock<&'static #schema_mod::Schema> = ::std::sync::OnceLock::new();
-                                S.get_or_init(|| {
+                                let compute_schema = || {
                                     #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
                                         name: #variant_schema_name.into(),
                                         full_name: concat!(module_path!(), "::", #variant_schema_name).into(),
@@ -276,7 +302,8 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                         hash_fn: None,
                                         drop_fn: None,
                                     })
-                                })
+                                };
+                                #register_schema
                             }
                         }
                     })
@@ -325,7 +352,6 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         quote! {
             unsafe impl #sync_send_generic_params #schema_mod::HasSchema for #name #generic_params {
                 fn schema() -> &'static #schema_mod::Schema {
-                    // TODO: use faster hashmap and rwlocks from bones_utils.
                     use ::std::sync::{OnceLock};
                     use ::std::any::TypeId;
                     use bones_utils::{HashMap, parking_lot::RwLock};
