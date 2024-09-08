@@ -165,7 +165,7 @@ impl CameraShake {
         decay_rate: f32,
     ) -> Self {
         let mut shake = Self::new(max_angle_deg, max_offset, speed, decay_rate);
-        shake.trauma = trauma.min(1.0).max(0.0);
+        shake.trauma = trauma.clamp(0.0, 1.0);
         shake
     }
 

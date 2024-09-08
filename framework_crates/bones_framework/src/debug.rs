@@ -79,7 +79,7 @@ pub fn frame_diagnostic_window(
                         state.reset();
                     }
 
-                    ui.monospace(&format!(
+                    ui.monospace(format!(
                         "{label:20}: {fps:4.0}{suffix:3} ( {min:4.0}{suffix:3}, {avg:4.0}{suffix:3}, {max:4.0}{suffix:3} )",
                         // label = localization.get("frames-per-second"),
                         label = "Frames Per Second",
@@ -90,7 +90,7 @@ pub fn frame_diagnostic_window(
                         avg = state.fps_avg,
                         max = state.max_fps,
                     ));
-                    ui.monospace(&format!(
+                    ui.monospace(format!(
                         "{label:20}: {fps:4.1}{suffix:3} ( {min:4.1}{suffix:3}, {avg:4.0}{suffix:3}, {max:4.1}{suffix:3} )",
                         // label = localization.get("frame-time"),
                         label = "Frame Time",

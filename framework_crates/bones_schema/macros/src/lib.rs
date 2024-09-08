@@ -64,7 +64,7 @@ macro_rules! throw {
 ///
 /// ## derive_type_data attribute
 /// This attribute is simply a shortcut equivalent to using the type_data attribute
-/// with any type's FromType<YourHasSchemaType> implementation like so:
+/// with any type's `FromType<YourHasSchemaType>` implementation like so:
 /// ```ignore
 /// #[derive(HasSchema, Clone, Default)]
 /// #[type_data(<OtherType as FromType<Data>>::from_type())]
