@@ -20,8 +20,6 @@ pub struct ResizableAlloc {
     ptr: NonNull<c_void>,
     /// The layout of the items stored
     layout: Layout,
-    /// The layout of the items stored, with it's size padded to its alignment.
-    padded: Layout,
     /// The current capacity measured in items.
     cap: usize,
 }
@@ -60,12 +58,20 @@ impl ResizableAlloc {
     /// If the new capacity is lower, it will reallocate and remove all items
     ///
     /// The capacity will be 0 and the pointer will be dangling.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the provided layout is not already padded to it's alignment.
     #[inline]
     pub fn new(layout: Layout) -> Self {
+        assert_eq!(
+            layout,
+            layout.pad_to_align(),
+            "Layout must be padded to it's alignment"
+        );
         Self {
             ptr: Self::dangling(&layout),
             layout,
-            padded: layout.pad_to_align(),
             cap: 0,
         }
     }
@@ -175,7 +181,7 @@ impl ResizableAlloc {
     /// This does no checks that the index is within bounds or that the returne dpointer is unaliased.
     #[inline]
     pub unsafe fn unchecked_idx(&self, idx: usize) -> *mut c_void {
-        self.ptr.as_ptr().add(self.padded.size() * idx)
+        self.ptr.as_ptr().add(self.layout.size() * idx)
     }
 
     /// Helper to create a dangling pointer that is properly aligned for our layout.
