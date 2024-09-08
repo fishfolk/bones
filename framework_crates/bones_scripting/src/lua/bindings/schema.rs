@@ -60,7 +60,7 @@ pub fn metatable(ctx: Context) -> Table {
             Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
                 let this: UserData = stack.consume(ctx)?;
                 let this = this.downcast_static::<&Schema>()?;
-                let s = piccolo::String::from_slice(&ctx, &format!("Schema({})", this.full_name));
+                let s = piccolo::String::from_slice(&ctx, format!("Schema({})", this.full_name));
 
                 stack.push_front(Value::String(s));
                 Ok(CallbackReturn::Return)

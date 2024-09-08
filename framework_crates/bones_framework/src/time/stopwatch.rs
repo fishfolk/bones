@@ -21,8 +21,7 @@ use std::time::Duration;
 /// assert!(stopwatch.paused());
 /// assert_eq!(stopwatch.elapsed_secs(), 0.0);
 /// ```
-#[derive(Clone, Debug, Default)]
-#[cfg_attr(feature = "serialize", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize)]
 pub struct Stopwatch {
     paused: bool,
     elapsed: Duration,
