@@ -5,6 +5,7 @@ use crate::prelude::*;
 use super::untyped::UntypedComponentStore;
 
 /// A typed wrapper around [`UntypedComponentStore`].
+#[derive(Clone)]
 #[repr(transparent)]
 pub struct ComponentStore<T: HasSchema> {
     untyped: UntypedComponentStore,
