@@ -637,7 +637,6 @@
 <a href="#636" id="636">636</a>
 <a href="#637" id="637">637</a>
 <a href="#638" id="638">638</a>
-<a href="#639" id="639">639</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>bones_schema::alloc::ResizableAlloc;
@@ -663,7 +662,6 @@
 
 <span class="kw">impl </span>Clone <span class="kw">for </span>UntypedComponentStore {
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>size = <span class="self">self</span>.schema.layout().size();
         <span class="kw">let </span>new_storage = <span class="self">self</span>.storage.clone();
 
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="self">self</span>.max_id {
@@ -674,8 +672,8 @@
                 // - And our previous pointer is a valid pointer to component data
                 // - And our new pointer is a writable pointer with the same layout
                 </span><span class="kw">unsafe </span>{
-                    <span class="kw">let </span>prev_ptr = <span class="self">self</span>.storage.as_ptr().add(i * size);
-                    <span class="kw">let </span>new_ptr = new_storage.as_ptr().add(i * size);
+                    <span class="kw">let </span>prev_ptr = <span class="self">self</span>.storage.unchecked_idx(i);
+                    <span class="kw">let </span>new_ptr = new_storage.unchecked_idx(i);
                     (<span class="self">self
                         </span>.schema
                         .clone_fn
