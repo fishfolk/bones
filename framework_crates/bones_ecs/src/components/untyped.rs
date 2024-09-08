@@ -23,7 +23,6 @@ unsafe impl Send for UntypedComponentStore {}
 
 impl Clone for UntypedComponentStore {
     fn clone(&self) -> Self {
-        let size = self.schema.layout().size();
         let new_storage = self.storage.clone();
 
         for i in 0..self.max_id {
@@ -34,8 +33,8 @@ impl Clone for UntypedComponentStore {
                 // - And our previous pointer is a valid pointer to component data
                 // - And our new pointer is a writable pointer with the same layout
                 unsafe {
-                    let prev_ptr = self.storage.as_ptr().add(i * size);
-                    let new_ptr = new_storage.as_ptr().add(i * size);
+                    let prev_ptr = self.storage.unchecked_idx(i);
+                    let new_ptr = new_storage.unchecked_idx(i);
                     (self
                         .schema
                         .clone_fn
