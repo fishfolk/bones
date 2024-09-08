@@ -50,6 +50,11 @@ async fn server(args: Config) -> anyhow::Result<()> {
         .alpns(vec![MATCH_ALPN.to_vec()])
         .discovery(Box::new(
             iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
+                Box::new(
+                    iroh_net::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
+                        secret_key.public(),
+                    )?,
+                ),
                 Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
                 Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
                     secret_key.clone(),
@@ -74,6 +79,7 @@ async fn server(args: Config) -> anyhow::Result<()> {
             Ok(conn) => {
                 info!(
                     connection_id = conn.stable_id(),
+                    addr = ?conn.remote_address(),
                     "Accepted connection from client"
                 );
 

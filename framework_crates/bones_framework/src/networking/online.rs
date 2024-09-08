@@ -102,7 +102,8 @@ async fn search_for_game(
 
     let message = postcard::to_allocvec(&message)?;
     send.write_all(&message).await?;
-    send.finish().await?;
+    send.finish()?;
+    send.stopped().await?;
 
     let response = recv.read_to_end(256).await?;
     let message: MatchmakerResponse = postcard::from_bytes(&response)?;

@@ -9,4 +9,4 @@ repository.workspace = true
 
 [dependencies]
 serde    = { version = "1.0", features = ["derive"] }
-iroh-net = "0.22"
+iroh-net = "0.24"

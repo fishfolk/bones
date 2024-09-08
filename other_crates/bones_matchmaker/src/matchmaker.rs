@@ -62,7 +62,8 @@ async fn impl_matchmaker(ep: iroh_net::Endpoint, conn: Connection) -> anyhow::Re
                         // Accept request
                         let message = postcard::to_allocvec(&MatchmakerResponse::Accepted)?;
                         send.write_all(&message).await?;
-                        send.finish().await?;
+                        send.finish()?;
+                        send.stopped().await?;
 
                         let player_count = match_info.client_count;
 
@@ -118,7 +119,8 @@ async fn impl_matchmaker(ep: iroh_net::Endpoint, conn: Connection) -> anyhow::Re
                                             for conn in members {
                                                 let mut send = conn.open_uni().await?;
                                                 send.write_all(&message).await?;
-                                                send.finish().await?;
+                                                send.finish()?;
+                                                send.stopped().await?;
                                             }
                                             Ok::<(), anyhow::Error>(())
                                         };
@@ -150,7 +152,8 @@ async fn impl_matchmaker(ep: iroh_net::Endpoint, conn: Connection) -> anyhow::Re
                             for conn in members_to_notify {
                                 let mut send = conn.open_uni().await?;
                                 send.write_all(&message).await?;
-                                send.finish().await?;
+                                send.finish()?;
+                                send.stopped().await?;
                             }
                         }
 
@@ -160,9 +163,9 @@ async fn impl_matchmaker(ep: iroh_net::Endpoint, conn: Connection) -> anyhow::Re
                             let random_seed = rand::random();
 
                             for (idx, conn) in members_to_join.iter().enumerate() {
-                                let id = get_remote_node_id(&conn)?;
+                                let id = get_remote_node_id(conn)?;
                                 let mut addr = NodeAddr::new(id);
-                                if let Some(info) = ep.connection_info(id) {
+                                if let Some(info) = ep.remote_info(id) {
                                     if let Some(relay_url) = info.relay_url {
                                         addr = addr.with_relay_url(relay_url.relay_url);
                                     }
@@ -185,7 +188,8 @@ async fn impl_matchmaker(ep: iroh_net::Endpoint, conn: Connection) -> anyhow::Re
                                     })?;
                                 let mut send = conn.open_uni().await?;
                                 send.write_all(&message).await?;
-                                send.finish().await?;
+                                send.finish()?;
+                                send.stopped().await?;
 
                                 // Close connection, we are done here
                                 conn.close(0u32.into(), b"done");

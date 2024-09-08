@@ -26,6 +26,11 @@ async fn client() -> anyhow::Result<()> {
         .alpns(vec![MATCH_ALPN.to_vec(), PLAY_ALPN.to_vec()])
         .discovery(Box::new(
             iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
+                Box::new(
+                    iroh_net::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
+                        secret_key.public(),
+                    )?,
+                ),
                 Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
                 Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
                     secret_key.clone(),
@@ -60,7 +65,8 @@ async fn client() -> anyhow::Result<()> {
     let message = postcard::to_allocvec(&message)?;
 
     send.write_all(&message).await?;
-    send.finish().await?;
+    send.finish()?;
+    send.stopped().await?;
 
     println!("o  Waiting for response");
 
@@ -115,7 +121,8 @@ async fn client() -> anyhow::Result<()> {
                         sender
                             .write_all(&postcard::to_allocvec(&hello.clone())?)
                             .await?;
-                        sender.finish().await?;
+                        sender.finish()?;
+                        sender.stopped().await?;
 
                         tokio::time::sleep(Duration::from_secs(1)).await;
                     }
@@ -132,13 +139,14 @@ async fn client() -> anyhow::Result<()> {
 
             let endpoint = endpoint.clone();
             tasks.spawn(async move {
-                if let Some(mut conn) = endpoint.accept().await {
+                if let Some(incomming) = endpoint.accept().await {
                     let result = async {
-                        let alpn = conn.alpn().await?;
+                        let mut connecting = incomming.accept()?;
+                        let alpn = connecting.alpn().await?;
                         if alpn != PLAY_ALPN {
                             anyhow::bail!("unexpected ALPN: {:?}", alpn);
                         }
-                        let conn = conn.await?;
+                        let conn = connecting.await?;
 
                         for _ in 0..3 {
                             let mut recv = conn.accept_uni().await?;

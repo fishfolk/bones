@@ -328,14 +328,15 @@ async fn lan_start_server(
             }
 
             // Handle new connections
-            new_connection = ep.accept() => {
-                let Some(mut new_connection) = new_connection else {
+            incomming = ep.accept() => {
+                let Some(incomming) = incomming else {
                     anyhow::bail!("unable to accept new connections");
                 };
                 let result = async move {
-                    let alpn = new_connection.alpn().await?;
+                    let mut connecting = incomming.accept()?;
+                    let alpn = connecting.alpn().await?;
                     anyhow::ensure!(alpn == PLAY_ALPN, "unexpected ALPN");
-                    let conn = new_connection.await?;
+                    let conn = connecting.await?;
                     anyhow::Ok(conn)
                 };
 
@@ -383,7 +384,7 @@ async fn lan_start_server(
                     .for_each(|(i, conn)| {
                         let id = get_remote_node_id(conn).expect("invalid connection");
                         let mut addr = NodeAddr::new(id);
-                        if let Some(info) = endpoint.connection_info(id) {
+                        if let Some(info) = endpoint.remote_info(id) {
                             if let Some(relay_url) = info.relay_url {
                                 addr = addr.with_relay_url(relay_url.relay_url);
                             }
@@ -402,7 +403,8 @@ async fn lan_start_server(
                     player_count,
                 })?)
                 .await?;
-                uni.finish().await?;
+                uni.finish()?;
+                uni.stopped().await?;
             }
 
             let connections = connections
