@@ -13,7 +13,6 @@ use super::{GameMessage, NetworkSocket, SocketTarget, RUNTIME};
 /// The [`NetworkSocket`] implementation.
 #[derive(Debug, Clone)]
 pub struct Socket {
-    ///
     pub connections: Vec<(u32, iroh_quinn::Connection)>,
     pub ggrs_receiver: async_channel::Receiver<(u32, GameMessage)>,
     pub reliable_receiver: async_channel::Receiver<(u32, Vec<u8>)>,

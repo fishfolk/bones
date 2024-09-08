@@ -66,6 +66,11 @@ image_ico = ["image/ico"]
 ## Enable BMP image loader.
 image_bmp = ["image/bmp"]
 
+#! ### Debuging Features
+
+## Simulate dramatic network latency by inserting random sleeps into the networking code. This is extremely cheap and hacky but may be useful.
+debug-network-slowdown = []
+
 document-features = ["dep:document-features"]
 
 [dependencies]

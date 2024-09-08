@@ -160,7 +160,7 @@ async fn impl_matchmaker(ep: iroh_net::Endpoint, conn: Connection) -> anyhow::Re
                             let random_seed = rand::random();
 
                             for (idx, conn) in members_to_join.iter().enumerate() {
-                                let id = get_remote_node_id(&conn)?;
+                                let id = get_remote_node_id(conn)?;
                                 let mut addr = NodeAddr::new(id);
                                 if let Some(info) = ep.connection_info(id) {
                                     if let Some(relay_url) = info.relay_url {

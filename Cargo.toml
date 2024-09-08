@@ -17,5 +17,8 @@ authors       = ["The Fish Folk & Spicy Lobster Developers"]
 categories    = ["game-development", "game-engines", "wasm", "data-structures"]
 keywords      = ["bones", "bevy", "scripting", "ecs", "framework"]
 
+[workspace.lints.clippy]
+correctness = "warn"
+
 [profile.release]
 lto = true
