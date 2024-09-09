@@ -2,7 +2,7 @@
 // TODO
 #![allow(missing_docs)]
 
-pub use bones_matchmaker_proto::{LobbyId, LobbyInfo, LobbyListItem, GameID};
+pub use bones_matchmaker_proto::{LobbyId, LobbyInfo, LobbyListItem, GameID, PlayerIdxAssignment};
 pub use super::online_matchmaking::*;
 pub use super::online_lobby::*;
 use iroh_net::NodeId;
@@ -20,7 +20,7 @@ pub struct OnlineMatchmaker(BiChannelClient<OnlineMatchmakerRequest, OnlineMatch
 /// Online matchmaker request
 #[derive(Debug)]
 pub enum OnlineMatchmakerRequest {
-    SearchForGame { id: NodeId, player_count: u32, game_id: GameID, match_data: Vec<u8> },
+    SearchForGame { id: NodeId, player_count: u32, game_id: GameID, match_data: Vec<u8>, player_idx_assignment: PlayerIdxAssignment },
     StopSearch,
     ListLobbies { id: NodeId, game_id: GameID },
     CreateLobby { id: NodeId, lobby_info: LobbyInfo },
@@ -66,8 +66,8 @@ async fn online_matchmaker(
 ) -> anyhow::Result<()> {
     while let Ok(message) = matchmaker_channel.recv().await {
         match message {
-            OnlineMatchmakerRequest::SearchForGame { id, player_count, game_id, match_data } => {
-                if let Err(err) = crate::networking::online_matchmaking::_resolve_search_for_game(&matchmaker_channel, id, game_id, player_count, match_data).await {
+            OnlineMatchmakerRequest::SearchForGame { id, player_count, game_id, match_data, player_idx_assignment } => {
+                if let Err(err) = crate::networking::online_matchmaking::_resolve_search_for_match(&matchmaker_channel, id, game_id, player_count, match_data, player_idx_assignment).await {
                     warn!("Online Game Search failed: {err:?}");
                 }
             }

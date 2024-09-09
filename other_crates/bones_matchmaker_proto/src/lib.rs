@@ -40,6 +40,8 @@ pub struct MatchInfo {
     pub match_data: Vec<u8>,
     /// The unique identifier for the game
     pub game_id: String,
+    /// Enables choosing how player_idx should be assigned to each player who joins the match.
+    pub player_idx_assignment: PlayerIdxAssignment,
 }
 
 /// Information about a lobby
@@ -51,10 +53,25 @@ pub struct LobbyInfo {
     pub max_players: u32,
     /// The hashed password for the lobby, if any
     pub password_hash: Option<String>,
-    /// Additional data about the match/lobby
+    /// This is an arbitrary set of bytes that the lobby creator specifies and which other clients must read/accept (ie. settings, version number, etc.)
     pub match_data: Vec<u8>,
     /// The unique identifier for the game
     pub game_id: String,
+    /// Enables choosing how player_idx should be assigned to each player who joins the match.
+    pub player_idx_assignment: PlayerIdxAssignment,
+}
+
+/// Choose how player_idx should be assigned to each player who joins a match/lobby.
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq, Default)]
+pub enum PlayerIdxAssignment {
+    /// The players will be assigned an idx based on the order that they join the match/lobby.
+    #[default]
+    Ordered,
+    /// The players will randomly be assigned an idx
+    Random,
+    /// The order specified in the Vec will be assigned to the players based on the order they join the match/lobby.
+    /// Ie. If the Vec contains `0,2,1,3` then the first player will get player_idx 0, second 2, third 1, and fourth 3.
+    SpecifiedOrder(Vec<usize>),
 }
 
 /// A unique identifier for a game
