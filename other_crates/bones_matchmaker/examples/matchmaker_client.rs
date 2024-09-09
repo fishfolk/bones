@@ -50,7 +50,7 @@ async fn client() -> anyhow::Result<()> {
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::RequestMatch(MatchInfo {
-        client_count: std::env::args()
+        player_count: std::env::args()
             .nth(1)
             .map(|x| x.parse().unwrap())
             .unwrap_or(0),
@@ -73,7 +73,7 @@ async fn client() -> anyhow::Result<()> {
         panic!("<= Unexpected message from server!");
     }
 
-    let (player_idx, player_ids, _client_count) = loop {
+    let (player_idx, player_ids, _player_count) = loop {
         let mut recv = conn.accept_uni().await?;
         let message = recv.read_to_end(256).await?;
         let message: MatchmakerResponse = postcard::from_bytes(&message)?;
@@ -85,11 +85,11 @@ async fn client() -> anyhow::Result<()> {
             MatchmakerResponse::Success {
                 random_seed,
                 player_idx,
-                client_count,
+                player_count,
                 player_ids,
             } => {
-                println!("<= Match is ready! Random seed: {random_seed}. Player IDX: {player_idx}. Client count: {client_count}");
-                break (player_idx, player_ids, client_count as usize);
+                println!("<= Match is ready! Random seed: {random_seed}. Player IDX: {player_idx}. Client count: {player_count}");
+                break (player_idx, player_ids, player_count as usize);
             }
             _ => panic!("<= Unexpected message from server"),
         }

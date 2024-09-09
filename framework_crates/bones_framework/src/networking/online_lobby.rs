@@ -108,10 +108,10 @@ pub async fn _resolve_join_lobby(
                     MatchmakerResponse::ClientCount(count) => {
                         matchmaker_channel.try_send(OnlineMatchmakerResponse::PlayerCount(count as _))?;
                     }
-                    MatchmakerResponse::Success { random_seed, player_idx, client_count, player_ids } => {
+                    MatchmakerResponse::Success { random_seed, player_idx, player_count, player_ids } => {
                         let peer_connections = establish_peer_connections(
                             player_idx,
-                            client_count,
+                            player_count,
                             player_ids,
                             None,
                         ).await?;
@@ -121,7 +121,7 @@ pub async fn _resolve_join_lobby(
                         matchmaker_channel.try_send(OnlineMatchmakerResponse::GameStarting {
                             socket: NetworkMatchSocket(Arc::new(socket)),
                             player_idx: player_idx as _,
-                            player_count: client_count as _,
+                            player_count: player_count as _,
                             random_seed
                         })?;
                         break;

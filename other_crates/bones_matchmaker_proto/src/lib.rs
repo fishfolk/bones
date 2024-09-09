@@ -14,7 +14,7 @@ pub const PLAY_ALPN: &[u8] = b"/bones/play/0";
 //
 // === Matchmaking Mode ===
 //
-// These are messages sent when first establishing a connecting to the matchmaker and waiting for a
+// These are messages sent when first establishing a connection to the matchmaker and waiting for a
 // match.
 //
 /// Requests that may be made in matchmaking mode
@@ -34,10 +34,9 @@ pub enum MatchmakerRequest {
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
 pub struct MatchInfo {
     /// The number of clients to have in a match.
-    pub client_count: u32,
+    pub player_count: u32,
     /// This is an arbitrary set of bytes that must match exactly for clients to end up in the same match.
-    ///
-    /// This allows us to support matchmaking for different games/modes with the same matchmaking server.
+    /// This allows us to support matchmaking for different modes or game versions with the same matchmaking server.
     pub match_data: Vec<u8>,
     /// The unique identifier for the game
     pub game_id: String,
@@ -79,7 +78,7 @@ pub enum MatchmakerResponse {
         /// The client idx of the current client
         player_idx: u32,
         /// The number of connected clients in the match
-        client_count: u32,
+        player_count: u32,
         /// The node ids of all players.
         player_ids: Vec<(u32, iroh_net::NodeAddr)>,
     },

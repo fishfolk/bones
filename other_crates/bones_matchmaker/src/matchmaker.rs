@@ -166,7 +166,7 @@ async fn handle_join_lobby(ep: Endpoint, conn: Connection, game_id: GameID, lobb
                     // Check if the lobby is full and start the match if it is
                     if count == max_players as usize {
                         let match_info = MatchInfo {
-                            client_count: max_players,
+                            player_count: max_players,
                             match_data,
                             game_id: game_id.clone(),
                         };
@@ -217,9 +217,9 @@ async fn handle_request_match(ep: Endpoint, conn: Connection, match_info: MatchI
     let should_start_match = state.matchmaking_rooms.update(&match_info, |_exists, members| {
         members.push(conn.clone());
         let member_count = members.len();
-        debug!(?match_info, "Room now has {}/{} members", member_count, match_info.client_count);
+        debug!(?match_info, "Room now has {}/{} members", member_count, match_info.player_count);
 
-        member_count >= match_info.client_count as usize
+        member_count >= match_info.player_count as usize
     });
 
     if let Some(true) = should_start_match {
@@ -275,7 +275,7 @@ async fn start_match(ep: Endpoint, members: Vec<Connection>, match_info: &MatchI
     for (player_idx, conn) in members.into_iter().enumerate() {
         let message = postcard::to_allocvec(&MatchmakerResponse::Success {
             random_seed,
-            client_count: match_info.client_count,
+            player_count: match_info.player_count,
             player_idx: player_idx.try_into()?,
             player_ids: player_ids.clone(),
         })?;

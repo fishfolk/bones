@@ -31,7 +31,7 @@ pub async fn _resolve_search_for_game(
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::RequestMatch(MatchInfo {
-        client_count: player_count,
+        player_count: player_count,
         match_data,
         game_id,
     });
@@ -86,14 +86,14 @@ pub async fn _resolve_search_for_game(
                     MatchmakerResponse::Success {
                         random_seed,
                         player_idx,
-                        client_count,
+                        player_count,
                         player_ids,
                     } => {
-                        info!(%random_seed, %player_idx, player_count=%client_count, "Online match complete");
+                        info!(%random_seed, %player_idx, player_count=%player_count, "Online match starting");
 
                         let peer_connections = establish_peer_connections(
                             player_idx,
-                            client_count,
+                            player_count,
                             player_ids,
                             None,
                         )
@@ -104,7 +104,7 @@ pub async fn _resolve_search_for_game(
                         matchmaker_channel.try_send(OnlineMatchmakerResponse::GameStarting {
                             socket: NetworkMatchSocket(Arc::new(socket)),
                             player_idx: player_idx as _,
-                            player_count: client_count as _,
+                            player_count: player_count as _,
                             random_seed
                         })?;
                         break;

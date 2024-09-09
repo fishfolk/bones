@@ -1,1 +1,1 @@
-Network protocol structs for the Jumpy matchmaker.
+Network protocol structs for the Bones matchmaker.
