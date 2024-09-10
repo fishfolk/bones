@@ -187,7 +187,7 @@ async fn handle_join_lobby(
                     send.write_all(&message).await?;
                     send.finish().await?;
 
-                    // Notify other players in the lobby
+                    // Always notify all players in the lobby about the update
                     let lobby_update_message =
                         postcard::to_allocvec(&MatchmakerResponse::LobbyUpdate{player_count: count as u32})?;
                     if let Some(connections) = state
@@ -195,11 +195,9 @@ async fn handle_join_lobby(
                         .get(&(game_id.clone(), lobby_id.clone()))
                     {
                         for connection in connections.get().iter() {
-                            if connection.stable_id() != conn.stable_id() {
-                                let mut send = connection.open_uni().await?;
-                                send.write_all(&lobby_update_message).await?;
-                                send.finish().await?;
-                            }
+                            let mut send = connection.open_uni().await?;
+                            send.write_all(&lobby_update_message).await?;
+                            send.finish().await?;
                         }
                     }
 
@@ -281,40 +279,38 @@ async fn handle_request_match(
             member_count >= match_info.player_count as usize
         });
 
+    // Always send a MatchmakingUpdate to all players in the room
+    let player_count = state
+        .matchmaking_rooms
+        .get(&match_info)
+        .map(|entry| entry.get().len())
+        .unwrap_or(0);
+    let matchmaking_update_message =
+        postcard::to_allocvec(&MatchmakerResponse::MatchmakingUpdate{player_count: player_count as u32})?;
+
+    if let Some(members) = state
+        .matchmaking_rooms
+        .get(&match_info)
+        .map(|entry| entry.get().clone())
+    {
+        for member in members {
+            if let Ok(mut send) = member.open_uni().await {
+                let _ = send.write_all(&matchmaking_update_message).await;
+                let _ = send.finish().await;
+            }
+        }
+    }
+
     if let Some(true) = should_start_game {
         // Start the match if the room is full
         if let Some(members_to_join) = state.matchmaking_rooms.remove(&match_info) {
+            let members = members_to_join.1;
             drop(state);
             tokio::spawn(async move {
-                if let Err(e) = start_game(ep, members_to_join.1, &match_info).await {
+                if let Err(e) = start_game(ep, members, &match_info).await {
                     error!("Error starting match: {:?}", e);
                 }
             });
-        }
-    } else {
-        // Notify players about the current count if the room isn't full
-        let player_count = state
-            .matchmaking_rooms
-            .get(&match_info)
-            .map(|entry| entry.get().len())
-            .unwrap_or(0);
-        let matchmaking_update_message =
-            postcard::to_allocvec(&MatchmakerResponse::MatchmakingUpdate{player_count: player_count as u32})?;
-
-        if let Some(members) = state
-            .matchmaking_rooms
-            .get(&match_info)
-            .map(|entry| entry.get().clone())
-        {
-            drop(state); // Release the lock before async operations
-            for member in members {
-                if member.stable_id() != conn.stable_id() {
-                    if let Ok(mut send) = member.open_uni().await {
-                        let _ = send.write_all(&matchmaking_update_message).await;
-                        let _ = send.finish().await;
-                    }
-                }
-            }
         }
     }
 
