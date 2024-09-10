@@ -29,10 +29,12 @@ pub enum OnlineMatchmakerRequest {
 
 
 /// Online matchmaker response
+#[derive(Serialize, Clone)]
 pub enum OnlineMatchmakerResponse {
     Searching,
     PlayerCount(usize),
     GameStarting {
+        #[serde(skip_serializing, skip_deserializing)]
         socket: NetworkMatchSocket,
         player_idx: usize,
         player_count: usize,
@@ -45,6 +47,13 @@ pub enum OnlineMatchmakerResponse {
         player_count: usize,
     },
     Error(String),
+}
+
+impl std::fmt::Debug for OnlineMatchmakerResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let serialized = serde_yaml::to_string(self).expect("Failed to serialize OnlineMatchmakerResponse");
+        write!(f, "{:?}", serialized)
+    }
 }
 
 
