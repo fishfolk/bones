@@ -1,5 +1,6 @@
 #![allow(missing_docs)]
 
+use tracing::info;
 use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse};
 use crate::{
     networking::{get_network_endpoint, socket::establish_peer_connections, NetworkMatchSocket},
@@ -101,16 +102,17 @@ pub async fn _resolve_join_lobby(
                 player_count: 0, // We don't have this information yet
             })?;
 
-            // Wait for further messages (player count updates or game start)
+            // Wait for further messages (updates or game start)
             while let Ok(recv) = conn.accept_uni().await {
                 let mut recv = recv;
                 let message = recv.read_to_end(5 * 1024).await?;
                 let message: MatchmakerResponse = postcard::from_bytes(&message)?;
 
                 match message {
-                    MatchmakerResponse::ClientCount(count) => {
+                    MatchmakerResponse::LobbyUpdate{player_count} => {
+                        info!("Online lobby updated player count: {player_count}");
                         matchmaker_channel
-                            .try_send(OnlineMatchmakerResponse::PlayerCount(count as _))?;
+                            .try_send(OnlineMatchmakerResponse::LobbyUpdate{player_count})?;
                     }
                     MatchmakerResponse::Success {
                         random_seed,

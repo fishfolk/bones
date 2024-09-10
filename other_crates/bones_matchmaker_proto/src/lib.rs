@@ -86,8 +86,8 @@ pub struct LobbyId(pub String);
 pub enum MatchmakerResponse {
     /// The connection has been accepted
     Accepted,
-    /// This is the current number of connected clients
-    ClientCount(u32),
+    /// Response that specifies updates about the current matchmaking (ie. player count updates)
+    MatchmakingUpdate { player_count: u32 },
     /// The desired client count has been reached, and the match may start.
     Success {
         /// The random seed that each client should use.
@@ -99,6 +99,8 @@ pub enum MatchmakerResponse {
         /// The node ids of all players.
         player_ids: Vec<(u32, iroh_net::NodeAddr)>,
     },
+    /// Response that specifies updates about the current lobby (ie. player count updates)
+    LobbyUpdate { player_count: u32 },
     /// A list of available lobbies
     LobbiesList(Vec<LobbyListItem>),
     /// Confirmation that a lobby has been created

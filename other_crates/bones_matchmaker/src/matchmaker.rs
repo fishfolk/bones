@@ -188,8 +188,8 @@ async fn handle_join_lobby(
                     send.finish().await?;
 
                     // Notify other players in the lobby
-                    let count_message =
-                        postcard::to_allocvec(&MatchmakerResponse::ClientCount(count as u32))?;
+                    let lobby_update_message =
+                        postcard::to_allocvec(&MatchmakerResponse::LobbyUpdate{player_count: count as u32})?;
                     if let Some(connections) = state
                         .lobby_connections
                         .get(&(game_id.clone(), lobby_id.clone()))
@@ -197,7 +197,7 @@ async fn handle_join_lobby(
                         for connection in connections.get().iter() {
                             if connection.stable_id() != conn.stable_id() {
                                 let mut send = connection.open_uni().await?;
-                                send.write_all(&count_message).await?;
+                                send.write_all(&lobby_update_message).await?;
                                 send.finish().await?;
                             }
                         }
@@ -293,13 +293,13 @@ async fn handle_request_match(
         }
     } else {
         // Notify players about the current count if the room isn't full
-        let member_count = state
+        let player_count = state
             .matchmaking_rooms
             .get(&match_info)
             .map(|entry| entry.get().len())
             .unwrap_or(0);
-        let count_message =
-            postcard::to_allocvec(&MatchmakerResponse::ClientCount(member_count as u32))?;
+        let matchmaking_update_message =
+            postcard::to_allocvec(&MatchmakerResponse::MatchmakingUpdate{player_count: player_count as u32})?;
 
         if let Some(members) = state
             .matchmaking_rooms
@@ -310,7 +310,7 @@ async fn handle_request_match(
             for member in members {
                 if member.stable_id() != conn.stable_id() {
                     if let Ok(mut send) = member.open_uni().await {
-                        let _ = send.write_all(&count_message).await;
+                        let _ = send.write_all(&matchmaking_update_message).await;
                         let _ = send.finish().await;
                     }
                 }

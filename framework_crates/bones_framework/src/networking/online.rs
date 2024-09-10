@@ -31,8 +31,11 @@ pub enum OnlineMatchmakerRequest {
 /// Online matchmaker response
 #[derive(Serialize, Clone)]
 pub enum OnlineMatchmakerResponse {
+    /// Searching for matchmaking in progress
     Searching,
-    PlayerCount(usize),
+    /// Response that specifies updates about the current matchmaking (ie. player count updates)
+    MatchmakingUpdate { player_count: u32 },
+    /// The desired client count has been reached, and the match may start.
     GameStarting {
         #[serde(skip_serializing, skip_deserializing)]
         socket: NetworkMatchSocket,
@@ -40,12 +43,18 @@ pub enum OnlineMatchmakerResponse {
         player_count: usize,
         random_seed: u64,
     },
+    /// Response that specifies updates about the current lobby (ie. player count updates)
+    LobbyUpdate { player_count: u32 },
+    /// A list of available lobbies
     LobbiesList(Vec<LobbyListItem>),
+    /// Confirmation that a lobby has been created
     LobbyCreated(LobbyId),
+    /// Confirmation that a client has joined a lobby
     LobbyJoined {
         lobby_id: LobbyId,
         player_count: usize,
     },
+    /// An error message response
     Error(String),
 }
 

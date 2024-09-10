@@ -81,9 +81,9 @@ player_idx_assignment
                 let message: MatchmakerResponse = postcard::from_bytes(&message)?;
 
                 match message {
-                    MatchmakerResponse::ClientCount(count) => {
-                        info!("Online match player count: {count}");
-                        matchmaker_channel.try_send(OnlineMatchmakerResponse::PlayerCount(count as _))?;
+                    MatchmakerResponse::MatchmakingUpdate{ player_count } => {
+                        info!("Online matchmaking updated player count: {player_count}");
+                        matchmaker_channel.try_send(OnlineMatchmakerResponse::MatchmakingUpdate{ player_count })?;
                     }
                     MatchmakerResponse::Success {
                         random_seed,
