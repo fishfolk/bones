@@ -152,6 +152,12 @@
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The bones framework for game development.
 //!
 </span><span class="attr">#![cfg_attr(feature = <span class="string">"document-features"</span>, doc = <span class="string">"## Features"</span>)]
@@ -196,6 +202,9 @@
 
     <span class="attr">#[cfg(feature = <span class="string">"localization"</span>)]
     </span><span class="kw">pub use </span><span class="kw">crate</span>::localization::<span class="kw-2">*</span>;
+
+    <span class="attr">#[cfg(feature = <span class="string">"logging"</span>)]
+    </span><span class="kw">pub use </span><span class="kw">crate</span>::logging::prelude::<span class="kw-2">*</span>;
 }
 
 <span class="kw">pub mod </span>animation;
@@ -220,6 +229,9 @@
 
 <span class="attr">#[cfg(feature = <span class="string">"localization"</span>)]
 </span><span class="kw">pub mod </span>localization;
+
+<span class="attr">#[cfg(feature = <span class="string">"logging"</span>)]
+</span><span class="kw">pub mod </span>logging;
 
 <span class="doccomment">/// External crate documentation.
 ///

@@ -578,6 +578,9 @@
 <a href="#578" id="578">578</a>
 <a href="#579" id="579">579</a>
 <a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::too_many_arguments)]
 
 </span><span class="kw">use </span>bones_bevy_renderer::{bevy::diagnostic::LogDiagnosticsPlugin, BonesBevyRenderer};
@@ -664,6 +667,9 @@
 </span><span class="kw">struct </span>PersistedTextData(String);
 
 <span class="kw">fn </span>main() {
+    <span class="comment">// Setup logging
+    </span><span class="macro">setup_logs!</span>();
+
     <span class="comment">// Register persistent data's schema so that it can be loaded by the storage loader.
     </span>PersistedTextData::register_schema();
 

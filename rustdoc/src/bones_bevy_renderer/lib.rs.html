@@ -394,6 +394,7 @@
 <a href="#394" id="394">394</a>
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bevy plugin for rendering Bones framework games.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -420,7 +421,7 @@
 <span class="kw">mod </span>ui;
 <span class="kw">use </span>ui::<span class="kw-2">*</span>;
 <span class="kw">mod </span>rumble;
-<span class="kw">use </span>bevy::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>bevy::{log::LogPlugin, prelude::<span class="kw-2">*</span>};
 <span class="kw">use </span>bones::GamepadsRumble;
 <span class="kw">use </span>bones_framework::prelude <span class="kw">as </span>bones;
 <span class="kw">use </span>rumble::<span class="kw-2">*</span>;
@@ -541,6 +542,7 @@
                 }),
                 ..default()
             })
+            .disable::&lt;LogPlugin&gt;()
             .build();
         <span class="kw">if </span><span class="self">self</span>.pixel_art {
             plugins = plugins.set(ImagePlugin::default_nearest());

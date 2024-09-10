@@ -56,6 +56,9 @@
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>bones_bevy_renderer::BonesBevyRenderer;
@@ -70,6 +73,9 @@
 }
 
 <span class="kw">fn </span>main() {
+    <span class="comment">// Setup logging
+    </span><span class="macro">setup_logs!</span>();
+
     <span class="kw">let </span><span class="kw-2">mut </span>game = Game::new();
     game.install_plugin(DefaultGamePlugin);
     game.shared_resource_mut::&lt;AssetServer&gt;()
