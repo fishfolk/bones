@@ -167,6 +167,7 @@ pub struct LogFileConfig {
 /// exiting. See [`tracing_appender::non_blocking::WorkerGuard`] docs for details.
 #[derive(HasSchema)]
 #[schema(no_clone, no_default)]
+#[allow(dead_code)]
 pub struct LogFileGuard(tracing_appender::non_blocking::WorkerGuard);
 
 impl Drop for LogFileGuard {
