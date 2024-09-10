@@ -218,7 +218,7 @@ async fn handle_join_lobby(
                             let members = connections.1;
                             drop(state);
                             tokio::spawn(async move {
-                                if let Err(e) = start_match(ep, members, &match_info).await {
+                                if let Err(e) = start_game(ep, members, &match_info).await {
                                     error!("Error starting match from full lobby: {:?}", e);
                                 }
                             });
@@ -268,7 +268,7 @@ async fn handle_request_match(
         .insert(match_info.clone(), Vec::new());
 
     // Add the player to the matchmaking room and check if it's full
-    let should_start_match = state
+    let should_start_game = state
         .matchmaking_rooms
         .update(&match_info, |_exists, members| {
             members.push(conn.clone());
@@ -281,12 +281,12 @@ async fn handle_request_match(
             member_count >= match_info.player_count as usize
         });
 
-    if let Some(true) = should_start_match {
+    if let Some(true) = should_start_game {
         // Start the match if the room is full
         if let Some(members_to_join) = state.matchmaking_rooms.remove(&match_info) {
             drop(state);
             tokio::spawn(async move {
-                if let Err(e) = start_match(ep, members_to_join.1, &match_info).await {
+                if let Err(e) = start_game(ep, members_to_join.1, &match_info).await {
                     error!("Error starting match: {:?}", e);
                 }
             });
@@ -322,7 +322,7 @@ async fn handle_request_match(
 }
 
 /// Starts a match/lobby with the given members
-async fn start_match(ep: Endpoint, members: Vec<Connection>, match_info: &MatchInfo) -> Result<()> {
+async fn start_game(ep: Endpoint, members: Vec<Connection>, match_info: &MatchInfo) -> Result<()> {
     let random_seed = generate_random_seed();
     let mut player_ids = Vec::new();
     let player_count = members.len();

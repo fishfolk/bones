@@ -1,3 +1,5 @@
+TODO: Update these docs with new matchmaking messaging flow + lobby explanation.
+
 Contains the online matchmaker.
 
 ## Matchmaking

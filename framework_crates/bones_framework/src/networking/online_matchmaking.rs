@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse, MATCH_ALPN, GameID, PlayerIdxAssignment};
-use iroh_net::{NodeId};
+use iroh_net::NodeId;
 use tracing::info;
 use crate::{
     networking::{get_network_endpoint, socket::establish_peer_connections, NetworkMatchSocket},

@@ -7,7 +7,7 @@ use crate::{
     utils::BiChannelServer,
 };
 use bones_matchmaker_proto::{
-    GameID, LobbyId, LobbyInfo, MatchmakerRequest, MatchmakerResponse, PlayerIdxAssignment,
+    GameID, LobbyId, LobbyInfo, MatchmakerRequest, MatchmakerResponse,
     MATCH_ALPN,
 };
 use iroh_net::NodeId;
