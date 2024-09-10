@@ -888,7 +888,7 @@ impl AssetServer {
                 if T::schema() == <SchemaBox as HasSchema>::schema() {
                     // SOUND: the above comparison verifies that T is concretely a SchemaBox so &Schemabox
                     // is the same as &T.
-                    Some(unsafe { std::mem::transmute(asset) })
+                    Some(unsafe { std::mem::transmute::<&SchemaBox, &T>(asset) })
                 } else {
                     asset.try_cast_ref().ok()
                 }
@@ -964,7 +964,7 @@ impl AssetServer {
             if T::schema() == <SchemaBox as HasSchema>::schema() {
                 // SOUND: the above comparison verifies that T is concretely a SchemaBox so &mut Schemabox
                 // is the same as &mut T.
-                unsafe { std::mem::transmute(asset) }
+                unsafe { std::mem::transmute::<&mut SchemaBox, &mut T>(asset) }
             } else {
                 asset.cast_mut()
             }

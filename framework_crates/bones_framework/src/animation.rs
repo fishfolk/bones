@@ -28,11 +28,6 @@ pub struct AnimatedSprite {
     pub repeat: bool,
 }
 
-#[cfg(feature = "serde")]
-fn default_true() -> bool {
-    true
-}
-
 /// Component that may be added to an [`AtlasSprite`] to control which animation, out of a set of
 /// animations, is playing.
 ///
@@ -45,7 +40,6 @@ pub struct AnimationBankSprite {
     /// The collection of animations in this animation bank.
     // TODO: Put Animation Frames in an `Arc` to Avoid Snapshot Clone Cost.
     pub animations: SMap<Ustr, AnimatedSprite>,
-    #[cfg_attr(feature = "serde", serde(default))]
     /// The last animation that was playing.
     pub last_animation: Ustr,
 }

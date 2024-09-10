@@ -46,9 +46,8 @@ When a client connects to the matchmaking server, the very first thing it will d
 [`RequestMatch`][crate::external::bones_matchmaker_proto::MatchmakerRequest::RequestMatch] message
 to the server over a reliable channel.
 
-This message contains the [`MatchInfo`][crate::external::bones_matchmaker_proto::MatchInfo] that
-tells the server how many players the client wants to connect to for the match, along with an
-arbitrary byte sequence for the `match_data`.
+This message contains the [`MatchInfo`] that tells the server how many players the client wants to
+connect to for the match, along with an arbitrary byte sequence for the `match_data`.
 
 In order for players to end up in the same match as each-other, they must specify the _exact_ same
 `MatchInfo`, including the `match_data`. We use the `match_data` as a way to specify which game mode

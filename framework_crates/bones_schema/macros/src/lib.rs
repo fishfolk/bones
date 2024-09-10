@@ -13,44 +13,69 @@ macro_rules! throw {
     };
 }
 
-/// Derive macro for the `HasSchema` trait.
+/// Derive macro for the HasSchema trait.
 ///
-/// ## Example
+/// ## Usage with #[repr(C)]
+/// HasSchema works with the #[repr(C)] annotation to fully implement its features.
 ///
+/// If there is no #[repr(C)] annotation, the SchemaKind of your type's schema will be Opaque.
+///
+/// This means if you don't know the kind of type, like in the case of a SchemaBox, you'll be unable
+/// to read the fields.
+///
+/// This applies to bones' lua scripting since SchemaBox is effectively the "lua type".
+/// See SchemaBox.
+///
+/// If you intend a type to be opaque even though it has #[repr(C)] you can use #[schema(opaque)]
+/// to force an opaque schema representation.
+///
+/// Keep in mind, enums deriving HasSchema with a #[repr(C)] annotation must also specify an
+/// enum tag type like #[repr(C, u8)] where u8 could be either u16 or u32 if you need
+/// more than 256 enum variants.
+///
+/// ## no_default & no_clone attributes
+/// HasSchema derive requires the type to implement Default & Clone, if either of these cannot be
+/// implemented you can use the no_default & no_clone schema attributes respectively to ignore
+/// these requirements.
 /// ```ignore
-/// /// This is a custom type data.
-/// ///
-/// /// While it must implement [`HasSchema`] it is fine to just make it opaque.
-/// ///
-/// /// In this case we want to store the name of the type in our custom type data.
-/// #[derive(HasSchema, Clone, Default)]
-/// /// struct TypeName(String);
+/// #[derive(HasSchema, Default)]
+/// #[schema(no_clone)]
+/// struct DoesntImplClone;
 ///
-/// /// In order to make [`TypeName`] derivable, we must implement [`FromType`] for it.
-/// impl<T> FromType<T> for TypeName {
-///     fn from_type() -> Self {
-///         Self(std::any::type_name::<T>().to_string())
-///     }
-/// }
-///
-/// /// Finally we can derive our type data on other types that implement [`HasSchema`] by using the
-/// /// `#[derive_type_data()]` attribute with one or more type datas to derive.
-/// #[derive(HasSchema, Debug, Default, Clone)]
-/// #[derive_type_data(TypeName)]
-/// #[repr(C)]
-/// struct MyStruct {
-///     x: f32,
-///     y: f32,
-/// }
-///
-/// /// It is also possible to add type data that may or may not implement [`FromType`] by passing in an
-/// /// expression for the type data into a `type_data` attribute.
-/// #[derive(HasSchema, Clone, Default, Debug)]
-/// #[type_data(TypeName("CustomName".into()))]
-/// #[repr(C)]
-/// struct MyOtherStruct;
+/// #[derive(HasSchema, Clone)]
+/// #[schema(no_default)]
+/// struct DoesntImplDefault;
 /// ```
+/// The caveat for putting no_default on your type is that it cannot be created from a Schema.
+/// This is necessary if you want to create your type within a bones lua script.
 ///
+/// Since the fields that need to be initialized to create a complete version of your type cannot be
+/// determined, Schema needs a default function to initialize the data properly.
+///
+/// The caveat for putting no_clone on your type is that it cannot be cloned in the form of a
+/// SchemaBox.
+///
+/// This is critical in the case of bones' networking which will panic if your type is in the world
+/// and does not implement clone during the network rollback.
+///
+/// ## type_data attribute
+/// This attribute takes an expression and stores that value in what is basically
+/// a type keyed map accessible from your type's Schema.
+///
+/// ## derive_type_data attribute
+/// This attribute is simply a shortcut equivalent to using the type_data attribute
+/// with any type's `FromType<YourHasSchemaType>` implementation like so:
+/// ```ignore
+/// #[derive(HasSchema, Clone, Default)]
+/// #[type_data(<OtherType as FromType<Data>>::from_type())]
+/// struct Data;
+/// ```
+/// Simply specify a type instead of an expression:
+/// ```ignore
+/// #[derive(HasSchema, Clone, Default)]
+/// #[derive_type_data(OtherType)] // OtherType implements FromType<Data>
+/// struct Data;
+/// ```
 /// ## Known Limitations
 ///
 /// Currently it isn't possible to construct a struct that contains itself. For example, this will

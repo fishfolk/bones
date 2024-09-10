@@ -68,6 +68,11 @@ image_ico = ["image/ico"]
 ## Enable BMP image loader.
 image_bmp = ["image/bmp"]
 
+#! ### Debuging Features
+
+## Simulate dramatic network latency by inserting random sleeps into the networking code. This is extremely cheap and hacky but may be useful.
+debug-network-slowdown = []
+
 # Enables tracy tracing subscriber to capture tracing spans for profiling with Tracy.
 #
 # Note that bones is primarily instrumented with puffin scopes, tracy only captures tracing spans.

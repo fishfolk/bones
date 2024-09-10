@@ -136,7 +136,7 @@ pub struct NetworkMatchSocket(Arc<dyn NetworkSocket>);
 
 /// Wraps [`ggrs::Message`] with included `match_id`, used to determine if message received
 /// from current match.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameMessage {
     /// Socket match id
     pub match_id: u8,
@@ -575,8 +575,8 @@ where
         // to integer so our computed timestep will match  that of ggrs.
         let network_fps = (simulation_fps * NETWORK_FRAME_RATE_FACTOR) as f64;
         let network_fps = network_fps
-            .max(std::usize::MIN as f64)
-            .min(std::usize::MAX as f64)
+            .max(usize::MIN as f64)
+            .min(usize::MAX as f64)
             .round() as usize;
 
         // There may be value in dynamically negotitaing these values based on client's pings
