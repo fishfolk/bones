@@ -19,7 +19,10 @@ pub struct SystemStages {
     pub has_started: bool,
     /// The systems that should run at startup.
     pub startup_systems: Vec<StaticSystem<(), ()>>,
+    /// Systems that are continously run until they succeed(return Some). These run before all stages. Uses Option to allow for easy usage of `?`.
+    pub single_success_systems: Vec<StaticSystem<(), Option<()>>>,
 }
+
 impl std::fmt::Debug for SystemStages {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SystemStages")
@@ -54,6 +57,12 @@ impl SystemStages {
             self.has_started = true;
         }
 
+        // Run single success systems
+        self.single_success_systems.retain_mut(|system| {
+            let result = system.run(world, ());
+            result.is_none() // Keep the system if it didn't succeed (returned None)
+        });
+
         // Run each stage
         for stage in &mut self.stages {
             // Set the current stage resource
@@ -82,6 +91,7 @@ impl SystemStages {
             ],
             has_started: false,
             startup_systems: default(),
+            single_success_systems: Vec::new(),
         }
     }
 
@@ -91,6 +101,15 @@ impl SystemStages {
         S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
     {
         self.startup_systems.push(system.system());
+        self
+    }
+
+    /// Add a system that will run each frame until it succeeds (returns Some). Runs before all stages. Uses Option to allow for easy usage of `?`.
+    pub fn add_single_success_system<Args, S>(&mut self, system: S) -> &mut Self
+    where
+        S: IntoSystem<Args, (), Option<()>, Sys = StaticSystem<(), Option<()>>>,
+    {
+        self.single_success_systems.push(system.system());
         self
     }
 
@@ -151,6 +170,27 @@ impl SystemStages {
 
         self
     }
+
+    /// Remove all systems from all stages, including startup and single success systems. Resets has_started as well, allowing for startup systems to run once again.
+    pub fn reset_remove_all_systems(&mut self) {
+        // Reset the has_started flag
+        self.has_started = false;
+        self.remove_all_systems();
+    }
+
+    /// Remove all systems from all stages, including startup and single success systems. Does not reset has_started.
+    pub fn remove_all_systems(&mut self) {
+        // Clear startup systems
+        self.startup_systems.clear();
+
+        // Clear single success systems
+        self.single_success_systems.clear();
+
+        // Clear systems from each stage
+        for stage in &mut self.stages {
+            stage.remove_all_systems();
+        }
+    }
 }
 
 /// Trait for system stages. A stage is a
@@ -164,6 +204,8 @@ pub trait SystemStage: Sync + Send {
 
     /// Add a system to this stage.
     fn add_system(&mut self, system: StaticSystem<(), ()>);
+    /// Remove all systems from this stage.
+    fn remove_all_systems(&mut self);
 }
 
 /// A collection of systems that will be run in order.
@@ -215,6 +257,10 @@ impl SystemStage for SimpleSystemStage {
 
     fn add_system(&mut self, system: StaticSystem<(), ()>) {
         self.systems.push(system);
+    }
+
+    fn remove_all_systems(&mut self) {
+        self.systems.clear();
     }
 }
 
