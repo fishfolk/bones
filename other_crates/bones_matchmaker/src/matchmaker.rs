@@ -4,7 +4,7 @@ use bones_matchmaker_proto::{
     GameID, LobbyId, LobbyInfo, LobbyListItem, MatchInfo, MatchmakerRequest, MatchmakerResponse,
     PlayerIdxAssignment,
 };
-use tokio::time::{timeout, Duration};
+use tokio::time::{sleep, Duration};
 use iroh_net::{Endpoint, NodeAddr};
 use once_cell::sync::Lazy;
 use quinn::Connection;
@@ -252,7 +252,6 @@ async fn handle_join_lobby(
     Ok(())
 }
 
-/// Handles a request to join a matchmaking queue
 async fn handle_request_match(
     ep: Endpoint,
     conn: Connection,
@@ -260,6 +259,41 @@ async fn handle_request_match(
     send: &mut quinn::SendStream,
 ) -> Result<()> {
     println!("Entering handle_request_match");
+
+    // Check if the matchmaking room is full
+    for _ in 0..100 { // 10 seconds total (100 * 100ms)
+        let room_is_full = {
+            let state = STATE.lock().await;
+            state.matchmaking_rooms.get(&match_info)
+                .map(|room| room.get().len() >= match_info.max_players as usize)
+                .unwrap_or(false)
+        };
+
+        if !room_is_full {
+            break;
+        }
+
+        // Wait for 100ms before checking again
+        sleep(Duration::from_millis(100)).await;
+    }
+
+    // Check one last time if the room is full
+    let can_join = {
+        let state = STATE.lock().await;
+        state.matchmaking_rooms.get(&match_info)
+            .map(|room| room.get().len() < match_info.max_players as usize)
+            .unwrap_or(true)
+    };
+
+    if !can_join {
+        // Send an error message if the room is still full after waiting
+        let error_message = postcard::to_allocvec(&MatchmakerResponse::Error(
+            "Matchmaking room is full. Please try again later.".to_string(),
+        ))?;
+        send.write_all(&error_message).await?;
+        send.finish().await?;
+        return Ok(());
+    }
 
     // Accept the matchmaking request
     let message = postcard::to_allocvec(&MatchmakerResponse::Accepted)?;
@@ -273,11 +307,17 @@ async fn handle_request_match(
         let mut state = STATE.lock().await;
         println!("Acquired STATE lock");
 
-        let mut room_entry = state.matchmaking_rooms.entry(match_info.clone()).or_default();
-        let members = room_entry.get_mut();
-        members.push(conn.clone());
-        println!("Added new connection to matchmaking room. Total members: {}", members.len());
-        members.len() as u32
+        let count = state.matchmaking_rooms.update(&match_info, |exists, members| {
+            members.push(conn.clone());
+            members.len() as u32
+        }).unwrap_or_else(|| {
+            let members = vec![conn.clone()];
+            state.matchmaking_rooms.insert(match_info.clone(), members).unwrap();
+            1 as u32
+        });
+
+        println!("Added new connection to matchmaking room. Total members: {:?}", count);
+        count
     }; // Release the lock here
 
     // Send MatchmakingUpdate to all players in the room and get active connections
@@ -295,6 +335,7 @@ async fn handle_request_match(
     println!("Exiting handle_request_match");
     Ok(())
 }
+
 
 
 async fn send_matchmaking_updates(match_info: &MatchInfo, new_player_count: u32) -> Result<Vec<Connection>> {
