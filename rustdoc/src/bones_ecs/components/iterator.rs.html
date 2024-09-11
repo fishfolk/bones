@@ -330,13 +330,13 @@
     <span class="kw">type </span>Item = SchemaRef&lt;<span class="lifetime">'a</span>&gt;;
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>max_id = <span class="self">self</span>.components.max_id;
-        <span class="kw">while </span>!(<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id)
-            &amp;&amp; <span class="self">self</span>.components.bitset.bit_test(<span class="self">self</span>.current_id))
-            &amp;&amp; <span class="self">self</span>.current_id &lt;= max_id
+        <span class="kw">while </span><span class="self">self</span>.current_id &lt; max_id
+            &amp;&amp; !(<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id)
+                &amp;&amp; <span class="self">self</span>.components.bitset.bit_test(<span class="self">self</span>.current_id))
         {
             <span class="self">self</span>.current_id += <span class="number">1</span>;
         }
-        <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt;= max_id {
+        <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt; max_id {
             <span class="comment">// SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
             </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{
                 SchemaRef::from_ptr_schema(
@@ -363,11 +363,11 @@
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="comment">// We stop iterating at bitset length, not component store length, as we want to iterate over
         // whole bitset and return None for entities that don't have this optional component.
-        </span><span class="kw">let </span>max_id = <span class="self">self</span>.bitset.bit_len() - <span class="number">1</span>;
-        <span class="kw">while </span>!<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id) &amp;&amp; <span class="self">self</span>.current_id &lt;= max_id {
+        </span><span class="kw">let </span>max_id = <span class="self">self</span>.bitset.bit_len();
+        <span class="kw">while </span><span class="self">self</span>.current_id &lt; max_id &amp;&amp; !<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id) {
             <span class="self">self</span>.current_id += <span class="number">1</span>;
         }
-        <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt;= max_id {
+        <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt; max_id {
             <span class="comment">// SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
             </span><span class="kw">if </span><span class="self">self</span>.components.bitset.bit_test(<span class="self">self</span>.current_id) {
                 <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{
@@ -402,13 +402,13 @@
     <span class="kw">type </span>Item = SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;;
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">let </span>max_id = <span class="self">self</span>.components.max_id;
-        <span class="kw">while </span>!(<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id)
-            &amp;&amp; <span class="self">self</span>.components.bitset.bit_test(<span class="self">self</span>.current_id))
-            &amp;&amp; <span class="self">self</span>.current_id &lt;= max_id
+        <span class="kw">while </span><span class="self">self</span>.current_id &lt; max_id
+            &amp;&amp; !(<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id)
+                &amp;&amp; <span class="self">self</span>.components.bitset.bit_test(<span class="self">self</span>.current_id))
         {
             <span class="self">self</span>.current_id += <span class="number">1</span>;
         }
-        <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt;= max_id {
+        <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt; max_id {
             <span class="comment">// SAFE: We know that the index is within bounds, and we know that the pointer will be
             // valid for the new lifetime.
             </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{
@@ -436,11 +436,11 @@
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="comment">// We do not stop iterating at component store length, as we want to iterate over
         // whole bitset and return None for entities that don't have this optional component.
-        </span><span class="kw">let </span>max_id = <span class="self">self</span>.bitset.bit_len() - <span class="number">1</span>;
-        <span class="kw">while </span>!<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id) &amp;&amp; <span class="self">self</span>.current_id &lt;= max_id {
+        </span><span class="kw">let </span>max_id = <span class="self">self</span>.bitset.bit_len();
+        <span class="kw">while </span><span class="self">self</span>.current_id &lt; max_id &amp;&amp; !<span class="self">self</span>.bitset.bit_test(<span class="self">self</span>.current_id) {
             <span class="self">self</span>.current_id += <span class="number">1</span>;
         }
-        <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt;= max_id {
+        <span class="kw">let </span>ret = <span class="kw">if </span><span class="self">self</span>.current_id &lt; max_id {
             <span class="comment">// SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
             </span><span class="kw">if </span><span class="self">self</span>.components.bitset.bit_test(<span class="self">self</span>.current_id) {
                 <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{
