@@ -33,8 +33,8 @@ pub enum MatchmakerRequest {
 /// Information about a match that is being requested
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
 pub struct MatchInfo {
-    /// The number of clients to have in a match.
-    pub player_count: u32,
+    /// The maximum number of players to have in a match.
+    pub max_players: u32,
     /// This is an arbitrary set of bytes that must match exactly for clients to end up in the same match.
     /// This allows us to support matchmaking for different modes or game versions with the same matchmaking server.
     pub match_data: Vec<u8>,

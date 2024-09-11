@@ -32,7 +32,7 @@ pub async fn _resolve_search_for_match(
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::RequestMatch(MatchInfo {
-        player_count: player_count,
+        max_players: player_count,
         match_data,
         game_id,
 player_idx_assignment
@@ -43,11 +43,11 @@ player_idx_assignment
     send.write_all(&message).await?;
     send.finish().await?;
 
-    let response = recv.read_to_end(256).await?;
-    let message: MatchmakerResponse = postcard::from_bytes(&response)?;
+    let res = recv.read_to_end(256).await?;
+    let response: MatchmakerResponse = postcard::from_bytes(&res)?;
 
-    if let MatchmakerResponse::Accepted = message {
-        info!("Waiting for match...");
+    if let MatchmakerResponse::Accepted = response {
+        info!("Matchmaking request accepted. Waiting for match...");
     } else {
         anyhow::bail!("Invalid response from matchmaker");
     }
@@ -81,6 +81,8 @@ player_idx_assignment
                 let message: MatchmakerResponse = postcard::from_bytes(&message)?;
 
                 match message {
+
+                    
                     MatchmakerResponse::MatchmakingUpdate{ player_count } => {
                         info!("Online matchmaking updated player count: {player_count}");
                         matchmaker_channel.try_send(OnlineMatchmakerResponse::MatchmakingUpdate{ player_count })?;

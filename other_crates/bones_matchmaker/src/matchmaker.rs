@@ -4,6 +4,7 @@ use bones_matchmaker_proto::{
     GameID, LobbyId, LobbyInfo, LobbyListItem, MatchInfo, MatchmakerRequest, MatchmakerResponse,
     PlayerIdxAssignment,
 };
+use tokio::time::{timeout, Duration};
 use iroh_net::{Endpoint, NodeAddr};
 use once_cell::sync::Lazy;
 use quinn::Connection;
@@ -15,6 +16,7 @@ use tokio::sync::Mutex;
 
 /// Represents the lobbies for a specific game
 struct GameLobbies {
+    #[allow(dead_code)]
     game_id: GameID,
     lobbies: HashMap<LobbyId, LobbyInfo>,
 }
@@ -33,12 +35,12 @@ static STATE: Lazy<Arc<Mutex<State>>> = Lazy::new(|| Arc::new(Mutex::new(State::
 /// Handles incoming connections and routes requests to appropriate handlers
 pub async fn handle_connection(ep: Endpoint, conn: Connection) -> Result<()> {
     let connection_id = conn.stable_id();
-    debug!(connection_id, "Accepted matchmaker connection");
+    println!( "Accepted matchmaker connection: {:?}", connection_id);
 
     loop {
         tokio::select! {
             close = conn.closed() => {
-                debug!("Connection closed {close:?}");
+                println!("Connection closed {close:?}");
                 return Ok(());
             }
             bi = conn.accept_bi() => {
@@ -125,9 +127,11 @@ async fn handle_create_lobby(
         .insert(lobby_id.clone(), lobby_info.clone());
 
     // Add the connection to the lobby
-    state
+        if let Err(e) = state
         .lobby_connections
-        .insert((lobby_info.game_id.clone(), lobby_id.clone()), vec![conn]);
+        .insert((lobby_info.game_id.clone(), lobby_id.clone()), vec![conn]) {
+            error!("Failed to inserting lobby during creation: {:?}", e);
+        }
 
     // Send confirmation to the client
     let message = postcard::to_allocvec(&MatchmakerResponse::LobbyCreated(lobby_id))?;
@@ -204,7 +208,7 @@ async fn handle_join_lobby(
                     // Check if the lobby is full and start the match if it is
                     if count == max_players as usize {
                         let match_info = MatchInfo {
-                            player_count: max_players,
+                            max_players,
                             match_data,
                             game_id: game_id.clone(),
                             player_idx_assignment,
@@ -255,67 +259,126 @@ async fn handle_request_match(
     match_info: MatchInfo,
     send: &mut quinn::SendStream,
 ) -> Result<()> {
+    println!("Entering handle_request_match");
+
     // Accept the matchmaking request
     let message = postcard::to_allocvec(&MatchmakerResponse::Accepted)?;
     send.write_all(&message).await?;
     send.finish().await?;
+    println!("Sent Accepted response to client");
+    println!("Handling join matchmaking. Match Info: {:?}", match_info);
 
-    let mut state = STATE.lock().await;
-    state
-        .matchmaking_rooms
-        .insert(match_info.clone(), Vec::new());
+    // Add the connection to the matchmaking room
+    let new_player_count = {
+        let mut state = STATE.lock().await;
+        println!("Acquired STATE lock");
 
-    // Add the player to the matchmaking room and check if it's full
-    let should_start_game = state
-        .matchmaking_rooms
-        .update(&match_info, |_exists, members| {
-            members.push(conn.clone());
-            let member_count = members.len();
-            debug!(
-                ?match_info,
-                "Room now has {}/{} members", member_count, match_info.player_count
-            );
+        let mut room_entry = state.matchmaking_rooms.entry(match_info.clone()).or_default();
+        let members = room_entry.get_mut();
+        members.push(conn.clone());
+        println!("Added new connection to matchmaking room. Total members: {}", members.len());
+        members.len() as u32
+    }; // Release the lock here
 
-            member_count >= match_info.player_count as usize
-        });
+    // Send MatchmakingUpdate to all players in the room and get active connections
+    let active_connections = send_matchmaking_updates(&match_info, new_player_count).await?;
 
-    // Always send a MatchmakingUpdate to all players in the room
-    let player_count = state
-        .matchmaking_rooms
-        .get(&match_info)
-        .map(|entry| entry.get().len())
-        .unwrap_or(0);
-    let matchmaking_update_message =
-        postcard::to_allocvec(&MatchmakerResponse::MatchmakingUpdate{player_count: player_count as u32})?;
+    let player_count = active_connections.len();
+    println!("Room now has {}/{} active players", player_count, match_info.max_players);
 
-    if let Some(members) = state
-        .matchmaking_rooms
-        .get(&match_info)
-        .map(|entry| entry.get().clone())
-    {
-        for member in members {
+    // Check if the room is full and start the game if it is
+    if player_count >= match_info.max_players as usize {
+        println!("Room is full. Starting the game.");
+        start_matchmaked_game_if_ready(ep, &match_info).await?;
+    }
+
+    println!("Exiting handle_request_match");
+    Ok(())
+}
+
+
+async fn send_matchmaking_updates(match_info: &MatchInfo, new_player_count: u32) -> Result<Vec<Connection>> {
+    let connections = {
+        let state = STATE.lock().await;
+        state.matchmaking_rooms.get(match_info)
+            .map(|room| room.get().clone())
+            .unwrap_or_default()
+    };
+
+    let current_count = connections.len() as u32;
+    let mut active_connections = Vec::new();
+
+    let first_update_message = postcard::to_allocvec(&MatchmakerResponse::MatchmakingUpdate {
+        player_count: current_count
+    })?;
+
+    // Send first update and check which connections are still active
+    for (index, conn) in connections.into_iter().enumerate() {
+        if let Ok(mut send) = conn.open_uni().await {
+            if send.write_all(&first_update_message).await.is_ok() && send.finish().await.is_ok() {
+                println!("Successfully sent first update to member {}", index);
+                active_connections.push(conn);
+            } else {
+                println!("Failed to send first update to member {}", index);
+            }
+        } else {
+            println!("Failed to open uni stream for member {}", index);
+        }
+    }
+
+    // If the number of active connections is different from what we expected, send a second update
+    if active_connections.len() as u32 != new_player_count {
+        let second_update_message = postcard::to_allocvec(&MatchmakerResponse::MatchmakingUpdate {
+            player_count: active_connections.len() as u32
+        })?;
+
+        for (index, member) in active_connections.iter().enumerate() {
             if let Ok(mut send) = member.open_uni().await {
-                let _ = send.write_all(&matchmaking_update_message).await;
-                let _ = send.finish().await;
+                if let Err(e) = send.write_all(&second_update_message).await {
+                    println!("Failed to send second update to member {}: {:?}", index, e);
+                } else if let Err(e) = send.finish().await {
+                    println!("Failed to finish sending second update to member {}: {:?}", index, e);
+                } else {
+                    println!("Successfully sent second update to member {}", index);
+                }
+            } else {
+                println!("Failed to open uni stream for second update to member {}", index);
             }
         }
     }
 
-    if let Some(true) = should_start_game {
-        // Start the match if the room is full
-        if let Some(members_to_join) = state.matchmaking_rooms.remove(&match_info) {
-            let members = members_to_join.1;
-            drop(state);
-            tokio::spawn(async move {
-                if let Err(e) = start_game(ep, members, &match_info).await {
-                    error!("Error starting match: {:?}", e);
-                }
-            });
-        }
+    // Update the stored connections
+    {
+        let state = STATE.lock().await;
+        state.matchmaking_rooms.remove(&match_info).unwrap();
+        state.matchmaking_rooms.insert(match_info.clone(), active_connections.clone()).unwrap();
+    }
+
+    Ok(active_connections)
+}
+
+async fn start_matchmaked_game_if_ready(ep: Endpoint, match_info: &MatchInfo) -> Result<()> {
+    let members = {
+        let state = STATE.lock().await;
+        state.matchmaking_rooms.remove(match_info).map(|(_, connections)| connections)
+    };
+
+    if let Some(members) = members {
+        let cloned_match_info = match_info.clone();
+        println!("Starting game with {} members", members.len());
+        tokio::spawn(async move {
+            match start_game(ep, members, &cloned_match_info).await {
+                Ok(_) => println!("Game started successfully"),
+                Err(e) => error!("Error starting match: {:?}", e),
+            }
+        });
+    } else {
+        warn!("Failed to remove matchmaking room when starting game");
     }
 
     Ok(())
 }
+
 
 /// Starts a match/lobby with the given members
 async fn start_game(ep: Endpoint, members: Vec<Connection>, match_info: &MatchInfo) -> Result<()> {
@@ -365,7 +428,7 @@ async fn start_game(ep: Endpoint, members: Vec<Connection>, match_info: &MatchIn
         let player_idx = player_indices[conn_idx];
         let message = postcard::to_allocvec(&MatchmakerResponse::Success {
             random_seed,
-            player_count: match_info.player_count,
+            player_count: player_ids.len() as u32,
             player_idx: player_idx as u32,
             player_ids: player_ids.clone(),
         })?;
