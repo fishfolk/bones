@@ -1,5 +1,5 @@
 use crate::helpers::generate_random_seed;
-use super::matchmaking::handle_request_match;
+use super::matchmaking::handle_request_matchaking;
 use super::lobbies::{
 handle_list_lobbies,
 handle_create_lobby,
@@ -55,7 +55,7 @@ pub async fn handle_connection(ep: Endpoint, conn: Connection) -> Result<()> {
                 // Route the request to the appropriate handler
                 match request {
                     MatchmakerRequest::RequestMatch(match_info) => {
-                        handle_request_match(ep.clone(), conn.clone(), match_info, &mut send).await?;
+                        handle_request_matchaking(ep.clone(), conn.clone(), match_info, &mut send).await?;
                     }
                     MatchmakerRequest::ListLobbies(game_id) => {
                         handle_list_lobbies(game_id, &mut send).await?;
