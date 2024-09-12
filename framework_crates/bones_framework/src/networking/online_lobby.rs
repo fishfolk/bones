@@ -2,29 +2,23 @@
 
 use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse};
 use crate::{
-    networking::{get_network_endpoint, socket::establish_peer_connections, NetworkMatchSocket},
+    networking::{socket::establish_peer_connections, NetworkMatchSocket},
     prelude::*,
     utils::BiChannelServer,
 };
 use bones_matchmaker_proto::{
-    GameID, LobbyId, LobbyInfo, MatchmakerRequest, MatchmakerResponse, MATCH_ALPN,
+    GameID, LobbyId, LobbyInfo, MatchmakerRequest, MatchmakerResponse,
 };
 use iroh_net::NodeId;
 use std::sync::Arc;
 use tracing::info;
-
-async fn connect_to_matchmaker(id: NodeId) -> anyhow::Result<iroh_quinn::Connection> {
-    let ep = get_network_endpoint().await;
-    Ok(ep.connect(id.into(), MATCH_ALPN).await?)
-}
+use iroh_quinn::Connection;
 
 pub async fn _resolve_list_lobbies(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-    id: NodeId,
+    conn: Connection,
     game_id: GameID,
 ) -> anyhow::Result<()> {
-    let conn = connect_to_matchmaker(id).await?;
-
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::ListLobbies(game_id);
@@ -47,11 +41,9 @@ pub async fn _resolve_list_lobbies(
 
 pub async fn _resolve_create_lobby(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-    id: NodeId,
+    conn: Connection,
     lobby_info: LobbyInfo,
 ) -> anyhow::Result<()> {
-    let conn = connect_to_matchmaker(id).await?;
-
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::CreateLobby(lobby_info);
@@ -77,13 +69,11 @@ pub async fn _resolve_create_lobby(
 
 pub async fn _resolve_join_lobby(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-    id: NodeId,
+    conn: Connection,
     game_id: GameID,
     lobby_id: LobbyId,
     password: Option<String>,
 ) -> anyhow::Result<()> {
-    let conn = connect_to_matchmaker(id).await?;
-
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::JoinLobby(game_id, lobby_id.clone(), password);

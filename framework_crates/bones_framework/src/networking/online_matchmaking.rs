@@ -2,24 +2,23 @@
 
 use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse};
 use crate::{
-    networking::{get_network_endpoint, socket::establish_peer_connections, NetworkMatchSocket},
+    networking::{socket::establish_peer_connections, NetworkMatchSocket},
     prelude::*,
     utils::BiChannelServer,
 };
 use bones_matchmaker_proto::{
-    GameID, MatchInfo, MatchmakerRequest, MatchmakerResponse, PlayerIdxAssignment, MATCH_ALPN,
+    GameID, MatchInfo, MatchmakerRequest, MatchmakerResponse, PlayerIdxAssignment,
 };
 use iroh_net::NodeId;
 use std::sync::Arc;
 use tracing::info;
 use iroh_quinn::Connection;
-use iroh_net::Endpoint;
+
+
 
 
 pub async fn _resolve_stop_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-    id: NodeId,
-    ep: Endpoint,
     conn: Connection,
     match_info: MatchInfo,
 ) -> anyhow::Result<()> {
@@ -61,15 +60,9 @@ pub async fn _resolve_stop_search_for_match(
 
 pub async fn _resolve_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-    id: NodeId,
+    conn: Connection,
     match_info: MatchInfo,
-    current_connection: &mut Option<(Endpoint, Connection)>,
 ) -> anyhow::Result<()> {
-    info!("Connecting to online matchmaker");
-    let ep = get_network_endpoint().await;
-    let conn = ep.connect(id.into(), MATCH_ALPN).await?;
-    info!("Connected to online matchmaker");
-
     matchmaker_channel
         .send(OnlineMatchmakerResponse::Searching)
         .await?;
@@ -85,36 +78,29 @@ pub async fn _resolve_search_for_match(
     send.finish().await?;
 
     let res = recv.read_to_end(256).await?;
-    let response: MatchmakerResponse = postcard::from_bytes(&res)?;
-
-    if let MatchmakerResponse::Accepted = response {
-        info!("Matchmaking request accepted. Waiting for match...");
-        *current_connection = Some((ep.clone(), conn.clone()));
-    } else {
-        anyhow::bail!("Invalid response from matchmaker");
-    }
+    let _response: MatchmakerResponse = postcard::from_bytes(&res)?;
 
     loop {
         tokio::select! {
             // UI message
-            message = matchmaker_channel.recv() => {
-                match message {
-                    Ok(OnlineMatchmakerRequest::SearchForGame { .. }) => {
-                        anyhow::bail!("Unexpected message from UI");
-                    }
-                    Ok(OnlineMatchmakerRequest::StopSearch { .. }) => {
-                        anyhow::bail!("Unexpected stop search");
-                    }
-                    Ok(OnlineMatchmakerRequest::ListLobbies { .. }) |
-                    Ok(OnlineMatchmakerRequest::CreateLobby { .. }) |
-                    Ok(OnlineMatchmakerRequest::JoinLobby { .. }) => {
-                        anyhow::bail!("Unexpected lobby-related message during matchmaking");
-                    }
-                    Err(err) => {
-                        anyhow::bail!("Failed to recv from match maker channel: {err:?}");
-                    }
-                }
-            }
+            // message = matchmaker_channel.recv() => {
+            //     match message {
+            //         Ok(OnlineMatchmakerRequest::SearchForGame { .. }) => {
+            //             anyhow::bail!("Unexpected message from UI");
+            //         }
+            //         Ok(OnlineMatchmakerRequest::StopSearch { .. }) => {
+            //             anyhow::bail!("Unexpected stop search");
+            //         }
+            //         Ok(OnlineMatchmakerRequest::ListLobbies { .. }) |
+            //         Ok(OnlineMatchmakerRequest::CreateLobby { .. }) |
+            //         Ok(OnlineMatchmakerRequest::JoinLobby { .. }) => {
+            //             anyhow::bail!("Unexpected lobby-related message during matchmaking");
+            //         }
+            //         Err(err) => {
+            //             anyhow::bail!("Failed to recv from match maker channel: {err:?}");
+            //         }
+            //     }
+            // }
             // Matchmaker message
             recv = conn.accept_uni() => {
                 let mut recv = recv?;
@@ -122,8 +108,6 @@ pub async fn _resolve_search_for_match(
                 let message: MatchmakerResponse = postcard::from_bytes(&message)?;
 
                 match message {
-
-
                     MatchmakerResponse::MatchmakingUpdate{ player_count } => {
                         info!("Online matchmaking updated player count: {player_count}");
                         matchmaker_channel.try_send(OnlineMatchmakerResponse::MatchmakingUpdate{ player_count })?;

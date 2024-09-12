@@ -4,11 +4,11 @@
 
 pub use super::online_lobby::*;
 pub use super::online_matchmaking::*;
-use crate::{networking::NetworkMatchSocket, prelude::*};
-pub use bones_matchmaker_proto::{GameID, LobbyId, LobbyInfo, LobbyListItem, PlayerIdxAssignment, MatchInfo};
+use crate::{networking::{NetworkMatchSocket, get_network_endpoint }, prelude::*};
+pub use bones_matchmaker_proto::{GameID, LobbyId, LobbyInfo, LobbyListItem, PlayerIdxAssignment, MatchInfo, MATCH_ALPN};
 use iroh_net::NodeId;
 use once_cell::sync::Lazy;
-use tracing::warn;
+use tracing::{warn, info};
 use iroh_quinn::Connection;
 use iroh_net::Endpoint;
 
@@ -43,6 +43,19 @@ pub enum OnlineMatchmakerRequest {
         lobby_id: LobbyId,
         password: Option<String>,
     },
+}
+
+impl OnlineMatchmakerRequest {
+    /// Returns the NodeId associated with the request.
+    pub fn node_id(&self) -> NodeId {
+        match self {
+            OnlineMatchmakerRequest::SearchForGame { id, .. } => *id,
+            OnlineMatchmakerRequest::StopSearch { id } => *id,
+            OnlineMatchmakerRequest::ListLobbies { id, .. } => *id,
+            OnlineMatchmakerRequest::CreateLobby { id, .. } => *id,
+            OnlineMatchmakerRequest::JoinLobby { id, .. } => *id,
+        }
+    }
 }
 
 /// Online matchmaker response
@@ -111,6 +124,7 @@ async fn online_matchmaker(
                 match_data,
                 player_idx_assignment,
             } => {
+                let (_ep, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;
                 let match_info = MatchInfo {
                     max_players: player_count,
                     match_data,
@@ -120,9 +134,8 @@ async fn online_matchmaker(
 
                 if let Err(err) = crate::networking::online_matchmaking::_resolve_search_for_match(
                     &matchmaker_channel,
-                    id,
+                    conn.clone(),
                     match_info.clone(),
-                    &mut current_connection,
                 )
                 .await
                 {
@@ -134,12 +147,11 @@ async fn online_matchmaker(
                 }
             }
             OnlineMatchmakerRequest::StopSearch { id } => {
-                if let (Some((ep, conn)), Some(match_info)) = (current_connection.take(), current_match_info.take()) {
+                let (_, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;
+                if let Some(match_info) = current_match_info.take() {
                     if let Err(err) = crate::networking::online_matchmaking::_resolve_stop_search_for_match(
                         &matchmaker_channel,
-                        id,
-                        ep,
-                        conn,
+                        conn.clone(),
                         match_info,
                     )
                     .await
@@ -153,9 +165,10 @@ async fn online_matchmaker(
                 }
             }
             OnlineMatchmakerRequest::ListLobbies { id, game_id } => {
+                let (_, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;
                 if let Err(err) = crate::networking::online_lobby::_resolve_list_lobbies(
                     &matchmaker_channel,
-                    id,
+                    conn.clone(),
                     game_id,
                 )
                 .await
@@ -164,9 +177,10 @@ async fn online_matchmaker(
                 }
             }
             OnlineMatchmakerRequest::CreateLobby { id, lobby_info } => {
+                let (_, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;
                 if let Err(err) = crate::networking::online_lobby::_resolve_create_lobby(
                     &matchmaker_channel,
-                    id,
+                    conn.clone(),
                     lobby_info,
                 )
                 .await
@@ -180,9 +194,10 @@ async fn online_matchmaker(
                 lobby_id,
                 password,
             } => {
+                let (_, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;
                 if let Err(err) = crate::networking::online_lobby::_resolve_join_lobby(
                     &matchmaker_channel,
-                    id,
+                    conn.clone(),
                     game_id,
                     lobby_id,
                     password,
@@ -196,6 +211,25 @@ async fn online_matchmaker(
     }
 
     Ok(())
+}
+
+/// Acquires the matchmaker connection, either establishing from scratch if none exists,
+/// or fetching and returning the current connection.
+pub async fn acquire_matchmaker_connection(
+    id: NodeId,
+    current_connection: &mut Option<(Endpoint, Connection)>,
+) -> anyhow::Result<(&Endpoint, &Connection)> {
+    if current_connection.is_none() {
+        info!("Connecting to online matchmaker");
+        let ep = get_network_endpoint().await;
+        let conn = ep.connect(id.into(), MATCH_ALPN).await?;
+        *current_connection = Some((ep.clone(), conn));
+        info!("Connected to online matchmaker");
+    }
+
+    current_connection.as_ref()
+        .map(|(ep, conn)| (ep, conn))
+        .ok_or_else(|| anyhow::anyhow!("Failed to establish connection"))
 }
 
 impl OnlineMatchmaker {
