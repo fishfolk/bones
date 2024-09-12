@@ -155,7 +155,7 @@ async fn online_matchmaker(
             OnlineMatchmakerRequest::StopSearch { id } => {
                 println!("In stop search message processing.");
                 let (_, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;
-                if let Some(match_info) = current_match_info.take() {
+                if let Some(match_info) = current_match_info.clone() {
                 println!("Current match info exists, attempting to resolve stop search.");
                     if let Err(err) =
                         crate::networking::online_matchmaking::_resolve_stop_search_for_match(
@@ -237,12 +237,15 @@ pub async fn acquire_matchmaker_connection(
 ) -> anyhow::Result<(&Endpoint, &Connection)> {
     if current_connection.is_none() {
         info!("Connecting to online matchmaker");
+        println!("Connecting to online matchmaker");
         let ep = get_network_endpoint().await;
         let conn = ep.connect(id.into(), MATCH_ALPN).await?;
         *current_connection = Some((ep.clone(), conn));
         info!("Connected to online matchmaker");
+        println!("Connected to online matchmaker");
     }
 
+    println!("Acquired online matchmaker connection");
     current_connection
         .as_ref()
         .map(|(ep, conn)| (ep, conn))
