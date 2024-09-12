@@ -14,7 +14,7 @@ keywords.workspace      = true
 serde = ["dep:serde", "hashbrown/serde", "ustr/serde"]
 
 [dependencies]
-bones_utils_macros = { version = "0.3", path = "./macros" }
+bones_utils_macros = { version = "0.4", path = "./macros" }
 smallvec           = "1.11"
 fxhash             = "0.2"
 hashbrown          = { version = "0.14" }

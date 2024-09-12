@@ -15,7 +15,7 @@ default = ["webgl2"]
 webgl2  = ["bevy/webgl2"]
 
 [dependencies]
-bones_framework = { version = "0.3", path = "../bones_framework" }
+bones_framework = { version = "0.4.0", path = "../bones_framework" }
 
 bevy_egui           = "0.22"
 glam                = { version = "0.24", features = ["serde"] }

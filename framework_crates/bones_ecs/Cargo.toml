@@ -22,11 +22,11 @@ keysize24 = []
 keysize32 = []
 
 [dependencies]
-bones_utils  = { version = "0.3", path = "../bones_utils" }
-bones_schema = { version = "0.3", path = "../bones_schema" }
+bones_utils  = { version = "0.4.0", path = "../bones_utils" }
+bones_schema = { version = "0.4.0", path = "../bones_schema" }
 
 # Optional deps
-bones_ecs_macros = { version = "0.3", path = "./macros", optional = true }
+bones_ecs_macros = { version = "0.4.0", path = "./macros", optional = true }
 
 anyhow      = "1.0"
 atomicell   = "0.2"

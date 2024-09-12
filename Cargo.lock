@@ -1356,7 +1356,7 @@ dependencies = [
 
 [[package]]
 name = "bones_asset"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "append-only-vec",
@@ -1387,7 +1387,7 @@ dependencies = [
 
 [[package]]
 name = "bones_bevy_renderer"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "bevy",
@@ -1403,7 +1403,7 @@ dependencies = [
 
 [[package]]
 name = "bones_ecs"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "atomicell",
@@ -1420,7 +1420,7 @@ dependencies = [
 
 [[package]]
 name = "bones_ecs_macros"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bevy_ecs 0.12.1",
  "bones_ecs",
@@ -1431,7 +1431,7 @@ dependencies = [
 
 [[package]]
 name = "bones_ecs_macros_core"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "pretty_assertions",
  "proc-macro2",
@@ -1441,7 +1441,7 @@ dependencies = [
 
 [[package]]
 name = "bones_framework"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "async-channel 1.9.0",
@@ -1495,7 +1495,7 @@ dependencies = [
 
 [[package]]
 name = "bones_lib"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bones_ecs",
  "instant",
@@ -1503,7 +1503,7 @@ dependencies = [
 
 [[package]]
 name = "bones_matchmaker"
-version = "0.2.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "bones_matchmaker_proto",
@@ -1526,7 +1526,7 @@ dependencies = [
 
 [[package]]
 name = "bones_matchmaker_proto"
-version = "0.2.0"
+version = "0.4.0"
 dependencies = [
  "iroh-net",
  "serde",
@@ -1534,7 +1534,7 @@ dependencies = [
 
 [[package]]
 name = "bones_schema"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "append-only-vec",
  "bones_schema_macros",
@@ -1552,7 +1552,7 @@ dependencies = [
 
 [[package]]
 name = "bones_schema_macros"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1561,7 +1561,7 @@ dependencies = [
 
 [[package]]
 name = "bones_scripting"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "async-channel 1.9.0",
  "bevy_tasks 0.11.3",
@@ -1577,7 +1577,7 @@ dependencies = [
 
 [[package]]
 name = "bones_utils"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bones_utils_macros",
  "branches",
@@ -1597,7 +1597,7 @@ dependencies = [
 
 [[package]]
 name = "bones_utils_macros"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "quote",
  "venial",
@@ -2182,7 +2182,7 @@ checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 
 [[package]]
 name = "demo_assets_minimal"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bones_bevy_renderer",
  "bones_framework",
@@ -2190,7 +2190,7 @@ dependencies = [
 
 [[package]]
 name = "demo_features"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bones_bevy_renderer",
  "bones_framework",
@@ -2198,7 +2198,7 @@ dependencies = [
 
 [[package]]
 name = "demo_hello_world"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bones_bevy_renderer",
  "bones_framework",
@@ -2206,7 +2206,7 @@ dependencies = [
 
 [[package]]
 name = "demo_scripting"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bones_bevy_renderer",
  "bones_framework",
