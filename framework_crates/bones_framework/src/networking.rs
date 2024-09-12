@@ -8,10 +8,11 @@ use crate::networking::online::OnlineMatchmakerResponse;
 pub use crate::networking::random::RngGenerator;
 use crate::prelude::*;
 use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
-use ggrs::P2PSession;
+use fxhash::FxHasher;
+use ggrs::{DesyncDetection, P2PSession};
 use instant::Duration;
 use once_cell::sync::Lazy;
-use std::{fmt::Debug, marker::PhantomData, sync::Arc};
+use std::{fmt::Debug, hash::Hasher, marker::PhantomData, sync::Arc};
 use tracing::{debug, error, info, trace, warn};
 
 #[cfg(feature = "net-debug")]
@@ -550,6 +551,17 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
 
     /// The random seed used for this session
     pub random_seed: u64,
+    
+    /// Interval in frames of how often to hash state and check for desync with other clients.
+    /// i.e if set to 10, will check every 10th frame. Desync detection disabled if None.
+    pub detect_desyncs: Option<u32>,
+
+    /// Override of hash function used to hash world for desync detection.
+    /// By default, [`World`]'s [`DesyncHash`] impl is used.
+    ///
+    /// This may be useful if you want to hash only a subset of components or resources
+    /// during testing.
+    pub world_hash_func: Option<fn(&World) -> u64>,
 }
 
 /// The info required to create a [`GgrsSessionRunner`].
@@ -572,8 +584,17 @@ pub struct GgrsSessionRunnerInfo {
     ///
     /// `None` will use Bone's default.
     pub local_input_delay: Option<usize>,
+    
     /// The random seed used for this session
     pub random_seed: u64,
+
+    /// Interval in frames of how often to hash state and check for desync with other clients.
+    /// i.e if set to 10, will check every 10th frame. Desync detection disabled if None.
+    pub detect_desyncs: Option<u32>,
+
+    /// Override of hash function used to hash world for desync detection.
+    /// By default, [`World`]'s [`DesyncHash`] impl is used.
+    pub world_hash_func: Option<fn(&World) -> u64>,
 }
 
 impl GgrsSessionRunnerInfo {
@@ -583,6 +604,8 @@ impl GgrsSessionRunnerInfo {
         max_prediction_window: Option<usize>,
         local_input_delay: Option<usize>,
         random_seed: u64,
+        world_hash_func: Option<fn(&World) -> u64>,
+        detect_desyncs: Option<u32>,
     ) -> Self {
         let player_idx = socket.player_idx();
         let player_count = socket.player_count();
@@ -593,6 +616,8 @@ impl GgrsSessionRunnerInfo {
             max_prediction_window,
             local_input_delay,
             random_seed,
+            detect_desyncs,
+            world_hash_func,
         }
     }
 }
@@ -662,11 +687,17 @@ where
             .try_send(NetworkDebugMessage::SetMaxPrediction(max_prediction))
             .unwrap();
 
+        let desync_detection = match info.detect_desyncs {
+            Some(interval) => DesyncDetection::On { interval },
+            None => DesyncDetection::Off,
+        };
+
         let mut builder = ggrs::SessionBuilder::new()
             .with_num_players(info.player_count as usize)
             .with_input_delay(local_input_delay)
             .with_fps(network_fps)
             .unwrap()
+            .with_desync_detection_mode(desync_detection)
             .with_max_prediction_window(max_prediction)
             .unwrap();
 
@@ -700,6 +731,8 @@ where
             local_input_delay,
             local_input_disabled: false,
             random_seed: info.random_seed,
+            detect_desyncs: info.detect_desyncs,
+            world_hash_func: info.world_hash_func,
         }
     }
 }
@@ -870,7 +903,20 @@ where
                         for request in requests {
                             match request {
                                 ggrs::GgrsRequest::SaveGameState { cell, frame } => {
-                                    cell.save(frame, Some(world.clone()), None)
+                                    // If desync detection enabled, hash world.
+                                    let checksum = if self.detect_desyncs.is_some() {
+                                        if let Some(hash_func) = self.world_hash_func {
+                                            Some(hash_func(world) as u128)
+                                        } else {
+                                            let mut hasher = FxHasher::default();
+                                            world.hash(&mut hasher);
+                                            Some(hasher.finish() as u128)
+                                        }
+                                    } else {
+                                        None
+                                    };
+
+                                    cell.save(frame, Some(world.clone()), checksum);
                                 }
                                 ggrs::GgrsRequest::LoadGameState { cell, frame } => {
                                     // Swap out sessions to preserve them after world save.
@@ -1027,6 +1073,8 @@ where
             max_prediction_window: Some(self.session.max_prediction()),
             local_input_delay: Some(self.local_input_delay),
             random_seed: self.random_seed,
+            detect_desyncs: self.detect_desyncs,
+            world_hash_func: self.world_hash_func,
         };
         *self = GgrsSessionRunner::new(Some(self.original_fps as f32), runner_info);
     }
