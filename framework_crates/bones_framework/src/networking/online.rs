@@ -165,6 +165,9 @@ async fn online_matchmaker(
                     {
                         warn!("Stopping search failed: {err:?}");
                     }
+                    else {
+                        current_match_info = None;
+                    }
                 } else {
                     matchmaker_channel
                         .send(OnlineMatchmakerResponse::Error(
