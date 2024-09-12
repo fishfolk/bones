@@ -9,6 +9,8 @@ pub use bones_matchmaker_proto::{GameID, LobbyId, LobbyInfo, LobbyListItem, Play
 use iroh_net::NodeId;
 use once_cell::sync::Lazy;
 use tracing::warn;
+use iroh_quinn::Connection;
+use iroh_net::Endpoint;
 
 /// Struct that holds a channel which exchange messages with the matchmaking server.
 #[derive(DerefMut, Deref)]
@@ -97,8 +99,8 @@ pub static ONLINE_MATCHMAKER: Lazy<OnlineMatchmaker> = Lazy::new(|| {
 async fn online_matchmaker(
     matchmaker_channel: BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
 ) -> anyhow::Result<()> {
-
-    let mut current_matchmaking_info = None;
+    let mut current_connection: Option<(Endpoint, Connection)> = None;
+    let mut current_match_info: Option<MatchInfo> = None;
 
     while let Ok(message) = matchmaker_channel.recv().await {
         match message {
@@ -115,39 +117,39 @@ async fn online_matchmaker(
                     game_id,
                     player_idx_assignment,
                 };
-                current_matchmaking_info = Some(match_info.clone());
 
                 if let Err(err) = crate::networking::online_matchmaking::_resolve_search_for_match(
                     &matchmaker_channel,
                     id,
-                    match_info,
+                    match_info.clone(),
+                    &mut current_connection,
                 )
                 .await
                 {
                     warn!("Online Game Search failed: {err:?}");
+                    current_connection = None;
+                    current_match_info = None;
+                } else {
+                    current_match_info = Some(match_info);
                 }
             }
-            OnlineMatchmakerRequest::StopSearch
-            {
-                id,
-            }
-             => {
-                if let Some(match_info) = current_matchmaking_info.clone() {
-                    current_matchmaking_info = None;
+            OnlineMatchmakerRequest::StopSearch { id } => {
+                if let (Some((ep, conn)), Some(match_info)) = (current_connection.take(), current_match_info.take()) {
                     if let Err(err) = crate::networking::online_matchmaking::_resolve_stop_search_for_match(
                         &matchmaker_channel,
                         id,
-                        match_info
+                        ep,
+                        conn,
+                        match_info,
                     )
                     .await
                     {
                         warn!("Stopping search failed: {err:?}");
                     }
-                }
-                else {
+                } else {
                     matchmaker_channel
-                    .send(OnlineMatchmakerResponse::Error("Matchmaking must be started first before trying to stop.".to_string()))
-                    .await?;
+                        .send(OnlineMatchmakerResponse::Error("No active matchmaking to stop".to_string()))
+                        .await?;
                 }
             }
             OnlineMatchmakerRequest::ListLobbies { id, game_id } => {

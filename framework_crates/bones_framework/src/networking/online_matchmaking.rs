@@ -12,21 +12,24 @@ use bones_matchmaker_proto::{
 use iroh_net::NodeId;
 use std::sync::Arc;
 use tracing::info;
+use iroh_quinn::Connection;
+use iroh_net::Endpoint;
+
 
 pub async fn _resolve_stop_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     id: NodeId,
+    ep: Endpoint,
+    conn: Connection,
     match_info: MatchInfo,
 ) -> anyhow::Result<()> {
-    info!("Connecting to online matchmaker to stop search");
-    let ep = get_network_endpoint().await;
-    let conn = ep.connect(id.into(), MATCH_ALPN).await?;
-    info!("Connected to online matchmaker");
+    info!("Stopping search for match");
 
-    // Send a stop matchmaking request to the server
+    // Use the existing connection to send the stop request
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::StopMatchmaking(match_info);
+    info!(request=?message, "Sending stop matchmaking request");
 
     let message = postcard::to_allocvec(&message)?;
     send.write_all(&message).await?;
@@ -50,6 +53,9 @@ pub async fn _resolve_stop_search_for_match(
         }
     }
 
+    // Close the connection
+    conn.close(0u32.into(), b"Matchmaking stopped");
+
     Ok(())
 }
 
@@ -57,6 +63,7 @@ pub async fn _resolve_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     id: NodeId,
     match_info: MatchInfo,
+    current_connection: &mut Option<(Endpoint, Connection)>,
 ) -> anyhow::Result<()> {
     info!("Connecting to online matchmaker");
     let ep = get_network_endpoint().await;
@@ -70,7 +77,7 @@ pub async fn _resolve_search_for_match(
     // Send a match request to the server
     let (mut send, mut recv) = conn.open_bi().await?;
 
-    let message = MatchmakerRequest::RequestMatchmaking(match_info);
+    let message = MatchmakerRequest::RequestMatchmaking(match_info.clone());
     info!(request=?message, "Sending match request");
 
     let message = postcard::to_allocvec(&message)?;
@@ -82,6 +89,7 @@ pub async fn _resolve_search_for_match(
 
     if let MatchmakerResponse::Accepted = response {
         info!("Matchmaking request accepted. Waiting for match...");
+        *current_connection = Some((ep.clone(), conn.clone()));
     } else {
         anyhow::bail!("Invalid response from matchmaker");
     }
