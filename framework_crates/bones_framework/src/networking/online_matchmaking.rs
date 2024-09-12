@@ -19,13 +19,14 @@ pub async fn _resolve_stop_search_for_match(
     conn: Connection,
     match_info: MatchInfo,
 ) -> anyhow::Result<()> {
-    info!("Resolve: Stopping matchmaking");
+    println!("Resolve: Stopping matchmaking");
 
     // Use the existing connection to send the stop request
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::StopMatchmaking(match_info);
     info!(request=?message, "Sending stop matchmaking request");
+    println!("Sending stop matchmaking request");
 
     let message = postcard::to_allocvec(&message)?;
     send.write_all(&message).await?;
@@ -36,7 +37,7 @@ pub async fn _resolve_stop_search_for_match(
 
     match response {
         MatchmakerResponse::Accepted => {
-            info!("Stop matchmaking request accepted");
+            println!("Stop matchmaking request accepted");
             matchmaker_channel
                 .send(OnlineMatchmakerResponse::Error(
                     "Matchmaking stopped by user".to_string(),
