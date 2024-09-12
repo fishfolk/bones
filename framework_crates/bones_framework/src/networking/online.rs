@@ -4,13 +4,18 @@
 
 pub use super::online_lobby::*;
 pub use super::online_matchmaking::*;
-use crate::{networking::{NetworkMatchSocket, get_network_endpoint }, prelude::*};
-pub use bones_matchmaker_proto::{GameID, LobbyId, LobbyInfo, LobbyListItem, PlayerIdxAssignment, MatchInfo, MATCH_ALPN};
-use iroh_net::NodeId;
-use once_cell::sync::Lazy;
-use tracing::{warn, info};
-use iroh_quinn::Connection;
+use crate::{
+    networking::{get_network_endpoint, NetworkMatchSocket},
+    prelude::*,
+};
+pub use bones_matchmaker_proto::{
+    GameID, LobbyId, LobbyInfo, LobbyListItem, MatchInfo, PlayerIdxAssignment, MATCH_ALPN,
+};
 use iroh_net::Endpoint;
+use iroh_net::NodeId;
+use iroh_quinn::Connection;
+use once_cell::sync::Lazy;
+use tracing::{info, warn};
 
 /// Struct that holds a channel which exchange messages with the matchmaking server.
 #[derive(DerefMut, Deref)]
@@ -124,7 +129,8 @@ async fn online_matchmaker(
                 match_data,
                 player_idx_assignment,
             } => {
-                let (_ep, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;
+                let (_ep, conn) =
+                    acquire_matchmaker_connection(id, &mut current_connection).await?;
                 let match_info = MatchInfo {
                     max_players: player_count,
                     match_data,
@@ -149,18 +155,21 @@ async fn online_matchmaker(
             OnlineMatchmakerRequest::StopSearch { id } => {
                 let (_, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;
                 if let Some(match_info) = current_match_info.take() {
-                    if let Err(err) = crate::networking::online_matchmaking::_resolve_stop_search_for_match(
-                        &matchmaker_channel,
-                        conn.clone(),
-                        match_info,
-                    )
-                    .await
+                    if let Err(err) =
+                        crate::networking::online_matchmaking::_resolve_stop_search_for_match(
+                            &matchmaker_channel,
+                            conn.clone(),
+                            match_info,
+                        )
+                        .await
                     {
                         warn!("Stopping search failed: {err:?}");
                     }
                 } else {
                     matchmaker_channel
-                        .send(OnlineMatchmakerResponse::Error("No active matchmaking to stop".to_string()))
+                        .send(OnlineMatchmakerResponse::Error(
+                            "No active matchmaking to stop".to_string(),
+                        ))
                         .await?;
                 }
             }
@@ -227,7 +236,8 @@ pub async fn acquire_matchmaker_connection(
         info!("Connected to online matchmaker");
     }
 
-    current_connection.as_ref()
+    current_connection
+        .as_ref()
         .map(|(ep, conn)| (ep, conn))
         .ok_or_else(|| anyhow::anyhow!("Failed to establish connection"))
 }

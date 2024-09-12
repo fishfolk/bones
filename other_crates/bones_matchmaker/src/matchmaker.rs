@@ -41,35 +41,35 @@ pub async fn handle_connection(ep: Endpoint, conn: Connection) -> Result<()> {
 
     loop {
         tokio::select! {
-                  close = conn.closed() => {
-                      println!("Connection closed {close:?}");
-                      return Ok(());
-                  }
-                  bi = conn.accept_bi() => {
-                      let (mut send, mut recv) = bi?;
-                      // Parse the incoming request
-                      let request: MatchmakerRequest = postcard::from_bytes(&recv.read_to_end(256).await?)?;
+            close = conn.closed() => {
+                println!("Connection closed {close:?}");
+                return Ok(());
+            }
+            bi = conn.accept_bi() => {
+                let (mut send, mut recv) = bi?;
+                // Parse the incoming request
+                let request: MatchmakerRequest = postcard::from_bytes(&recv.read_to_end(256).await?)?;
 
-                      // Route the request to the appropriate handler
-                      match request {
-                          MatchmakerRequest::RequestMatchmaking(match_info) => {
-                              handle_request_matchaking(ep.clone(), conn.clone(), match_info, &mut send).await?;
-                          }
-                          MatchmakerRequest::StopMatchmaking(match_info) => {
-                              handle_stop_matchmaking(conn.clone(), match_info, &mut send).await?;
-                          }
-                          MatchmakerRequest::ListLobbies(game_id) => {
-                              handle_list_lobbies(game_id, &mut send).await?;
-                          }
-                          MatchmakerRequest::CreateLobby(lobby_info) => {
-                              handle_create_lobby(conn.clone(), lobby_info, &mut send).await?;
-                          }
-                          MatchmakerRequest::JoinLobby(game_id, lobby_id, password) => {
-                              handle_join_lobby(ep.clone(), conn.clone(), game_id, lobby_id, password, &mut send).await?;
-                          }
-                      }
-                  }
-              }
+                // Route the request to the appropriate handler
+                match request {
+                    MatchmakerRequest::RequestMatchmaking(match_info) => {
+                        handle_request_matchaking(ep.clone(), conn.clone(), match_info, &mut send).await?;
+                    }
+                    MatchmakerRequest::StopMatchmaking(match_info) => {
+                        handle_stop_matchmaking(conn.clone(), match_info, &mut send).await?;
+                    }
+                    MatchmakerRequest::ListLobbies(game_id) => {
+                        handle_list_lobbies(game_id, &mut send).await?;
+                    }
+                    MatchmakerRequest::CreateLobby(lobby_info) => {
+                        handle_create_lobby(conn.clone(), lobby_info, &mut send).await?;
+                    }
+                    MatchmakerRequest::JoinLobby(game_id, lobby_id, password) => {
+                        handle_join_lobby(ep.clone(), conn.clone(), game_id, lobby_id, password, &mut send).await?;
+                    }
+                }
+            }
+        }
     }
 }
 

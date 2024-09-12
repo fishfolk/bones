@@ -10,19 +10,16 @@ use bones_matchmaker_proto::{
     GameID, MatchInfo, MatchmakerRequest, MatchmakerResponse, PlayerIdxAssignment,
 };
 use iroh_net::NodeId;
+use iroh_quinn::Connection;
 use std::sync::Arc;
 use tracing::info;
-use iroh_quinn::Connection;
-
-
-
 
 pub async fn _resolve_stop_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     conn: Connection,
     match_info: MatchInfo,
 ) -> anyhow::Result<()> {
-    info!("Stopping search for match");
+    info!("Resolve: Stopping matchmaking");
 
     // Use the existing connection to send the stop request
     let (mut send, mut recv) = conn.open_bi().await?;
@@ -41,7 +38,9 @@ pub async fn _resolve_stop_search_for_match(
         MatchmakerResponse::Accepted => {
             info!("Stop matchmaking request accepted");
             matchmaker_channel
-                .send(OnlineMatchmakerResponse::Error("Matchmaking stopped by user".to_string()))
+                .send(OnlineMatchmakerResponse::Error(
+                    "Matchmaking stopped by user".to_string(),
+                ))
                 .await?;
         }
         MatchmakerResponse::Error(error) => {
@@ -51,9 +50,6 @@ pub async fn _resolve_stop_search_for_match(
             anyhow::bail!("Unexpected response from matchmaker: {:?}", response);
         }
     }
-
-    // Close the connection
-    conn.close(0u32.into(), b"Matchmaking stopped");
 
     Ok(())
 }
@@ -71,7 +67,7 @@ pub async fn _resolve_search_for_match(
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::RequestMatchmaking(match_info.clone());
-    info!(request=?message, "Sending match request");
+    info!(request=?message, "Resolve: Sending match request");
 
     let message = postcard::to_allocvec(&message)?;
     send.write_all(&message).await?;

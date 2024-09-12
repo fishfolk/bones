@@ -6,13 +6,11 @@ use crate::{
     prelude::*,
     utils::BiChannelServer,
 };
-use bones_matchmaker_proto::{
-    GameID, LobbyId, LobbyInfo, MatchmakerRequest, MatchmakerResponse,
-};
+use bones_matchmaker_proto::{GameID, LobbyId, LobbyInfo, MatchmakerRequest, MatchmakerResponse};
 use iroh_net::NodeId;
+use iroh_quinn::Connection;
 use std::sync::Arc;
 use tracing::info;
-use iroh_quinn::Connection;
 
 pub async fn _resolve_list_lobbies(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,

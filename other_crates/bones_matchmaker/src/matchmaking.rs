@@ -11,6 +11,8 @@ pub async fn handle_stop_matchmaking(
     match_info: MatchInfo,
     send: &mut quinn::SendStream,
 ) -> Result<()> {
+    let stable_id = conn.stable_id();
+    info!("[{}] Handling stop matchmaking request", stable_id);
     let state = MATCHMAKER_STATE.lock().await;
 
     let removed = state
@@ -18,52 +20,61 @@ pub async fn handle_stop_matchmaking(
         .update(&match_info, |_, members| {
             if let Some(pos) = members
                 .iter()
-                .position(|member| member.stable_id() == conn.stable_id())
+                .position(|member| member.stable_id() == stable_id)
             {
+                info!("[{}] Removing player at position {} from matchmaking room", stable_id, pos);
                 members.remove(pos);
                 true
             } else {
+                info!("[{}] Player not found in matchmaking room", stable_id);
                 false
             }
         })
         .unwrap_or(false);
 
     let response = if removed {
+        info!("[{}] Player successfully removed from matchmaking", stable_id);
         MatchmakerResponse::Accepted
     } else {
+        info!("[{}] Player not found in matchmaking queue", stable_id);
         MatchmakerResponse::Error("Not found in matchmaking queue".to_string())
     };
 
+    info!("[{}] Sending response to client: {:?}", stable_id, response);
     let message = postcard::to_allocvec(&response)?;
     send.write_all(&message).await?;
     send.finish().await?;
 
     // If we removed a player, update the other players in the room
     if removed {
+        info!("[{}] Updating other players in the matchmaking room", stable_id);
         drop(state); // Release the lock before calling send_matchmaking_updates
         if let Ok(active_connections) = send_matchmaking_updates(&match_info, 0).await {
             let player_count = active_connections.len();
-            println!(
-                "Updated matchmaking room. Current player count: {}",
-                player_count
+            info!(
+                "[{}] Updated matchmaking room. Current player count: {}",
+                stable_id, player_count
             );
+        } else {
+            info!("[{}] Failed to update other players in the matchmaking room", stable_id);
         }
     }
 
     Ok(())
 }
 
-/// Handles a new matchmaking request from a client
 pub async fn handle_request_matchaking(
     ep: Endpoint,
     conn: Connection,
     match_info: MatchInfo,
     send: &mut quinn::SendStream,
 ) -> Result<()> {
+    let stable_id = conn.stable_id();
+    info!("[{}] Handling matchmaking request", stable_id);
     let mut state = MATCHMAKER_STATE.lock().await;
 
     // Wait for up to 20 seconds if the matchmaking room is full
-    for _ in 0..200 {
+    for i in 0..200 {
         let room_is_full = state
             .matchmaking_rooms
             .get(&match_info)
@@ -71,9 +82,11 @@ pub async fn handle_request_matchaking(
             .unwrap_or(false);
 
         if !room_is_full {
+            info!("[{}] Found available space in matchmaking room after {} iterations", stable_id, i);
             break;
         }
 
+        info!("[{}] Matchmaking room is full, waiting... (iteration {})", stable_id, i);
         // Temporarily release the lock while waiting
         drop(state);
         sleep(Duration::from_millis(100)).await;
@@ -88,8 +101,8 @@ pub async fn handle_request_matchaking(
         .unwrap_or(true);
 
     // Send error if room is still full
-    // TODO: If this occurs often enough under heavy load, rework matchmakng to allow for multiple rooms
     if !can_join {
+        info!("[{}] Matchmaking room is full after waiting, rejecting request", stable_id);
         let error_message = postcard::to_allocvec(&MatchmakerResponse::Error(
             "Matchmaking room is full. Please try matchmaking again shortly.".to_string(),
         ))?;
@@ -99,6 +112,7 @@ pub async fn handle_request_matchaking(
     }
 
     // Accept the matchmaking request
+    info!("[{}] Accepting matchmaking request", stable_id);
     let message = postcard::to_allocvec(&MatchmakerResponse::Accepted)?;
     send.write_all(&message).await?;
     send.finish().await?;
@@ -108,12 +122,14 @@ pub async fn handle_request_matchaking(
         .matchmaking_rooms
         .update(&match_info, |_, members| {
             members.push(conn.clone());
+            info!("[{}] Added player to existing matchmaking room. New count: {}", stable_id, members.len());
             members.len() as u32
         })
         .unwrap_or_else(|| {
             let members = vec![conn.clone()];
+            info!("[{}] Created new matchmaking room with 1 player", stable_id);
             if let Err(e) = state.matchmaking_rooms.insert(match_info.clone(), members) {
-                warn!("Failed to insert new matchmaking room: {:?}", e);
+                warn!("[{}] Failed to insert new matchmaking room: {:?}", stable_id, e);
             }
             1 as u32
         });
@@ -122,13 +138,18 @@ pub async fn handle_request_matchaking(
     drop(state);
 
     // Update all players and get active connections
+    info!("[{}] Updating all players in the matchmaking room", stable_id);
     let active_connections = send_matchmaking_updates(&match_info, new_player_count).await?;
 
     let player_count = active_connections.len();
+    info!("[{}] Active connections after update: {}", stable_id, player_count);
 
     // Start the game if room is full
     if player_count >= match_info.max_players as usize {
+        info!("[{}] Matchmaking room is full. Starting the game.", stable_id);
         start_matchmaked_game_if_ready(ep, &match_info).await?;
+    } else {
+        info!("[{}] Matchmaking room is not full yet. Waiting for more players.", stable_id);
     }
 
     Ok(())
