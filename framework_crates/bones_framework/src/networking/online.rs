@@ -121,7 +121,6 @@ async fn online_matchmaker(
     matchmaker_channel: BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
 ) -> anyhow::Result<()> {
     let mut current_connection: Option<(Endpoint, Connection)> = None;
-    let mut current_match_info: Option<MatchInfo> = None;
 
     while let Ok(message) = matchmaker_channel.recv().await {
         match message {
@@ -150,38 +149,7 @@ async fn online_matchmaker(
                 {
                     warn!("Online Game Search failed: {err:?}");
                     current_connection = None;
-                    current_match_info = None;
-                } else {
-                    current_match_info = Some(match_info);
-                }
-            }
-            OnlineMatchmakerRequest::StopSearch { id } => {
-                println!("In stop search message processing.");
-                let (_, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;
-                if let Some(match_info) = current_match_info.clone() {
-                println!("Current match info exists, attempting to resolve stop search.");
-                    if let Err(err) =
-                        crate::networking::online_matchmaking::_resolve_stop_search_for_match(
-                            &matchmaker_channel,
-                            conn.clone(),
-                            match_info,
-                        )
-                        .await
-                    {
-                        warn!("Stopping search failed: {err:?}");
-                        println!("Stopping search failed {:?}", err);
-                    }
-                    else {
-                        println!("Stopping search success!!");
-                        current_match_info = None;
-                    }
-                } else {
-                    matchmaker_channel
-                        .send(OnlineMatchmakerResponse::Error(
-                            "No active matchmaking to stop".to_string(),
-                        ))
-                        .await?;
-                }
+                } 
             }
             OnlineMatchmakerRequest::ListLobbies { id, game_id } => {
                 let (_, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;
@@ -226,6 +194,8 @@ async fn online_matchmaker(
                     warn!("Joining lobby failed: {err:?}");
                 }
             }
+            // Otherwise do nothing because the above paths take care of it
+            _ => {}
         }
     }
 

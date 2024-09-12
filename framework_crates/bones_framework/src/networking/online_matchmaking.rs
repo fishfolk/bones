@@ -14,56 +14,11 @@ use iroh_quinn::Connection;
 use std::sync::Arc;
 use tracing::{info, warn};
 
-pub async fn _resolve_stop_search_for_match(
-    matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-    conn: Connection,
-    match_info: MatchInfo,
-) -> anyhow::Result<()> {
-    println!("Resolve: Stopping matchmaking");
-
-    // Use the existing connection to send the stop request
-    let (mut send, mut recv) = conn.open_bi().await?;
-
-    let message = MatchmakerRequest::StopMatchmaking(match_info);
-    info!(request=?message, "Sending stop matchmaking request");
-    println!("Sending stop matchmaking request");
-
-    let message = postcard::to_allocvec(&message)?;
-    send.write_all(&message).await?;
-    send.finish().await?;
-
-    let res = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
-    let response: MatchmakerResponse = postcard::from_bytes(&res)?;
-
-    match response {
-        MatchmakerResponse::Accepted => {
-            println!("Stop matchmaking request accepted");
-            matchmaker_channel
-                .send(OnlineMatchmakerResponse::Error(
-                    "Matchmaking stopped by user".to_string(),
-                ))
-                .await?;
-        }
-        MatchmakerResponse::Error(error) => {
-            anyhow::bail!("Failed to stop matchmaking: {}", error);
-        }
-        _ => {
-            anyhow::bail!("Unexpected response from matchmaker: {:?}", response);
-        }
-    }
-
-    Ok(())
-}
-
 pub async fn _resolve_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     conn: Connection,
     match_info: MatchInfo,
 ) -> anyhow::Result<()> {
-    matchmaker_channel
-        .send(OnlineMatchmakerResponse::Searching)
-        .await?;
-
     // Send a match request to the server
     let (mut send, mut recv) = conn.open_bi().await?;
 
@@ -79,24 +34,27 @@ pub async fn _resolve_search_for_match(
 
     loop {
         tokio::select! {
-        // If the user sends other requests, act based off of them to not be blocking
             message = matchmaker_channel.recv() => {
                 match message {
                     Ok(OnlineMatchmakerRequest::StopSearch { .. }) => {
-                        // Handle stop search request
-                        info!("Stopping matchmaking search");
+                        println!("Stop search request received, cancelling matchmaking");
+                        if let Err(err) = _resolve_stop_search_for_match(
+                            matchmaker_channel,
+                            conn.clone(),
+                            match_info.clone(),
+                        ).await {
+                            warn!("Error stopping matchmaking: {:?}", err);
+                        }
                         return Ok(());
                     }
                     Ok(other) => {
                         warn!("Unexpected request during matchmaking: {:?}", other);
-                        // Optionally, you could choose to ignore this and continue matchmaking
                     }
                     Err(err) => {
                         anyhow::bail!("Failed to recv from match maker channel: {err:?}");
                     }
                 }
             }
-            // Matchmaker message
             recv = conn.accept_uni() => {
                 let mut recv = recv?;
                 let message = recv.read_to_end(5 * 1024).await?;
@@ -141,6 +99,49 @@ pub async fn _resolve_search_for_match(
 
     Ok(())
 }
+
+pub async fn _resolve_stop_search_for_match(
+    matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
+    conn: Connection,
+    match_info: MatchInfo,
+) -> anyhow::Result<()> {
+    println!("Resolve: Stopping matchmaking");
+
+    // Use the existing connection to send the stop request
+    let (mut send, mut recv) = conn.open_bi().await?;
+
+    let message = MatchmakerRequest::StopMatchmaking(match_info);
+    info!(request=?message, "Sending stop matchmaking request");
+    println!("Sending stop matchmaking request");
+
+    let message = postcard::to_allocvec(&message)?;
+    send.write_all(&message).await?;
+    send.finish().await?;
+
+    let res = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
+    let response: MatchmakerResponse = postcard::from_bytes(&res)?;
+
+    match response {
+        MatchmakerResponse::Accepted => {
+            println!("Stop matchmaking request accepted");
+            matchmaker_channel
+                .send(OnlineMatchmakerResponse::Error(
+                    "Matchmaking stopped by user".to_string(),
+                ))
+                .await?;
+        }
+        MatchmakerResponse::Error(error) => {
+            anyhow::bail!("Failed to stop matchmaking: {}", error);
+        }
+        _ => {
+            anyhow::bail!("Unexpected response from matchmaker: {:?}", response);
+        }
+    }
+
+    Ok(())
+}
+
+
 
 impl OnlineMatchmaker {
     /// Sends a request to the matchmaking server to start searching for a match. Response is read via `read_matchmaker_response()`.
