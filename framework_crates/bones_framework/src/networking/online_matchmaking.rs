@@ -149,22 +149,26 @@ impl OnlineMatchmaker {
         player_count: u32,
         match_data: Vec<u8>,
         player_idx_assignment: PlayerIdxAssignment,
-    ) -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
-        super::online::ONLINE_MATCHMAKER.try_send(OnlineMatchmakerRequest::SearchForGame {
-            id: matchmaking_server,
-            player_count,
-            game_id,
-            match_data,
-            player_idx_assignment,
-        })
+    ) -> anyhow::Result<()> {
+        super::online::ONLINE_MATCHMAKER
+            .try_send(OnlineMatchmakerRequest::SearchForGame {
+                id: matchmaking_server,
+                player_count,
+                game_id,
+                match_data,
+                player_idx_assignment,
+            })
+            .map_err(|e| anyhow::anyhow!("Failed to send matchmaker request: {}", e))?;
+        Ok(())
     }
 
     /// Stops searching for a match.
-    pub fn stop_search_for_match(
-        matchmaking_server: NodeId,
-    ) -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
-        super::online::ONLINE_MATCHMAKER.try_send(OnlineMatchmakerRequest::StopSearch {
-            id: matchmaking_server,
-        })
+    pub fn stop_search_for_match(matchmaking_server: NodeId) -> anyhow::Result<()> {
+        super::online::ONLINE_MATCHMAKER
+            .try_send(OnlineMatchmakerRequest::StopSearch {
+                id: matchmaking_server,
+            })
+            .map_err(|e| anyhow::anyhow!("Failed to send matchmaker request: {}", e))?;
+        Ok(())
     }
 }

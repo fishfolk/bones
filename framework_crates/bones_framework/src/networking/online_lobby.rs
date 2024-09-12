@@ -145,25 +145,25 @@ pub async fn _resolve_join_lobby(
 
 impl OnlineMatchmaker {
     /// Sends a request to the matchmaking server to provide a list of all available lobbies for game_id. Response is read via `read_matchmaker_response()`.
-    pub fn list_lobbies(
-        matchmaking_server: NodeId,
-        game_id: GameID,
-    ) -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
-        super::online::ONLINE_MATCHMAKER.try_send(OnlineMatchmakerRequest::ListLobbies {
-            id: matchmaking_server,
-            game_id,
-        })
+    pub fn list_lobbies(matchmaking_server: NodeId, game_id: GameID) -> anyhow::Result<()> {
+        super::online::ONLINE_MATCHMAKER
+            .try_send(OnlineMatchmakerRequest::ListLobbies {
+                id: matchmaking_server,
+                game_id,
+            })
+            .map_err(|e| anyhow::anyhow!("Failed to send list lobbies request: {}", e))?;
+        Ok(())
     }
 
     /// Sends a request to the matchmaking server to create a new lobby with the specified lobby_info.
-    pub fn create_lobby(
-        matchmaking_server: NodeId,
-        lobby_info: LobbyInfo,
-    ) -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
-        super::online::ONLINE_MATCHMAKER.try_send(OnlineMatchmakerRequest::CreateLobby {
-            id: matchmaking_server,
-            lobby_info,
-        })
+    pub fn create_lobby(matchmaking_server: NodeId, lobby_info: LobbyInfo) -> anyhow::Result<()> {
+        super::online::ONLINE_MATCHMAKER
+            .try_send(OnlineMatchmakerRequest::CreateLobby {
+                id: matchmaking_server,
+                lobby_info,
+            })
+            .map_err(|e| anyhow::anyhow!("Failed to send create lobby request: {}", e))?;
+        Ok(())
     }
 
     /// Sends a request to the matchmaking server to join a lobby with the specified game_id, lobby_id, and optional password.
@@ -172,12 +172,15 @@ impl OnlineMatchmaker {
         game_id: GameID,
         lobby_id: LobbyId,
         password: Option<String>,
-    ) -> Result<(), async_channel::TrySendError<OnlineMatchmakerRequest>> {
-        super::online::ONLINE_MATCHMAKER.try_send(OnlineMatchmakerRequest::JoinLobby {
-            id: matchmaking_server,
-            game_id,
-            lobby_id,
-            password,
-        })
+    ) -> anyhow::Result<()> {
+        super::online::ONLINE_MATCHMAKER
+            .try_send(OnlineMatchmakerRequest::JoinLobby {
+                id: matchmaking_server,
+                game_id,
+                lobby_id,
+                password,
+            })
+            .map_err(|e| anyhow::anyhow!("Failed to send join lobby request: {}", e))?;
+        Ok(())
     }
 }

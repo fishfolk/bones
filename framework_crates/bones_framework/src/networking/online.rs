@@ -124,6 +124,12 @@ pub struct MatchmakerConnectionState {
     node_id: Option<NodeId>,
 }
 
+impl Default for MatchmakerConnectionState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MatchmakerConnectionState {
     /// Initialize a new MatchmakerConnectionState
     pub fn new() -> Self {
