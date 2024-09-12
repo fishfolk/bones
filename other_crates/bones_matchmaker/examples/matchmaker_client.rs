@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use bones_matchmaker_proto::{
-    MatchInfo, MatchmakerRequest, MatchmakerResponse, MATCH_ALPN, PLAY_ALPN,
+    GameID, MatchInfo, MatchmakerRequest, MatchmakerResponse, PlayerIdxAssignment, MATCH_ALPN,
+    PLAY_ALPN,
 };
 use serde::{Deserialize, Serialize};
 use tokio::task::JoinSet;
@@ -50,11 +51,13 @@ async fn client() -> anyhow::Result<()> {
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::RequestMatchmaking(MatchInfo {
-        player_count: std::env::args()
+        max_players: std::env::args()
             .nth(1)
             .map(|x| x.parse().unwrap())
-            .unwrap_or(0),
+            .unwrap_or(2),
+        game_id: GameID::from("example-game"),
         match_data: b"example-client".to_vec(),
+        player_idx_assignment: PlayerIdxAssignment::Ordered,
     });
     println!("=> Sending match request: {message:?}");
     let message = postcard::to_allocvec(&message)?;
@@ -64,7 +67,7 @@ async fn client() -> anyhow::Result<()> {
 
     println!("o  Waiting for response");
 
-    let message = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
+    let message = recv.read_to_end(256).await?;
     let message: MatchmakerResponse = postcard::from_bytes(&message)?;
 
     if let MatchmakerResponse::Accepted = message {
@@ -75,12 +78,12 @@ async fn client() -> anyhow::Result<()> {
 
     let (player_idx, player_ids, _player_count) = loop {
         let mut recv = conn.accept_uni().await?;
-        let message = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
+        let message = recv.read_to_end(256).await?;
         let message: MatchmakerResponse = postcard::from_bytes(&message)?;
 
         match message {
-            MatchmakerResponse::ClientCount(count) => {
-                println!("<= {count} players in lobby");
+            MatchmakerResponse::MatchmakingUpdate { player_count } => {
+                println!("<= {player_count} players in lobby");
             }
             MatchmakerResponse::Success {
                 random_seed,
@@ -89,7 +92,7 @@ async fn client() -> anyhow::Result<()> {
                 player_ids,
             } => {
                 println!("<= Match is ready! Random seed: {random_seed}. Player IDX: {player_idx}. Client count: {player_count}");
-                break (player_idx, player_ids, player_count as usize);
+                break (player_idx, player_ids, player_count);
             }
             _ => panic!("<= Unexpected message from server"),
         }
@@ -144,7 +147,7 @@ async fn client() -> anyhow::Result<()> {
                             let mut recv = conn.accept_uni().await?;
                             println!("<= accepted connection");
 
-                            let incomming = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
+                            let incomming = recv.read_to_end(256).await?;
                             let message: Hello = postcard::from_bytes(&incomming).unwrap();
 
                             println!("<= {message:?}");
