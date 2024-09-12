@@ -140,17 +140,16 @@ impl MatchmakerConnectionState {
         if let Some(id) = self.node_id {
             if self.conn.is_none() {
                 info!("Connecting to online matchmaker");
-                println!("Connecting to online matchmaker");
                 let ep = get_network_endpoint().await;
                 let conn = ep.connect(id.into(), MATCH_ALPN).await?;
                 self.ep = Some(ep.clone());
                 self.conn = Some(conn);
                 info!("Connected to online matchmaker");
-                println!("Connected to online matchmaker");
             }
 
-            println!("Acquired online matchmaker connection");
-            self.conn.as_ref().ok_or_else(|| anyhow::anyhow!("Failed to establish connection"))
+            self.conn
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("Failed to establish connection"))
         } else {
             Err(anyhow::anyhow!("NodeId not set"))
         }
@@ -160,7 +159,6 @@ impl MatchmakerConnectionState {
     pub fn close_connection(&mut self) {
         if let Some(conn) = self.conn.take() {
             conn.close(0u32.into(), b"Closing matchmaker connection");
-            println!("Closed matchmaker connection");
         }
         self.ep = None;
     }
@@ -206,9 +204,8 @@ async fn process_matchmaker_requests(
                 )
                 .await
                 {
-                    warn!("Online Matchmaking Search failed: {err:?}");
+                    warn!("Start Matchmaking Search failed: {err:?}");
                 }
-                matchmaker_connection_state.close_connection();
             }
             OnlineMatchmakerRequest::ListLobbies { id, game_id } => {
                 matchmaker_connection_state.set_node_id(id);
@@ -253,16 +250,13 @@ async fn process_matchmaker_requests(
                     warn!("Joining lobby failed: {err:?}");
                 }
             }
-            OnlineMatchmakerRequest::StopSearch { id } => {
-                matchmaker_connection_state.set_node_id(id);
-                matchmaker_connection_state.close_connection();
-            }
+            // Otherwise do nothing as the requests will be dealt with in the above functions
+            _ => {}
         }
     }
 
     Ok(())
 }
-
 
 impl OnlineMatchmaker {
     /// Read and return the latest matchmaker response, if one exists.

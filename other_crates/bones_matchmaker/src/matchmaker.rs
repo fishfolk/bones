@@ -37,12 +37,10 @@ pub static MATCHMAKER_STATE: Lazy<Arc<Mutex<State>>> =
 /// Handles incoming connections and routes requests to appropriate handlers
 pub async fn handle_connection(ep: Endpoint, conn: Connection) -> Result<()> {
     let connection_id = conn.stable_id();
-    println!("Accepted connection from client: {:?}", connection_id);
-
     loop {
         tokio::select! {
-            close = conn.closed() => {
-                println!("Connection closed {close:?}");
+            _ = conn.closed() => {
+                info!("[{}] Client closed connection.", connection_id);
                 return Ok(());
             }
             bi = conn.accept_bi() => {

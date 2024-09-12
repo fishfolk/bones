@@ -1,6 +1,9 @@
 #![allow(missing_docs)]
 
-use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse, READ_TO_END_BYTE_COUNT, MatchmakerConnectionState};
+use super::online::{
+    MatchmakerConnectionState, OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse,
+    READ_TO_END_BYTE_COUNT,
+};
 use crate::{
     networking::{socket::establish_peer_connections, NetworkMatchSocket},
     prelude::*,
@@ -10,10 +13,10 @@ use bones_matchmaker_proto::{
     GameID, MatchInfo, MatchmakerRequest, MatchmakerResponse, PlayerIdxAssignment,
 };
 use iroh_net::NodeId;
-use iroh_quinn::Connection;
 use std::sync::Arc;
 use tracing::{info, warn};
 
+/// Resolves the search for a match by sending a matchmaking request and handling responses.
 pub async fn _resolve_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     matchmaker_connection_state: &mut MatchmakerConnectionState,
@@ -37,7 +40,6 @@ pub async fn _resolve_search_for_match(
             message = matchmaker_channel.recv() => {
                 match message {
                     Ok(OnlineMatchmakerRequest::StopSearch { .. }) => {
-                        println!("Stop search request received, cancelling matchmaking");
                         if let Err(err) = _resolve_stop_search_for_match(
                             matchmaker_channel,
                             matchmaker_connection_state,
@@ -100,6 +102,7 @@ pub async fn _resolve_search_for_match(
     }
 }
 
+/// Resolves the stop search for a match by sending a stop matchmaking request and handling responses.
 pub async fn _resolve_stop_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     matchmaker_connection_state: &mut MatchmakerConnectionState,
@@ -109,10 +112,8 @@ pub async fn _resolve_stop_search_for_match(
     // Use the existing connection to send the stop request
     let (mut send, mut recv) = conn.open_bi().await?;
 
-    println!("Resolve: Stopping matchmaking");
     let message = MatchmakerRequest::StopMatchmaking(match_info);
     info!(request=?message, "Sending stop matchmaking request");
-    println!("Sending stop matchmaking request");
 
     let message = postcard::to_allocvec(&message)?;
     send.write_all(&message).await?;
@@ -123,7 +124,6 @@ pub async fn _resolve_stop_search_for_match(
 
     match response {
         MatchmakerResponse::Accepted => {
-            println!("Stop matchmaking request accepted");
             matchmaker_channel
                 .send(OnlineMatchmakerResponse::Error(
                     "Matchmaking stopped by user".to_string(),
@@ -140,8 +140,6 @@ pub async fn _resolve_stop_search_for_match(
 
     Ok(())
 }
-
-
 
 impl OnlineMatchmaker {
     /// Sends a request to the matchmaking server to start searching for a match. Response is read via `read_matchmaker_response()`.

@@ -1,6 +1,9 @@
 #![allow(missing_docs)]
 
-use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse, READ_TO_END_BYTE_COUNT, MatchmakerConnectionState};
+use super::online::{
+    MatchmakerConnectionState, OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse,
+    READ_TO_END_BYTE_COUNT,
+};
 use crate::{
     networking::{socket::establish_peer_connections, NetworkMatchSocket},
     prelude::*,
