@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse, READ_TO_END_BYTE_COUNT};
+use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse, READ_TO_END_BYTE_COUNT, MatchmakerConnectionState};
 use crate::{
     networking::{socket::establish_peer_connections, NetworkMatchSocket},
     prelude::*,
@@ -10,23 +10,21 @@ use bones_matchmaker_proto::{
     GameID, MatchInfo, MatchmakerRequest, MatchmakerResponse, PlayerIdxAssignment,
 };
 use iroh_net::NodeId;
-use iroh_net::Endpoint;
 use iroh_quinn::Connection;
 use std::sync::Arc;
 use tracing::{info, warn};
 
 pub async fn _resolve_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-    conn: Connection,
-    current_connection: &mut Option<(Endpoint, Connection)>,
-    match_info: MatchInfo
+    matchmaker_connection_state: &mut MatchmakerConnectionState,
+    match_info: MatchInfo,
 ) -> anyhow::Result<()> {
-    // Send a match request to the server
+    let conn = matchmaker_connection_state.acquire_connection().await?;
     let (mut send, mut recv) = conn.open_bi().await?;
 
+    // Send a matchmaking request to the server
     let message = MatchmakerRequest::RequestMatchmaking(match_info.clone());
     info!(request=?message, "Resolve: Sending match request");
-
     let message = postcard::to_allocvec(&message)?;
     send.write_all(&message).await?;
     send.finish().await?;
@@ -42,7 +40,7 @@ pub async fn _resolve_search_for_match(
                         println!("Stop search request received, cancelling matchmaking");
                         if let Err(err) = _resolve_stop_search_for_match(
                             matchmaker_channel,
-                            conn.clone(),
+                            matchmaker_connection_state,
                             match_info.clone(),
                         ).await {
                             warn!("Error stopping matchmaking: {:?}", err);
@@ -92,8 +90,7 @@ pub async fn _resolve_search_for_match(
                             random_seed
                         })?;
 
-                        conn.close(0u32.into(), b"Match found, closing connection");
-                        *current_connection = None;
+                        matchmaker_connection_state.close_connection();
                         return Ok(());
                     }
                     other => anyhow::bail!("Unexpected message from matchmaker: {other:?}"),
@@ -101,20 +98,18 @@ pub async fn _resolve_search_for_match(
             }
         }
     }
-
-    Ok(())
 }
 
 pub async fn _resolve_stop_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-    conn: Connection,
+    matchmaker_connection_state: &mut MatchmakerConnectionState,
     match_info: MatchInfo,
 ) -> anyhow::Result<()> {
-    println!("Resolve: Stopping matchmaking");
-
+    let conn = matchmaker_connection_state.acquire_connection().await?;
     // Use the existing connection to send the stop request
     let (mut send, mut recv) = conn.open_bi().await?;
 
+    println!("Resolve: Stopping matchmaking");
     let message = MatchmakerRequest::StopMatchmaking(match_info);
     info!(request=?message, "Sending stop matchmaking request");
     println!("Sending stop matchmaking request");

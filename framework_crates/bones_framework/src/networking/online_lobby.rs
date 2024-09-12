@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse, READ_TO_END_BYTE_COUNT};
+use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse, READ_TO_END_BYTE_COUNT, MatchmakerConnectionState};
 use crate::{
     networking::{socket::establish_peer_connections, NetworkMatchSocket},
     prelude::*,
@@ -8,15 +8,15 @@ use crate::{
 };
 use bones_matchmaker_proto::{GameID, LobbyId, LobbyInfo, MatchmakerRequest, MatchmakerResponse};
 use iroh_net::NodeId;
-use iroh_quinn::Connection;
 use std::sync::Arc;
 use tracing::info;
 
 pub async fn _resolve_list_lobbies(
-    matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-    conn: Connection,
+    user_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
+    matchmaker_connection_state: &mut MatchmakerConnectionState,
     game_id: GameID,
 ) -> anyhow::Result<()> {
+    let conn = matchmaker_connection_state.acquire_connection().await?;
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::ListLobbies(game_id);
@@ -29,7 +29,7 @@ pub async fn _resolve_list_lobbies(
 
     match message {
         MatchmakerResponse::LobbiesList(lobbies) => {
-            matchmaker_channel.try_send(OnlineMatchmakerResponse::LobbiesList(lobbies))?;
+            user_channel.try_send(OnlineMatchmakerResponse::LobbiesList(lobbies))?;
         }
         other => anyhow::bail!("Unexpected message from matchmaker: {other:?}"),
     }
@@ -38,10 +38,11 @@ pub async fn _resolve_list_lobbies(
 }
 
 pub async fn _resolve_create_lobby(
-    matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-    conn: Connection,
+    user_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
+    matchmaker_connection_state: &mut MatchmakerConnectionState,
     lobby_info: LobbyInfo,
 ) -> anyhow::Result<()> {
+    let conn = matchmaker_connection_state.acquire_connection().await?;
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::CreateLobby(lobby_info);
@@ -54,10 +55,10 @@ pub async fn _resolve_create_lobby(
 
     match message {
         MatchmakerResponse::LobbyCreated(lobby_id) => {
-            matchmaker_channel.try_send(OnlineMatchmakerResponse::LobbyCreated(lobby_id))?;
+            user_channel.try_send(OnlineMatchmakerResponse::LobbyCreated(lobby_id))?;
         }
         MatchmakerResponse::Error(err) => {
-            matchmaker_channel.try_send(OnlineMatchmakerResponse::Error(err))?;
+            user_channel.try_send(OnlineMatchmakerResponse::Error(err))?;
         }
         other => anyhow::bail!("Unexpected message from matchmaker: {other:?}"),
     }
@@ -66,12 +67,13 @@ pub async fn _resolve_create_lobby(
 }
 
 pub async fn _resolve_join_lobby(
-    matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-    conn: Connection,
+    user_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
+    matchmaker_connection_state: &mut MatchmakerConnectionState,
     game_id: GameID,
     lobby_id: LobbyId,
     password: Option<String>,
 ) -> anyhow::Result<()> {
+    let conn = matchmaker_connection_state.acquire_connection().await?;
     let (mut send, mut recv) = conn.open_bi().await?;
 
     let message = MatchmakerRequest::JoinLobby(game_id, lobby_id.clone(), password);
@@ -84,7 +86,7 @@ pub async fn _resolve_join_lobby(
 
     match message {
         MatchmakerResponse::LobbyJoined(joined_lobby_id) => {
-            matchmaker_channel.try_send(OnlineMatchmakerResponse::LobbyJoined {
+            user_channel.try_send(OnlineMatchmakerResponse::LobbyJoined {
                 lobby_id: joined_lobby_id,
                 player_count: 0, // We don't have this information yet
             })?;
@@ -98,7 +100,7 @@ pub async fn _resolve_join_lobby(
                 match message {
                     MatchmakerResponse::LobbyUpdate { player_count } => {
                         info!("Online lobby updated player count: {player_count}");
-                        matchmaker_channel
+                        user_channel
                             .try_send(OnlineMatchmakerResponse::LobbyUpdate { player_count })?;
                     }
                     MatchmakerResponse::Success {
@@ -113,7 +115,7 @@ pub async fn _resolve_join_lobby(
 
                         let socket = super::socket::Socket::new(player_idx, peer_connections);
 
-                        matchmaker_channel.try_send(OnlineMatchmakerResponse::GameStarting {
+                        user_channel.try_send(OnlineMatchmakerResponse::GameStarting {
                             socket: NetworkMatchSocket(Arc::new(socket)),
                             player_idx: player_idx as _,
                             player_count: player_count as _,
@@ -122,7 +124,7 @@ pub async fn _resolve_join_lobby(
                         break;
                     }
                     MatchmakerResponse::Error(err) => {
-                        matchmaker_channel.try_send(OnlineMatchmakerResponse::Error(err))?;
+                        user_channel.try_send(OnlineMatchmakerResponse::Error(err))?;
                         break;
                     }
                     other => anyhow::bail!("Unexpected message from matchmaker: {other:?}"),
@@ -130,7 +132,7 @@ pub async fn _resolve_join_lobby(
             }
         }
         MatchmakerResponse::Error(err) => {
-            matchmaker_channel.try_send(OnlineMatchmakerResponse::Error(err))?;
+            user_channel.try_send(OnlineMatchmakerResponse::Error(err))?;
         }
         other => anyhow::bail!("Unexpected message from matchmaker: {other:?}"),
     }

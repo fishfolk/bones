@@ -109,7 +109,7 @@ pub static ONLINE_MATCHMAKER: Lazy<OnlineMatchmaker> = Lazy::new(|| {
     let (client, server) = bi_channel();
 
     RUNTIME.spawn(async move {
-        if let Err(err) = online_matchmaker(server).await {
+        if let Err(err) = process_matchmaker_requests(server).await {
             warn!("online matchmaker failed: {err:?}");
         }
     });
@@ -117,12 +117,72 @@ pub static ONLINE_MATCHMAKER: Lazy<OnlineMatchmaker> = Lazy::new(|| {
     OnlineMatchmaker(client)
 });
 
-async fn online_matchmaker(
-    matchmaker_channel: BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
-) -> anyhow::Result<()> {
-    let mut current_connection: Option<(Endpoint, Connection)> = None;
+/// Internal struct used to keep track of the connection with the matchmaker
+pub struct MatchmakerConnectionState {
+    ep: Option<Endpoint>,
+    conn: Option<Connection>,
+    node_id: Option<NodeId>,
+}
 
-    while let Ok(message) = matchmaker_channel.recv().await {
+impl MatchmakerConnectionState {
+    /// Initialize a new MatchmakerConnectionState
+    pub fn new() -> Self {
+        Self {
+            ep: None,
+            conn: None,
+            node_id: None,
+        }
+    }
+
+    /// Acquires the matchmaker connection, either establishing from scratch if none exists
+    /// or fetching the currently held connection.
+    pub async fn acquire_connection(&mut self) -> anyhow::Result<&Connection> {
+        if let Some(id) = self.node_id {
+            if self.conn.is_none() {
+                info!("Connecting to online matchmaker");
+                println!("Connecting to online matchmaker");
+                let ep = get_network_endpoint().await;
+                let conn = ep.connect(id.into(), MATCH_ALPN).await?;
+                self.ep = Some(ep.clone());
+                self.conn = Some(conn);
+                info!("Connected to online matchmaker");
+                println!("Connected to online matchmaker");
+            }
+
+            println!("Acquired online matchmaker connection");
+            self.conn.as_ref().ok_or_else(|| anyhow::anyhow!("Failed to establish connection"))
+        } else {
+            Err(anyhow::anyhow!("NodeId not set"))
+        }
+    }
+
+    /// Closes the connection with the matchmaker, and removes the conn/ep from self.
+    pub fn close_connection(&mut self) {
+        if let Some(conn) = self.conn.take() {
+            conn.close(0u32.into(), b"Closing matchmaker connection");
+            println!("Closed matchmaker connection");
+        }
+        self.ep = None;
+    }
+
+    /// Returns true if a connection with the matchmaker currently exists
+    pub fn is_connected(&self) -> bool {
+        self.conn.is_some()
+    }
+
+    /// Sets the iroh NodeId that will be used to establish connection with the matchmaker
+    pub fn set_node_id(&mut self, id: NodeId) {
+        self.node_id = Some(id);
+    }
+}
+
+/// Core communication processing for the matchmaker
+async fn process_matchmaker_requests(
+    user_channel: BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
+) -> anyhow::Result<()> {
+    let mut matchmaker_connection_state = MatchmakerConnectionState::new();
+
+    while let Ok(message) = user_channel.recv().await {
         match message {
             OnlineMatchmakerRequest::SearchForGame {
                 id,
@@ -131,8 +191,7 @@ async fn online_matchmaker(
                 match_data,
                 player_idx_assignment,
             } => {
-                let (_ep, conn) =
-                    acquire_matchmaker_connection(id, &mut current_connection).await?;
+                matchmaker_connection_state.set_node_id(id);
                 let match_info = MatchInfo {
                     max_players: player_count,
                     match_data,
@@ -141,22 +200,21 @@ async fn online_matchmaker(
                 };
 
                 if let Err(err) = crate::networking::online_matchmaking::_resolve_search_for_match(
-                    &matchmaker_channel,
-                    conn.clone(),
-                    &mut current_connection,
+                    &user_channel,
+                    &mut matchmaker_connection_state,
                     match_info.clone(),
                 )
                 .await
                 {
                     warn!("Online Matchmaking Search failed: {err:?}");
                 }
-                current_connection = None;
+                matchmaker_connection_state.close_connection();
             }
             OnlineMatchmakerRequest::ListLobbies { id, game_id } => {
-                let (_, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;
+                matchmaker_connection_state.set_node_id(id);
                 if let Err(err) = crate::networking::online_lobby::_resolve_list_lobbies(
-                    &matchmaker_channel,
-                    conn.clone(),
+                    &user_channel,
+                    &mut matchmaker_connection_state,
                     game_id,
                 )
                 .await
@@ -165,10 +223,10 @@ async fn online_matchmaker(
                 }
             }
             OnlineMatchmakerRequest::CreateLobby { id, lobby_info } => {
-                let (_, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;
+                matchmaker_connection_state.set_node_id(id);
                 if let Err(err) = crate::networking::online_lobby::_resolve_create_lobby(
-                    &matchmaker_channel,
-                    conn.clone(),
+                    &user_channel,
+                    &mut matchmaker_connection_state,
                     lobby_info,
                 )
                 .await
@@ -182,10 +240,10 @@ async fn online_matchmaker(
                 lobby_id,
                 password,
             } => {
-                let (_, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;
+                matchmaker_connection_state.set_node_id(id);
                 if let Err(err) = crate::networking::online_lobby::_resolve_join_lobby(
-                    &matchmaker_channel,
-                    conn.clone(),
+                    &user_channel,
+                    &mut matchmaker_connection_state,
                     game_id,
                     lobby_id,
                     password,
@@ -195,36 +253,16 @@ async fn online_matchmaker(
                     warn!("Joining lobby failed: {err:?}");
                 }
             }
-            // Otherwise do nothing because the above paths take care of it
-            _ => {}
+            OnlineMatchmakerRequest::StopSearch { id } => {
+                matchmaker_connection_state.set_node_id(id);
+                matchmaker_connection_state.close_connection();
+            }
         }
     }
 
     Ok(())
 }
 
-/// Acquires the matchmaker connection, either establishing from scratch if none exists,
-/// or fetching and returning the current connection.
-pub async fn acquire_matchmaker_connection(
-    id: NodeId,
-    current_connection: &mut Option<(Endpoint, Connection)>,
-) -> anyhow::Result<(&Endpoint, &Connection)> {
-    if current_connection.is_none() {
-        info!("Connecting to online matchmaker");
-        println!("Connecting to online matchmaker");
-        let ep = get_network_endpoint().await;
-        let conn = ep.connect(id.into(), MATCH_ALPN).await?;
-        *current_connection = Some((ep.clone(), conn));
-        info!("Connected to online matchmaker");
-        println!("Connected to online matchmaker");
-    }
-
-    println!("Acquired online matchmaker connection");
-    current_connection
-        .as_ref()
-        .map(|(ep, conn)| (ep, conn))
-        .ok_or_else(|| anyhow::anyhow!("Failed to establish connection"))
-}
 
 impl OnlineMatchmaker {
     /// Read and return the latest matchmaker response, if one exists.
