@@ -1,13 +1,12 @@
-use std::collections::HashMap;
-use super::matchmaker::{MATCHMAKER_STATE, start_game,  GameLobbies};
+use super::matchmaker::{start_game, GameLobbies, MATCHMAKER_STATE};
+use crate::helpers::{generate_unique_id, hash_password};
 use anyhow::Result;
 use bones_matchmaker_proto::{
- MatchInfo,  MatchmakerResponse, GameID, LobbyListItem, LobbyInfo, LobbyId,
+    GameID, LobbyId, LobbyInfo, LobbyListItem, MatchInfo, MatchmakerResponse,
 };
 use iroh_net::Endpoint;
 use quinn::Connection;
-use crate::helpers::{generate_unique_id, hash_password};
-
+use std::collections::HashMap;
 
 /// Handles a request to list lobbies for a specific game
 pub async fn handle_list_lobbies(game_id: GameID, send: &mut quinn::SendStream) -> Result<()> {
@@ -68,11 +67,12 @@ pub async fn handle_create_lobby(
         .insert(lobby_id.clone(), lobby_info.clone());
 
     // Add the connection to the lobby
-        if let Err(e) = state
+    if let Err(e) = state
         .lobby_connections
-        .insert((lobby_info.game_id.clone(), lobby_id.clone()), vec![conn]) {
-            error!("Failed to inserting lobby during creation: {:?}", e);
-        }
+        .insert((lobby_info.game_id.clone(), lobby_id.clone()), vec![conn])
+    {
+        error!("Failed to inserting lobby during creation: {:?}", e);
+    }
 
     // Send confirmation to the client
     let message = postcard::to_allocvec(&MatchmakerResponse::LobbyCreated(lobby_id))?;
@@ -134,7 +134,9 @@ pub async fn handle_join_lobby(
 
                     // Always notify all players in the lobby about the update
                     let lobby_update_message =
-                        postcard::to_allocvec(&MatchmakerResponse::LobbyUpdate{player_count: count as u32})?;
+                        postcard::to_allocvec(&MatchmakerResponse::LobbyUpdate {
+                            player_count: count as u32,
+                        })?;
                     if let Some(connections) = state
                         .lobby_connections
                         .get(&(game_id.clone(), lobby_id.clone()))

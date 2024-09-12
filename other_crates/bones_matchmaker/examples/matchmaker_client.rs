@@ -49,7 +49,7 @@ async fn client() -> anyhow::Result<()> {
     // Send a match request to the server
     let (mut send, mut recv) = conn.open_bi().await?;
 
-    let message = MatchmakerRequest::RequestMatch(MatchInfo {
+    let message = MatchmakerRequest::RequestMatchmaking(MatchInfo {
         player_count: std::env::args()
             .nth(1)
             .map(|x| x.parse().unwrap())

@@ -45,7 +45,7 @@ needing a matchmaking server.
 #### Initial Connection
 
 When a client connects to the matchmaking server, the very first thing it will do is send a
-[`RequestMatch`][crate::external::bones_matchmaker_proto::MatchmakerRequest::RequestMatch] message
+[`RequestMatchmaking`][crate::external::bones_matchmaker_proto::MatchmakerRequest::RequestMatchmaking] message
 to the server over a reliable channel.
 
 This message contains the [`MatchInfo`] that tells the server how many players the client wants to

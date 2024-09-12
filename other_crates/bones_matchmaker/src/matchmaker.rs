@@ -1,9 +1,6 @@
+use super::lobbies::{handle_create_lobby, handle_join_lobby, handle_list_lobbies};
+use super::matchmaking::{handle_request_matchaking, handle_stop_matchmaking};
 use crate::helpers::generate_random_seed;
-use super::matchmaking::handle_request_matchaking;
-use super::lobbies::{
-handle_list_lobbies,
-handle_create_lobby,
-handle_join_lobby};
 use anyhow::Result;
 use bones_matchmaker_proto::{
     GameID, LobbyId, LobbyInfo, MatchInfo, MatchmakerRequest, MatchmakerResponse,
@@ -34,46 +31,54 @@ pub struct State {
 }
 
 /// Global state of the matchmaker
-pub static MATCHMAKER_STATE: Lazy<Arc<Mutex<State>>> = Lazy::new(|| Arc::new(Mutex::new(State::default())));
+pub static MATCHMAKER_STATE: Lazy<Arc<Mutex<State>>> =
+    Lazy::new(|| Arc::new(Mutex::new(State::default())));
 
 /// Handles incoming connections and routes requests to appropriate handlers
 pub async fn handle_connection(ep: Endpoint, conn: Connection) -> Result<()> {
     let connection_id = conn.stable_id();
-    println!( "Accepted matchmaker connection: {:?}", connection_id);
+    println!("Accepted matchmaker connection: {:?}", connection_id);
 
     loop {
         tokio::select! {
-            close = conn.closed() => {
-                println!("Connection closed {close:?}");
-                return Ok(());
-            }
-            bi = conn.accept_bi() => {
-                let (mut send, mut recv) = bi?;
-                // Parse the incoming request
-                let request: MatchmakerRequest = postcard::from_bytes(&recv.read_to_end(256).await?)?;
+                  close = conn.closed() => {
+                      println!("Connection closed {close:?}");
+                      return Ok(());
+                  }
+                  bi = conn.accept_bi() => {
+                      let (mut send, mut recv) = bi?;
+                      // Parse the incoming request
+                      let request: MatchmakerRequest = postcard::from_bytes(&recv.read_to_end(256).await?)?;
 
-                // Route the request to the appropriate handler
-                match request {
-                    MatchmakerRequest::RequestMatch(match_info) => {
-                        handle_request_matchaking(ep.clone(), conn.clone(), match_info, &mut send).await?;
-                    }
-                    MatchmakerRequest::ListLobbies(game_id) => {
-                        handle_list_lobbies(game_id, &mut send).await?;
-                    }
-                    MatchmakerRequest::CreateLobby(lobby_info) => {
-                        handle_create_lobby(conn.clone(), lobby_info, &mut send).await?;
-                    }
-                    MatchmakerRequest::JoinLobby(game_id, lobby_id, password) => {
-                        handle_join_lobby(ep.clone(), conn.clone(), game_id, lobby_id, password, &mut send).await?;
-                    }
-                }
-            }
-        }
+                      // Route the request to the appropriate handler
+                      match request {
+                          MatchmakerRequest::RequestMatchmaking(match_info) => {
+                              handle_request_matchaking(ep.clone(), conn.clone(), match_info, &mut send).await?;
+                          }
+                          MatchmakerRequest::StopMatchmaking(match_info) => {
+                              handle_stop_matchmaking(conn.clone(), match_info, &mut send).await?;
+                          }
+                          MatchmakerRequest::ListLobbies(game_id) => {
+                              handle_list_lobbies(game_id, &mut send).await?;
+                          }
+                          MatchmakerRequest::CreateLobby(lobby_info) => {
+                              handle_create_lobby(conn.clone(), lobby_info, &mut send).await?;
+                          }
+                          MatchmakerRequest::JoinLobby(game_id, lobby_id, password) => {
+                              handle_join_lobby(ep.clone(), conn.clone(), game_id, lobby_id, password, &mut send).await?;
+                          }
+                      }
+                  }
+              }
     }
 }
 
 /// Starts a match/lobby with the given members
-pub async fn start_game(ep: Endpoint, members: Vec<Connection>, match_info: &MatchInfo) -> Result<()> {
+pub async fn start_game(
+    ep: Endpoint,
+    members: Vec<Connection>,
+    match_info: &MatchInfo,
+) -> Result<()> {
     let random_seed = generate_random_seed();
     let mut player_ids = Vec::new();
     let player_count = members.len();

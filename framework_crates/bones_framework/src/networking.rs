@@ -23,8 +23,8 @@ use crate::input::PlayerControls as PlayerControlsTrait;
 pub mod input;
 pub mod lan;
 pub mod online;
-pub mod online_matchmaking;
 pub mod online_lobby;
+pub mod online_matchmaking;
 pub mod proto;
 pub mod socket;
 

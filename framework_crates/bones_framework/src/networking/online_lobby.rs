@@ -1,6 +1,5 @@
 #![allow(missing_docs)]
 
-use tracing::info;
 use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse};
 use crate::{
     networking::{get_network_endpoint, socket::establish_peer_connections, NetworkMatchSocket},
@@ -8,11 +7,11 @@ use crate::{
     utils::BiChannelServer,
 };
 use bones_matchmaker_proto::{
-    GameID, LobbyId, LobbyInfo, MatchmakerRequest, MatchmakerResponse,
-    MATCH_ALPN,
+    GameID, LobbyId, LobbyInfo, MatchmakerRequest, MatchmakerResponse, MATCH_ALPN,
 };
 use iroh_net::NodeId;
 use std::sync::Arc;
+use tracing::info;
 
 async fn connect_to_matchmaker(id: NodeId) -> anyhow::Result<iroh_quinn::Connection> {
     let ep = get_network_endpoint().await;
@@ -109,10 +108,10 @@ pub async fn _resolve_join_lobby(
                 let message: MatchmakerResponse = postcard::from_bytes(&message)?;
 
                 match message {
-                    MatchmakerResponse::LobbyUpdate{player_count} => {
+                    MatchmakerResponse::LobbyUpdate { player_count } => {
                         info!("Online lobby updated player count: {player_count}");
                         matchmaker_channel
-                            .try_send(OnlineMatchmakerResponse::LobbyUpdate{player_count})?;
+                            .try_send(OnlineMatchmakerResponse::LobbyUpdate { player_count })?;
                     }
                     MatchmakerResponse::Success {
                         random_seed,

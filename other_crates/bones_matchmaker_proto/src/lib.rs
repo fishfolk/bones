@@ -20,8 +20,10 @@ pub const PLAY_ALPN: &[u8] = b"/bones/play/0";
 /// Requests that may be made in matchmaking mode
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum MatchmakerRequest {
-    /// Request a match from the server
-    RequestMatch(MatchInfo),
+    /// Request to have the client join matchmaking queue
+    RequestMatchmaking(MatchInfo),
+    /// Request to remove the client from the matchmaking queue
+    StopMatchmaking(MatchInfo),
     /// Request a list of lobbies for a specific game
     ListLobbies(String),
     /// Request to create a new lobby
