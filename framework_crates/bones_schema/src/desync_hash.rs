@@ -1,4 +1,7 @@
 //! Implementation of [`DesyncHash`] for [`SchemaRef`].
+//!
+//! SchemaRef's DesyncHash impl calls a function pointer that is optional. It can be opted in
+//! by adding `#[net]`.
 
 use std::{any::type_name, hash::Hasher};
 
@@ -6,7 +9,7 @@ use bones_utils::DesyncHash;
 
 use crate::{prelude::*, ptr::SchemaRef, FromType, HasSchema, Schema, SchemaData};
 
-/// Used in [`Schema`] [`TypeDatas`] to optionally implement desync hash.
+/// Used in [`Schema`] `TypeDatas` to optionally implement desync hash.
 pub struct SchemaDesyncHash {
     /// Desync hash fn pointer
     pub desync_hash_fn: for<'a> fn(SchemaRef<'a>, hasher: &mut dyn Hasher),

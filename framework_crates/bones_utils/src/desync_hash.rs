@@ -1,6 +1,6 @@
 //! [`DesyncHash`] trait and impls, for detecting net desync.
-//
-// In order to use [`DesyncHash`] with [`glam`] types, the "glam" feature flag must be used.
+//!
+//! In order to use [`DesyncHash`] with [`glam`] types, the "glam" feature flag must be used.
 
 use std::time::Duration;
 
@@ -8,7 +8,7 @@ use ustr::Ustr;
 
 /// [`DesyncHash`] is used to hash type and compare over network to detect desyncs.
 ///
-/// In order to opt in a [`HasSchema`] Component or Resource to be included in hash of World in networked session,
+/// In order to opt in a `HasSchema` Component or Resource to be included in hash of World in networked session,
 /// `#[net]` or `#[derive_type_data(SchemaDesyncHas)]` must also be included.
 pub trait DesyncHash {
     /// Update hasher from type's values
