@@ -8,6 +8,7 @@
 
 mod collections;
 mod default;
+mod desync_hash;
 #[cfg(feature = "ulid")]
 mod labeled_id;
 mod names;
@@ -21,7 +22,7 @@ macro_rules! pub_use {
     () => {
         #[cfg(feature = "turborand")]
         pub use crate::random::*;
-        pub use crate::{collections::*, default::*, names::*};
+        pub use crate::{collections::*, default::*, desync_hash::*, names::*};
         #[cfg(feature = "ulid")]
         pub use crate::{labeled_id::*, ulid::*};
         pub use bones_utils_macros::*;

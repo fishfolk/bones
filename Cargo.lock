@@ -1612,6 +1612,7 @@ dependencies = [
  "bones_utils_macros",
  "fxhash",
  "getrandom",
+ "glam 0.24.2",
  "hashbrown 0.14.5",
  "instant",
  "serde",
