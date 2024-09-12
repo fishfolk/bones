@@ -20,6 +20,30 @@ fn is_simple_named_attr(attr: &venial::Attribute, name: &str) -> bool {
         && attr.get_value_tokens().is_empty()
 }
 
+/// Attribute adding extra functionality for networking.
+///
+/// For example, provides sugar for `#[derive_type_data(SchemaDesyncHash)]`, which
+/// opts in [`SchemaRef`] to support [`DesyncHash`], so it maybe be included in hash for desync detection.
+#[proc_macro_attribute]
+pub fn net(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    // Error if #[net] is used with #[schema(no_clone)].
+    let input = venial::parse_declaration(item.clone().into()).unwrap();
+
+    if let Some(schema_attr) = input
+        .attributes()
+        .iter()
+        .find(|attr| attr.path.len() == 1 && attr.path[0].to_string().as_str() == "schema")
+    {
+        if let venial::AttributeValue::Group(_, value) = &schema_attr.value {
+            if value.iter().any(|f| f.to_string().as_str() == "no_clone") {
+                panic!("#[net] was used with #[schema(no_clone)]. A Schema that cannot be cloned will never be deterministic in network play.");
+            }
+        };
+    }
+
+    item
+}
+
 /// Derive macro for deriving [`Deref`] on structs with one field.
 #[proc_macro_derive(Deref, attributes(deref))]
 pub fn derive_deref(input: TokenStream) -> TokenStream {
