@@ -47,6 +47,25 @@ impl Clone for ComponentStores {
     }
 }
 
+impl DesyncHash for ComponentStores {
+    fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        for (_, component_store) in self.components.read_only_view().iter() {
+            // Verify Schema for component store implement desync hash. If no hash_fn, while the
+            // components will not impact hash, we should probably not hash the schema_id in this case.
+            let component_store = component_store.as_ref().borrow();
+            if component_store
+                .schema()
+                .type_data
+                .get::<SchemaDesyncHash>()
+                .is_some()
+            {
+                component_store.schema().full_name.hash(hasher);
+                component_store.hash(hasher);
+            }
+        }
+    }
+}
+
 impl ComponentStores {
     /// Get the components of a certain type
     pub fn get_cell<T: HasSchema>(&self) -> AtomicComponentStore<T> {

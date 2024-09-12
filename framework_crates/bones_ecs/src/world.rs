@@ -36,6 +36,13 @@ impl Default for World {
     }
 }
 
+impl DesyncHash for World {
+    fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        self.components.hash(hasher);
+        self.resources.hash(hasher);
+    }
+}
+
 impl World {
     /// Create a new [`World`].
     pub fn new() -> Self {

@@ -24,6 +24,14 @@ impl std::fmt::Debug for UntypedResource {
     }
 }
 
+impl DesyncHash for UntypedResource {
+    fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        if let Some(schema_box) = self.cell.borrow().as_ref() {
+            DesyncHash::hash(&schema_box.as_ref(), hasher);
+        }
+    }
+}
+
 impl UntypedResource {
     /// Initialize a new, empty [`UntypedResource`].
     pub fn empty(schema: &'static Schema) -> Self {
@@ -136,6 +144,24 @@ impl Clone for UntypedResources {
     }
 }
 
+impl DesyncHash for UntypedResources {
+    fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        for (schema_id, resource_cell) in self.resources.read_only_view().iter() {
+            let is_shared = self.shared_resources.contains_key(schema_id);
+
+            if !is_shared {
+                // Verify Schema for resource implement desync hash. If no hash fn,
+                // we should avoid hashing the schema too.
+                let schema = resource_cell.schema();
+                if schema.type_data.get::<SchemaDesyncHash>().is_some() {
+                    schema.full_name.hash(hasher);
+                    resource_cell.hash(hasher);
+                }
+            }
+        }
+    }
+}
+
 /// Error thrown when a resource cell cannot be inserted because it already exists.
 #[derive(Debug, Clone, Copy)]
 pub struct CellAlreadyPresentError;
@@ -208,6 +234,12 @@ impl UntypedResources {
 #[derive(Clone, Default)]
 pub struct Resources {
     untyped: UntypedResources,
+}
+
+impl DesyncHash for Resources {
+    fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        self.untyped.hash(hasher);
+    }
 }
 
 impl Resources {

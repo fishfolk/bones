@@ -73,6 +73,14 @@ impl Drop for UntypedComponentStore {
     }
 }
 
+impl DesyncHash for UntypedComponentStore {
+    fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        for component in self.iter() {
+            DesyncHash::hash(&component, hasher);
+        }
+    }
+}
+
 impl UntypedComponentStore {
     /// Create a arbitrary [`UntypedComponentStore`].
     ///
