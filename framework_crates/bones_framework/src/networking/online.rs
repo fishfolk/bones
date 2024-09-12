@@ -17,6 +17,9 @@ use iroh_quinn::Connection;
 use once_cell::sync::Lazy;
 use tracing::{info, warn};
 
+/// The number of bytes to use for read_to_end()
+pub const READ_TO_END_BYTE_COUNT: usize = 256;
+
 /// Struct that holds a channel which exchange messages with the matchmaking server.
 #[derive(DerefMut, Deref)]
 pub struct OnlineMatchmaker(BiChannelClient<OnlineMatchmakerRequest, OnlineMatchmakerResponse>);

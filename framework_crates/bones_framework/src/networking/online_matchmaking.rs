@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse};
+use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse, READ_TO_END_BYTE_COUNT};
 use crate::{
     networking::{socket::establish_peer_connections, NetworkMatchSocket},
     prelude::*,
@@ -12,7 +12,7 @@ use bones_matchmaker_proto::{
 use iroh_net::NodeId;
 use iroh_quinn::Connection;
 use std::sync::Arc;
-use tracing::info;
+use tracing::{info, warn};
 
 pub async fn _resolve_stop_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
@@ -32,7 +32,7 @@ pub async fn _resolve_stop_search_for_match(
     send.write_all(&message).await?;
     send.finish().await?;
 
-    let res = recv.read_to_end(256).await?;
+    let res = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
     let response: MatchmakerResponse = postcard::from_bytes(&res)?;
 
     match response {
@@ -74,30 +74,28 @@ pub async fn _resolve_search_for_match(
     send.write_all(&message).await?;
     send.finish().await?;
 
-    let res = recv.read_to_end(256).await?;
+    let res = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
     let _response: MatchmakerResponse = postcard::from_bytes(&res)?;
 
     loop {
         tokio::select! {
-            // UI message
-            // message = matchmaker_channel.recv() => {
-            //     match message {
-            //         Ok(OnlineMatchmakerRequest::SearchForGame { .. }) => {
-            //             anyhow::bail!("Unexpected message from UI");
-            //         }
-            //         Ok(OnlineMatchmakerRequest::StopSearch { .. }) => {
-            //             anyhow::bail!("Unexpected stop search");
-            //         }
-            //         Ok(OnlineMatchmakerRequest::ListLobbies { .. }) |
-            //         Ok(OnlineMatchmakerRequest::CreateLobby { .. }) |
-            //         Ok(OnlineMatchmakerRequest::JoinLobby { .. }) => {
-            //             anyhow::bail!("Unexpected lobby-related message during matchmaking");
-            //         }
-            //         Err(err) => {
-            //             anyhow::bail!("Failed to recv from match maker channel: {err:?}");
-            //         }
-            //     }
-            // }
+        // If the user sends other requests, act based off of them to not be blocking
+            message = matchmaker_channel.recv() => {
+                match message {
+                    Ok(OnlineMatchmakerRequest::StopSearch { .. }) => {
+                        // Handle stop search request
+                        info!("Stopping matchmaking search");
+                        return Ok(());
+                    }
+                    Ok(other) => {
+                        warn!("Unexpected request during matchmaking: {:?}", other);
+                        // Optionally, you could choose to ignore this and continue matchmaking
+                    }
+                    Err(err) => {
+                        anyhow::bail!("Failed to recv from match maker channel: {err:?}");
+                    }
+                }
+            }
             // Matchmaker message
             recv = conn.accept_uni() => {
                 let mut recv = recv?;

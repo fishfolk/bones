@@ -64,7 +64,7 @@ async fn client() -> anyhow::Result<()> {
 
     println!("o  Waiting for response");
 
-    let message = recv.read_to_end(256).await?;
+    let message = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
     let message: MatchmakerResponse = postcard::from_bytes(&message)?;
 
     if let MatchmakerResponse::Accepted = message {
@@ -75,7 +75,7 @@ async fn client() -> anyhow::Result<()> {
 
     let (player_idx, player_ids, _player_count) = loop {
         let mut recv = conn.accept_uni().await?;
-        let message = recv.read_to_end(256).await?;
+        let message = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
         let message: MatchmakerResponse = postcard::from_bytes(&message)?;
 
         match message {
@@ -144,7 +144,7 @@ async fn client() -> anyhow::Result<()> {
                             let mut recv = conn.accept_uni().await?;
                             println!("<= accepted connection");
 
-                            let incomming = recv.read_to_end(256).await?;
+                            let incomming = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
                             let message: Hello = postcard::from_bytes(&incomming).unwrap();
 
                             println!("<= {message:?}");

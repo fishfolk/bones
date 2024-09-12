@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse};
+use super::online::{OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse, READ_TO_END_BYTE_COUNT};
 use crate::{
     networking::{socket::establish_peer_connections, NetworkMatchSocket},
     prelude::*,
@@ -49,7 +49,7 @@ pub async fn _resolve_create_lobby(
     send.write_all(&message).await?;
     send.finish().await?;
 
-    let response = recv.read_to_end(256).await?;
+    let response = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
     let message: MatchmakerResponse = postcard::from_bytes(&response)?;
 
     match message {
@@ -79,7 +79,7 @@ pub async fn _resolve_join_lobby(
     send.write_all(&message).await?;
     send.finish().await?;
 
-    let response = recv.read_to_end(256).await?;
+    let response = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
     let message: MatchmakerResponse = postcard::from_bytes(&response)?;
 
     match message {
