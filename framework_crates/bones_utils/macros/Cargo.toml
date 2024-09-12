@@ -16,3 +16,4 @@ proc-macro = true
 [dependencies]
 quote  = "1.0"
 venial = "0.5"
+proc-macro2 = "1"
