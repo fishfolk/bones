@@ -143,13 +143,14 @@ async fn online_matchmaker(
                 if let Err(err) = crate::networking::online_matchmaking::_resolve_search_for_match(
                     &matchmaker_channel,
                     conn.clone(),
+                    &mut current_connection,
                     match_info.clone(),
                 )
                 .await
                 {
-                    warn!("Online Game Search failed: {err:?}");
-                    current_connection = None;
-                } 
+                    warn!("Online Matchmaking Search failed: {err:?}");
+                }
+                current_connection = None;
             }
             OnlineMatchmakerRequest::ListLobbies { id, game_id } => {
                 let (_, conn) = acquire_matchmaker_connection(id, &mut current_connection).await?;

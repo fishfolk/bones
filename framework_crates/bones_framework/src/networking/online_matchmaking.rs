@@ -10,6 +10,7 @@ use bones_matchmaker_proto::{
     GameID, MatchInfo, MatchmakerRequest, MatchmakerResponse, PlayerIdxAssignment,
 };
 use iroh_net::NodeId;
+use iroh_net::Endpoint;
 use iroh_quinn::Connection;
 use std::sync::Arc;
 use tracing::{info, warn};
@@ -17,7 +18,8 @@ use tracing::{info, warn};
 pub async fn _resolve_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     conn: Connection,
-    match_info: MatchInfo,
+    current_connection: &mut Option<(Endpoint, Connection)>,
+    match_info: MatchInfo
 ) -> anyhow::Result<()> {
     // Send a match request to the server
     let (mut send, mut recv) = conn.open_bi().await?;
@@ -89,7 +91,10 @@ pub async fn _resolve_search_for_match(
                             player_count: player_count as _,
                             random_seed
                         })?;
-                        break;
+
+                        conn.close(0u32.into(), b"Match found, closing connection");
+                        *current_connection = None;
+                        return Ok(());
                     }
                     other => anyhow::bail!("Unexpected message from matchmaker: {other:?}"),
                 }
