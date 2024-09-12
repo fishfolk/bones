@@ -133,6 +133,7 @@ async fn online_matchmaker(
             }
              => {
                 if let Some(match_info) = current_matchmaking_info.clone() {
+                    current_matchmaking_info = None;
                     if let Err(err) = crate::networking::online_matchmaking::_resolve_stop_search_for_match(
                         &matchmaker_channel,
                         id,
