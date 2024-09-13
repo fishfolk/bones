@@ -2,6 +2,9 @@ use bones_bevy_renderer::BonesBevyRenderer;
 use bones_framework::prelude::*;
 
 fn main() {
+    // Setup logging
+    setup_logs!();
+
     // First create bones game.
     let mut game = Game::new();
 

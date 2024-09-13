@@ -1369,7 +1369,7 @@ dependencies = [
 
 [[package]]
 name = "bones_asset"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "append-only-vec",
@@ -1400,7 +1400,7 @@ dependencies = [
 
 [[package]]
 name = "bones_bevy_renderer"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "bevy",
@@ -1416,7 +1416,7 @@ dependencies = [
 
 [[package]]
 name = "bones_ecs"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "atomicell",
@@ -1433,7 +1433,7 @@ dependencies = [
 
 [[package]]
 name = "bones_ecs_macros"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bevy_ecs 0.12.1",
  "bones_ecs",
@@ -1444,7 +1444,7 @@ dependencies = [
 
 [[package]]
 name = "bones_ecs_macros_core"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "pretty_assertions",
  "proc-macro2",
@@ -1454,7 +1454,7 @@ dependencies = [
 
 [[package]]
 name = "bones_framework"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "async-channel 1.9.0",
@@ -1467,6 +1467,7 @@ dependencies = [
  "bytemuck",
  "bytes",
  "csscolorparser",
+ "directories",
  "document-features",
  "egui",
  "egui_plot",
@@ -1497,13 +1498,17 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "tracing-tracy",
+ "tracing-wasm",
  "ttf-parser",
  "unic-langid",
 ]
 
 [[package]]
 name = "bones_lib"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bones_ecs",
  "instant",
@@ -1511,7 +1516,7 @@ dependencies = [
 
 [[package]]
 name = "bones_matchmaker"
-version = "0.2.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "blake3",
@@ -1535,7 +1540,7 @@ dependencies = [
 
 [[package]]
 name = "bones_matchmaker_proto"
-version = "0.2.0"
+version = "0.4.0"
 dependencies = [
  "iroh-net",
  "serde",
@@ -1543,7 +1548,7 @@ dependencies = [
 
 [[package]]
 name = "bones_schema"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "append-only-vec",
  "bones_schema_macros",
@@ -1561,7 +1566,7 @@ dependencies = [
 
 [[package]]
 name = "bones_schema_macros"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1570,7 +1575,7 @@ dependencies = [
 
 [[package]]
 name = "bones_scripting"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "async-channel 1.9.0",
  "bevy_tasks 0.11.3",
@@ -1586,7 +1591,7 @@ dependencies = [
 
 [[package]]
 name = "bones_utils"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bones_utils_macros",
  "branches",
@@ -1606,7 +1611,7 @@ dependencies = [
 
 [[package]]
 name = "bones_utils_macros"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "quote",
  "venial",
@@ -2191,7 +2196,7 @@ checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 
 [[package]]
 name = "demo_assets_minimal"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bones_bevy_renderer",
  "bones_framework",
@@ -2199,7 +2204,7 @@ dependencies = [
 
 [[package]]
 name = "demo_features"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bones_bevy_renderer",
  "bones_framework",
@@ -2207,7 +2212,7 @@ dependencies = [
 
 [[package]]
 name = "demo_hello_world"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bones_bevy_renderer",
  "bones_framework",
@@ -2215,7 +2220,7 @@ dependencies = [
 
 [[package]]
 name = "demo_scripting"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bones_bevy_renderer",
  "bones_framework",
@@ -3108,6 +3113,20 @@ dependencies = [
  "quote",
  "syn 2.0.77",
  "synstructure 0.13.1",
+]
+
+[[package]]
+name = "generator"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "186014d53bc231d0090ef8d6f03e0920c54d85a5ed22f4f2f74315ec56cf83fb"
+dependencies = [
+ "cc",
+ "cfg-if",
+ "libc",
+ "log",
+ "rustversion",
+ "windows 0.54.0",
 ]
 
 [[package]]
@@ -4332,6 +4351,19 @@ name = "log"
 version = "0.4.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
+
+[[package]]
+name = "loom"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "419e0dc8046cb947daa77eb95ae174acfbddb7673b4151f56d1eed8e93fbfaca"
+dependencies = [
+ "cfg-if",
+ "generator",
+ "scoped-tls",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "lru"
@@ -6388,6 +6420,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "scoped-tls"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1cf6437eb19a8f4a6cc0f7dca544973b0b78843adbfeb3683d1a94a0024a294"
+
+[[package]]
 name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7406,6 +7444,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-appender"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3566e8ce28cc0a3fe42519fc80e6b4c943cc4c8cef275620eb8dac2d3d4e06cf"
+dependencies = [
+ "crossbeam-channel",
+ "parking_lot",
+ "thiserror",
+ "time",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "tracing-attributes"
 version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7467,6 +7518,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-tracy"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6a90519f16f55e5c62ffd5976349f10744435a919ecff83d918300575dfb69b"
+dependencies = [
+ "tracing-core",
+ "tracing-subscriber",
+ "tracy-client",
+]
+
+[[package]]
 name = "tracing-wasm"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7475,6 +7537,26 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "tracy-client"
+version = "0.17.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "373db47331c3407b343538df77eea2516884a0b126cdfb4b135acfd400015dd7"
+dependencies = [
+ "loom",
+ "once_cell",
+ "tracy-client-sys",
+]
+
+[[package]]
+name = "tracy-client-sys"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "49cf0064dcb31c99aa1244c1b93439359e53f72ed217eef5db50abd442241e9a"
+dependencies = [
+ "cc",
 ]
 
 [[package]]

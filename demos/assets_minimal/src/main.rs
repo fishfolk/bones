@@ -19,6 +19,9 @@ struct GameMeta {
 }
 
 fn main() {
+    // Setup logging
+    setup_logs!();
+
     // First create bones game.
     let mut game = Game::new();
 

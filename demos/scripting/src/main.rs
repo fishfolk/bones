@@ -12,6 +12,9 @@ struct GameMeta {
 }
 
 fn main() {
+    // Setup logging
+    setup_logs!();
+
     let mut game = Game::new();
     game.install_plugin(DefaultGamePlugin);
     game.shared_resource_mut::<AssetServer>()

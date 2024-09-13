@@ -84,6 +84,9 @@ struct TileMeta {
 struct PersistedTextData(String);
 
 fn main() {
+    // Setup logging
+    setup_logs!();
+
     // Register persistent data's schema so that it can be loaded by the storage loader.
     PersistedTextData::register_schema();
 
