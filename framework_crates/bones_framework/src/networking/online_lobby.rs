@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
 use super::online::{
-    MatchmakerConnectionState,OnlineMatchmakerRequest, OnlineMatchmakerResponse,
+    MatchmakerConnectionState, OnlineMatchmakerRequest, OnlineMatchmakerResponse,
     READ_TO_END_BYTE_COUNT,
 };
 use crate::{

@@ -152,7 +152,7 @@ pub async fn handle_request_matchaking(
                     stable_id, e
                 );
             }
-            1 as u32
+            1_u32
         });
 
     // Release the lock after adding the new player
@@ -242,7 +242,7 @@ async fn send_matchmaking_updates(
     // Update stored connections
     {
         let state = MATCHMAKER_STATE.lock().await;
-        if let None = state.matchmaking_rooms.remove(&match_info) {
+        if state.matchmaking_rooms.remove(match_info).is_none() {
             warn!("Failed to remove matchmaking room: {:?}", &match_info);
         }
         if let Err(e) = state

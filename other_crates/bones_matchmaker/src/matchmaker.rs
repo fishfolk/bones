@@ -103,7 +103,7 @@ pub async fn start_game(
 
     // Collect player IDs and addresses
     for (conn_idx, conn) in members.iter().enumerate() {
-        let id = iroh_net::endpoint::get_remote_node_id(&conn)?;
+        let id = iroh_net::endpoint::get_remote_node_id(conn)?;
         let mut addr = NodeAddr::new(id);
         if let Some(info) = ep.connection_info(id) {
             if let Some(relay_url) = info.relay_url {

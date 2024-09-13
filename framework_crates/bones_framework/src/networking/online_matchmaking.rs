@@ -9,9 +9,7 @@ use crate::{
     prelude::*,
     utils::BiChannelServer,
 };
-use bones_matchmaker_proto::{
-    MatchInfo, MatchmakerRequest, MatchmakerResponse, 
-};
+use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse};
 use std::sync::Arc;
 use tracing::{info, warn};
 
@@ -139,4 +137,3 @@ pub(crate) async fn resolve_stop_search_for_match(
 
     Ok(())
 }
-
