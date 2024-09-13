@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
 use super::online::{
-    MatchmakerConnectionState, OnlineMatchmaker, OnlineMatchmakerRequest, OnlineMatchmakerResponse,
+    MatchmakerConnectionState, OnlineMatchmakerRequest, OnlineMatchmakerResponse,
     READ_TO_END_BYTE_COUNT,
 };
 use crate::{
@@ -10,14 +10,13 @@ use crate::{
     utils::BiChannelServer,
 };
 use bones_matchmaker_proto::{
-    GameID, MatchInfo, MatchmakerRequest, MatchmakerResponse, PlayerIdxAssignment,
+    MatchInfo, MatchmakerRequest, MatchmakerResponse, 
 };
-use iroh_net::NodeId;
 use std::sync::Arc;
 use tracing::{info, warn};
 
 /// Resolves the search for a match by sending a matchmaking request and handling responses.
-pub async fn _resolve_search_for_match(
+pub(crate) async fn resolve_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     matchmaker_connection_state: &mut MatchmakerConnectionState,
     match_info: MatchInfo,
@@ -40,7 +39,7 @@ pub async fn _resolve_search_for_match(
             message = matchmaker_channel.recv() => {
                 match message {
                     Ok(OnlineMatchmakerRequest::StopSearch { .. }) => {
-                        if let Err(err) = _resolve_stop_search_for_match(
+                        if let Err(err) = resolve_stop_search_for_match(
                             matchmaker_channel,
                             matchmaker_connection_state,
                             match_info.clone(),
@@ -103,7 +102,7 @@ pub async fn _resolve_search_for_match(
 }
 
 /// Resolves the stop search for a match by sending a stop matchmaking request and handling responses.
-pub async fn _resolve_stop_search_for_match(
+pub(crate) async fn resolve_stop_search_for_match(
     matchmaker_channel: &BiChannelServer<OnlineMatchmakerRequest, OnlineMatchmakerResponse>,
     matchmaker_connection_state: &mut MatchmakerConnectionState,
     match_info: MatchInfo,
@@ -141,34 +140,3 @@ pub async fn _resolve_stop_search_for_match(
     Ok(())
 }
 
-impl OnlineMatchmaker {
-    /// Sends a request to the matchmaking server to start searching for a match. Response is read via `read_matchmaker_response()`.
-    pub fn start_search_for_match(
-        matchmaking_server: NodeId,
-        game_id: GameID,
-        player_count: u32,
-        match_data: Vec<u8>,
-        player_idx_assignment: PlayerIdxAssignment,
-    ) -> anyhow::Result<()> {
-        super::online::ONLINE_MATCHMAKER
-            .try_send(OnlineMatchmakerRequest::SearchForGame {
-                id: matchmaking_server,
-                player_count,
-                game_id,
-                match_data,
-                player_idx_assignment,
-            })
-            .map_err(|e| anyhow::anyhow!("Failed to send matchmaker request: {}", e))?;
-        Ok(())
-    }
-
-    /// Stops searching for a match.
-    pub fn stop_search_for_match(matchmaking_server: NodeId) -> anyhow::Result<()> {
-        super::online::ONLINE_MATCHMAKER
-            .try_send(OnlineMatchmakerRequest::StopSearch {
-                id: matchmaking_server,
-            })
-            .map_err(|e| anyhow::anyhow!("Failed to send matchmaker request: {}", e))?;
-        Ok(())
-    }
-}

@@ -2,8 +2,6 @@
 // TODO
 #![allow(missing_docs)]
 
-pub use super::online_lobby::*;
-pub use super::online_matchmaking::*;
 use crate::{
     networking::{get_network_endpoint, NetworkMatchSocket},
     prelude::*,
@@ -203,7 +201,7 @@ async fn process_matchmaker_requests(
                     player_idx_assignment,
                 };
 
-                if let Err(err) = crate::networking::online_matchmaking::_resolve_search_for_match(
+                if let Err(err) = crate::networking::online_matchmaking::resolve_search_for_match(
                     &user_channel,
                     &mut matchmaker_connection_state,
                     match_info.clone(),
@@ -215,7 +213,7 @@ async fn process_matchmaker_requests(
             }
             OnlineMatchmakerRequest::ListLobbies { id, game_id } => {
                 matchmaker_connection_state.set_node_id(id);
-                if let Err(err) = crate::networking::online_lobby::_resolve_list_lobbies(
+                if let Err(err) = crate::networking::online_lobby::resolve_list_lobbies(
                     &user_channel,
                     &mut matchmaker_connection_state,
                     game_id,
@@ -227,7 +225,7 @@ async fn process_matchmaker_requests(
             }
             OnlineMatchmakerRequest::CreateLobby { id, lobby_info } => {
                 matchmaker_connection_state.set_node_id(id);
-                if let Err(err) = crate::networking::online_lobby::_resolve_create_lobby(
+                if let Err(err) = crate::networking::online_lobby::resolve_create_lobby(
                     &user_channel,
                     &mut matchmaker_connection_state,
                     lobby_info,
@@ -244,7 +242,7 @@ async fn process_matchmaker_requests(
                 password,
             } => {
                 matchmaker_connection_state.set_node_id(id);
-                if let Err(err) = crate::networking::online_lobby::_resolve_join_lobby(
+                if let Err(err) = crate::networking::online_lobby::resolve_join_lobby(
                     &user_channel,
                     &mut matchmaker_connection_state,
                     game_id,
@@ -264,9 +262,80 @@ async fn process_matchmaker_requests(
     Ok(())
 }
 
+// Interface for interacting with the matchmaker from a game
 impl OnlineMatchmaker {
     /// Read and return the latest matchmaker response, if one exists.
     pub fn read_matchmaker_response() -> Option<OnlineMatchmakerResponse> {
         ONLINE_MATCHMAKER.try_recv().ok()
+    }
+
+    /// Sends a request to the matchmaking server to start searching for a match. Response is read via `read_matchmaker_response()`.
+    pub fn start_search_for_match(
+        matchmaking_server: NodeId,
+        game_id: GameID,
+        player_count: u32,
+        match_data: Vec<u8>,
+        player_idx_assignment: PlayerIdxAssignment,
+    ) -> anyhow::Result<()> {
+        ONLINE_MATCHMAKER
+            .try_send(OnlineMatchmakerRequest::SearchForGame {
+                id: matchmaking_server,
+                player_count,
+                game_id,
+                match_data,
+                player_idx_assignment,
+            })
+            .map_err(|e| anyhow::anyhow!("Failed to send matchmaker request: {}", e))?;
+        Ok(())
+    }
+
+    /// Stops searching for a match.
+    pub fn stop_search_for_match(matchmaking_server: NodeId) -> anyhow::Result<()> {
+        ONLINE_MATCHMAKER
+            .try_send(OnlineMatchmakerRequest::StopSearch {
+                id: matchmaking_server,
+            })
+            .map_err(|e| anyhow::anyhow!("Failed to send matchmaker request: {}", e))?;
+        Ok(())
+    }
+
+    /// Sends a request to the matchmaking server to provide a list of all available lobbies for game_id. Response is read via `read_matchmaker_response()`.
+    pub fn list_lobbies(matchmaking_server: NodeId, game_id: GameID) -> anyhow::Result<()> {
+        ONLINE_MATCHMAKER
+            .try_send(OnlineMatchmakerRequest::ListLobbies {
+                id: matchmaking_server,
+                game_id,
+            })
+            .map_err(|e| anyhow::anyhow!("Failed to send list lobbies request: {}", e))?;
+        Ok(())
+    }
+
+    /// Sends a request to the matchmaking server to create a new lobby with the specified lobby_info.
+    pub fn create_lobby(matchmaking_server: NodeId, lobby_info: LobbyInfo) -> anyhow::Result<()> {
+        ONLINE_MATCHMAKER
+            .try_send(OnlineMatchmakerRequest::CreateLobby {
+                id: matchmaking_server,
+                lobby_info,
+            })
+            .map_err(|e| anyhow::anyhow!("Failed to send create lobby request: {}", e))?;
+        Ok(())
+    }
+
+    /// Sends a request to the matchmaking server to join a lobby with the specified game_id, lobby_id, and optional password.
+    pub fn join_lobby(
+        matchmaking_server: NodeId,
+        game_id: GameID,
+        lobby_id: LobbyId,
+        password: Option<String>,
+    ) -> anyhow::Result<()> {
+        ONLINE_MATCHMAKER
+            .try_send(OnlineMatchmakerRequest::JoinLobby {
+                id: matchmaking_server,
+                game_id,
+                lobby_id,
+                password,
+            })
+            .map_err(|e| anyhow::anyhow!("Failed to send join lobby request: {}", e))?;
+        Ok(())
     }
 }
