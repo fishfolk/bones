@@ -1,10 +1,8 @@
-use std::time::Duration;
-
 use bones_matchmaker_proto::{
-    GameID, MatchInfo, MatchmakerRequest, MatchmakerResponse, PlayerIdxAssignment, MATCH_ALPN,
-    PLAY_ALPN,
+    MatchInfo, MatchmakerRequest, MatchmakerResponse, PlayerIdxAssignment, MATCH_ALPN, PLAY_ALPN,
 };
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 use tokio::task::JoinSet;
 
 const CLIENT_PORT: u16 = 0;
@@ -55,7 +53,7 @@ async fn client() -> anyhow::Result<()> {
             .nth(1)
             .map(|x| x.parse().unwrap())
             .unwrap_or(2),
-        game_id: GameID::from("example-game"),
+        game_id: String::from("example-game"),
         match_data: b"example-client".to_vec(),
         player_idx_assignment: PlayerIdxAssignment::Ordered,
     });

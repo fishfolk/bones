@@ -41,7 +41,7 @@ pub struct MatchInfo {
     /// This allows us to support matchmaking for different modes or game versions with the same matchmaking server.
     pub match_data: Vec<u8>,
     /// The unique identifier for the game
-    pub game_id: String,
+    pub game_id: GameID,
     /// Enables choosing how player_idx should be assigned to each player who joins the match.
     pub player_idx_assignment: PlayerIdxAssignment,
 }
