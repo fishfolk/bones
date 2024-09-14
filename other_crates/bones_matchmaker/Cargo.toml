@@ -1,7 +1,7 @@
 [package]
 name                 = "bones_matchmaker"
 description          = "Simple matchmaking server for games."
-version              = "0.2.0"
+version.workspace    = true
 authors.workspace    = true
 edition.workspace    = true
 license.workspace    = true
@@ -16,7 +16,7 @@ scc                    = "1.0"
 rcgen                  = "0.12"
 tracing                = "0.1"
 rand                   = "0.8"
-bones_matchmaker_proto = { version = "0.2", path = "../bones_matchmaker_proto" }
+bones_matchmaker_proto = { version = "0.4.0", path = "../bones_matchmaker_proto" }
 clap                   = { version = "4.0", features = ["derive", "env"] }
 futures                = { version = "0.3", default-features = false, features = ["std", "async-await"] }
 postcard               = { version = "1.0", default-features = false, features = ["alloc"] }

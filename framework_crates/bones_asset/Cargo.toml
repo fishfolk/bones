@@ -17,8 +17,8 @@ default = []
 cid_debug_trace = []
 
 [dependencies]
-bones_utils  = { version = "0.3", path = "../bones_utils", features = ["serde"] }
-bones_schema = { version = "0.3", path = "../bones_schema", features = ["serde"] }
+bones_utils  = { version = "0.4.0", path = "../bones_utils", features = ["serde"] }
+bones_schema = { version = "0.4.0", path = "../bones_schema", features = ["serde"] }
 
 serde           = { version = "1.0", features = ["derive"] }
 sha2            = "0.10"
@@ -48,6 +48,6 @@ notify = "6.0"
 web-sys = { version = "0.3", features = ["console"] }
 
 [dev-dependencies]
-bones_schema = { version = "0.3", path = "../bones_schema", features = ["glam"] }
+bones_schema = { version = "0.4", path = "../bones_schema", features = ["glam"] }
 glam         = "0.24"
 bevy_tasks   = "0.11"

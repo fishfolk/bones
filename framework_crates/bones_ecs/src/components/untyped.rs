@@ -295,12 +295,10 @@ impl UntypedComponentStore {
         entity: Entity,
         f: impl FnOnce() -> T,
     ) -> &mut T {
-        if self.bitset.bit_test(entity.index() as usize) {
-            return self.get_mut(entity).unwrap();
-        } else {
+        if !self.bitset.bit_test(entity.index() as usize) {
             self.insert(entity, f());
-            self.get_mut(entity).unwrap()
         }
+        self.get_mut(entity).unwrap()
     }
 
     /// Get a [`SchemaRefMut`] to the component for the given [`Entity`]
@@ -492,6 +490,37 @@ impl UntypedComponentStore {
         }
     }
 
+    /// Get a reference to the component store if there is exactly one instance of the component.
+    pub fn get_single_with_bitset(
+        &self,
+        bitset: Rc<BitSetVec>,
+    ) -> Result<SchemaRef, QuerySingleError> {
+        let len = self.bitset().bit_len();
+        let mut iter = (0..len).filter(|&i| bitset.bit_test(i) && self.bitset().bit_test(i));
+        let i = iter.next().ok_or(QuerySingleError::NoEntities)?;
+        if iter.next().is_some() {
+            return Err(QuerySingleError::MultipleEntities);
+        }
+        // TODO: add unchecked variant to avoid redundant validation
+        self.get_idx(i).ok_or(QuerySingleError::NoEntities)
+    }
+
+    /// Get a mutable reference to the component store if there is exactly one instance of the
+    /// component.
+    pub fn get_single_with_bitset_mut(
+        &mut self,
+        bitset: Rc<BitSetVec>,
+    ) -> Result<SchemaRefMut, QuerySingleError> {
+        let len = self.bitset().bit_len();
+        let mut iter = (0..len).filter(|&i| bitset.bit_test(i) && self.bitset().bit_test(i));
+        let i = iter.next().ok_or(QuerySingleError::NoEntities)?;
+        if iter.next().is_some() {
+            return Err(QuerySingleError::MultipleEntities);
+        }
+        // TODO: add unchecked variant to avoid redundant validation
+        self.get_idx_mut(i).ok_or(QuerySingleError::NoEntities)
+    }
+
     /// Iterates immutably over all components of this type.
     ///
     /// Very fast but doesn't allow joining with other component types.
@@ -600,9 +629,8 @@ impl<'a> Iterator for UntypedComponentStoreIter<'a> {
                 if let Some(ptr) = self.store.get_idx(self.idx) {
                     self.idx += 1;
                     break Some(ptr);
-                } else {
-                    self.idx += 1;
                 }
+                self.idx += 1;
             } else {
                 break None;
             }
@@ -627,9 +655,8 @@ impl<'a> Iterator for UntypedComponentStoreIterMut<'a> {
                     break Some(unsafe {
                         SchemaRefMut::from_ptr_schema(ptr.as_ptr(), ptr.schema())
                     });
-                } else {
-                    self.idx += 1;
                 }
+                self.idx += 1;
             } else {
                 break None;
             }
