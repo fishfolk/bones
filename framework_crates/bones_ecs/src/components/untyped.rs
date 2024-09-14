@@ -81,6 +81,29 @@ impl DesyncHash for UntypedComponentStore {
     }
 }
 
+impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for UntypedComponentStore {
+    fn desync_tree_node<H: std::hash::Hasher + Default>(&self) -> DefaultDesyncTreeNode {
+        let mut hasher = H::default();
+        let child_nodes = self
+            .iter()
+            .map(|component| -> DefaultDesyncTreeNode {
+                let hash = component.compute_hash::<H>();
+
+                // Update parent node hash from data
+                DesyncHash::hash(&component, &mut hasher);
+
+                DefaultDesyncTreeNode::new(hash, None, vec![])
+            })
+            .collect();
+
+        DefaultDesyncTreeNode::new(
+            hasher.finish(),
+            Some(self.schema().full_name.to_string()),
+            child_nodes,
+        )
+    }
+}
+
 impl UntypedComponentStore {
     /// Create a arbitrary [`UntypedComponentStore`].
     ///

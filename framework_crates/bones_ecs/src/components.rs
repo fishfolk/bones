@@ -66,6 +66,28 @@ impl DesyncHash for ComponentStores {
     }
 }
 
+impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for ComponentStores {
+    fn desync_tree_node<H: std::hash::Hasher + Default>(&self) -> DefaultDesyncTreeNode {
+        let mut hasher = H::default();
+
+        let child_nodes = self
+            .components
+            .read_only_view()
+            .iter()
+            .map(|(_, component_store)| {
+                let component_store = component_store.as_ref().borrow();
+                let child_node = component_store.desync_tree_node::<H>();
+                // Update parent node hash from data
+                DesyncHash::hash(&child_node.get_hash(), &mut hasher);
+
+                child_node
+            })
+            .collect();
+
+        DefaultDesyncTreeNode::new(hasher.finish(), Some("Components".into()), child_nodes)
+    }
+}
+
 impl ComponentStores {
     /// Get the components of a certain type
     pub fn get_cell<T: HasSchema>(&self) -> AtomicComponentStore<T> {

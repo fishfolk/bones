@@ -15,6 +15,111 @@ pub trait DesyncHash {
     fn hash(&self, hasher: &mut dyn std::hash::Hasher);
 }
 
+/// Extension of [`DesyncHash`] that is automatically implemented for `T: DesyncHash`.
+/// Adds helper to compute standalone hash instead of updating a hasher.
+pub trait DesyncHashImpl {
+    /// Compute hash of type with provided hasher.
+    fn compute_hash<H: std::hash::Hasher + Default>(&self) -> u64;
+}
+
+impl<T: DesyncHash> DesyncHashImpl for T {
+    fn compute_hash<H: std::hash::Hasher + Default>(&self) -> u64 {
+        let mut hasher = H::default();
+        self.hash(&mut hasher);
+        hasher.finish()
+    }
+}
+
+/// Tree of desync hashes
+pub trait DesyncTree<V>: Clone {
+    type Node;
+
+    fn get_hash(&self) -> V;
+
+    fn name(&self) -> &Option<String>;
+
+    fn from_root(root: Self::Node) -> Self;
+}
+
+/// [`DesyncTree`] node trait, built from children and hash. A node is effectively a sub-tree,
+/// as we build the tree bottom-up.
+pub trait DesyncTreeNode<V>: Clone + PartialEq + Eq {
+    fn new(hash: u64, name: Option<String>, children: Vec<DefaultDesyncTreeNode>) -> Self;
+
+    fn get_hash(&self) -> V;
+}
+
+/// Implement to allow type to create a [`DesyncTreeNode`] containing hash built from children.
+pub trait BuildDesyncNode<N, V>
+where
+    N: DesyncTreeNode<V>,
+{
+    fn desync_tree_node<H: std::hash::Hasher + Default>(&self) -> N;
+}
+
+/// Default impl for [`DesyncTreeNode`].
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DefaultDesyncTreeNode {
+    name: Option<String>,
+    hash: u64,
+    children: Vec<DefaultDesyncTreeNode>,
+}
+
+impl PartialOrd for DefaultDesyncTreeNode {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for DefaultDesyncTreeNode {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.hash.cmp(&other.hash)
+    }
+}
+
+impl DesyncTreeNode<u64> for DefaultDesyncTreeNode {
+    fn new(hash: u64, name: Option<String>, children: Vec<DefaultDesyncTreeNode>) -> Self {
+        Self {
+            name,
+            hash,
+            children,
+        }
+    }
+
+    fn get_hash(&self) -> u64 {
+        self.hash
+    }
+}
+
+/// Tree of desync hashes, allows storing hash of world and children such as components and resources.
+#[derive(Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DefaultDesyncTree {
+    root: DefaultDesyncTreeNode,
+}
+
+impl From<DefaultDesyncTreeNode> for DefaultDesyncTree {
+    fn from(value: DefaultDesyncTreeNode) -> Self {
+        Self::from_root(value)
+    }
+}
+
+impl DesyncTree<u64> for DefaultDesyncTree {
+    type Node = DefaultDesyncTreeNode;
+
+    fn get_hash(&self) -> u64 {
+        self.root.get_hash()
+    }
+
+    fn name(&self) -> &Option<String> {
+        &self.root.name
+    }
+
+    fn from_root(root: Self::Node) -> Self {
+        Self { root }
+    }
+}
 impl DesyncHash for Duration {
     fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
         self.as_nanos().hash(hasher);
