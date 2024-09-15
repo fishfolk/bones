@@ -115,7 +115,7 @@ impl World {
         match self.resources.get::<T>() {
             Some(r) => r,
             None => panic!(
-                "Requested resource {} does not exist in the `World`.
+                "Requested resource {} does not exist in the `World`. \
                 Did you forget to add it using `world.insert_resource` / `world.init_resource`?",
                 std::any::type_name::<T>()
             ),
@@ -130,7 +130,7 @@ impl World {
         match self.resources.get_mut::<T>() {
             Some(r) => r,
             None => panic!(
-                "Requested resource {} does not exist in the `World`.
+                "Requested resource {} does not exist in the `World`. \
                 Did you forget to add it using `world.insert_resource` / `world.init_resource`?",
                 std::any::type_name::<T>()
             ),
