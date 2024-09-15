@@ -30,9 +30,10 @@ scripting = ["dep:bones_scripting"]
 ## Enable networking debug window + frame prediction history.
 net-debug = ["ui"]
 
+## Enables advanced desync debugging, generates hash tree of world for frames
 desync-debug = []
 
-#! ### Audio formats## Enables advanced desync debugging, generates hash tree of world for frames
+#! ### Audio formats
 #! These features enable different audio formats
 
 ## Enable OGG audio loader.
