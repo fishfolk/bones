@@ -136,6 +136,14 @@ impl DesyncHash for bool {
     }
 }
 
+impl<T: DesyncHash, const N: usize> DesyncHash for [T; N] {
+    fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        for value in self {
+            DesyncHash::hash(value, hasher);
+        }
+    }
+}
+
 impl<T: DesyncHash> DesyncHash for Vec<T> {
     fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
         for value in self {
