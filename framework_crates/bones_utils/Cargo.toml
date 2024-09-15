@@ -35,5 +35,5 @@ paste              = { version = "1.0" }
 getrandom = { version = "0.2", features = ["js"] }
 
 [dev-dependencies]
-bones_schema = { version = "0.3", path = "../bones_schema" }
-bones_utils  = { version = "0.3", path = ".", features = ["glam"] }
+bones_schema = { version = "0.4", path = "../bones_schema" }
+bones_utils  = { version = "0.4", path = ".", features = ["glam"] }
