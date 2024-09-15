@@ -64,7 +64,7 @@ impl World {
     /// This will remove the component storage for all killed entities, and allow their slots to be
     /// re-used for any new entities.
     pub fn maintain(&self) {
-        let mut entities = self.resources.get_mut::<Entities>().unwrap();
+        let mut entities = self.resource_mut::<Entities>();
         for components in self.components.components.read_only_view().values() {
             let mut components = components.borrow_mut();
             let killed = entities.killed();
