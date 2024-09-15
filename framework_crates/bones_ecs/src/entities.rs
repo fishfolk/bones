@@ -767,11 +767,11 @@ mod tests {
 
     #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
     #[repr(C)]
-    struct A(String);
+    struct A(u32);
 
     #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
     #[repr(C)]
-    struct B(String);
+    struct B(u32);
 
     #[test]
     fn query_item__get_single_with_one_required() {
@@ -794,7 +794,7 @@ mod tests {
             let mut comp = state.borrow_mut();
 
             let e = entities.create();
-            let a = A("e".to_string());
+            let a = A(1);
             comp.insert(e, a.clone());
 
             let query = &comp;
@@ -812,10 +812,10 @@ mod tests {
             let mut comp = state.borrow_mut();
 
             let e1 = entities.create();
-            comp.insert(e1, A("e1".to_string()));
+            comp.insert(e1, A(1));
 
             let e2 = entities.create();
-            comp.insert(e2, A("e2".to_string()));
+            comp.insert(e2, A(2));
 
             let query = &comp;
             let mut bitset = entities.bitset().clone();
@@ -848,8 +848,8 @@ mod tests {
 
         {
             let e = entities.create();
-            let a = A("e".to_string());
-            let b = B("e".to_string());
+            let a = A(1);
+            let b = B(1);
             state_a.borrow_mut().insert(e, a.clone());
             state_b.borrow_mut().insert(e, b.clone());
 
@@ -866,12 +866,12 @@ mod tests {
 
         {
             let e1 = entities.create();
-            state_a.borrow_mut().insert(e1, A("e1".to_string()));
-            state_b.borrow_mut().insert(e1, B("e1".to_string()));
+            state_a.borrow_mut().insert(e1, A(1));
+            state_b.borrow_mut().insert(e1, B(1));
 
             let e2 = entities.create();
-            state_a.borrow_mut().insert(e2, A("e2".to_string()));
-            state_b.borrow_mut().insert(e2, B("e2".to_string()));
+            state_a.borrow_mut().insert(e2, A(2));
+            state_b.borrow_mut().insert(e2, B(2));
 
             let query = (&state_a.borrow(), &state_b.borrow());
             let mut bitset = entities.bitset().clone();
@@ -892,7 +892,7 @@ mod tests {
         let state = AtomicCell::new(ComponentStore::<A>::default());
 
         let e = entities.create();
-        state.borrow_mut().insert(e, A("unexpected".to_string()));
+        state.borrow_mut().insert(e, A(u32::MAX));
 
         let query = &state.borrow();
         let bitset = Rc::new({
@@ -1033,7 +1033,7 @@ mod tests {
         let mut entities = Entities::default();
         (0..3).map(|_| entities.create()).count();
         let e = entities.create();
-        let a = A("a".to_string());
+        let a = A(4);
 
         let state = AtomicCell::new(ComponentStore::<A>::default());
         state.borrow_mut().insert(e, a.clone());
@@ -1064,7 +1064,7 @@ mod tests {
 
         for i in 0..3 {
             let e = entities.create();
-            let a = A(i.to_string());
+            let a = A(i);
             state.borrow_mut().insert(e, a.clone());
         }
 
@@ -1086,14 +1086,14 @@ mod tests {
         let _e1 = entities.create();
 
         let e2 = entities.create();
-        state_a.borrow_mut().insert(e2, A("a2".to_string()));
+        state_a.borrow_mut().insert(e2, A(2));
 
         let e3 = entities.create();
-        state_b.borrow_mut().insert(e3, B("b3".to_string()));
+        state_b.borrow_mut().insert(e3, B(3));
 
         let e4 = entities.create();
-        let a4 = A("a4".to_string());
-        let b4 = B("b4".to_string());
+        let a4 = A(4);
+        let b4 = B(4);
         state_a.borrow_mut().insert(e4, a4.clone());
         state_b.borrow_mut().insert(e4, b4.clone());
 
@@ -1127,7 +1127,7 @@ mod tests {
 
         {
             let e = entities.create();
-            let mut a = A("a".to_string());
+            let mut a = A(1);
             state.borrow_mut().insert(e, a.clone());
 
             let mut comp = state.borrow_mut();
@@ -1154,7 +1154,7 @@ mod tests {
 
         {
             let e = entities.create();
-            let a = A("a".to_string());
+            let a = A(1);
             state_a.borrow_mut().insert(e, a.clone());
 
             let comp_a = state_a.borrow();
@@ -1175,8 +1175,8 @@ mod tests {
 
         {
             let e = entities.create();
-            let a = A("a".to_string());
-            let mut b = B("b".to_string());
+            let a = A(1);
+            let mut b = B(1);
             state_a.borrow_mut().insert(e, a.clone());
             state_b.borrow_mut().insert(e, b.clone());
 
