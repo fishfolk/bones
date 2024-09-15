@@ -34,7 +34,7 @@ impl<T: DesyncHash> DesyncHashImpl for T {
 pub trait DesyncTree<V>: Clone {
     type Node;
 
-    fn get_hash(&self) -> V;
+    fn get_hash(&self) -> Option<V>;
 
     fn name(&self) -> &Option<String>;
 
@@ -44,9 +44,9 @@ pub trait DesyncTree<V>: Clone {
 /// [`DesyncTree`] node trait, built from children and hash. A node is effectively a sub-tree,
 /// as we build the tree bottom-up.
 pub trait DesyncTreeNode<V>: Clone + PartialEq + Eq {
-    fn new(hash: u64, name: Option<String>, children: Vec<DefaultDesyncTreeNode>) -> Self;
+    fn new(hash: Option<u64>, name: Option<String>, children: Vec<DefaultDesyncTreeNode>) -> Self;
 
-    fn get_hash(&self) -> V;
+    fn get_hash(&self) -> Option<V>;
 }
 
 /// Implement to allow type to create a [`DesyncTreeNode`] containing hash built from children.
@@ -54,7 +54,9 @@ pub trait BuildDesyncNode<N, V>
 where
     N: DesyncTreeNode<V>,
 {
-    fn desync_tree_node<H: std::hash::Hasher + Default>(&self) -> N;
+    /// `include_unhashable` sets whether components or resources be included as non-contributing nodes
+    /// in tree, to see what could be opted-in.
+    fn desync_tree_node<H: std::hash::Hasher + Default>(&self, include_unhashable: bool) -> N;
 }
 
 /// Default impl for [`DesyncTreeNode`].
@@ -62,7 +64,7 @@ where
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DefaultDesyncTreeNode {
     name: Option<String>,
-    hash: u64,
+    hash: Option<u64>,
     children: Vec<DefaultDesyncTreeNode>,
 }
 
@@ -79,7 +81,7 @@ impl Ord for DefaultDesyncTreeNode {
 }
 
 impl DesyncTreeNode<u64> for DefaultDesyncTreeNode {
-    fn new(hash: u64, name: Option<String>, children: Vec<DefaultDesyncTreeNode>) -> Self {
+    fn new(hash: Option<u64>, name: Option<String>, children: Vec<DefaultDesyncTreeNode>) -> Self {
         Self {
             name,
             hash,
@@ -87,7 +89,7 @@ impl DesyncTreeNode<u64> for DefaultDesyncTreeNode {
         }
     }
 
-    fn get_hash(&self) -> u64 {
+    fn get_hash(&self) -> Option<u64> {
         self.hash
     }
 }
@@ -108,7 +110,7 @@ impl From<DefaultDesyncTreeNode> for DefaultDesyncTree {
 impl DesyncTree<u64> for DefaultDesyncTree {
     type Node = DefaultDesyncTreeNode;
 
-    fn get_hash(&self) -> u64 {
+    fn get_hash(&self) -> Option<u64> {
         self.root.get_hash()
     }
 

@@ -82,22 +82,29 @@ impl DesyncHash for ComponentStores {
 }
 
 impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for ComponentStores {
-    fn desync_tree_node<H: std::hash::Hasher + Default>(&self) -> DefaultDesyncTreeNode {
-        let mut hasher = H::default();
-
+    fn desync_tree_node<H: std::hash::Hasher + Default>(
+        &self,
+        include_unhashable: bool,
+    ) -> DefaultDesyncTreeNode {
+        let mut any_hashable = false;
         let mut child_nodes = self
             .components
             .read_only_view()
             .iter()
             .filter_map(|(_, component_store)| {
                 let component_store = component_store.as_ref().borrow();
-                if component_store
+                let is_hashable = component_store
                     .schema()
                     .type_data
                     .get::<SchemaDesyncHash>()
-                    .is_some()
-                {
-                    let child_node = component_store.desync_tree_node::<H>();
+                    .is_some();
+
+                if is_hashable {
+                    any_hashable = true;
+                }
+
+                if include_unhashable || is_hashable {
+                    let child_node = component_store.desync_tree_node::<H>(include_unhashable);
 
                     return Some(child_node);
                 }
@@ -106,12 +113,20 @@ impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for ComponentStores {
             .collect::<Vec<DefaultDesyncTreeNode>>();
         child_nodes.sort();
 
-        for node in child_nodes.iter() {
-            // Update parent node hash from data
-            DesyncHash::hash(&node.get_hash(), &mut hasher);
-        }
+        let hash = if any_hashable {
+            let mut hasher = H::default();
+            for node in child_nodes.iter() {
+                // Update parent node hash from data
+                if let Some(hash) = node.get_hash() {
+                    DesyncHash::hash(&hash, &mut hasher);
+                }
+            }
+            Some(hasher.finish())
+        } else {
+            None
+        };
 
-        DefaultDesyncTreeNode::new(hasher.finish(), Some("Components".into()), child_nodes)
+        DefaultDesyncTreeNode::new(hash, Some("Components".into()), child_nodes)
     }
 }
 

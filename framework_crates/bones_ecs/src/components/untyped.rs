@@ -83,25 +83,38 @@ impl DesyncHash for UntypedComponentStore {
 }
 
 impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for UntypedComponentStore {
-    fn desync_tree_node<H: std::hash::Hasher + Default>(&self) -> DefaultDesyncTreeNode {
+    fn desync_tree_node<H: std::hash::Hasher + Default>(
+        &self,
+        _include_unhashable: bool,
+    ) -> DefaultDesyncTreeNode {
         let mut hasher = H::default();
-        let child_nodes = self
+        let child_nodes: Vec<DefaultDesyncTreeNode> = self
             .iter()
             .map(|component| -> DefaultDesyncTreeNode {
-                let hash = component.compute_hash::<H>();
-
-                // Update parent node hash from data
-                DesyncHash::hash(&component, &mut hasher);
+                let hash = if component
+                    .schema()
+                    .type_data
+                    .get::<SchemaDesyncHash>()
+                    .is_some()
+                {
+                    // Update parent node hash from data
+                    DesyncHash::hash(&component, &mut hasher);
+                    Some(component.compute_hash::<H>())
+                } else {
+                    None
+                };
 
                 DefaultDesyncTreeNode::new(hash, None, vec![])
             })
             .collect();
 
-        DefaultDesyncTreeNode::new(
-            hasher.finish(),
-            Some(self.schema().full_name.to_string()),
-            child_nodes,
-        )
+        let hash = if !child_nodes.is_empty() {
+            Some(hasher.finish())
+        } else {
+            None
+        };
+
+        DefaultDesyncTreeNode::new(hash, Some(self.schema().full_name.to_string()), child_nodes)
     }
 }
 

@@ -44,20 +44,27 @@ impl DesyncHash for World {
 }
 
 impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for World {
-    fn desync_tree_node<H: std::hash::Hasher + Default>(&self) -> DefaultDesyncTreeNode {
+    fn desync_tree_node<H: std::hash::Hasher + Default>(
+        &self,
+        include_unhashable: bool,
+    ) -> DefaultDesyncTreeNode {
         let mut hasher = H::default();
 
         let mut child_nodes: Vec<DefaultDesyncTreeNode> = vec![];
 
-        let components_node = self.components.desync_tree_node::<H>();
-        components_node.get_hash().hash(&mut hasher);
+        let components_node = self.components.desync_tree_node::<H>(include_unhashable);
+        if let Some(hash) = components_node.get_hash() {
+            hash.hash(&mut hasher);
+        }
         child_nodes.push(components_node);
 
-        let resources_node = self.resources.desync_tree_node::<H>();
-        resources_node.get_hash().hash(&mut hasher);
+        let resources_node = self.resources.desync_tree_node::<H>(include_unhashable);
+        if let Some(hash) = resources_node.get_hash() {
+            hash.hash(&mut hasher);
+        }
         child_nodes.push(resources_node);
 
-        DefaultDesyncTreeNode::new(hasher.finish(), Some("World".into()), child_nodes)
+        DefaultDesyncTreeNode::new(Some(hasher.finish()), Some("World".into()), child_nodes)
     }
 }
 

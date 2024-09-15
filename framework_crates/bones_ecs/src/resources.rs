@@ -35,16 +35,24 @@ impl DesyncHash for UntypedResource {
 }
 
 impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for UntypedResource {
-    fn desync_tree_node<H: std::hash::Hasher + Default>(&self) -> DefaultDesyncTreeNode {
+    fn desync_tree_node<H: std::hash::Hasher + Default>(
+        &self,
+        _include_unhashable: bool,
+    ) -> DefaultDesyncTreeNode {
         let name = Some(self.schema().full_name.to_string());
 
+        let hashable = self.schema().type_data.get::<SchemaDesyncHash>().is_some();
+
         if let Some(schema_box) = self.cell.borrow().as_ref() {
-            let hash = schema_box.as_ref().compute_hash::<H>();
+            let hash = if hashable {
+                Some(schema_box.as_ref().compute_hash::<H>())
+            } else {
+                None
+            };
             return DefaultDesyncTreeNode::new(hash, name, vec![]);
         }
 
-        // TODO should we only optionally provide node?
-        DefaultDesyncTreeNode::new(0, name, vec![])
+        DefaultDesyncTreeNode::new(None, name, vec![])
     }
 }
 
@@ -190,7 +198,10 @@ impl DesyncHash for UntypedResources {
 }
 
 impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for UntypedResources {
-    fn desync_tree_node<H: std::hash::Hasher + Default>(&self) -> DefaultDesyncTreeNode {
+    fn desync_tree_node<H: std::hash::Hasher + Default>(
+        &self,
+        include_unhashable: bool,
+    ) -> DefaultDesyncTreeNode {
         let mut hasher = H::default();
         let mut child_nodes: Vec<DefaultDesyncTreeNode> = self
             .resources
@@ -202,8 +213,8 @@ impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for UntypedResources {
                 if !is_shared {
                     // Only build child node if hashable
                     let schema = resource_cell.schema();
-                    if schema.type_data.get::<SchemaDesyncHash>().is_some() {
-                        return Some(resource_cell.desync_tree_node::<H>());
+                    if include_unhashable || schema.type_data.get::<SchemaDesyncHash>().is_some() {
+                        return Some(resource_cell.desync_tree_node::<H>(include_unhashable));
                     }
                 }
                 None
@@ -214,10 +225,12 @@ impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for UntypedResources {
 
         for node in child_nodes.iter() {
             // Update parent hash
-            DesyncHash::hash(&node.get_hash(), &mut hasher);
+            if let Some(hash) = node.get_hash() {
+                DesyncHash::hash(&hash, &mut hasher);
+            }
         }
 
-        DefaultDesyncTreeNode::new(hasher.finish(), Some("Resources".into()), child_nodes)
+        DefaultDesyncTreeNode::new(Some(hasher.finish()), Some("Resources".into()), child_nodes)
     }
 }
 
@@ -302,8 +315,11 @@ impl DesyncHash for Resources {
 }
 
 impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for Resources {
-    fn desync_tree_node<H: std::hash::Hasher + Default>(&self) -> DefaultDesyncTreeNode {
-        self.untyped.desync_tree_node::<H>()
+    fn desync_tree_node<H: std::hash::Hasher + Default>(
+        &self,
+        include_unhashable: bool,
+    ) -> DefaultDesyncTreeNode {
+        self.untyped.desync_tree_node::<H>(include_unhashable)
     }
 }
 

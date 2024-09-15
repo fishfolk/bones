@@ -8,7 +8,7 @@ use crate::networking::online::OnlineMatchmakerResponse;
 pub use crate::networking::random::RngGenerator;
 use crate::prelude::*;
 use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
-use desync::DesyncDebugHistoryBuffer;
+use desync::{DesyncDebugHistoryBuffer, DetectDesyncs};
 use fxhash::FxHasher;
 use ggrs::{DesyncDetection, P2PSession};
 use instant::Duration;
@@ -65,7 +65,7 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 /// Module prelude.
 pub mod prelude {
     pub use super::{
-        input, lan, online, proto, random, DisconnectedPlayers, RngGenerator, SyncingInfo, RUNTIME,
+        desync::DetectDesyncs, input, lan, online, proto, random, DisconnectedPlayers, RngGenerator, SyncingInfo, RUNTIME,
     };
 
     #[cfg(feature = "net-debug")]
@@ -554,20 +554,12 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
     /// The random seed used for this session
     pub random_seed: u64,
     
-    /// Interval in frames of how often to hash state and check for desync with other clients.
-    /// i.e if set to 10, will check every 10th frame. Desync detection disabled if None.
-    pub detect_desyncs: Option<u32>,
+    /// When provided, desync detection is enabled. Contains settings for desync detection.
+    detect_desyncs: Option<DetectDesyncs>,    
 
     /// History buffer for desync debug data to fetch it upon detected desyncs.
     /// [`DefaultDesyncTree`] will be generated and saved here if feature `desync-debug` is enabled.
     pub desync_debug_history: Option<DesyncDebugHistoryBuffer<DefaultDesyncTree>>,
-
-    /// Override of hash function used to hash world for desync detection.
-    /// By default, [`World`]'s [`DesyncHash`] impl is used.
-    ///
-    /// This may be useful if you want to hash only a subset of components or resources
-    /// during testing.
-    pub world_hash_func: Option<fn(&World) -> u64>,
 }
 
 /// The info required to create a [`GgrsSessionRunner`].
@@ -593,14 +585,10 @@ pub struct GgrsSessionRunnerInfo {
     
     /// The random seed used for this session
     pub random_seed: u64,
+    
+    /// When provided, desync detection is enabled. Contains settings for desync detection.
+    pub detect_desyncs: Option<DetectDesyncs>,
 
-    /// Interval in frames of how often to hash state and check for desync with other clients.
-    /// i.e if set to 10, will check every 10th frame. Desync detection disabled if None.
-    pub detect_desyncs: Option<u32>,
-
-    /// Override of hash function used to hash world for desync detection.
-    /// By default, [`World`]'s [`DesyncHash`] impl is used.
-    pub world_hash_func: Option<fn(&World) -> u64>,
 }
 
 impl GgrsSessionRunnerInfo {
@@ -610,8 +598,7 @@ impl GgrsSessionRunnerInfo {
         max_prediction_window: Option<usize>,
         local_input_delay: Option<usize>,
         random_seed: u64,
-        world_hash_func: Option<fn(&World) -> u64>,
-        detect_desyncs: Option<u32>,
+        detect_desyncs: Option<DetectDesyncs>,
     ) -> Self {
         let player_idx = socket.player_idx();
         let player_count = socket.player_count();
@@ -623,7 +610,6 @@ impl GgrsSessionRunnerInfo {
             local_input_delay,
             random_seed,
             detect_desyncs,
-            world_hash_func,
         }
     }
 }
@@ -693,8 +679,10 @@ where
             .try_send(NetworkDebugMessage::SetMaxPrediction(max_prediction))
             .unwrap();
 
-        let desync_detection = match info.detect_desyncs {
-            Some(interval) => DesyncDetection::On { interval },
+        let desync_detection = match info.detect_desyncs.as_ref() {
+            Some(config) => DesyncDetection::On {
+                interval: config.detection_interval,
+            },
             None => DesyncDetection::Off,
         };
 
@@ -723,9 +711,13 @@ where
         let session = builder.start_p2p_session(info.socket.clone()).unwrap();
 
         #[cfg(feature = "desync-debug")]
-        let desync_debug_history = info
-            .detect_desyncs
-            .map(DesyncDebugHistoryBuffer::<DefaultDesyncTree>::new);
+        let desync_debug_history = if let Some(detect_desync) = info.detect_desyncs.as_ref() {
+            Some(DesyncDebugHistoryBuffer::<DefaultDesyncTree>::new(
+                detect_desync.detection_interval,
+            ))
+        } else {
+            None
+        };
 
         #[cfg(not(feature = "desync-debug"))]
         let desync_debug_history = None;
@@ -747,7 +739,6 @@ where
             random_seed: info.random_seed,
             detect_desyncs: info.detect_desyncs,
             desync_debug_history,
-            world_hash_func: info.world_hash_func,
         }
     }
 }
@@ -935,7 +926,9 @@ where
                                     // GGRS should only use hashes from fixed interval.
 
                                     // If desync detection enabled, hash world.
-                                    let checksum = if self.detect_desyncs.is_some() {
+                                    let checksum = if let Some(detect_desyncs) =
+                                        self.detect_desyncs.as_ref()
+                                    {
                                         #[cfg(feature = "desync-debug")]
                                         {
                                             if let Some(desync_debug_history) =
@@ -944,14 +937,17 @@ where
                                                 if desync_debug_history
                                                     .is_desync_detect_frame(frame as u32)
                                                 {
-                                                    desync_debug_history.record(
-                                                        frame as u32,
-                                                        world.desync_tree_node::<FxHasher>().into(),
+                                                    let tree = DefaultDesyncTree::from(
+                                                        world.desync_tree_node::<FxHasher>(
+                                                            detect_desyncs.include_unhashable_nodes,
+                                                        ),
                                                     );
+                                                    desync_debug_history.record(frame as u32, tree);
                                                 }
                                             }
                                         }
-                                        if let Some(hash_func) = self.world_hash_func {
+
+                                        if let Some(hash_func) = detect_desyncs.world_hash_func {
                                             Some(hash_func(world) as u128)
                                         } else {
                                             let mut hasher = FxHasher::default();
@@ -1119,8 +1115,7 @@ where
             max_prediction_window: Some(self.session.max_prediction()),
             local_input_delay: Some(self.local_input_delay),
             random_seed: self.random_seed,
-            detect_desyncs: self.detect_desyncs,
-            world_hash_func: self.world_hash_func,
+            detect_desyncs: self.detect_desyncs.clone(),
         };
         *self = GgrsSessionRunner::new(Some(self.original_fps as f32), runner_info);
     }
