@@ -75,6 +75,7 @@ impl Drop for UntypedComponentStore {
 
 impl DesyncHash for UntypedComponentStore {
     fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        self.schema().full_name.hash(hasher);
         for component in self.iter() {
             DesyncHash::hash(&component, hasher);
         }

@@ -8,6 +8,7 @@ use crate::networking::online::OnlineMatchmakerResponse;
 pub use crate::networking::random::RngGenerator;
 use crate::prelude::*;
 use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
+use desync::DesyncDebugHistoryBuffer;
 use fxhash::FxHasher;
 use ggrs::{DesyncDetection, P2PSession};
 use instant::Duration;
@@ -23,6 +24,7 @@ use {
 
 use crate::input::PlayerControls as PlayerControlsTrait;
 
+pub mod desync;
 pub mod input;
 pub mod lan;
 pub mod online;
@@ -556,6 +558,10 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
     /// i.e if set to 10, will check every 10th frame. Desync detection disabled if None.
     pub detect_desyncs: Option<u32>,
 
+    /// History buffer for desync debug data to fetch it upon detected desyncs.
+    /// [`DefaultDesyncTree`] will be generated and saved here if feature `desync-debug` is enabled.
+    pub desync_debug_history: Option<DesyncDebugHistoryBuffer<DefaultDesyncTree>>,
+
     /// Override of hash function used to hash world for desync detection.
     /// By default, [`World`]'s [`DesyncHash`] impl is used.
     ///
@@ -716,6 +722,14 @@ where
 
         let session = builder.start_p2p_session(info.socket.clone()).unwrap();
 
+        #[cfg(feature = "desync-debug")]
+        let desync_debug_history = info
+            .detect_desyncs
+            .map(DesyncDebugHistoryBuffer::<DefaultDesyncTree>::new);
+
+        #[cfg(not(feature = "desync-debug"))]
+        let desync_debug_history = None;
+
         Self {
             last_player_input: InputTypes::Dense::default(),
             session,
@@ -732,6 +746,7 @@ where
             local_input_disabled: false,
             random_seed: info.random_seed,
             detect_desyncs: info.detect_desyncs,
+            desync_debug_history,
             world_hash_func: info.world_hash_func,
         }
     }
@@ -855,6 +870,19 @@ where
                     addr,
                 } => {
                     error!(%frame, %local_checksum, %remote_checksum, player=%addr, "Network de-sync detected");
+
+                    #[cfg(feature = "desync-debug")]
+                    {
+                        if let Some(desync_debug_history) = &self.desync_debug_history {
+                            if let Some(desync_hash_tree) =
+                                desync_debug_history.get_frame_data(frame as u32)
+                            {
+                                let string = serde_yaml::to_string(desync_hash_tree)
+                                    .expect("Failed to serialize desync hash tree");
+                                error!("Desync hash tree: frame: {frame}\n{}", string);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -903,8 +931,26 @@ where
                         for request in requests {
                             match request {
                                 ggrs::GgrsRequest::SaveGameState { cell, frame } => {
+                                    // TODO: Do we only need to compute hash for desync interval frames?
+                                    // GGRS should only use hashes from fixed interval.
+
                                     // If desync detection enabled, hash world.
                                     let checksum = if self.detect_desyncs.is_some() {
+                                        #[cfg(feature = "desync-debug")]
+                                        {
+                                            if let Some(desync_debug_history) =
+                                                &mut self.desync_debug_history
+                                            {
+                                                if desync_debug_history
+                                                    .is_desync_detect_frame(frame as u32)
+                                                {
+                                                    desync_debug_history.record(
+                                                        frame as u32,
+                                                        world.desync_tree_node::<FxHasher>().into(),
+                                                    );
+                                                }
+                                            }
+                                        }
                                         if let Some(hash_func) = self.world_hash_func {
                                             Some(hash_func(world) as u128)
                                         } else {
