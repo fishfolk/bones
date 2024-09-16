@@ -224,6 +224,9 @@ impl BonesBevyRenderer {
             (
                 setup_egui,
                 get_bones_input.pipe(insert_bones_input).after(InputSystem),
+                get_mouse_position
+                    .pipe(insert_mouse_position)
+                    .after(InputSystem),
                 egui_input_hook,
             )
                 .chain()
