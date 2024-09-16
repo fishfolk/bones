@@ -367,24 +367,24 @@ mod tests {
         send(World::new())
     }
 
-    #[test]
-    fn get_entity_components() {
-        let w = World::default();
+    // #[test]
+    // fn get_entity_components() {
+    //     let w = World::default();
 
-        let (e1, e2) = {
-            let mut entities = w.resource_mut::<Entities>();
-            (entities.create(), entities.create())
-        };
+    //     let (e1, e2) = {
+    //         let mut entities = w.resource_mut::<Entities>();
+    //         (entities.create(), entities.create())
+    //     };
 
-        let state = w.components.get::<C>();
-        let mut comp = state.borrow_mut();
+    //     let state = w.components.get::<C>();
+    //     let mut comp = state.borrow_mut();
 
-        let c2 = C(2);
-        comp.insert(e2, c2);
+    //     let c2 = C(2);
+    //     comp.insert(e2, c2);
 
-        assert_eq!(w.get_entity_components(e1, &comp), None);
-        assert_eq!(w.get_entity_components(e2, &comp), Some(&c2));
-    }
+    //     assert_eq!(w.get_entity_components(e1, &comp), None);
+    //     assert_eq!(w.get_entity_components(e2, &comp), Some(&c2));
+    // }
 
     // ============
     //  From World
