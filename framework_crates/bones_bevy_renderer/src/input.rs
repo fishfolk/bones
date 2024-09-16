@@ -7,7 +7,7 @@ use bevy::{
     },
     window::PrimaryWindow,
 };
-use bones::MousePosition;
+use bones::{MouseScreenPosition, MouseWorldPosition};
 
 pub fn insert_bones_input(
     In((mouse_inputs, keyboard_inputs, gamepad_inputs)): In<(
@@ -99,18 +99,31 @@ pub fn get_bones_input(
     )
 }
 
-pub fn insert_mouse_position(In(mouse_position): In<Option<Vec2>>, mut game: ResMut<BonesGame>) {
-    game.insert_shared_resource(MousePosition(mouse_position));
+pub fn insert_mouse_position(
+    In((screen_pos, world_pos)): In<(Option<Vec2>, Option<Vec2>)>,
+    mut game: ResMut<BonesGame>,
+) {
+    game.insert_shared_resource(MouseScreenPosition(screen_pos));
+    game.insert_shared_resource(MouseWorldPosition(world_pos));
 }
 
 // Source: https://bevy-cheatbook.github.io/cookbook/cursor2world.html
 pub fn get_mouse_position(
     mut q_primary_windows: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform)>,
-) -> Option<Vec2> {
-    let window = q_primary_windows.get_single_mut().ok()?;
-    let viewport_position = window.cursor_position()?;
-
-    let (camera, camera_transform) = q_camera.get_single().ok()?;
-    camera.viewport_to_world_2d(camera_transform, viewport_position)
+) -> (Option<Vec2>, Option<Vec2>) {
+    match q_primary_windows
+        .get_single_mut()
+        .ok()
+        .and_then(Window::cursor_position)
+    {
+        None => (None, None),
+        screen_pos @ Some(sp) => match q_camera.get_single() {
+            Err(_) => (screen_pos, None),
+            Ok((camera, camera_transform)) => {
+                let world_pos = camera.viewport_to_world_2d(camera_transform, sp);
+                (screen_pos, world_pos)
+            }
+        },
+    }
 }
