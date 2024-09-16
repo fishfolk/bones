@@ -536,7 +536,7 @@ impl Entities {
     }
 
     /// Iterates over entities using the provided bitset.
-    pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> EntityIterator {
+    pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> EntityIterator<'a> {
         EntityIterator {
             current_id: 0,
             next_id: self.next_id,

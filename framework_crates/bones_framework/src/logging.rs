@@ -6,7 +6,7 @@
 use std::{
     backtrace::{Backtrace, BacktraceStatus},
     error::Error,
-    panic::PanicInfo,
+    panic::PanicHookInfo,
     path::PathBuf,
 };
 
@@ -456,7 +456,7 @@ pub mod macros {
 /// Panic hook that sends panic payload to [`tracing::error`], and backtrace if available.
 ///
 /// This hook is enabled in [`setup_logging`] to make sure panics are traced.
-pub fn tracing_panic_hook(panic_info: &PanicInfo) {
+pub fn tracing_panic_hook(panic_info: &PanicHookInfo) {
     let payload = panic_info.payload();
 
     let payload = if let Some(s) = payload.downcast_ref::<&str>() {
