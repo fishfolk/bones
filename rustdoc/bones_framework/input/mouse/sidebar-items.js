@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["MouseButton","MouseScrollUnit"],"struct":["MouseButtonEvent","MouseInputs","MouseScrollEvent"]};
+window.SIDEBAR_ITEMS = {"enum":["MouseButton","MouseScrollUnit"],"struct":["MouseButtonEvent","MouseInputs","MouseScreenPosition","MouseScrollEvent","MouseWorldPosition"]};

@@ -66,6 +66,12 @@
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Bitset implementation.
 //!
 //! Bitsets are powered by the [`bitset_core`] crate.
@@ -126,6 +132,12 @@
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: Entity) -&gt; bool {
         <span class="self">self</span>.bit_test(entity.index() <span class="kw">as </span>usize)
+    }
+
+    <span class="doccomment">/// Set an entity on the the bitset.
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>set(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entity: Entity) {
+        <span class="self">self</span>.bit_set(entity.index() <span class="kw">as </span>usize);
     }
 }
 

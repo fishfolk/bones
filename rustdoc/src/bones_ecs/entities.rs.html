@@ -1966,11 +1966,11 @@
 
     <span class="attr">#[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
     #[repr(C)]
-    </span><span class="kw">struct </span>A(String);
+    </span><span class="kw">struct </span>A(u32);
 
     <span class="attr">#[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
     #[repr(C)]
-    </span><span class="kw">struct </span>B(String);
+    </span><span class="kw">struct </span>B(u32);
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>query_item__get_single_with_one_required() {
@@ -1993,7 +1993,7 @@
             <span class="kw">let </span><span class="kw-2">mut </span>comp = state.borrow_mut();
 
             <span class="kw">let </span>e = entities.create();
-            <span class="kw">let </span>a = A(<span class="string">"e"</span>.to_string());
+            <span class="kw">let </span>a = A(<span class="number">1</span>);
             comp.insert(e, a.clone());
 
             <span class="kw">let </span>query = <span class="kw-2">&amp;</span>comp;
@@ -2011,10 +2011,10 @@
             <span class="kw">let </span><span class="kw-2">mut </span>comp = state.borrow_mut();
 
             <span class="kw">let </span>e1 = entities.create();
-            comp.insert(e1, A(<span class="string">"e1"</span>.to_string()));
+            comp.insert(e1, A(<span class="number">1</span>));
 
             <span class="kw">let </span>e2 = entities.create();
-            comp.insert(e2, A(<span class="string">"e2"</span>.to_string()));
+            comp.insert(e2, A(<span class="number">2</span>));
 
             <span class="kw">let </span>query = <span class="kw-2">&amp;</span>comp;
             <span class="kw">let </span><span class="kw-2">mut </span>bitset = entities.bitset().clone();
@@ -2047,8 +2047,8 @@
 
         {
             <span class="kw">let </span>e = entities.create();
-            <span class="kw">let </span>a = A(<span class="string">"e"</span>.to_string());
-            <span class="kw">let </span>b = B(<span class="string">"e"</span>.to_string());
+            <span class="kw">let </span>a = A(<span class="number">1</span>);
+            <span class="kw">let </span>b = B(<span class="number">1</span>);
             state_a.borrow_mut().insert(e, a.clone());
             state_b.borrow_mut().insert(e, b.clone());
 
@@ -2065,12 +2065,12 @@
 
         {
             <span class="kw">let </span>e1 = entities.create();
-            state_a.borrow_mut().insert(e1, A(<span class="string">"e1"</span>.to_string()));
-            state_b.borrow_mut().insert(e1, B(<span class="string">"e1"</span>.to_string()));
+            state_a.borrow_mut().insert(e1, A(<span class="number">1</span>));
+            state_b.borrow_mut().insert(e1, B(<span class="number">1</span>));
 
             <span class="kw">let </span>e2 = entities.create();
-            state_a.borrow_mut().insert(e2, A(<span class="string">"e2"</span>.to_string()));
-            state_b.borrow_mut().insert(e2, B(<span class="string">"e2"</span>.to_string()));
+            state_a.borrow_mut().insert(e2, A(<span class="number">2</span>));
+            state_b.borrow_mut().insert(e2, B(<span class="number">2</span>));
 
             <span class="kw">let </span>query = (<span class="kw-2">&amp;</span>state_a.borrow(), <span class="kw-2">&amp;</span>state_b.borrow());
             <span class="kw">let </span><span class="kw-2">mut </span>bitset = entities.bitset().clone();
@@ -2091,7 +2091,7 @@
         <span class="kw">let </span>state = AtomicCell::new(ComponentStore::&lt;A&gt;::default());
 
         <span class="kw">let </span>e = entities.create();
-        state.borrow_mut().insert(e, A(<span class="string">"unexpected"</span>.to_string()));
+        state.borrow_mut().insert(e, A(u32::MAX));
 
         <span class="kw">let </span>query = <span class="kw-2">&amp;</span>state.borrow();
         <span class="kw">let </span>bitset = Rc::new({
@@ -2232,7 +2232,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>entities = Entities::default();
         (<span class="number">0</span>..<span class="number">3</span>).map(|<span class="kw">_</span>| entities.create()).count();
         <span class="kw">let </span>e = entities.create();
-        <span class="kw">let </span>a = A(<span class="string">"a"</span>.to_string());
+        <span class="kw">let </span>a = A(<span class="number">4</span>);
 
         <span class="kw">let </span>state = AtomicCell::new(ComponentStore::&lt;A&gt;::default());
         state.borrow_mut().insert(e, a.clone());
@@ -2263,7 +2263,7 @@
 
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">3 </span>{
             <span class="kw">let </span>e = entities.create();
-            <span class="kw">let </span>a = A(i.to_string());
+            <span class="kw">let </span>a = A(i);
             state.borrow_mut().insert(e, a.clone());
         }
 
@@ -2285,14 +2285,14 @@
         <span class="kw">let </span>_e1 = entities.create();
 
         <span class="kw">let </span>e2 = entities.create();
-        state_a.borrow_mut().insert(e2, A(<span class="string">"a2"</span>.to_string()));
+        state_a.borrow_mut().insert(e2, A(<span class="number">2</span>));
 
         <span class="kw">let </span>e3 = entities.create();
-        state_b.borrow_mut().insert(e3, B(<span class="string">"b3"</span>.to_string()));
+        state_b.borrow_mut().insert(e3, B(<span class="number">3</span>));
 
         <span class="kw">let </span>e4 = entities.create();
-        <span class="kw">let </span>a4 = A(<span class="string">"a4"</span>.to_string());
-        <span class="kw">let </span>b4 = B(<span class="string">"b4"</span>.to_string());
+        <span class="kw">let </span>a4 = A(<span class="number">4</span>);
+        <span class="kw">let </span>b4 = B(<span class="number">4</span>);
         state_a.borrow_mut().insert(e4, a4.clone());
         state_b.borrow_mut().insert(e4, b4.clone());
 
@@ -2326,7 +2326,7 @@
 
         {
             <span class="kw">let </span>e = entities.create();
-            <span class="kw">let </span><span class="kw-2">mut </span>a = A(<span class="string">"a"</span>.to_string());
+            <span class="kw">let </span><span class="kw-2">mut </span>a = A(<span class="number">1</span>);
             state.borrow_mut().insert(e, a.clone());
 
             <span class="kw">let </span><span class="kw-2">mut </span>comp = state.borrow_mut();
@@ -2353,7 +2353,7 @@
 
         {
             <span class="kw">let </span>e = entities.create();
-            <span class="kw">let </span>a = A(<span class="string">"a"</span>.to_string());
+            <span class="kw">let </span>a = A(<span class="number">1</span>);
             state_a.borrow_mut().insert(e, a.clone());
 
             <span class="kw">let </span>comp_a = state_a.borrow();
@@ -2374,8 +2374,8 @@
 
         {
             <span class="kw">let </span>e = entities.create();
-            <span class="kw">let </span>a = A(<span class="string">"a"</span>.to_string());
-            <span class="kw">let </span><span class="kw-2">mut </span>b = B(<span class="string">"b"</span>.to_string());
+            <span class="kw">let </span>a = A(<span class="number">1</span>);
+            <span class="kw">let </span><span class="kw-2">mut </span>b = B(<span class="number">1</span>);
             state_a.borrow_mut().insert(e, a.clone());
             state_b.borrow_mut().insert(e, b.clone());
 
