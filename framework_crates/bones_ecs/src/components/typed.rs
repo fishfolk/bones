@@ -349,38 +349,38 @@ mod tests {
         assert_eq!(comp.0, "Test2");
     }
 
-    // #[test]
-    // fn single_returns_none_when_empty() {
-    //     let storage = ComponentStore::<A>::default();
-    //     let bitset = Rc::new({
-    //         let mut entities = Entities::default();
-    //         entities.create();
-    //         entities.bitset().clone()
-    //     });
+    #[test]
+    fn single_returns_none_when_empty() {
+        let storage = ComponentStore::<A>::default();
+        let bitset = Rc::new({
+            let mut entities = Entities::default();
+            entities.create();
+            entities.bitset().clone()
+        });
 
-    //     let maybe_comp = storage.get_single_with_bitset(bitset);
+        let maybe_comp = storage.get_single_with_bitset(bitset);
 
-    //     assert_eq!(maybe_comp, Err(QuerySingleError::NoEntities));
-    // }
+        assert_eq!(maybe_comp, Err(QuerySingleError::NoEntities));
+    }
 
-    // #[test]
-    // fn single_returns_some_single() {
-    //     let mut storage = ComponentStore::<A>::default();
-    //     let mut entities = Entities::default();
+    #[test]
+    fn single_returns_some_single() {
+        let mut storage = ComponentStore::<A>::default();
+        let mut entities = Entities::default();
 
-    //     // Create some dummies so that the target entity isn't 0
-    //     (0..3).map(|_| entities.create()).count();
+        // Create some dummies so that the target entity isn't 0
+        (0..3).map(|_| entities.create()).count();
 
-    //     let e = entities.create();
-    //     let a = A("a".to_string());
-    //     storage.insert(e, a.clone());
+        let e = entities.create();
+        let a = A("a".to_string());
+        storage.insert(e, a.clone());
 
-    //     let bitset = Rc::new(entities.bitset().clone());
+        let bitset = Rc::new(entities.bitset().clone());
 
-    //     let maybe_comp = storage.get_single_with_bitset(bitset);
+        let maybe_comp = storage.get_single_with_bitset(bitset);
 
-    //     assert_eq!(maybe_comp, Ok(&a));
-    // }
+        assert_eq!(maybe_comp, Ok(&a));
+    }
 
     #[test]
     fn single_returns_none_when_more_than_1() {
