@@ -55,3 +55,15 @@ pub enum MouseButton {
     /// Another mouse button with the associated number.
     Other(u16),
 }
+
+/// The position of the mouse in screen-space.
+///
+/// `None` if there is no cursor within the window.
+#[derive(HasSchema, Clone, Copy, Debug, Default, PartialEq)]
+pub struct MouseScreenPosition(pub Option<Vec2>);
+
+/// The position of the mouse in world-space.
+///
+/// `None` if there is no cursor within the window.
+#[derive(HasSchema, Clone, Copy, Debug, Default, PartialEq)]
+pub struct MouseWorldPosition(pub Option<Vec2>);

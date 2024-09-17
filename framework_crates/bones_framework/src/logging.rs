@@ -305,8 +305,9 @@ pub fn setup_logging(settings: LogSettings) -> Option<LogFileGuard> {
                 match file_appender.build(&**log_path) {
                     Ok(file_appender) => {
                         let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
-                        let file_layer =
-                            tracing_subscriber::fmt::Layer::default().with_writer(non_blocking);
+                        let file_layer = tracing_subscriber::fmt::Layer::default()
+                            .with_ansi(false)
+                            .with_writer(non_blocking);
                         (Some(file_layer), Some(LogFileGuard(_guard)))
                     }
                     Err(err) => {

@@ -64,7 +64,7 @@ impl World {
     /// This will remove the component storage for all killed entities, and allow their slots to be
     /// re-used for any new entities.
     pub fn maintain(&self) {
-        let mut entities = self.resources.get_mut::<Entities>().unwrap();
+        let mut entities = self.resource_mut::<Entities>();
         for components in self.components.components.read_only_view().values() {
             let mut components = components.borrow_mut();
             let killed = entities.killed();
@@ -93,6 +93,42 @@ impl World {
         s.run(self, input)
     }
 
+    /// Get an entity's components.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the entity does not have the required components from the query.
+    pub fn entity_components<Q: QueryItem>(
+        &self,
+        entity: Entity,
+        query: Q,
+    ) -> <Q::Iter as Iterator>::Item {
+        self.get_entity_components(entity, query).unwrap()
+    }
+
+    /// Get an entity's components.
+    pub fn get_entity_components<Q: QueryItem>(
+        &self,
+        entity: Entity,
+        query: Q,
+    ) -> Option<<Q::Iter as Iterator>::Item> {
+        let mut bitset = BitSetVec::default();
+        if self.resource::<Entities>().bitset().contains(entity) {
+            bitset.set(entity);
+        }
+        query.apply_bitset(&mut bitset);
+        match query.get_single_with_bitset(bitset.into()) {
+            Ok(components) => Some(components),
+            Err(QuerySingleError::NoEntities) => None,
+            Err(QuerySingleError::MultipleEntities) => {
+                panic!(
+                    "Query returned a MultipleEntities error for a bitset that \
+                    contains at most one enabled bit"
+                )
+            }
+        }
+    }
+
     /// Initialize a resource of type `T` by inserting it's default value.
     pub fn init_resource<R: HasSchema + FromWorld>(&mut self) -> RefMut<R> {
         if unlikely(!self.resources.contains::<R>()) {
@@ -115,7 +151,7 @@ impl World {
         match self.resources.get::<T>() {
             Some(r) => r,
             None => panic!(
-                "Requested resource {} does not exist in the `World`.
+                "Requested resource {} does not exist in the `World`. \
                 Did you forget to add it using `world.insert_resource` / `world.init_resource`?",
                 std::any::type_name::<T>()
             ),
@@ -130,7 +166,7 @@ impl World {
         match self.resources.get_mut::<T>() {
             Some(r) => r,
             None => panic!(
-                "Requested resource {} does not exist in the `World`.
+                "Requested resource {} does not exist in the `World`. \
                 Did you forget to add it using `world.insert_resource` / `world.init_resource`?",
                 std::any::type_name::<T>()
             ),
@@ -200,6 +236,10 @@ mod tests {
     use crate::prelude::*;
 
     use super::FromWorld;
+
+    #[derive(Clone, Copy, HasSchema, Debug, Eq, PartialEq, Default)]
+    #[repr(C)]
+    struct C(u32);
 
     #[derive(Clone, HasSchema, Debug, Eq, PartialEq, Default)]
     #[repr(C)]
@@ -323,10 +363,28 @@ mod tests {
 
     #[test]
     fn world_is_send() {
+        fn send<T: Send>(_: T) {}
         send(World::new())
     }
 
-    fn send<T: Send>(_: T) {}
+    #[test]
+    fn get_entity_components() {
+        let w = World::default();
+
+        let (e1, e2) = {
+            let mut entities = w.resource_mut::<Entities>();
+            (entities.create(), entities.create())
+        };
+
+        let state = w.components.get::<C>();
+        let mut comp = state.borrow_mut();
+
+        let c2 = C(2);
+        comp.insert(e2, c2);
+
+        assert_eq!(w.get_entity_components(e1, &comp), None);
+        assert_eq!(w.get_entity_components(e2, &comp), Some(&c2));
+    }
 
     // ============
     //  From World

@@ -59,6 +59,12 @@ impl BitSetVec {
     pub fn contains(&self, entity: Entity) -> bool {
         self.bit_test(entity.index() as usize)
     }
+
+    /// Set an entity on the the bitset.
+    #[inline]
+    pub fn set(&mut self, entity: Entity) {
+        self.bit_set(entity.index() as usize);
+    }
 }
 
 /// Creates a bitset big enough to contain the index of each entity.
