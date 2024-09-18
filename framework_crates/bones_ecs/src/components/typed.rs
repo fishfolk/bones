@@ -430,9 +430,9 @@ mod tests {
     #[test]
     fn iter_with_bitset_optional() {
         let mut entities = Entities::default();
-        let mut storage = ComponentStore::<A>::default();
 
         {
+            let mut storage = ComponentStore::<A>::default();
             let bitset = Rc::new(entities.bitset().clone());
 
             let mut comp_iter = storage.iter_with_bitset_optional(bitset.clone());
@@ -443,31 +443,45 @@ mod tests {
         }
 
         {
-            let e = entities.create();
+            let mut storage = ComponentStore::<A>::default();
+            (0..2).map(|_| entities.create()).count();
             let bitset = Rc::new(entities.bitset().clone());
 
             let mut comp_iter = storage.iter_with_bitset_optional(bitset.clone());
             assert_eq!(comp_iter.next(), Some(None));
+            assert_eq!(comp_iter.next(), Some(None));
+            assert_eq!(comp_iter.next(), None);
 
             let mut comp_mut_iter = storage.iter_mut_with_bitset_optional(bitset);
             assert_eq!(comp_mut_iter.next(), Some(None));
+            assert_eq!(comp_mut_iter.next(), Some(None));
+            assert_eq!(comp_mut_iter.next(), None);
 
-            entities.kill(e);
+            entities.kill_all();
         }
 
         {
-            let e = entities.create();
-            let mut a = A(0);
-            storage.insert(e, a);
+            let mut storage = ComponentStore::<A>::default();
+            let _e1 = entities.create();
+            let e2 = entities.create();
+            let _e3 = entities.create();
+            let mut a2 = A(2);
+            storage.insert(e2, a2);
             let bitset = Rc::new(entities.bitset().clone());
 
             let mut comp_iter = storage.iter_with_bitset_optional(bitset.clone());
-            assert_eq!(comp_iter.next(), Some(Some(&a)));
+            assert_eq!(comp_iter.next(), Some(None));
+            assert_eq!(comp_iter.next(), Some(Some(&a2)));
+            assert_eq!(comp_iter.next(), Some(None));
+            assert_eq!(comp_iter.next(), None);
 
             let mut comp_mut_iter = storage.iter_mut_with_bitset_optional(bitset);
-            assert_eq!(comp_mut_iter.next(), Some(Some(&mut a)));
+            assert_eq!(comp_mut_iter.next(), Some(None));
+            assert_eq!(comp_mut_iter.next(), Some(Some(&mut a2)));
+            assert_eq!(comp_mut_iter.next(), Some(None));
+            assert_eq!(comp_mut_iter.next(), None);
 
-            entities.kill(e);
+            entities.kill_all();
         }
     }
 }
