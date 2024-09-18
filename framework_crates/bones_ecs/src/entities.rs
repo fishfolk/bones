@@ -765,11 +765,11 @@ mod tests {
 
     use crate::prelude::*;
 
-    #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
     #[repr(C)]
     struct A(u32);
 
-    #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
     #[repr(C)]
     struct B(u32);
 
@@ -795,7 +795,7 @@ mod tests {
 
             let e = entities.create();
             let a = A(1);
-            comp.insert(e, a.clone());
+            comp.insert(e, a);
 
             let query = &comp;
             let mut bitset = entities.bitset().clone();
@@ -850,8 +850,8 @@ mod tests {
             let e = entities.create();
             let a = A(1);
             let b = B(1);
-            state_a.borrow_mut().insert(e, a.clone());
-            state_b.borrow_mut().insert(e, b.clone());
+            state_a.borrow_mut().insert(e, a);
+            state_b.borrow_mut().insert(e, b);
 
             let query = (&state_a.borrow(), &state_b.borrow());
             let mut bitset = entities.bitset().clone();
@@ -1036,7 +1036,7 @@ mod tests {
         let a = A(4);
 
         let state = AtomicCell::new(ComponentStore::<A>::default());
-        state.borrow_mut().insert(e, a.clone());
+        state.borrow_mut().insert(e, a);
 
         let comp = state.borrow();
 
@@ -1065,7 +1065,7 @@ mod tests {
         for i in 0..3 {
             let e = entities.create();
             let a = A(i);
-            state.borrow_mut().insert(e, a.clone());
+            state.borrow_mut().insert(e, a);
         }
 
         let comp = state.borrow();
@@ -1094,8 +1094,8 @@ mod tests {
         let e4 = entities.create();
         let a4 = A(4);
         let b4 = B(4);
-        state_a.borrow_mut().insert(e4, a4.clone());
-        state_b.borrow_mut().insert(e4, b4.clone());
+        state_a.borrow_mut().insert(e4, a4);
+        state_b.borrow_mut().insert(e4, b4);
 
         let comp_a = state_a.borrow();
         let comp_b = state_b.borrow();
@@ -1128,7 +1128,7 @@ mod tests {
         {
             let e = entities.create();
             let mut a = A(1);
-            state.borrow_mut().insert(e, a.clone());
+            state.borrow_mut().insert(e, a);
 
             let mut comp = state.borrow_mut();
 
@@ -1155,7 +1155,7 @@ mod tests {
         {
             let e = entities.create();
             let a = A(1);
-            state_a.borrow_mut().insert(e, a.clone());
+            state_a.borrow_mut().insert(e, a);
 
             let comp_a = state_a.borrow();
             let mut comp_b = state_b.borrow_mut();
@@ -1177,8 +1177,8 @@ mod tests {
             let e = entities.create();
             let a = A(1);
             let mut b = B(1);
-            state_a.borrow_mut().insert(e, a.clone());
-            state_b.borrow_mut().insert(e, b.clone());
+            state_a.borrow_mut().insert(e, a);
+            state_b.borrow_mut().insert(e, b);
 
             let comp_a = state_a.borrow();
             let mut comp_b = state_b.borrow_mut();
