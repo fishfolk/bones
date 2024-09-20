@@ -10,6 +10,8 @@ use ustr::Ustr;
 ///
 /// In order to opt in a `HasSchema` Component or Resource to be included in hash of World in networked session,
 /// `#[net]` or `#[derive_type_data(SchemaDesyncHas)]` must also be included.
+///
+/// Fields may be excluded from hash by using attribute: `#[desync_exclude]`
 pub trait DesyncHash {
     /// Update hasher from type's values
     fn hash(&self, hasher: &mut dyn std::hash::Hasher);

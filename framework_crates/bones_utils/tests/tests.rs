@@ -21,6 +21,14 @@ struct StructB {
     b: String,
 }
 
+#[derive(HasSchema, DesyncHash, Debug, Clone, Default)]
+#[desync_hash_module(crate)]
+struct StructC {
+    a: f32,
+    #[desync_exclude]
+    b: String,
+}
+
 /// Test DesyncHash proc macro on Enum variants
 #[derive(HasSchema, DesyncHash, Debug, Clone, Default)]
 #[repr(C, u8)]
@@ -37,6 +45,24 @@ enum EnumA {
         b: u16,
     },
     F = 52,
+}
+
+#[derive(HasSchema, DesyncHash, Debug, Clone, Default)]
+#[repr(C, u8)]
+#[desync_hash_module(crate)]
+#[allow(dead_code)]
+enum EnumB {
+    A {
+        #[desync_exclude]
+        a: f64,
+
+        b: u16,
+    },
+    #[default]
+    #[desync_exclude]
+    B,
+    #[desync_exclude]
+    C { a: f32 },
 }
 
 fn hash_value<T: DesyncHash>(value: &T) -> u64 {
@@ -76,6 +102,44 @@ fn desync_hash_struct() {
     };
 
     assert_ne!(hash_value(&a), hash_value(&b));
+}
+
+#[test]
+fn desync_hash_exclude_struct_field() {
+    let a = StructC {
+        a: 1.0,
+        b: "foo".to_string(),
+    };
+    let b = StructC {
+        a: 1.0,
+        b: "bar".to_string(),
+    };
+
+    // field b is excluded on StructC, hash should be the same.
+    assert_eq!(hash_value(&a), hash_value(&b));
+}
+
+#[test]
+fn desync_hash_exclude_enum_variant_named_field() {
+    let a = EnumB::A { a: 1.0, b: 1 };
+    let b = EnumB::A { a: 0.0, b: 1 };
+
+    // field a is excluded on EnumB::A variant, hash should be the same.
+    assert_eq!(hash_value(&a), hash_value(&b));
+}
+
+#[test]
+fn desync_hash_exclude_enum_variant() {
+    let a = EnumB::C { a: 1.0 };
+    let b = EnumB::C { a: 0.0 };
+
+    // Variant EnumB::C Is excluded, should be equal.
+    assert_eq!(hash_value(&a), hash_value(&b));
+
+    // Although variant may be excluded and its fields not hashed,
+    // two variants (even if both excluded) should give unique hash.
+    let c = EnumB::B;
+    assert_ne!(hash_value(&c), hash_value(&a))
 }
 
 #[test]

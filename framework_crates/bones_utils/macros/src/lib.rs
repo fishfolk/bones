@@ -195,7 +195,7 @@ pub fn derive_deref_mut(input: TokenStream) -> TokenStream {
     }
 }
 
-#[proc_macro_derive(DesyncHash, attributes(desync_hash_module))]
+#[proc_macro_derive(DesyncHash, attributes(desync_hash_module, desync_exclude))]
 pub fn derive_desync_hash(input: TokenStream) -> TokenStream {
     let input = venial::parse_declaration(input.into()).unwrap();
     let name = input.name().expect("Type must have a name");
@@ -217,7 +217,8 @@ pub fn derive_desync_hash(input: TokenStream) -> TokenStream {
         .unwrap_or_else(|| quote!(bones_utils));
 
     // Helper to get hash invocations of struct fields
-    let hash_struct_fields = |fields: &StructFields| match fields {
+    let hash_struct_fields = |fields: &StructFields| {
+        match fields {
         venial::StructFields::Tuple(tuple) => tuple
             .fields
             .iter()
@@ -230,11 +231,15 @@ pub fn derive_desync_hash(input: TokenStream) -> TokenStream {
         venial::StructFields::Named(named) => named
             .fields
             .iter()
-            .map(|(field, _)| {
+            .filter_map(|(field, _)| {
                 let name = &field.name;
                 let ty = &field.ty;
-
-                quote! {<#ty as #desync_hash_module::DesyncHash>::hash(&self.#name, hasher);}
+                if !field.attributes.iter().any(|attr| {
+                    attr.path[0].to_string() == "desync_exclude"
+                }) {
+                    return Some(quote! {<#ty as #desync_hash_module::DesyncHash>::hash(&self.#name, hasher);})
+                }
+                None
             })
             .collect::<Vec<_>>(),
         venial::StructFields::Unit => vec![],
@@ -267,11 +272,37 @@ pub fn derive_desync_hash(input: TokenStream) -> TokenStream {
             (tuple_fields, invocations)
         }
         venial::StructFields::Named(named) => {
-            let field_idents: Vec<_> = named.fields.iter().map(|f| &f.0.name).collect();
+            let mut any_fields_excluded = false;
 
-            // format list of fields as '{ fieldA, fieldB, ... }'
-            let named_fields = quote! {
+            let field_idents: Vec<_> = named
+                .fields
+                .iter()
+                .filter_map(|f| {
+                    if f.0
+                        .attributes
+                        .iter()
+                        .any(|attr| attr.path[0].to_string() == "desync_exclude")
+                    {
+                        any_fields_excluded = true;
+                        return None;
+                    }
+                    Some(&f.0.name)
+                })
+                .collect();
+
+            // format list of fields as '{ fieldA, fieldB, }'
+            let named_fields = if !any_fields_excluded {
+                quote! {
                 {#(#field_idents),*}
+                }
+            } else if !field_idents.is_empty() {
+                // If any fields excluded, include '..' to avoid compilation error
+                quote! {
+                {#(#field_idents),* , ..}
+                }
+            } else {
+                // All fields of variant were excluded
+                quote! { {..} }
             };
 
             let invocations = field_idents
@@ -293,7 +324,20 @@ pub fn derive_desync_hash(input: TokenStream) -> TokenStream {
             let enum_name = &e.name;
             for (idx, v) in e.variants.items().enumerate() {
                 let variant_name = &v.name;
-                let (variant_fields_string, invocations) = enum_variant_fields(&v.contents);
+                let variant_excluded = v
+                    .attributes
+                    .iter()
+                    .any(|attr| attr.path[0].to_string() == "desync_exclude");
+
+                // Excluded variant skips all invocations for hashing fields,
+                // however index of variant is still hashed, making it unique from
+                // other variants
+                let (variant_fields_string, invocations) = if !variant_excluded {
+                    enum_variant_fields(&v.contents)
+                } else {
+                    (quote! { {..} }, vec![])
+                };
+
                 variants.push(quote! {
                     #enum_name::#variant_name #variant_fields_string => {
                         // Hash index of variant to ensure that two variants are unique
