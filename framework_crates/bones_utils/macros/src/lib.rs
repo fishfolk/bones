@@ -219,30 +219,31 @@ pub fn derive_desync_hash(input: TokenStream) -> TokenStream {
     // Helper to get hash invocations of struct fields
     let hash_struct_fields = |fields: &StructFields| {
         match fields {
-        venial::StructFields::Tuple(tuple) => tuple
-            .fields
-            .iter()
-            .enumerate()
-            .map(|(idx, (field, _))| {
-                let ty = &field.ty;
-                quote! {<#ty as #desync_hash_module::DesyncHash>::hash(&self.#idx, hasher);}
-            })
-            .collect::<Vec<_>>(),
-        venial::StructFields::Named(named) => named
-            .fields
-            .iter()
-            .filter_map(|(field, _)| {
-                let name = &field.name;
-                let ty = &field.ty;
-                if !field.attributes.iter().any(|attr| {
-                    attr.path[0].to_string() == "desync_exclude"
-                }) {
-                    return Some(quote! {<#ty as #desync_hash_module::DesyncHash>::hash(&self.#name, hasher);})
-                }
-                None
-            })
-            .collect::<Vec<_>>(),
-        venial::StructFields::Unit => vec![],
+            venial::StructFields::Tuple(tuple) => tuple
+                .fields
+                .iter()
+                .enumerate()
+                .map(|(idx, (field, _))| {
+                    let ty = &field.ty;
+                    quote! {<#ty as #desync_hash_module::DesyncHash>::hash(&self.#idx, hasher);}
+                })
+                .collect::<Vec<_>>(),
+            venial::StructFields::Named(named) => named
+                .fields
+                .iter()
+                .filter_map(|(field, _)| {
+                    let name = &field.name;
+                    let ty = &field.ty;
+                    if !field.attributes.iter().any(|attr| {
+                        attr.path[0].to_string() == "desync_exclude"
+                    }) {
+                        return Some(quote! {<#ty as #desync_hash_module::DesyncHash>::hash(&self.#name, hasher);})
+                    }
+                    None
+                })
+                .collect::<Vec<_>>(),
+            venial::StructFields::Unit => vec![],
+        }
     };
 
     // Get fields of enum variant
