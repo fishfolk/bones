@@ -389,12 +389,12 @@ macro_rules! impl_query {
                         )*
                     )
                 };
-                let first = query.next();
-                let has_second = query.next().is_some();
-                match (first, has_second) {
-                    (None, _) => Err(QuerySingleError::NoEntities),
-                    (Some(items), false) => Ok(items),
-                    (Some(_), true) => Err(QuerySingleError::MultipleEntities),
+                let Some(items) = query.next() else {
+                    return Err(QuerySingleError::NoEntities);
+                };
+                match query.next() {
+                    Some(_) => Err(QuerySingleError::MultipleEntities),
+                    None => Ok(items),
                 }
             }
 
@@ -888,22 +888,106 @@ mod tests {
 
     #[test]
     fn query_item__get_single_with_bitset__uses_bitset() {
-        let mut entities = Entities::default();
-        let state = AtomicCell::new(ComponentStore::<A>::default());
+        fn entity(index: u32) -> Entity {
+            Entity::new(index, 0)
+        }
 
-        let e = entities.create();
-        state.borrow_mut().insert(e, A(u32::MAX));
+        fn store(entities: &[u32]) -> ComponentStore<A> {
+            let mut store = ComponentStore::default();
+            for &i in entities {
+                store.insert(entity(i), A(i));
+            }
+            store
+        }
 
-        let query = &state.borrow();
-        let bitset = Rc::new({
+        fn bitset(enabled: &[usize]) -> Rc<BitSetVec> {
             let mut bitset = BitSetVec::default();
-            bitset.bit_set(99);
-            bitset
-        });
+            for &i in enabled {
+                bitset.bit_set(i);
+            }
+            Rc::new(bitset)
+        }
+        eprintln!();
 
-        let maybe_comp = query.get_single_with_bitset(bitset);
+        {
+            let (mut store, bitset) = (store(&[]), bitset(&[]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
 
-        assert_eq!(maybe_comp, Err(QuerySingleError::NoEntities));
+        {
+            let (mut store, bitset) = (store(&[1]), bitset(&[]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[]), bitset(&[1]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[3]), bitset(&[3]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Ok(&A(3)));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Ok(&mut A(3)));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[5, 6]), bitset(&[5, 6]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[90, 91, 92]), bitset(&[0]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[0]), bitset(&[90, 91, 92]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[11, 21, 31]), bitset(&[12, 22, 32]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[11, 20, 31, 41]), bitset(&[12, 20, 32, 42]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Ok(&A(20)));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Ok(&mut A(20)));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[11, 21, 30, 41, 50]), bitset(&[12, 22, 30, 42, 50]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
+        }
     }
 
     #[test]
