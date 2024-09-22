@@ -12,29 +12,74 @@ use crate::prelude::*;
 // 2^16 gives 65536      concurrent entities for 8KB     of ram per component
 // 2^12 gives 4096       concurrent entities for 512B    of ram per component
 // SIMD processes 256 bits/entities (32 bytes) at once when comparing bitsets.
-#[cfg(feature = "keysize16")]
-const BITSET_EXP: u32 = 16;
+#[cfg(all(
+    feature = "keysize10",
+    not(feature = "keysize12"),
+    not(feature = "keysize16"),
+    not(feature = "keysize20"),
+    not(feature = "keysize24"),
+    not(feature = "keysize32")
+))]
+#[allow(missing_docs)]
+pub const BITSET_EXP: u32 = 10;
+
+#[cfg(all(
+    feature = "keysize12",
+    not(feature = "keysize10"),
+    not(feature = "keysize16"),
+    not(feature = "keysize20"),
+    not(feature = "keysize24"),
+    not(feature = "keysize32")
+))]
+#[allow(missing_docs)]
+pub const BITSET_EXP: u32 = 12;
+
+// 16 is the default, if no `keysize*` features are enabled then use this one.
+#[cfg(any(
+    feature = "keysize16",
+    all(
+        not(feature = "keysize10"),
+        not(feature = "keysize12"),
+        not(feature = "keysize20"),
+        not(feature = "keysize24"),
+        not(feature = "keysize32")
+    )
+))]
+#[allow(missing_docs)]
+pub const BITSET_EXP: u32 = 16;
+
 #[cfg(all(
     feature = "keysize20",
+    not(feature = "keysize10"),
+    not(feature = "keysize12"),
     not(feature = "keysize16"),
     not(feature = "keysize24"),
     not(feature = "keysize32")
 ))]
-const BITSET_EXP: u32 = 20;
+#[allow(missing_docs)]
+pub const BITSET_EXP: u32 = 20;
+
 #[cfg(all(
     feature = "keysize24",
+    not(feature = "keysize10"),
+    not(feature = "keysize12"),
     not(feature = "keysize16"),
     not(feature = "keysize20"),
     not(feature = "keysize32")
 ))]
-const BITSET_EXP: u32 = 24;
+#[allow(missing_docs)]
+pub const BITSET_EXP: u32 = 24;
+
 #[cfg(all(
     feature = "keysize32",
+    not(feature = "keysize10"),
+    not(feature = "keysize12"),
     not(feature = "keysize16"),
     not(feature = "keysize20"),
     not(feature = "keysize24")
 ))]
-const BITSET_EXP: u32 = 32;
+#[allow(missing_docs)]
+pub const BITSET_EXP: u32 = 32;
 
 pub use bitset_core::*;
 

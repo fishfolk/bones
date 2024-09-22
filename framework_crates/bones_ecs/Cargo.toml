@@ -12,10 +12,13 @@ keywords.workspace      = true
 
 [features]
 default = ["derive", "keysize16"]
+miri    = ["derive", "keysize10"]
 derive  = ["dep:bones_ecs_macros"]
 glam    = ["dep:glam", "dep:paste", "bones_schema/glam"]
 serde   = ["dep:serde"]
 
+keysize10 = []
+keysize12 = []
 keysize16 = []
 keysize20 = []
 keysize24 = []
