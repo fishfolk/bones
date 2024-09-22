@@ -642,17 +642,21 @@ impl Entities {
             while self.alive[section].bit_all() {
                 section += 1;
             }
+            // Start at the beginning of the section with unset bits
             let mut i = section * (32 * 8);
-            while self.alive.bit_test(i) || self.killed.iter().any(|e| e.index() == i as u32) {
+            // Find the first bit that is not used by an alive or dead entity
+            while i < BITSET_SIZE
+                && (self.alive.bit_test(i) || self.killed.iter().any(|e| e.index() == i as u32))
+            {
                 i += 1;
+            }
+            if i >= BITSET_SIZE {
+                panic!("Exceeded maximum amount of concurrent entities.");
             }
             self.alive.bit_set(i);
             if i >= self.next_id {
                 self.next_id = i + 1;
                 self.has_deleted = false;
-            }
-            if i >= BITSET_SIZE {
-                panic!("Exceeded maximum amount of concurrent entities.");
             }
             let entity = Entity::new(i as u32, self.generation[i]);
 
@@ -1087,11 +1091,7 @@ mod tests {
     #[should_panic(expected = "Exceeded maximum amount")]
     fn entities__force_max_entity_panic2() {
         let mut entities = Entities::default();
-        let mut e = None;
-        for _ in 0..BITSET_SIZE {
-            e = Some(entities.create());
-        }
-        let e = e.unwrap();
+        let e = (0..BITSET_SIZE).fold(default(), |_, _| entities.create());
         entities.kill(e);
         entities.create();
         entities.create();
