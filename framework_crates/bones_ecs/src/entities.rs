@@ -1050,7 +1050,7 @@ mod tests {
         #[allow(clippy::clone_on_copy)]
         let _ = e1.clone();
         // Debug
-        println!("{e1:?}");
+        assert_eq!(format!("{e1:?}"), "Entity(0, 0)");
         // Hash
         let mut h = HashSet::new();
         h.insert(e1);
