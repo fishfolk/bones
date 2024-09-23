@@ -474,6 +474,17 @@
 <a href="#474" id="474">474</a>
 <a href="#475" id="475">475</a>
 <a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -777,13 +788,13 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-    <span class="kw">use </span>std::rc::Rc;
+    <span class="kw">use </span>std::{iter, rc::Rc};
 
     <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 
-    <span class="attr">#[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
+    <span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
     #[repr(C)]
-    </span><span class="kw">struct </span>A(String);
+    </span><span class="kw">struct </span>A(u32);
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>create_remove_components() {
@@ -792,15 +803,12 @@
         <span class="kw">let </span>e2 = entities.create();
 
         <span class="kw">let </span><span class="kw-2">mut </span>storage = ComponentStore::&lt;A&gt;::default();
-        storage.insert(e1, A(<span class="string">"hello"</span>.into()));
-        storage.insert(e2, A(<span class="string">"world"</span>.into()));
+        storage.insert(e1, A(<span class="number">1</span>));
+        storage.insert(e2, A(<span class="number">2</span>));
         <span class="macro">assert!</span>(storage.get(e1).is_some());
         storage.remove(e1);
         <span class="macro">assert!</span>(storage.get(e1).is_none());
-        <span class="macro">assert_eq!</span>(
-            storage.iter().cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
-            <span class="macro">vec!</span>[A(<span class="string">"world"</span>.into())]
-        )
+        <span class="macro">assert!</span>(storage.iter().eq(iter::once(<span class="kw-2">&amp;</span>A(<span class="number">2</span>))));
     }
 
     <span class="attr">#[test]
@@ -811,18 +819,18 @@
         <span class="kw">let </span><span class="kw-2">mut </span>storage = ComponentStore::&lt;A&gt;::default();
         {
             <span class="comment">// Test that inserted component is correct
-            </span><span class="kw">let </span>comp = storage.get_mut_or_insert(e1, || A(<span class="string">"Test1"</span>.to_string()));
-            <span class="macro">assert_eq!</span>(comp.<span class="number">0</span>, <span class="string">"Test1"</span>);
+            </span><span class="kw">let </span>comp = storage.get_mut_or_insert(e1, || A(<span class="number">1</span>));
+            <span class="macro">assert_eq!</span>(comp.<span class="number">0</span>, <span class="number">1</span>);
 
             <span class="comment">// Mutate component
-            </span>comp.<span class="number">0 </span>= <span class="string">"Test2"</span>.to_string();
+            </span>comp.<span class="number">0 </span>= <span class="number">2</span>;
         }
 
-        <span class="comment">// Should not insert "Unexpected", but retrieve original mutated component.
-        </span><span class="kw">let </span>comp = storage.get_mut_or_insert(e1, || A(<span class="string">"Unexpected"</span>.to_string()));
+        <span class="comment">// Should not insert the unexpected value but retrieve original mutated component.
+        </span><span class="kw">let </span>comp = storage.get_mut_or_insert(e1, || A(u32::MAX));
 
         <span class="comment">// Test that existing component is retrieved
-        </span><span class="macro">assert_eq!</span>(comp.<span class="number">0</span>, <span class="string">"Test2"</span>);
+        </span><span class="macro">assert_eq!</span>(comp.<span class="number">0</span>, <span class="number">2</span>);
     }
 
     <span class="attr">#[test]
@@ -848,8 +856,8 @@
         </span>(<span class="number">0</span>..<span class="number">3</span>).map(|<span class="kw">_</span>| entities.create()).count();
 
         <span class="kw">let </span>e = entities.create();
-        <span class="kw">let </span>a = A(<span class="string">"a"</span>.to_string());
-        storage.insert(e, a.clone());
+        <span class="kw">let </span>a = A(<span class="number">1</span>);
+        storage.insert(e, a);
 
         <span class="kw">let </span>bitset = Rc::new(entities.bitset().clone());
 
@@ -864,7 +872,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>storage = ComponentStore::&lt;A&gt;::default();
 
         (<span class="number">0</span>..<span class="number">3</span>)
-            .map(|i| storage.insert(entities.create(), A(i.to_string())))
+            .map(|i| storage.insert(entities.create(), A(i)))
             .count();
 
         <span class="kw">let </span>bitset = Rc::new(entities.bitset().clone());
@@ -891,8 +899,8 @@
 
         {
             <span class="kw">let </span>e = entities.create();
-            <span class="kw">let </span><span class="kw-2">mut </span>a = A(<span class="string">"e"</span>.to_string());
-            storage.insert(e, a.clone());
+            <span class="kw">let </span><span class="kw-2">mut </span>a = A(<span class="number">1</span>);
+            storage.insert(e, a);
 
             <span class="kw">let </span>bitset = Rc::new(entities.bitset().clone());
 
@@ -909,9 +917,9 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>iter_with_bitset_optional() {
         <span class="kw">let </span><span class="kw-2">mut </span>entities = Entities::default();
-        <span class="kw">let </span><span class="kw-2">mut </span>storage = ComponentStore::&lt;A&gt;::default();
 
         {
+            <span class="kw">let </span><span class="kw-2">mut </span>storage = ComponentStore::&lt;A&gt;::default();
             <span class="kw">let </span>bitset = Rc::new(entities.bitset().clone());
 
             <span class="kw">let </span><span class="kw-2">mut </span>comp_iter = storage.iter_with_bitset_optional(bitset.clone());
@@ -922,31 +930,45 @@
         }
 
         {
-            <span class="kw">let </span>e = entities.create();
+            <span class="kw">let </span><span class="kw-2">mut </span>storage = ComponentStore::&lt;A&gt;::default();
+            (<span class="number">0</span>..<span class="number">2</span>).map(|<span class="kw">_</span>| entities.create()).count();
             <span class="kw">let </span>bitset = Rc::new(entities.bitset().clone());
 
             <span class="kw">let </span><span class="kw-2">mut </span>comp_iter = storage.iter_with_bitset_optional(bitset.clone());
             <span class="macro">assert_eq!</span>(comp_iter.next(), <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>));
+            <span class="macro">assert_eq!</span>(comp_iter.next(), <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>));
+            <span class="macro">assert_eq!</span>(comp_iter.next(), <span class="prelude-val">None</span>);
 
             <span class="kw">let </span><span class="kw-2">mut </span>comp_mut_iter = storage.iter_mut_with_bitset_optional(bitset);
             <span class="macro">assert_eq!</span>(comp_mut_iter.next(), <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>));
+            <span class="macro">assert_eq!</span>(comp_mut_iter.next(), <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>));
+            <span class="macro">assert_eq!</span>(comp_mut_iter.next(), <span class="prelude-val">None</span>);
 
-            entities.kill(e);
+            entities.kill_all();
         }
 
         {
-            <span class="kw">let </span>e = entities.create();
-            <span class="kw">let </span><span class="kw-2">mut </span>a = A(<span class="string">"e"</span>.to_string());
-            storage.insert(e, a.clone());
+            <span class="kw">let </span><span class="kw-2">mut </span>storage = ComponentStore::&lt;A&gt;::default();
+            <span class="kw">let </span>_e1 = entities.create();
+            <span class="kw">let </span>e2 = entities.create();
+            <span class="kw">let </span>_e3 = entities.create();
+            <span class="kw">let </span><span class="kw-2">mut </span>a2 = A(<span class="number">2</span>);
+            storage.insert(e2, a2);
             <span class="kw">let </span>bitset = Rc::new(entities.bitset().clone());
 
             <span class="kw">let </span><span class="kw-2">mut </span>comp_iter = storage.iter_with_bitset_optional(bitset.clone());
-            <span class="macro">assert_eq!</span>(comp_iter.next(), <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>a)));
+            <span class="macro">assert_eq!</span>(comp_iter.next(), <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>));
+            <span class="macro">assert_eq!</span>(comp_iter.next(), <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>a2)));
+            <span class="macro">assert_eq!</span>(comp_iter.next(), <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>));
+            <span class="macro">assert_eq!</span>(comp_iter.next(), <span class="prelude-val">None</span>);
 
             <span class="kw">let </span><span class="kw-2">mut </span>comp_mut_iter = storage.iter_mut_with_bitset_optional(bitset);
-            <span class="macro">assert_eq!</span>(comp_mut_iter.next(), <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>a)));
+            <span class="macro">assert_eq!</span>(comp_mut_iter.next(), <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>));
+            <span class="macro">assert_eq!</span>(comp_mut_iter.next(), <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>a2)));
+            <span class="macro">assert_eq!</span>(comp_mut_iter.next(), <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>));
+            <span class="macro">assert_eq!</span>(comp_mut_iter.next(), <span class="prelude-val">None</span>);
 
-            entities.kill(e);
+            entities.kill_all();
         }
     }
 }

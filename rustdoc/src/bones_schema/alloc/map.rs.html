@@ -1416,7 +1416,7 @@
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SMapIter&lt;K, V&gt; {
         <span class="kw">fn </span>map_fn&lt;<span class="lifetime">'a</span>, K: HasSchema, V: HasSchema&gt;(
             (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox),
-        ) -&gt; (<span class="kw-2">&amp;</span>K, <span class="kw-2">&amp;</span>V) {
+        ) -&gt; (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V) {
             <span class="comment">// SOUND: SMap ensures K and V schemas always match.
             </span><span class="kw">unsafe </span>{
                 (
@@ -1462,7 +1462,7 @@
     </span><span class="attr">#[allow(clippy::type_complexity)]
     </span><span class="kw">pub fn </span>values(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-    ) -&gt; std::iter::Map&lt;hash_map::Values&lt;SchemaBox, SchemaBox&gt;, <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox) -&gt; <span class="kw-2">&amp;</span>V&gt;
+    ) -&gt; std::iter::Map&lt;hash_map::Values&lt;SchemaBox, SchemaBox&gt;, <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V&gt;
     {
         <span class="kw">fn </span>map_fn&lt;V: HasSchema&gt;(value: <span class="kw-2">&amp;</span>SchemaBox) -&gt; <span class="kw-2">&amp;</span>V {
             <span class="comment">// SOUND: SMap ensures value schema always matches.
@@ -1477,7 +1477,7 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     ) -&gt; std::iter::Map&lt;
         hash_map::ValuesMut&lt;SchemaBox, SchemaBox&gt;,
-        <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaBox) -&gt; <span class="kw-2">&amp;mut </span>V,
+        <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaBox) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V,
     &gt; {
         <span class="kw">fn </span>map_fn&lt;V&gt;(value: <span class="kw-2">&amp;mut </span>SchemaBox) -&gt; <span class="kw-2">&amp;mut </span>V {
             <span class="comment">// SOUND: SMap ensures value schema always matches

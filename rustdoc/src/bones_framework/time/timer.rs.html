@@ -979,7 +979,7 @@
 }
 
 <span class="comment">// To speed up CI, only do these on miri, where they complete without waiting for time to pass.
-</span><span class="attr">#[cfg(miri)]
+</span><span class="attr">#[cfg(all(test, miri))]
 #[allow(clippy::float_cmp)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
