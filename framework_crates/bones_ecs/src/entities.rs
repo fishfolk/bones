@@ -637,12 +637,13 @@ impl Entities {
             self.alive.bit_set(i);
             Entity::new(i as u32, self.generation[i])
         } else {
+            // Skip over sections where all bits are enabled
             let mut section = 0;
-            // Find section where at least one bit isn't set
             while self.alive[section].bit_all() {
                 section += 1;
             }
-            // Start at the beginning of the section with unset bits
+
+            // Start at the beginning of the first section with at least 1 unset bit
             let mut i = section * (32 * 8);
             // Find the first bit that is not used by an alive or dead entity
             while i < BITSET_SIZE
@@ -653,6 +654,8 @@ impl Entities {
             if i >= BITSET_SIZE {
                 panic!("Exceeded maximum amount of concurrent entities.");
             }
+
+            // Create the entity
             self.alive.bit_set(i);
             if i >= self.next_id {
                 self.next_id = i + 1;
