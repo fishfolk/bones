@@ -301,13 +301,13 @@ impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
+    use std::{iter, rc::Rc};
 
     use crate::prelude::*;
 
-    #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
     #[repr(C)]
-    struct A(String);
+    struct A(u32);
 
     #[test]
     fn create_remove_components() {
@@ -316,15 +316,12 @@ mod tests {
         let e2 = entities.create();
 
         let mut storage = ComponentStore::<A>::default();
-        storage.insert(e1, A("hello".into()));
-        storage.insert(e2, A("world".into()));
+        storage.insert(e1, A(1));
+        storage.insert(e2, A(2));
         assert!(storage.get(e1).is_some());
         storage.remove(e1);
         assert!(storage.get(e1).is_none());
-        assert_eq!(
-            storage.iter().cloned().collect::<Vec<_>>(),
-            vec![A("world".into())]
-        )
+        assert!(storage.iter().eq(iter::once(&A(2))));
     }
 
     #[test]
@@ -335,18 +332,18 @@ mod tests {
         let mut storage = ComponentStore::<A>::default();
         {
             // Test that inserted component is correct
-            let comp = storage.get_mut_or_insert(e1, || A("Test1".to_string()));
-            assert_eq!(comp.0, "Test1");
+            let comp = storage.get_mut_or_insert(e1, || A(1));
+            assert_eq!(comp.0, 1);
 
             // Mutate component
-            comp.0 = "Test2".to_string();
+            comp.0 = 2;
         }
 
-        // Should not insert "Unexpected", but retrieve original mutated component.
-        let comp = storage.get_mut_or_insert(e1, || A("Unexpected".to_string()));
+        // Should not insert the unexpected value but retrieve original mutated component.
+        let comp = storage.get_mut_or_insert(e1, || A(u32::MAX));
 
         // Test that existing component is retrieved
-        assert_eq!(comp.0, "Test2");
+        assert_eq!(comp.0, 2);
     }
 
     #[test]
@@ -372,8 +369,8 @@ mod tests {
         (0..3).map(|_| entities.create()).count();
 
         let e = entities.create();
-        let a = A("a".to_string());
-        storage.insert(e, a.clone());
+        let a = A(1);
+        storage.insert(e, a);
 
         let bitset = Rc::new(entities.bitset().clone());
 
@@ -388,7 +385,7 @@ mod tests {
         let mut storage = ComponentStore::<A>::default();
 
         (0..3)
-            .map(|i| storage.insert(entities.create(), A(i.to_string())))
+            .map(|i| storage.insert(entities.create(), A(i)))
             .count();
 
         let bitset = Rc::new(entities.bitset().clone());
@@ -415,8 +412,8 @@ mod tests {
 
         {
             let e = entities.create();
-            let mut a = A("e".to_string());
-            storage.insert(e, a.clone());
+            let mut a = A(1);
+            storage.insert(e, a);
 
             let bitset = Rc::new(entities.bitset().clone());
 
@@ -433,9 +430,9 @@ mod tests {
     #[test]
     fn iter_with_bitset_optional() {
         let mut entities = Entities::default();
-        let mut storage = ComponentStore::<A>::default();
 
         {
+            let mut storage = ComponentStore::<A>::default();
             let bitset = Rc::new(entities.bitset().clone());
 
             let mut comp_iter = storage.iter_with_bitset_optional(bitset.clone());
@@ -446,31 +443,45 @@ mod tests {
         }
 
         {
-            let e = entities.create();
+            let mut storage = ComponentStore::<A>::default();
+            (0..2).map(|_| entities.create()).count();
             let bitset = Rc::new(entities.bitset().clone());
 
             let mut comp_iter = storage.iter_with_bitset_optional(bitset.clone());
             assert_eq!(comp_iter.next(), Some(None));
+            assert_eq!(comp_iter.next(), Some(None));
+            assert_eq!(comp_iter.next(), None);
 
             let mut comp_mut_iter = storage.iter_mut_with_bitset_optional(bitset);
             assert_eq!(comp_mut_iter.next(), Some(None));
+            assert_eq!(comp_mut_iter.next(), Some(None));
+            assert_eq!(comp_mut_iter.next(), None);
 
-            entities.kill(e);
+            entities.kill_all();
         }
 
         {
-            let e = entities.create();
-            let mut a = A("e".to_string());
-            storage.insert(e, a.clone());
+            let mut storage = ComponentStore::<A>::default();
+            let _e1 = entities.create();
+            let e2 = entities.create();
+            let _e3 = entities.create();
+            let mut a2 = A(2);
+            storage.insert(e2, a2);
             let bitset = Rc::new(entities.bitset().clone());
 
             let mut comp_iter = storage.iter_with_bitset_optional(bitset.clone());
-            assert_eq!(comp_iter.next(), Some(Some(&a)));
+            assert_eq!(comp_iter.next(), Some(None));
+            assert_eq!(comp_iter.next(), Some(Some(&a2)));
+            assert_eq!(comp_iter.next(), Some(None));
+            assert_eq!(comp_iter.next(), None);
 
             let mut comp_mut_iter = storage.iter_mut_with_bitset_optional(bitset);
-            assert_eq!(comp_mut_iter.next(), Some(Some(&mut a)));
+            assert_eq!(comp_mut_iter.next(), Some(None));
+            assert_eq!(comp_mut_iter.next(), Some(Some(&mut a2)));
+            assert_eq!(comp_mut_iter.next(), Some(None));
+            assert_eq!(comp_mut_iter.next(), None);
 
-            entities.kill(e);
+            entities.kill_all();
         }
     }
 }

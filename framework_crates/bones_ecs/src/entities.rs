@@ -389,12 +389,12 @@ macro_rules! impl_query {
                         )*
                     )
                 };
-                let first = query.next();
-                let has_second = query.next().is_some();
-                match (first, has_second) {
-                    (None, _) => Err(QuerySingleError::NoEntities),
-                    (Some(items), false) => Ok(items),
-                    (Some(_), true) => Err(QuerySingleError::MultipleEntities),
+                let Some(items) = query.next() else {
+                    return Err(QuerySingleError::NoEntities);
+                };
+                match query.next() {
+                    Some(_) => Err(QuerySingleError::MultipleEntities),
+                    None => Ok(items),
                 }
             }
 
@@ -536,7 +536,7 @@ impl Entities {
     }
 
     /// Iterates over entities using the provided bitset.
-    pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> EntityIterator {
+    pub fn iter_with_bitset<'a>(&'a self, bitset: &'a BitSetVec) -> EntityIterator<'a> {
         EntityIterator {
             current_id: 0,
             next_id: self.next_id,
@@ -637,22 +637,29 @@ impl Entities {
             self.alive.bit_set(i);
             Entity::new(i as u32, self.generation[i])
         } else {
+            // Skip over sections where all bits are enabled
             let mut section = 0;
-            // Find section where at least one bit isn't set
             while self.alive[section].bit_all() {
                 section += 1;
             }
+
+            // Start at the beginning of the first section with at least 1 unset bit
             let mut i = section * (32 * 8);
-            while self.alive.bit_test(i) || self.killed.iter().any(|e| e.index() == i as u32) {
+            // Find the first bit that is not used by an alive or dead entity
+            while i < BITSET_SIZE
+                && (self.alive.bit_test(i) || self.killed.iter().any(|e| e.index() == i as u32))
+            {
                 i += 1;
             }
+            if i >= BITSET_SIZE {
+                panic!("Exceeded maximum amount of concurrent entities.");
+            }
+
+            // Create the entity
             self.alive.bit_set(i);
             if i >= self.next_id {
                 self.next_id = i + 1;
                 self.has_deleted = false;
-            }
-            if i >= BITSET_SIZE {
-                panic!("Exceeded maximum amount of concurrent entities.");
             }
             let entity = Entity::new(i as u32, self.generation[i]);
 
@@ -765,11 +772,11 @@ mod tests {
 
     use crate::prelude::*;
 
-    #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
     #[repr(C)]
     struct A(u32);
 
-    #[derive(Debug, Clone, PartialEq, Eq, HasSchema, Default)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
     #[repr(C)]
     struct B(u32);
 
@@ -795,7 +802,7 @@ mod tests {
 
             let e = entities.create();
             let a = A(1);
-            comp.insert(e, a.clone());
+            comp.insert(e, a);
 
             let query = &comp;
             let mut bitset = entities.bitset().clone();
@@ -850,8 +857,8 @@ mod tests {
             let e = entities.create();
             let a = A(1);
             let b = B(1);
-            state_a.borrow_mut().insert(e, a.clone());
-            state_b.borrow_mut().insert(e, b.clone());
+            state_a.borrow_mut().insert(e, a);
+            state_b.borrow_mut().insert(e, b);
 
             let query = (&state_a.borrow(), &state_b.borrow());
             let mut bitset = entities.bitset().clone();
@@ -888,22 +895,106 @@ mod tests {
 
     #[test]
     fn query_item__get_single_with_bitset__uses_bitset() {
-        let mut entities = Entities::default();
-        let state = AtomicCell::new(ComponentStore::<A>::default());
+        fn entity(index: u32) -> Entity {
+            Entity::new(index, 0)
+        }
 
-        let e = entities.create();
-        state.borrow_mut().insert(e, A(u32::MAX));
+        fn store(entities: &[u32]) -> ComponentStore<A> {
+            let mut store = ComponentStore::default();
+            for &i in entities {
+                store.insert(entity(i), A(i));
+            }
+            store
+        }
 
-        let query = &state.borrow();
-        let bitset = Rc::new({
+        fn bitset(enabled: &[usize]) -> Rc<BitSetVec> {
             let mut bitset = BitSetVec::default();
-            bitset.bit_set(99);
-            bitset
-        });
+            for &i in enabled {
+                bitset.bit_set(i);
+            }
+            Rc::new(bitset)
+        }
+        eprintln!();
 
-        let maybe_comp = query.get_single_with_bitset(bitset);
+        {
+            let (mut store, bitset) = (store(&[]), bitset(&[]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
 
-        assert_eq!(maybe_comp, Err(QuerySingleError::NoEntities));
+        {
+            let (mut store, bitset) = (store(&[1]), bitset(&[]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[]), bitset(&[1]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[3]), bitset(&[3]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Ok(&A(3)));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Ok(&mut A(3)));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[5, 6]), bitset(&[5, 6]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[90, 91, 92]), bitset(&[0]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[0]), bitset(&[90, 91, 92]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[11, 21, 31]), bitset(&[12, 22, 32]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[11, 20, 31, 41]), bitset(&[12, 20, 32, 42]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Ok(&A(20)));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Ok(&mut A(20)));
+        }
+
+        {
+            let (mut store, bitset) = (store(&[11, 21, 30, 41, 50]), bitset(&[12, 22, 30, 42, 50]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
+        }
     }
 
     #[test]
@@ -966,7 +1057,7 @@ mod tests {
         #[allow(clippy::clone_on_copy)]
         let _ = e1.clone();
         // Debug
-        println!("{e1:?}");
+        assert_eq!(format!("{e1:?}"), "Entity(0, 0)");
         // Hash
         let mut h = HashSet::new();
         h.insert(e1);
@@ -990,7 +1081,6 @@ mod tests {
         entities.create();
     }
 
-    #[cfg(not(miri))] // This test is very slow on miri and not critical to test for.
     #[test]
     #[should_panic(expected = "Exceeded maximum amount")]
     fn entities__force_max_entity_panic() {
@@ -1000,16 +1090,11 @@ mod tests {
         }
     }
 
-    #[cfg(not(miri))] // This test is very slow on miri and not critical to test for.
     #[test]
     #[should_panic(expected = "Exceeded maximum amount")]
     fn entities__force_max_entity_panic2() {
         let mut entities = Entities::default();
-        let mut e = None;
-        for _ in 0..BITSET_SIZE {
-            e = Some(entities.create());
-        }
-        let e = e.unwrap();
+        let e = (0..BITSET_SIZE).fold(default(), |_, _| entities.create());
         entities.kill(e);
         entities.create();
         entities.create();
@@ -1036,7 +1121,7 @@ mod tests {
         let a = A(4);
 
         let state = AtomicCell::new(ComponentStore::<A>::default());
-        state.borrow_mut().insert(e, a.clone());
+        state.borrow_mut().insert(e, a);
 
         let comp = state.borrow();
 
@@ -1065,7 +1150,7 @@ mod tests {
         for i in 0..3 {
             let e = entities.create();
             let a = A(i);
-            state.borrow_mut().insert(e, a.clone());
+            state.borrow_mut().insert(e, a);
         }
 
         let comp = state.borrow();
@@ -1094,8 +1179,8 @@ mod tests {
         let e4 = entities.create();
         let a4 = A(4);
         let b4 = B(4);
-        state_a.borrow_mut().insert(e4, a4.clone());
-        state_b.borrow_mut().insert(e4, b4.clone());
+        state_a.borrow_mut().insert(e4, a4);
+        state_b.borrow_mut().insert(e4, b4);
 
         let comp_a = state_a.borrow();
         let comp_b = state_b.borrow();
@@ -1128,7 +1213,7 @@ mod tests {
         {
             let e = entities.create();
             let mut a = A(1);
-            state.borrow_mut().insert(e, a.clone());
+            state.borrow_mut().insert(e, a);
 
             let mut comp = state.borrow_mut();
 
@@ -1155,7 +1240,7 @@ mod tests {
         {
             let e = entities.create();
             let a = A(1);
-            state_a.borrow_mut().insert(e, a.clone());
+            state_a.borrow_mut().insert(e, a);
 
             let comp_a = state_a.borrow();
             let mut comp_b = state_b.borrow_mut();
@@ -1177,8 +1262,8 @@ mod tests {
             let e = entities.create();
             let a = A(1);
             let mut b = B(1);
-            state_a.borrow_mut().insert(e, a.clone());
-            state_b.borrow_mut().insert(e, b.clone());
+            state_a.borrow_mut().insert(e, a);
+            state_b.borrow_mut().insert(e, b);
 
             let comp_a = state_a.borrow();
             let mut comp_b = state_b.borrow_mut();

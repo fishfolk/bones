@@ -414,7 +414,7 @@ pub enum TimerMode {
 }
 
 // To speed up CI, only do these on miri, where they complete without waiting for time to pass.
-#[cfg(miri)]
+#[cfg(all(test, miri))]
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;

@@ -154,9 +154,7 @@ jobs:
           restore-keys: |
             ci-miri-${{ matrix.config.target }}-
       - name: 📡 Test with Miri
-        run: |
-          # Try multiple seeds to catch possible alignment issues
-          for SEED in $(seq 0 10); do
-            echo "Trying seed: $SEED"
-            MIRIFLAGS=-Zmiri-seed=$SEED cargo miri test || { echo "Failing seed: $SEED"; exit 1; };
-          done
+        shell: bash
+        run: "${GITHUB_WORKSPACE}/.github/miri-test.sh"
+        env:
+          NUM_SEEDS: 8
