@@ -220,7 +220,9 @@ impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
+    #![allow(non_snake_case)]
+
     use super::*;
 
     #[derive(Clone, HasSchema, Default)]
@@ -335,6 +337,67 @@ mod test {
             }
             // Expected two entities with A
             assert_eq!(count, 2);
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
+    struct X(u32);
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
+    struct Y(u32);
+
+    fn entity(index: u32) -> Entity {
+        Entity::new(index, 0)
+    }
+
+    fn store<C: HasSchema>(entities: &[u32], ctor: fn(u32) -> C) -> ComponentStore<C> {
+        let mut store = ComponentStore::default();
+        for &i in entities {
+            store.insert(entity(i), ctor(i));
+        }
+        store
+    }
+
+    fn bitset(enabled: &[usize]) -> BitSetVec {
+        let mut bitset = BitSetVec::default();
+        for &i in enabled {
+            bitset.bit_set(i);
+        }
+        bitset
+    }
+
+    #[test]
+    fn get_single_with_bitset__multiple_required() {
+        {
+            let bitset = bitset(&[]);
+            let (store_x, store_y) = (store(&[], X), store(&[], Y));
+            let query = (&Ref::new(&store_x), &Ref::new(&store_y));
+
+            let result = query.get_single_with_bitset(Rc::new(bitset));
+
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let bitset = bitset(&[1]);
+            let store_x = store(&[1], X);
+            let store_y = store(&[1], Y);
+            let query = (&Ref::new(&store_x), &Ref::new(&store_y));
+
+            let result = query.get_single_with_bitset(Rc::new(bitset));
+
+            assert_eq!(result, Ok((&X(1), &Y(1))));
+        }
+
+        {
+            let bitset = bitset(&[1, 2]);
+            let store_x = store(&[1, 2], X);
+            let store_y = store(&[1, 2], Y);
+            let query = (&Ref::new(&store_x), &Ref::new(&store_y));
+
+            let result = query.get_single_with_bitset(Rc::new(bitset));
+
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
         }
     }
 }
