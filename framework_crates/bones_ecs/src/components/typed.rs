@@ -301,6 +301,8 @@ impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(non_snake_case)]
+
     use std::{iter, rc::Rc};
 
     use crate::prelude::*;
@@ -308,6 +310,30 @@ mod tests {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
     #[repr(C)]
     struct A(u32);
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
+    #[repr(C)]
+    struct B(u32);
+
+    fn entity(index: u32) -> Entity {
+        Entity::new(index, 0)
+    }
+
+    fn store(entities: &[u32]) -> ComponentStore<A> {
+        let mut store = ComponentStore::default();
+        for &i in entities {
+            store.insert(entity(i), A(i));
+        }
+        store
+    }
+
+    fn bitset(enabled: &[usize]) -> Rc<BitSetVec> {
+        let mut bitset = BitSetVec::default();
+        for &i in enabled {
+            bitset.bit_set(i);
+        }
+        Rc::new(bitset)
+    }
 
     #[test]
     fn create_remove_components() {
@@ -347,141 +373,212 @@ mod tests {
     }
 
     #[test]
-    fn single_returns_none_when_empty() {
-        let storage = ComponentStore::<A>::default();
-        let bitset = Rc::new({
-            let mut entities = Entities::default();
-            entities.create();
-            entities.bitset().clone()
-        });
+    fn iter() {
+        let mut store = store(&[10, 20, 30]);
+        let expected = vec![10, 20, 30];
 
-        let maybe_comp = storage.get_single_with_bitset(bitset);
+        let actual = store.iter().map(|c| c.0).collect::<Vec<_>>();
+        assert_eq!(actual, expected);
 
-        assert_eq!(maybe_comp, Err(QuerySingleError::NoEntities));
+        let actual = store.iter_mut().map(|c| c.0).collect::<Vec<_>>();
+        assert_eq!(actual, expected);
     }
 
     #[test]
-    fn single_returns_some_single() {
-        let mut storage = ComponentStore::<A>::default();
-        let mut entities = Entities::default();
+    fn get_single_with_bitset() {
+        {
+            let (mut store, bitset) = (store(&[]), bitset(&[]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
 
-        // Create some dummies so that the target entity isn't 0
-        (0..3).map(|_| entities.create()).count();
+        {
+            let (mut store, bitset) = (store(&[1]), bitset(&[]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
 
-        let e = entities.create();
-        let a = A(1);
-        storage.insert(e, a);
+        {
+            let (mut store, bitset) = (store(&[]), bitset(&[1]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
 
-        let bitset = Rc::new(entities.bitset().clone());
+        {
+            let (mut store, bitset) = (store(&[3]), bitset(&[3]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Ok(&A(3)));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Ok(&mut A(3)));
+        }
 
-        let maybe_comp = storage.get_single_with_bitset(bitset);
+        {
+            let (mut store, bitset) = (store(&[5, 6]), bitset(&[5, 6]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
+        }
 
-        assert_eq!(maybe_comp, Ok(&a));
-    }
+        {
+            let (mut store, bitset) = (store(&[11, 21, 31]), bitset(&[12, 22, 32]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
 
-    #[test]
-    fn single_returns_none_when_more_than_1() {
-        let mut entities = Entities::default();
-        let mut storage = ComponentStore::<A>::default();
+        {
+            let (mut store, bitset) = (store(&[11, 20, 31, 41]), bitset(&[12, 20, 32, 42]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Ok(&A(20)));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Ok(&mut A(20)));
+        }
 
-        (0..3)
-            .map(|i| storage.insert(entities.create(), A(i)))
-            .count();
-
-        let bitset = Rc::new(entities.bitset().clone());
-
-        let maybe_comp = storage.get_single_with_bitset(bitset);
-
-        assert_eq!(maybe_comp, Err(QuerySingleError::MultipleEntities));
+        {
+            let (mut store, bitset) = (store(&[11, 21, 30, 41, 50]), bitset(&[12, 22, 30, 42, 50]));
+            let result = store.get_single_with_bitset(bitset.clone());
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
+            let result = store.get_single_with_bitset_mut(bitset);
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
+        }
     }
 
     #[test]
     fn iter_with_bitset() {
-        let mut entities = Entities::default();
-        let mut storage = ComponentStore::<A>::default();
-
         {
-            let bitset = Rc::new(entities.bitset().clone());
+            let (mut store, bitset) = (store(&[]), bitset(&[]));
 
-            let mut comp_iter = storage.iter_with_bitset(bitset.clone());
-            assert_eq!(comp_iter.next(), None);
+            let mut iter = store.iter_with_bitset(bitset.clone());
+            assert_eq!(iter.next(), None);
 
-            let mut comp_mut_iter = storage.iter_mut_with_bitset(bitset);
-            assert_eq!(comp_mut_iter.next(), None);
+            let mut iter = store.iter_mut_with_bitset(bitset);
+            assert_eq!(iter.next(), None);
         }
 
         {
-            let e = entities.create();
-            let mut a = A(1);
-            storage.insert(e, a);
+            let (mut store, bitset) = (store(&[]), bitset(&[10, 20]));
 
-            let bitset = Rc::new(entities.bitset().clone());
+            let mut iter = store.iter_with_bitset(bitset.clone());
+            assert_eq!(iter.next(), None);
 
-            let mut comp_iter = storage.iter_with_bitset(bitset.clone());
-            assert_eq!(comp_iter.next(), Some(&a));
+            let mut iter = store.iter_mut_with_bitset(bitset);
+            assert_eq!(iter.next(), None);
+        }
 
-            let mut comp_mut_iter = storage.iter_mut_with_bitset(bitset);
-            assert_eq!(comp_mut_iter.next(), Some(&mut a));
+        {
+            let (mut store, bitset) = (store(&[10, 20]), bitset(&[]));
 
-            entities.kill(e);
+            let mut iter = store.iter_with_bitset(bitset.clone());
+            assert_eq!(iter.next(), None);
+
+            let mut iter = store.iter_mut_with_bitset(bitset);
+            assert_eq!(iter.next(), None);
+        }
+
+        {
+            let (mut store, bitset) = (store(&[11, 21, 31]), bitset(&[12, 22, 32]));
+
+            let mut iter = store.iter_with_bitset(bitset.clone());
+            assert_eq!(iter.next(), None);
+
+            let mut iter = store.iter_mut_with_bitset(bitset.clone());
+            assert_eq!(iter.next(), None);
+        }
+
+        {
+            let (mut store, bitset) = (store(&[5]), bitset(&[5]));
+
+            let mut iter = store.iter_with_bitset(bitset.clone());
+            assert_eq!(iter.next(), Some(&A(5)));
+            assert_eq!(iter.next(), None);
+
+            let mut iter = store.iter_mut_with_bitset(bitset);
+            assert_eq!(iter.next(), Some(&mut A(5)));
+            assert_eq!(iter.next(), None);
+        }
+
+        {
+            let (mut store, bitset) = (
+                store(&[11, 20, 31, 41, 50, 61]),
+                bitset(&[12, 20, 32, 42, 50, 62]),
+            );
+
+            let mut iter = store.iter_with_bitset(bitset.clone());
+            assert_eq!(iter.next(), Some(&A(20)));
+            assert_eq!(iter.next(), Some(&A(50)));
+            assert_eq!(iter.next(), None);
+
+            let mut iter = store.iter_mut_with_bitset(bitset);
+            assert_eq!(iter.next(), Some(&mut A(20)));
+            assert_eq!(iter.next(), Some(&mut A(50)));
+            assert_eq!(iter.next(), None);
         }
     }
 
     #[test]
     fn iter_with_bitset_optional() {
-        let mut entities = Entities::default();
-
         {
-            let mut storage = ComponentStore::<A>::default();
-            let bitset = Rc::new(entities.bitset().clone());
+            let (mut store, bitset) = (store(&[]), bitset(&[]));
 
-            let mut comp_iter = storage.iter_with_bitset_optional(bitset.clone());
-            assert_eq!(comp_iter.next(), None);
+            let mut iter = store.iter_with_bitset_optional(bitset.clone());
+            assert_eq!(iter.next(), None);
 
-            let mut comp_mut_iter = storage.iter_mut_with_bitset_optional(bitset);
-            assert_eq!(comp_mut_iter.next(), None);
+            let mut iter = store.iter_mut_with_bitset_optional(bitset);
+            assert_eq!(iter.next(), None);
         }
 
         {
-            let mut storage = ComponentStore::<A>::default();
-            (0..2).map(|_| entities.create()).count();
-            let bitset = Rc::new(entities.bitset().clone());
+            let (mut store, bitset) = (store(&[]), bitset(&[5, 6]));
 
-            let mut comp_iter = storage.iter_with_bitset_optional(bitset.clone());
-            assert_eq!(comp_iter.next(), Some(None));
-            assert_eq!(comp_iter.next(), Some(None));
-            assert_eq!(comp_iter.next(), None);
+            let mut iter = store.iter_with_bitset_optional(bitset.clone());
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), None);
 
-            let mut comp_mut_iter = storage.iter_mut_with_bitset_optional(bitset);
-            assert_eq!(comp_mut_iter.next(), Some(None));
-            assert_eq!(comp_mut_iter.next(), Some(None));
-            assert_eq!(comp_mut_iter.next(), None);
-
-            entities.kill_all();
+            let mut iter = store.iter_mut_with_bitset_optional(bitset);
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), None);
         }
 
         {
-            let mut storage = ComponentStore::<A>::default();
-            let _e1 = entities.create();
-            let e2 = entities.create();
-            let _e3 = entities.create();
-            let mut a2 = A(2);
-            storage.insert(e2, a2);
-            let bitset = Rc::new(entities.bitset().clone());
+            let (mut store, bitset) = (store(&[11, 21, 31]), bitset(&[12, 22, 32]));
 
-            let mut comp_iter = storage.iter_with_bitset_optional(bitset.clone());
-            assert_eq!(comp_iter.next(), Some(None));
-            assert_eq!(comp_iter.next(), Some(Some(&a2)));
-            assert_eq!(comp_iter.next(), Some(None));
-            assert_eq!(comp_iter.next(), None);
+            let mut iter = store.iter_with_bitset_optional(bitset.clone());
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), None);
 
-            let mut comp_mut_iter = storage.iter_mut_with_bitset_optional(bitset);
-            assert_eq!(comp_mut_iter.next(), Some(None));
-            assert_eq!(comp_mut_iter.next(), Some(Some(&mut a2)));
-            assert_eq!(comp_mut_iter.next(), Some(None));
-            assert_eq!(comp_mut_iter.next(), None);
+            let mut iter = store.iter_mut_with_bitset_optional(bitset);
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), None);
+        }
 
-            entities.kill_all();
+        {
+            let (mut store, bitset) = (store(&[11, 20, 31]), bitset(&[12, 20, 32]));
+
+            let mut iter = store.iter_with_bitset_optional(bitset.clone());
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), Some(Some(&A(20))));
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), None);
+
+            let mut iter = store.iter_mut_with_bitset_optional(bitset);
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), Some(Some(&mut A(20))));
+            assert_eq!(iter.next(), Some(None));
+            assert_eq!(iter.next(), None);
         }
     }
 }

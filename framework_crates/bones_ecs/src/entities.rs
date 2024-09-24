@@ -768,7 +768,7 @@ impl<'a> Iterator for EntityIterator<'a> {
 mod tests {
     #![allow(non_snake_case)]
 
-    use std::{collections::HashSet, rc::Rc};
+    use std::collections::HashSet;
 
     use crate::prelude::*;
 
@@ -779,223 +779,6 @@ mod tests {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
     #[repr(C)]
     struct B(u32);
-
-    #[test]
-    fn query_item__get_single_with_one_required() {
-        let mut entities = Entities::default();
-        let state = AtomicCell::new(ComponentStore::<A>::default());
-
-        {
-            let comp = state.borrow_mut();
-            let query = &comp;
-
-            let mut bitset = entities.bitset().clone();
-            query.apply_bitset(&mut bitset);
-
-            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
-
-            assert_eq!(maybe_comps, Err(QuerySingleError::NoEntities));
-        }
-
-        {
-            let mut comp = state.borrow_mut();
-
-            let e = entities.create();
-            let a = A(1);
-            comp.insert(e, a);
-
-            let query = &comp;
-            let mut bitset = entities.bitset().clone();
-            query.apply_bitset(&mut bitset);
-
-            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
-
-            assert_eq!(maybe_comps, Ok(&a));
-
-            entities.kill(e);
-        }
-
-        {
-            let mut comp = state.borrow_mut();
-
-            let e1 = entities.create();
-            comp.insert(e1, A(1));
-
-            let e2 = entities.create();
-            comp.insert(e2, A(2));
-
-            let query = &comp;
-            let mut bitset = entities.bitset().clone();
-            query.apply_bitset(&mut bitset);
-
-            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
-
-            assert_eq!(maybe_comps, Err(QuerySingleError::MultipleEntities));
-
-            entities.kill(e1);
-            entities.kill(e2);
-        }
-    }
-
-    #[test]
-    fn query_item__get_single_with_multiple_required() {
-        let mut entities = Entities::default();
-        let state_a = AtomicCell::new(ComponentStore::<A>::default());
-        let state_b = AtomicCell::new(ComponentStore::<B>::default());
-
-        {
-            let query = (&state_a.borrow(), &state_b.borrow());
-            let mut bitset = entities.bitset().clone();
-            query.apply_bitset(&mut bitset);
-
-            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
-
-            assert_eq!(maybe_comps, Err(QuerySingleError::NoEntities));
-        }
-
-        {
-            let e = entities.create();
-            let a = A(1);
-            let b = B(1);
-            state_a.borrow_mut().insert(e, a);
-            state_b.borrow_mut().insert(e, b);
-
-            let query = (&state_a.borrow(), &state_b.borrow());
-            let mut bitset = entities.bitset().clone();
-            query.apply_bitset(&mut bitset);
-
-            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
-
-            assert_eq!(maybe_comps, Ok((&a, &b)));
-
-            entities.kill(e);
-        }
-
-        {
-            let e1 = entities.create();
-            state_a.borrow_mut().insert(e1, A(1));
-            state_b.borrow_mut().insert(e1, B(1));
-
-            let e2 = entities.create();
-            state_a.borrow_mut().insert(e2, A(2));
-            state_b.borrow_mut().insert(e2, B(2));
-
-            let query = (&state_a.borrow(), &state_b.borrow());
-            let mut bitset = entities.bitset().clone();
-            query.apply_bitset(&mut bitset);
-
-            let maybe_comps = query.get_single_with_bitset(Rc::new(bitset));
-
-            assert_eq!(maybe_comps, Err(QuerySingleError::MultipleEntities));
-
-            entities.kill(e1);
-            entities.kill(e2);
-        }
-    }
-
-    #[test]
-    fn query_item__get_single_with_bitset__uses_bitset() {
-        fn entity(index: u32) -> Entity {
-            Entity::new(index, 0)
-        }
-
-        fn store(entities: &[u32]) -> ComponentStore<A> {
-            let mut store = ComponentStore::default();
-            for &i in entities {
-                store.insert(entity(i), A(i));
-            }
-            store
-        }
-
-        fn bitset(enabled: &[usize]) -> Rc<BitSetVec> {
-            let mut bitset = BitSetVec::default();
-            for &i in enabled {
-                bitset.bit_set(i);
-            }
-            Rc::new(bitset)
-        }
-        eprintln!();
-
-        {
-            let (mut store, bitset) = (store(&[]), bitset(&[]));
-            let result = store.get_single_with_bitset(bitset.clone());
-            assert_eq!(result, Err(QuerySingleError::NoEntities));
-            let result = store.get_single_with_bitset_mut(bitset);
-            assert_eq!(result, Err(QuerySingleError::NoEntities));
-        }
-
-        {
-            let (mut store, bitset) = (store(&[1]), bitset(&[]));
-            let result = store.get_single_with_bitset(bitset.clone());
-            assert_eq!(result, Err(QuerySingleError::NoEntities));
-            let result = store.get_single_with_bitset_mut(bitset);
-            assert_eq!(result, Err(QuerySingleError::NoEntities));
-        }
-
-        {
-            let (mut store, bitset) = (store(&[]), bitset(&[1]));
-            let result = store.get_single_with_bitset(bitset.clone());
-            assert_eq!(result, Err(QuerySingleError::NoEntities));
-            let result = store.get_single_with_bitset_mut(bitset);
-            assert_eq!(result, Err(QuerySingleError::NoEntities));
-        }
-
-        {
-            let (mut store, bitset) = (store(&[3]), bitset(&[3]));
-            let result = store.get_single_with_bitset(bitset.clone());
-            assert_eq!(result, Ok(&A(3)));
-            let result = store.get_single_with_bitset_mut(bitset);
-            assert_eq!(result, Ok(&mut A(3)));
-        }
-
-        {
-            let (mut store, bitset) = (store(&[5, 6]), bitset(&[5, 6]));
-            let result = store.get_single_with_bitset(bitset.clone());
-            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
-            let result = store.get_single_with_bitset_mut(bitset);
-            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
-        }
-
-        {
-            let (mut store, bitset) = (store(&[90, 91, 92]), bitset(&[0]));
-            let result = store.get_single_with_bitset(bitset.clone());
-            assert_eq!(result, Err(QuerySingleError::NoEntities));
-            let result = store.get_single_with_bitset_mut(bitset);
-            assert_eq!(result, Err(QuerySingleError::NoEntities));
-        }
-
-        {
-            let (mut store, bitset) = (store(&[0]), bitset(&[90, 91, 92]));
-            let result = store.get_single_with_bitset(bitset.clone());
-            assert_eq!(result, Err(QuerySingleError::NoEntities));
-            let result = store.get_single_with_bitset_mut(bitset);
-            assert_eq!(result, Err(QuerySingleError::NoEntities));
-        }
-
-        {
-            let (mut store, bitset) = (store(&[11, 21, 31]), bitset(&[12, 22, 32]));
-            let result = store.get_single_with_bitset(bitset.clone());
-            assert_eq!(result, Err(QuerySingleError::NoEntities));
-            let result = store.get_single_with_bitset_mut(bitset);
-            assert_eq!(result, Err(QuerySingleError::NoEntities));
-        }
-
-        {
-            let (mut store, bitset) = (store(&[11, 20, 31, 41]), bitset(&[12, 20, 32, 42]));
-            let result = store.get_single_with_bitset(bitset.clone());
-            assert_eq!(result, Ok(&A(20)));
-            let result = store.get_single_with_bitset_mut(bitset);
-            assert_eq!(result, Ok(&mut A(20)));
-        }
-
-        {
-            let (mut store, bitset) = (store(&[11, 21, 30, 41, 50]), bitset(&[12, 22, 30, 42, 50]));
-            let result = store.get_single_with_bitset(bitset.clone());
-            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
-            let result = store.get_single_with_bitset_mut(bitset);
-            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
-        }
-    }
 
     #[test]
     fn entities__create_kill() {
@@ -1120,24 +903,20 @@ mod tests {
         let e = entities.create();
         let a = A(4);
 
-        let state = AtomicCell::new(ComponentStore::<A>::default());
-        state.borrow_mut().insert(e, a);
+        let mut store = ComponentStore::<A>::default();
+        store.insert(e, a);
 
-        let comp = state.borrow();
-
-        assert_eq!(entities.get_single_with(&comp), Ok((e, &a)));
+        assert_eq!(entities.get_single_with(&Ref::new(&store)), Ok((e, &a)));
     }
 
     #[test]
     fn entities__get_single__with_one_required__none() {
         let mut entities = Entities::default();
+        let store = ComponentStore::<A>::default();
         (0..3).map(|_| entities.create()).count();
 
-        let state = AtomicCell::new(ComponentStore::<A>::default());
-        let comp = state.borrow();
-
         assert_eq!(
-            entities.get_single_with(&comp),
+            entities.get_single_with(&Ref::new(&store)),
             Err(QuerySingleError::NoEntities)
         );
     }
@@ -1145,18 +924,14 @@ mod tests {
     #[test]
     fn entities__get_single__with_one_required__too_many() {
         let mut entities = Entities::default();
-        let state = AtomicCell::new(ComponentStore::<A>::default());
+        let mut store = ComponentStore::<A>::default();
 
         for i in 0..3 {
-            let e = entities.create();
-            let a = A(i);
-            state.borrow_mut().insert(e, a);
+            store.insert(entities.create(), A(i));
         }
 
-        let comp = state.borrow();
-
         assert_eq!(
-            entities.get_single_with(&comp),
+            entities.get_single_with(&Ref::new(&store)),
             Err(QuerySingleError::MultipleEntities)
         );
     }
@@ -1165,27 +940,25 @@ mod tests {
     fn entities__get_single__with_multiple_required() {
         let mut entities = Entities::default();
 
-        let state_a = AtomicCell::new(ComponentStore::<A>::default());
-        let state_b = AtomicCell::new(ComponentStore::<B>::default());
+        let mut store_a = ComponentStore::<A>::default();
+        let mut store_b = ComponentStore::<B>::default();
 
         let _e1 = entities.create();
 
         let e2 = entities.create();
-        state_a.borrow_mut().insert(e2, A(2));
+        store_a.insert(e2, A(2));
 
         let e3 = entities.create();
-        state_b.borrow_mut().insert(e3, B(3));
+        store_b.insert(e3, B(3));
 
         let e4 = entities.create();
         let a4 = A(4);
         let b4 = B(4);
-        state_a.borrow_mut().insert(e4, a4);
-        state_b.borrow_mut().insert(e4, b4);
+        store_a.insert(e4, a4);
+        store_b.insert(e4, b4);
 
-        let comp_a = state_a.borrow();
-        let comp_b = state_b.borrow();
         assert_eq!(
-            entities.get_single_with((&comp_a, &comp_b)),
+            entities.get_single_with((&Ref::new(&store_a), &Ref::new(&store_b))),
             Ok((e4, (&a4, &b4)))
         );
     }
@@ -1193,17 +966,18 @@ mod tests {
     #[test]
     fn entities__get_single__with_one_optional() {
         let mut entities = Entities::default();
-        let state = AtomicCell::new(ComponentStore::<A>::default());
+        let mut store = ComponentStore::<A>::default();
 
         {
             let e = entities.create();
 
-            let mut comp = state.borrow_mut();
-
-            assert_eq!(entities.get_single_with(&Optional(&comp)), Ok((e, None)));
+            assert_eq!(
+                entities.get_single_with(&Optional(&Ref::new(&store))),
+                Ok((e, None))
+            );
 
             assert_eq!(
-                entities.get_single_with(&mut OptionalMut(&mut comp)),
+                entities.get_single_with(&mut OptionalMut(&mut RefMut::new(&mut store))),
                 Ok((e, None))
             );
 
@@ -1213,17 +987,15 @@ mod tests {
         {
             let e = entities.create();
             let mut a = A(1);
-            state.borrow_mut().insert(e, a);
-
-            let mut comp = state.borrow_mut();
+            store.insert(e, a);
 
             assert_eq!(
-                entities.get_single_with(&Optional(&comp)),
+                entities.get_single_with(&Optional(&Ref::new(&store))),
                 Ok((e, Some(&a)))
             );
 
             assert_eq!(
-                entities.get_single_with(&mut OptionalMut(&mut comp)),
+                entities.get_single_with(&mut OptionalMut(&mut RefMut::new(&mut store))),
                 Ok((e, Some(&mut a)))
             );
 
@@ -1234,24 +1006,24 @@ mod tests {
     #[test]
     fn entities__get_single__with_required_and_optional() {
         let mut entities = Entities::default();
-        let state_a = AtomicCell::new(ComponentStore::<A>::default());
-        let state_b = AtomicCell::new(ComponentStore::<B>::default());
+        let mut store_a = ComponentStore::<A>::default();
+        let mut store_b = ComponentStore::<B>::default();
 
         {
             let e = entities.create();
             let a = A(1);
-            state_a.borrow_mut().insert(e, a);
-
-            let comp_a = state_a.borrow();
-            let mut comp_b = state_b.borrow_mut();
+            store_a.insert(e, a);
 
             assert_eq!(
-                entities.get_single_with((&comp_a, &Optional(&comp_b))),
+                entities.get_single_with((&Ref::new(&store_a), &Optional(&Ref::new(&store_b)))),
                 Ok((e, (&a, None)))
             );
 
             assert_eq!(
-                entities.get_single_with((&comp_a, &mut OptionalMut(&mut comp_b))),
+                entities.get_single_with((
+                    &Ref::new(&store_a),
+                    &mut OptionalMut(&mut RefMut::new(&mut store_b))
+                )),
                 Ok((e, (&a, None)))
             );
 
@@ -1262,19 +1034,19 @@ mod tests {
             let e = entities.create();
             let a = A(1);
             let mut b = B(1);
-            state_a.borrow_mut().insert(e, a);
-            state_b.borrow_mut().insert(e, b);
-
-            let comp_a = state_a.borrow();
-            let mut comp_b = state_b.borrow_mut();
+            store_a.insert(e, a);
+            store_b.insert(e, b);
 
             assert_eq!(
-                entities.get_single_with((&comp_a, &Optional(&comp_b))),
+                entities.get_single_with((&Ref::new(&store_a), &Optional(&Ref::new(&store_b)))),
                 Ok((e, (&a, Some(&b))))
             );
 
             assert_eq!(
-                entities.get_single_with((&comp_a, &mut OptionalMut(&mut comp_b))),
+                entities.get_single_with((
+                    &Ref::new(&store_a),
+                    &mut OptionalMut(&mut RefMut::new(&mut store_b))
+                )),
                 Ok((e, (&a, Some(&mut b))))
             );
 

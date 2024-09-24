@@ -274,8 +274,8 @@ fn eq_hash() {
     assert_eq!(b1, b2);
     assert_ne!(b3, b2);
     assert_ne!(b3, b1);
-    assert_eq!(dbg!(b1.hash()), b2.hash());
-    assert_ne!(dbg!(b3.hash()), b1.hash());
+    assert_eq!(b1.hash(), b2.hash());
+    assert_ne!(b3.hash(), b1.hash());
 
     let s_hash_fn = b1.schema().hash_fn.as_ref().unwrap();
     assert_eq!(
