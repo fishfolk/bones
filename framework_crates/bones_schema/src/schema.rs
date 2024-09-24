@@ -2,7 +2,7 @@
 
 use std::{alloc::Layout, any::TypeId, borrow::Cow, ffi::c_void};
 
-use bones_utils::Ustr;
+use ustr::Ustr;
 
 use crate::{alloc::TypeDatas, prelude::*};
 

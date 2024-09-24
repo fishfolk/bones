@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use bevy_tasks::ThreadExecutor;
+use futures_lite::future::Boxed as BoxedFuture;
 use piccolo::{
     Callback, CallbackReturn, Closure, Context, Executor, StashedClosure, Table, UserData,
 };
@@ -22,11 +23,7 @@ pub struct LuaScript {
 /// Asset loader for [`LuaScript`].
 struct LuaScriptLoader;
 impl AssetLoader for LuaScriptLoader {
-    fn load(
-        &self,
-        _ctx: AssetLoadCtx,
-        bytes: &[u8],
-    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+    fn load(&self, _ctx: AssetLoadCtx, bytes: &[u8]) -> BoxedFuture<anyhow::Result<SchemaBox>> {
         let bytes = bytes.to_vec();
         Box::pin(async move {
             let script = LuaScript {
@@ -245,11 +242,7 @@ pub struct LuaPluginSystems {
 
 struct LuaPluginLoader;
 impl AssetLoader for LuaPluginLoader {
-    fn load(
-        &self,
-        _ctx: AssetLoadCtx,
-        bytes: &[u8],
-    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+    fn load(&self, _ctx: AssetLoadCtx, bytes: &[u8]) -> BoxedFuture<anyhow::Result<SchemaBox>> {
         let bytes = bytes.to_vec();
         Box::pin(async move {
             let script = LuaPlugin {

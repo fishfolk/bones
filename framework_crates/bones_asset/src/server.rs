@@ -7,6 +7,7 @@ use anyhow::Context;
 use append_only_vec::AppendOnlyVec;
 use async_channel::{Receiver, Sender};
 use bevy_tasks::IoTaskPool;
+use bones_utils::{default, Deref, DerefMut, UlidExt};
 use dashmap::{
     mapref::one::{
         MappedRef as MappedMapRef, MappedRefMut as MappedMapRefMut, Ref as MapRef,
@@ -15,19 +16,14 @@ use dashmap::{
     DashMap,
 };
 use once_cell::sync::Lazy;
+use parking_lot::{MappedMutexGuard, MutexGuard};
 use semver::VersionReq;
 use serde::{de::DeserializeSeed, Deserialize};
-use ulid::Ulid;
-
 #[allow(unused_imports)]
 use tracing::info;
+use ulid::Ulid;
 
 use crate::prelude::*;
-
-use bones_utils::{
-    parking_lot::{MappedMutexGuard, MutexGuard},
-    *,
-};
 
 mod schema_loader;
 
@@ -1025,7 +1021,9 @@ fn path_is_metadata(path: &Path) -> bool {
 
 pub use metadata::*;
 mod metadata {
+    use bones_utils::LabeledId;
     use serde::de::{DeserializeSeed, Error, Unexpected, VariantAccess, Visitor};
+    use ustr::{ustr, Ustr};
 
     use super::*;
 

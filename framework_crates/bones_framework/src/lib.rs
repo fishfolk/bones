@@ -24,6 +24,8 @@ pub mod prelude {
         utils::*, AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin, ExitBones,
     };
 
+    pub use futures_lite::future::Boxed as BoxedFuture;
+
     #[cfg(feature = "ui")]
     pub use crate::debug;
 

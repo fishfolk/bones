@@ -26,9 +26,11 @@ pub use world::{FromWorld, World};
 
 /// The prelude.
 pub mod prelude {
-    pub use {
-        atomicell::*, bitset_core::BitSet, bones_schema::prelude::*, bones_utils::prelude::*,
-    };
+    pub use atomicell::*;
+    pub use bitset_core::BitSet;
+    pub use bones_schema::prelude::*;
+    pub use bones_utils::prelude::*;
+    pub use branches::{likely, unlikely};
 
     pub use crate::{
         bitset::*,

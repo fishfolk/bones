@@ -157,11 +157,7 @@ impl<T: HasSchema> SystemParam for Localization<'_, T> {
 
 struct FluentResourceLoader;
 impl AssetLoader for FluentResourceLoader {
-    fn load(
-        &self,
-        _ctx: AssetLoadCtx,
-        bytes: &[u8],
-    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+    fn load(&self, _ctx: AssetLoadCtx, bytes: &[u8]) -> BoxedFuture<anyhow::Result<SchemaBox>> {
         let bytes = bytes.to_vec();
         Box::pin(async move {
             let string = String::from_utf8(bytes).context("Error loading fluent resource file.")?;
@@ -182,11 +178,7 @@ impl AssetLoader for FluentResourceLoader {
 
 struct FluentBundleLoader;
 impl AssetLoader for FluentBundleLoader {
-    fn load(
-        &self,
-        mut ctx: AssetLoadCtx,
-        bytes: &[u8],
-    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+    fn load(&self, mut ctx: AssetLoadCtx, bytes: &[u8]) -> BoxedFuture<anyhow::Result<SchemaBox>> {
         let bytes = bytes.to_vec();
         Box::pin(async move {
             let self_path = ctx.loc.path.clone();
@@ -225,11 +217,7 @@ impl AssetLoader for FluentBundleLoader {
 
 struct LocalizationLoader;
 impl AssetLoader for LocalizationLoader {
-    fn load(
-        &self,
-        mut ctx: AssetLoadCtx,
-        bytes: &[u8],
-    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+    fn load(&self, mut ctx: AssetLoadCtx, bytes: &[u8]) -> BoxedFuture<anyhow::Result<SchemaBox>> {
         let bytes = bytes.to_vec();
         Box::pin(async move {
             let self_path = ctx.loc.path.clone();

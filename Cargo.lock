@@ -1370,9 +1370,11 @@ dependencies = [
  "elsa",
  "erased-serde 0.4.5",
  "event-listener 4.0.3",
+ "futures-lite 2.3.0",
  "glam 0.24.2",
  "notify",
  "once_cell",
+ "parking_lot",
  "paste",
  "path-absolutize",
  "semver",
@@ -1382,6 +1384,7 @@ dependencies = [
  "sha2",
  "tracing",
  "ulid",
+ "ustr",
  "web-sys",
 ]
 
@@ -1411,6 +1414,7 @@ dependencies = [
  "bones_ecs_macros",
  "bones_schema",
  "bones_utils",
+ "branches",
  "glam 0.24.2",
  "once_map",
  "paste",
@@ -1461,6 +1465,7 @@ dependencies = [
  "either",
  "fluent",
  "fluent-langneg",
+ "futures-lite 2.3.0",
  "ggrs",
  "glam 0.24.2",
  "hex",
@@ -1499,6 +1504,7 @@ version = "0.4.0"
 dependencies = [
  "bones_ecs",
  "instant",
+ "ustr",
 ]
 
 [[package]]
@@ -1540,14 +1546,18 @@ dependencies = [
  "bones_schema_macros",
  "bones_utils",
  "erased-serde 0.4.5",
+ "fxhash",
  "glam 0.24.2",
+ "hashbrown 0.14.5",
  "humantime",
+ "parking_lot",
  "paste",
  "serde",
  "serde_yaml",
  "sptr",
  "stable_deref_trait",
  "ulid",
+ "ustr",
 ]
 
 [[package]]
@@ -1567,8 +1577,10 @@ dependencies = [
  "bevy_tasks 0.11.3",
  "bones_asset",
  "bones_lib",
+ "futures-lite 2.3.0",
  "gc-arena",
  "gc-arena-derive",
+ "parking_lot",
  "piccolo",
  "send_wrapper",
  "tracing",
@@ -1580,19 +1592,13 @@ name = "bones_utils"
 version = "0.4.0"
 dependencies = [
  "bones_utils_macros",
- "branches",
- "futures-lite 2.3.0",
  "fxhash",
  "getrandom",
  "hashbrown 0.14.5",
  "instant",
- "maybe-owned",
- "parking_lot",
  "serde",
- "smallvec",
  "turborand",
  "ulid",
- "ustr",
 ]
 
 [[package]]
@@ -4446,12 +4452,6 @@ checksum = "8263075bb86c5a1b1427b5ae862e8889656f126e9f77c484496e8b47cf5c5558"
 dependencies = [
  "regex-automata 0.1.10",
 ]
-
-[[package]]
-name = "maybe-owned"
-version = "0.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4facc753ae494aeb6e3c22f839b158aebd4f9270f55cd3c79906c45476c47ab4"
 
 [[package]]
 name = "md5"
@@ -7788,7 +7788,6 @@ dependencies = [
  "byteorder",
  "lazy_static",
  "parking_lot",
- "serde",
 ]
 
 [[package]]

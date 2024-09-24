@@ -6,7 +6,7 @@ use std::{
 };
 
 use append_only_vec::AppendOnlyVec;
-use bones_utils::*;
+use bones_utils::prelude::*;
 
 use crate::prelude::*;
 

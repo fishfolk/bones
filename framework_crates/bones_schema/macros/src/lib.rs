@@ -379,7 +379,8 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                 fn schema() -> &'static #schema_mod::Schema {
                     use ::std::sync::{OnceLock};
                     use ::std::any::TypeId;
-                    use bones_utils::{HashMap, parking_lot::RwLock};
+                    use bones_utils::HashMap;
+                    use parking_lot::RwLock;
                     static S: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
                     let schema = {
                         S.get_or_init(Default::default)

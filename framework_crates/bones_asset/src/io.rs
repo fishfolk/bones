@@ -2,7 +2,8 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use async_channel::Sender;
-use bones_utils::{default, futures::future::Boxed as BoxedFuture, HashMap};
+use bones_utils::{default, HashMap};
+use futures_lite::future::Boxed as BoxedFuture;
 use path_absolutize::Absolutize;
 
 use crate::{AssetLocRef, ChangedAsset};
@@ -40,7 +41,7 @@ pub struct FileAssetIo {
     /// The directory to load the asset packs from.
     pub packs_dir: PathBuf,
     /// Filesystem watcher if enabled.
-    pub watcher: bones_utils::parking_lot::Mutex<Option<Box<dyn notify::Watcher + Sync + Send>>>,
+    pub watcher: parking_lot::Mutex<Option<Box<dyn notify::Watcher + Sync + Send>>>,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -53,7 +54,7 @@ impl FileAssetIo {
         Self {
             core_dir: core_dir.clone(),
             packs_dir: packs_dir.clone(),
-            watcher: bones_utils::parking_lot::Mutex::new(None),
+            watcher: parking_lot::Mutex::new(None),
         }
     }
 }

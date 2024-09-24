@@ -20,5 +20,15 @@ keywords      = ["bones", "bevy", "scripting", "ecs", "framework"]
 [workspace.lints.clippy]
 correctness = "warn"
 
+[workspace.dependencies]
+branches     = "0.1"
+futures-lite = "2.3"
+fxhash       = "0.2"
+hashbrown    = "0.14"
+maybe-owned  = "0.3"
+parking_lot  = "0.12"
+smallvec     = "1.11"
+ustr         = "0.10"
+
 [profile.release]
 lto = true

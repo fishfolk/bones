@@ -8,9 +8,11 @@ use std::{
 };
 
 use append_only_vec::AppendOnlyVec;
-use bones_utils::{parking_lot::Mutex, prelude::*};
+use bones_utils::prelude::*;
 use dashmap::DashMap;
 use event_listener::{Event, EventListener};
+use futures_lite::future::Boxed as BoxedFuture;
+use parking_lot::Mutex;
 use semver::VersionReq;
 
 use crate::prelude::*;
@@ -309,11 +311,7 @@ impl AssetLoadCtx {
 /// A custom assset loader.
 pub trait AssetLoader: Sync + Send + 'static {
     /// Load the asset from raw bytes.
-    fn load(
-        &self,
-        ctx: AssetLoadCtx,
-        bytes: &[u8],
-    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>>;
+    fn load(&self, ctx: AssetLoadCtx, bytes: &[u8]) -> BoxedFuture<anyhow::Result<SchemaBox>>;
 }
 
 /// A custom asset loader implementation for a metadata asset.
@@ -399,7 +397,6 @@ pub fn metadata_asset(extension: &str) -> AssetKind {
 ///
 /// ```
 /// # use bones_asset::prelude::*;
-/// # use bones_utils::prelude::*;
 /// #[derive(HasSchema, Default, Clone)]
 /// #[type_data(asset_loader("png", PngLoader))]
 /// #[repr(C)]
@@ -411,7 +408,7 @@ pub fn metadata_asset(extension: &str) -> AssetKind {
 ///
 /// struct PngLoader;
 /// impl AssetLoader for PngLoader {
-///     fn load(&self, ctx: AssetLoadCtx, data: &[u8]) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+///     fn load(&self, ctx: AssetLoadCtx, data: &[u8]) -> BoxedFuture<anyhow::Result<SchemaBox>> {
 ///         Box::pin(async move {
 ///             todo!("Load PNG from data");
 ///         })
