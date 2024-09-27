@@ -1,0 +1,54 @@
+name: ⏮️ Pull Requests
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+  merge_group:
+
+jobs:
+  validate_title:
+    name: 🕵 Validate Conventional PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        name: 🔎 Validate Conventional PR Title
+        if: github.event_name == 'pull_request_target'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  miri_tests:
+    runs-on: ubuntu-latest
+    name: 📡 Miri tests ( PR )
+    steps:
+      - uses: actions/checkout@v3
+      - name: 🧰 Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y -q \
+              libasound2-dev \
+              libudev-dev
+      - name: 🧰 Install Miri
+        run: |
+          rustup toolchain install nightly --component miri
+          rustup override set nightly
+          cargo miri setup
+      - name: ♻️ Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            web-target/
+          key: ci-miri-${{ matrix.config.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ci-miri-${{ matrix.config.target }}-
+      - name: 📡 Test with Miri
+        shell: bash
+        run: "${GITHUB_WORKSPACE}/.github/miri-test.sh"
+        env:
+          NUM_SEEDS: 1
