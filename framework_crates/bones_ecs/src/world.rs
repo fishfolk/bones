@@ -307,7 +307,6 @@ mod tests {
         let mut i = 0;
         for (entity, (pos, vel)) in entities.iter_with((&pos, &vel)) {
             let marker = marker.get(entity);
-            dbg!(i, entity);
             match (i, pos, vel, marker) {
                 (0, Pos(0, 99), Vel(0, -1), None) | (1, Pos(1, 1), Vel(1, 1), Some(Marker)) => (),
                 x => unreachable!("{:?}", x),

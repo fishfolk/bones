@@ -495,12 +495,22 @@ impl UntypedComponentStore {
         &self,
         bitset: Rc<BitSetVec>,
     ) -> Result<SchemaRef, QuerySingleError> {
+        if self.bitset().bit_count() == 0 || bitset.bit_count() == 0 {
+            // Both bitsets are empty so there are no matches
+            return Err(QuerySingleError::NoEntities);
+        }
+
         let len = self.bitset().bit_len();
         let mut iter = (0..len).filter(|&i| bitset.bit_test(i) && self.bitset().bit_test(i));
+
+        // Try to find the first match
         let i = iter.next().ok_or(QuerySingleError::NoEntities)?;
+
         if iter.next().is_some() {
+            // Found an unexpected second match in both bitsets
             return Err(QuerySingleError::MultipleEntities);
         }
+
         // TODO: add unchecked variant to avoid redundant validation
         self.get_idx(i).ok_or(QuerySingleError::NoEntities)
     }
@@ -511,12 +521,22 @@ impl UntypedComponentStore {
         &mut self,
         bitset: Rc<BitSetVec>,
     ) -> Result<SchemaRefMut, QuerySingleError> {
+        if self.bitset().bit_count() == 0 || bitset.bit_count() == 0 {
+            // Both bitsets are empty so there are no matches
+            return Err(QuerySingleError::NoEntities);
+        }
+
         let len = self.bitset().bit_len();
         let mut iter = (0..len).filter(|&i| bitset.bit_test(i) && self.bitset().bit_test(i));
+
+        // Try to find the first match
         let i = iter.next().ok_or(QuerySingleError::NoEntities)?;
+
         if iter.next().is_some() {
+            // Found an unexpected second match in both bitsets
             return Err(QuerySingleError::MultipleEntities);
         }
+
         // TODO: add unchecked variant to avoid redundant validation
         self.get_idx_mut(i).ok_or(QuerySingleError::NoEntities)
     }
@@ -553,19 +573,6 @@ impl UntypedComponentStore {
         }
     }
 
-    /// Iterates immutably over the components of this type where `bitset` indicates the indices of
-    /// entities. Iterator provides Option, returning None if there is no component for entity in bitset.
-    pub fn iter_with_bitset_optional(
-        &self,
-        bitset: Rc<BitSetVec>,
-    ) -> UntypedComponentOptionalBitsetIterator {
-        UntypedComponentOptionalBitsetIterator(UntypedComponentBitsetIterator {
-            current_id: 0,
-            components: self,
-            bitset,
-        })
-    }
-
     /// Iterates mutable over the components of this type where `bitset` indicates the indices of
     /// entities.
     ///
@@ -581,17 +588,44 @@ impl UntypedComponentStore {
         }
     }
 
+    /// Iterates immutably over the components of this type where `bitset` indicates the indices of
+    /// entities. Iterator provides Option, returning None if there is no component for entity in bitset.
+    pub fn iter_with_bitset_optional(
+        &self,
+        bitset: Rc<BitSetVec>,
+    ) -> UntypedComponentOptionalBitsetIterator {
+        let components_count = self.bitset.bit_count();
+        let query_count = bitset.bit_count();
+        UntypedComponentOptionalBitsetIterator {
+            inner: UntypedComponentBitsetIterator {
+                current_id: 0,
+                components: self,
+                bitset,
+            },
+            components_count,
+            query_count,
+            found: 0,
+        }
+    }
+
     /// Iterates mutably over the components of this type where `bitset` indicates the indices of
     /// entities. Iterator provides Option, returning None if there is no component for entity in bitset.
     pub fn iter_mut_with_bitset_optional(
         &mut self,
         bitset: Rc<BitSetVec>,
     ) -> UntypedComponentOptionalBitsetIteratorMut {
-        UntypedComponentOptionalBitsetIteratorMut(UntypedComponentBitsetIteratorMut {
-            current_id: 0,
-            components: self,
-            bitset,
-        })
+        let components_count = self.bitset.bit_count();
+        let query_count = bitset.bit_count();
+        UntypedComponentOptionalBitsetIteratorMut {
+            inner: UntypedComponentBitsetIteratorMut {
+                current_id: 0,
+                components: self,
+                bitset,
+            },
+            components_count,
+            query_count,
+            found: 0,
+        }
     }
 
     /// Returns the bitset indicating which entity indices have a component associated to them.

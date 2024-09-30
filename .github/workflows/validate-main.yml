@@ -1,0 +1,41 @@
+name: 📝 Validation
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  miri_tests:
+    runs-on: ubuntu-latest
+    name: 📡 Miri tests
+    steps:
+      - uses: actions/checkout@v3
+      - name: 🧰 Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y -q \
+              libasound2-dev \
+              libudev-dev
+      - name: 🧰 Install Miri
+        run: |
+          rustup toolchain install nightly --component miri
+          rustup override set nightly
+          cargo miri setup
+      - name: ♻️ Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            web-target/
+          key: ci-miri-${{ matrix.config.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ci-miri-${{ matrix.config.target }}-
+      - name: 📡 Test with Miri
+        shell: bash
+        run: "${GITHUB_WORKSPACE}/.github/miri-test.sh"
+        env:
+          NUM_SEEDS: 8

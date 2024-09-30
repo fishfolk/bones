@@ -63,37 +63,123 @@ impl<'a> Iterator for UntypedComponentBitsetIterator<'a> {
 /// Iterate over component store returning `Option<SchemaRef<'a>>`,
 /// filtered by bitset of iterator, but not bitset of own ComponentStore. Returns None on
 /// bitset entries that do not have this Component.
-#[derive(Deref, DerefMut)]
-pub struct UntypedComponentOptionalBitsetIterator<'a>(pub UntypedComponentBitsetIterator<'a>);
+pub struct UntypedComponentOptionalBitsetIterator<'a> {
+    /// The component bitset iterator.
+    pub inner: UntypedComponentBitsetIterator<'a>,
+    /// The number of components (enabled bits in the `inner` iterator).
+    pub components_count: usize,
+    /// The number of enabled bits in the input bitset.
+    pub query_count: usize,
+    /// The number of enabled bits discovered in the query bitset. Iteration is complete when this
+    /// reaches `query_count`.
+    pub found: usize,
+}
 
 impl<'a> Iterator for UntypedComponentOptionalBitsetIterator<'a> {
     type Item = Option<SchemaRef<'a>>;
     fn next(&mut self) -> Option<Self::Item> {
+        if self.found >= self.query_count {
+            // All enabled bits from the query bitset have been discovered. The rest is just zeros,
+            // we are done iterating.
+            return None;
+        }
+
+        if self.components_count == 0 {
+            // The component store is empty, no need to test all of the bits.
+            self.found += 1;
+            return Some(None);
+        }
+
         // We stop iterating at bitset length, not component store length, as we want to iterate over
         // whole bitset and return None for entities that don't have this optional component.
-        let max_id = self.bitset.bit_len();
-        while self.current_id < max_id && !self.bitset.bit_test(self.current_id) {
-            self.current_id += 1;
+        let max_id = self.inner.bitset.bit_len();
+        while self.inner.current_id < max_id && !self.inner.bitset.bit_test(self.inner.current_id) {
+            self.inner.current_id += 1;
         }
-        let ret = if self.current_id < max_id {
+
+        let ret = if self.inner.components.bitset.bit_test(self.inner.current_id) {
+            self.found += 1;
             // SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
-            if self.components.bitset.bit_test(self.current_id) {
-                Some(Some(unsafe {
-                    SchemaRef::from_ptr_schema(
-                        self.components.storage.unchecked_idx(self.current_id),
-                        self.components.schema,
-                    )
-                }))
-            } else {
-                // Component at current_id is not in store, however we are still iterating,
-                // later ids in self.bitset may have components in store.
-                Some(None)
-            }
+            Some(Some(unsafe {
+                SchemaRef::from_ptr_schema(
+                    self.inner
+                        .components
+                        .storage
+                        .unchecked_idx(self.inner.current_id),
+                    self.inner.components.schema,
+                )
+            }))
         } else {
-            // Iterated through whole bitset
-            None
+            // Component at current_id is not in store, however we are still iterating,
+            // later ids in self.bitset may have components in store.
+            self.found += 1;
+            Some(None)
         };
-        self.current_id += 1;
+
+        self.inner.current_id += 1;
+
+        ret
+    }
+}
+
+/// Iterate mutably over component store returning `Option<SchemaRef<'a>>`,
+/// filtered by bitset of iterator, but not bitset of own ComponentStore. Returns None on
+/// bitset entries that do not have this Component.
+pub struct UntypedComponentOptionalBitsetIteratorMut<'a> {
+    /// The component bitset iterator.
+    pub inner: UntypedComponentBitsetIteratorMut<'a>,
+    /// The number of components (enabled bits in the `inner` iterator).
+    pub components_count: usize,
+    /// The number of enabled bits in the input bitset.
+    pub query_count: usize,
+    /// The number of enabled bits discovered in the query bitset. Iteration is complete when this
+    /// reaches `query_count`.
+    pub found: usize,
+}
+
+impl<'a> Iterator for UntypedComponentOptionalBitsetIteratorMut<'a> {
+    type Item = Option<SchemaRefMut<'a>>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.found >= self.query_count {
+            // All enabled bits from the query bitset have been discovered. The rest is just zeros,
+            // we are done iterating.
+            return None;
+        }
+
+        if self.components_count == 0 {
+            // The component store is empty, no need to test all of the bits.
+            self.found += 1;
+            return Some(None);
+        }
+
+        // We do not stop iterating at component store length, as we want to iterate over
+        // whole bitset and return None for entities that don't have this optional component.
+        let max_id = self.inner.bitset.bit_len();
+        while self.inner.current_id < max_id && !self.inner.bitset.bit_test(self.inner.current_id) {
+            self.inner.current_id += 1;
+        }
+
+        let ret = if self.inner.components.bitset.bit_test(self.inner.current_id) {
+            self.found += 1;
+            // SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
+            Some(Some(unsafe {
+                SchemaRefMut::from_ptr_schema(
+                    self.inner
+                        .components
+                        .storage
+                        .unchecked_idx(self.inner.current_id),
+                    self.inner.components.schema,
+                )
+            }))
+        } else {
+            // Component at current_id is not in store, however we are still iterating,
+            // later ids in self.bitset may have components in store.
+            self.found += 1;
+            Some(None)
+        };
+
+        self.inner.current_id += 1;
+
         ret
     }
 }
@@ -133,46 +219,10 @@ impl<'a> Iterator for UntypedComponentBitsetIteratorMut<'a> {
     }
 }
 
-/// Iterate mutably over component store returning `Option<SchemaRef<'a>>`,
-/// filtered by bitset of iterator, but not bitset of own ComponentStore. Returns None on
-/// bitset entries that do not have this Component.
-#[derive(Deref, DerefMut)]
-pub struct UntypedComponentOptionalBitsetIteratorMut<'a>(pub UntypedComponentBitsetIteratorMut<'a>);
-
-impl<'a> Iterator for UntypedComponentOptionalBitsetIteratorMut<'a> {
-    type Item = Option<SchemaRefMut<'a>>;
-    fn next(&mut self) -> Option<Self::Item> {
-        // We do not stop iterating at component store length, as we want to iterate over
-        // whole bitset and return None for entities that don't have this optional component.
-        let max_id = self.bitset.bit_len();
-        while self.current_id < max_id && !self.bitset.bit_test(self.current_id) {
-            self.current_id += 1;
-        }
-        let ret = if self.current_id < max_id {
-            // SAFE: Here we are just getting a pointer, not doing anything unsafe with it.
-            if self.components.bitset.bit_test(self.current_id) {
-                Some(Some(unsafe {
-                    SchemaRefMut::from_ptr_schema(
-                        self.components.storage.unchecked_idx(self.current_id),
-                        self.components.schema,
-                    )
-                }))
-            } else {
-                // Component at current_id is not in store, however we are still iterating,
-                // later ids in self.bitset may have components in store.
-                Some(None)
-            }
-        } else {
-            // Iterated through whole bitset
-            None
-        };
-        self.current_id += 1;
-        ret
-    }
-}
-
 #[cfg(test)]
-mod test {
+mod tests {
+    #![allow(non_snake_case)]
+
     use super::*;
 
     #[derive(Clone, HasSchema, Default)]
@@ -287,6 +337,67 @@ mod test {
             }
             // Expected two entities with A
             assert_eq!(count, 2);
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
+    struct X(u32);
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
+    struct Y(u32);
+
+    fn entity(index: u32) -> Entity {
+        Entity::new(index, 0)
+    }
+
+    fn store<C: HasSchema>(entities: &[u32], ctor: fn(u32) -> C) -> ComponentStore<C> {
+        let mut store = ComponentStore::default();
+        for &i in entities {
+            store.insert(entity(i), ctor(i));
+        }
+        store
+    }
+
+    fn bitset(enabled: &[usize]) -> BitSetVec {
+        let mut bitset = BitSetVec::default();
+        for &i in enabled {
+            bitset.bit_set(i);
+        }
+        bitset
+    }
+
+    #[test]
+    fn get_single_with_bitset__multiple_required() {
+        {
+            let bitset = bitset(&[]);
+            let (store_x, store_y) = (store(&[], X), store(&[], Y));
+            let query = (&Ref::new(&store_x), &Ref::new(&store_y));
+
+            let result = query.get_single_with_bitset(Rc::new(bitset));
+
+            assert_eq!(result, Err(QuerySingleError::NoEntities));
+        }
+
+        {
+            let bitset = bitset(&[1]);
+            let store_x = store(&[1], X);
+            let store_y = store(&[1], Y);
+            let query = (&Ref::new(&store_x), &Ref::new(&store_y));
+
+            let result = query.get_single_with_bitset(Rc::new(bitset));
+
+            assert_eq!(result, Ok((&X(1), &Y(1))));
+        }
+
+        {
+            let bitset = bitset(&[1, 2]);
+            let store_x = store(&[1, 2], X);
+            let store_y = store(&[1, 2], Y);
+            let query = (&Ref::new(&store_x), &Ref::new(&store_y));
+
+            let result = query.get_single_with_bitset(Rc::new(bitset));
+
+            assert_eq!(result, Err(QuerySingleError::MultipleEntities));
         }
     }
 }
