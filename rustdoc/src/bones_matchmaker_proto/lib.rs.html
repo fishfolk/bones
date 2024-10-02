@@ -92,6 +92,70 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 </span><span class="comment">// This cfg_attr is needed because `rustdoc::all` includes lints not supported on stable
 </span><span class="attr">#![cfg_attr(doc, allow(unknown_lints))]
@@ -108,59 +172,123 @@
 <span class="comment">//
 // === Matchmaking Mode ===
 //
-// These are messages sent when first establishing a connecting to the matchmaker and waiting for a
+// These are messages sent when first establishing a connection to the matchmaker and waiting for a
 // match.
 //
-
 </span><span class="doccomment">/// Requests that may be made in matchmaking mode
 </span><span class="attr">#[derive(Serialize, Deserialize, Debug, Clone)]
 </span><span class="kw">pub enum </span>MatchmakerRequest {
-    <span class="doccomment">/// Request a match ID from the server
-    </span>RequestMatch(MatchInfo),
+    <span class="doccomment">/// Request to have the client join matchmaking queue
+    </span>RequestMatchmaking(MatchInfo),
+    <span class="doccomment">/// Request to remove the client from the matchmaking queue
+    </span>StopMatchmaking(MatchInfo),
+    <span class="doccomment">/// Request a list of lobbies for a specific game
+    </span>ListLobbies(String),
+    <span class="doccomment">/// Request to create a new lobby
+    </span>CreateLobby(LobbyInfo),
+    <span class="doccomment">/// Request to join an existing lobby for a specific gameid, optionally providing a password
+    </span>JoinLobby(GameID, LobbyId, <span class="prelude-ty">Option</span>&lt;String&gt;),
 }
 
 <span class="doccomment">/// Information about a match that is being requested
 </span><span class="attr">#[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
 </span><span class="kw">pub struct </span>MatchInfo {
-    <span class="doccomment">/// The number of clients to have in a match.
-    </span><span class="kw">pub </span>client_count: u32,
-    <span class="doccomment">/// This is an arbitrary set of bytes that must match exactly for clients to end up in the same
-    /// match.
-    ///
-    /// This allows us to support matchmaking for different games/modes with the same matchmaking
-    /// server.
+    <span class="doccomment">/// The maximum number of players to have in a match.
+    </span><span class="kw">pub </span>max_players: u32,
+    <span class="doccomment">/// This is an arbitrary set of bytes that must match exactly for clients to end up in the same match.
+    /// This allows us to support matchmaking for different modes or game versions with the same matchmaking server.
     </span><span class="kw">pub </span>match_data: Vec&lt;u8&gt;,
+    <span class="doccomment">/// The unique identifier for the game
+    </span><span class="kw">pub </span>game_id: GameID,
+    <span class="doccomment">/// Enables choosing how player_idx should be assigned to each player who joins the match.
+    </span><span class="kw">pub </span>player_idx_assignment: PlayerIdxAssignment,
 }
+
+<span class="doccomment">/// Information about a lobby
+</span><span class="attr">#[derive(Serialize, Deserialize, Debug, Clone)]
+</span><span class="kw">pub struct </span>LobbyInfo {
+    <span class="doccomment">/// The name of the lobby
+    </span><span class="kw">pub </span>name: String,
+    <span class="doccomment">/// The maximum number of players allowed in the lobby
+    </span><span class="kw">pub </span>max_players: u32,
+    <span class="doccomment">/// The hashed password for the lobby, if any
+    </span><span class="kw">pub </span>password_hash: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="doccomment">/// This is an arbitrary set of bytes that the lobby creator specifies and which other clients must read/accept (ie. settings, version number, etc.)
+    </span><span class="kw">pub </span>match_data: Vec&lt;u8&gt;,
+    <span class="doccomment">/// The unique identifier for the game
+    </span><span class="kw">pub </span>game_id: String,
+    <span class="doccomment">/// Enables choosing how player_idx should be assigned to each player who joins the match.
+    </span><span class="kw">pub </span>player_idx_assignment: PlayerIdxAssignment,
+}
+
+<span class="doccomment">/// Choose how player_idx should be assigned to each player who joins a match/lobby.
+</span><span class="attr">#[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq, Default)]
+</span><span class="kw">pub enum </span>PlayerIdxAssignment {
+    <span class="doccomment">/// The players will be assigned an idx based on the order that they join the match/lobby.
+    </span><span class="attr">#[default]
+    </span>Ordered,
+    <span class="doccomment">/// The players will randomly be assigned an idx
+    </span>Random,
+    <span class="doccomment">/// The order specified in the Vec will be assigned to the players based on the order they join the match/lobby.
+    /// Ie. If the Vec contains `0,2,1,3` then the first player will get player_idx 0, second 2, third 1, and fourth 3.
+    </span>SpecifiedOrder(Vec&lt;usize&gt;),
+}
+
+<span class="doccomment">/// A unique identifier for a game
+</span><span class="kw">pub type </span>GameID = String;
+
+<span class="doccomment">/// A unique identifier for a lobby
+</span><span class="attr">#[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
+</span><span class="kw">pub struct </span>LobbyId(<span class="kw">pub </span>String);
 
 <span class="doccomment">/// Responses that may be returned in matchmaking mode
 </span><span class="attr">#[derive(Serialize, Deserialize, Debug, Clone)]
 </span><span class="kw">pub enum </span>MatchmakerResponse {
-    <span class="doccomment">/// The conneciton has been accepted
+    <span class="doccomment">/// The connection has been accepted
     </span>Accepted,
-    <span class="doccomment">/// This is the current number of connected clients
-    </span>ClientCount(u32),
-    <span class="doccomment">/// The desired client count has been reached, and you may start the match.
+    <span class="doccomment">/// Response that specifies updates about the current matchmaking (ie. player count updates)
+    </span>MatchmakingUpdate { player_count: u32 },
+    <span class="doccomment">/// The desired client count has been reached, and the match may start.
     </span>Success {
         <span class="doccomment">/// The random seed that each client should use.
         </span>random_seed: u64,
         <span class="doccomment">/// The client idx of the current client
         </span>player_idx: u32,
         <span class="doccomment">/// The number of connected clients in the match
-        </span>client_count: u32,
+        </span>player_count: u32,
         <span class="doccomment">/// The node ids of all players.
         </span>player_ids: Vec&lt;(u32, iroh_net::NodeAddr)&gt;,
     },
+    <span class="doccomment">/// Response that specifies updates about the current lobby (ie. player count updates)
+    </span>LobbyUpdate { player_count: u32 },
+    <span class="doccomment">/// A list of available lobbies
+    </span>LobbiesList(Vec&lt;LobbyListItem&gt;),
+    <span class="doccomment">/// Confirmation that a lobby has been created
+    </span>LobbyCreated(LobbyId),
+    <span class="doccomment">/// Confirmation that a client has joined a lobby
+    </span>LobbyJoined(LobbyId),
+    <span class="doccomment">/// An error message
+    </span>Error(String),
 }
 
-<span class="comment">//
-// === Proxy mode ===
-//
-// These are messages sent after the match has been made and the clients are sending messages to
-// each-other.
-//
+<span class="doccomment">/// Information about a lobby for the lobby list
+</span><span class="attr">#[derive(Serialize, Deserialize, Debug, Clone)]
+</span><span class="kw">pub struct </span>LobbyListItem {
+    <span class="doccomment">/// The unique identifier of the lobby
+    </span><span class="kw">pub </span>id: LobbyId,
+    <span class="doccomment">/// The name of the lobby
+    </span><span class="kw">pub </span>name: String,
+    <span class="doccomment">/// The current number of players in the lobby
+    </span><span class="kw">pub </span>current_players: u32,
+    <span class="doccomment">/// The maximum number of players allowed in the lobby
+    </span><span class="kw">pub </span>max_players: u32,
+    <span class="doccomment">/// Whether the lobby is password protected
+    </span><span class="kw">pub </span>has_password: bool,
+    <span class="doccomment">/// The unique identifier for the game this lobby belongs to
+    </span><span class="kw">pub </span>game_id: String,
+}
 
-</span><span class="doccomment">/// The format of a message sent by a client to the proxy, so the proxy can send it to another
-/// client.
+<span class="doccomment">/// The format of a message sent by a client to the proxy, so the proxy can send it to another client.
 </span><span class="attr">#[derive(Serialize, Deserialize, Debug, Clone)]
 </span><span class="kw">pub struct </span>SendProxyMessage {
     <span class="doccomment">/// The client that the message should go to.
