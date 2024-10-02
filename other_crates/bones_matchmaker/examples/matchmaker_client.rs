@@ -1,9 +1,8 @@
-use std::time::Duration;
-
 use bones_matchmaker_proto::{
-    MatchInfo, MatchmakerRequest, MatchmakerResponse, MATCH_ALPN, PLAY_ALPN,
+    MatchInfo, MatchmakerRequest, MatchmakerResponse, PlayerIdxAssignment, MATCH_ALPN, PLAY_ALPN,
 };
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 use tokio::task::JoinSet;
 
 const CLIENT_PORT: u16 = 0;
@@ -49,12 +48,14 @@ async fn client() -> anyhow::Result<()> {
     // Send a match request to the server
     let (mut send, mut recv) = conn.open_bi().await?;
 
-    let message = MatchmakerRequest::RequestMatch(MatchInfo {
-        client_count: std::env::args()
+    let message = MatchmakerRequest::RequestMatchmaking(MatchInfo {
+        max_players: std::env::args()
             .nth(1)
             .map(|x| x.parse().unwrap())
-            .unwrap_or(0),
+            .unwrap_or(2),
+        game_id: String::from("example-game"),
         match_data: b"example-client".to_vec(),
+        player_idx_assignment: PlayerIdxAssignment::Ordered,
     });
     println!("=> Sending match request: {message:?}");
     let message = postcard::to_allocvec(&message)?;
@@ -73,23 +74,23 @@ async fn client() -> anyhow::Result<()> {
         panic!("<= Unexpected message from server!");
     }
 
-    let (player_idx, player_ids, _client_count) = loop {
+    let (player_idx, player_ids, _player_count) = loop {
         let mut recv = conn.accept_uni().await?;
         let message = recv.read_to_end(256).await?;
         let message: MatchmakerResponse = postcard::from_bytes(&message)?;
 
         match message {
-            MatchmakerResponse::ClientCount(count) => {
-                println!("<= {count} players in lobby");
+            MatchmakerResponse::MatchmakingUpdate { player_count } => {
+                println!("<= {player_count} players in lobby");
             }
             MatchmakerResponse::Success {
                 random_seed,
                 player_idx,
-                client_count,
+                player_count,
                 player_ids,
             } => {
-                println!("<= Match is ready! Random seed: {random_seed}. Player IDX: {player_idx}. Client count: {client_count}");
-                break (player_idx, player_ids, client_count as usize);
+                println!("<= Match is ready! Random seed: {random_seed}. Player IDX: {player_idx}. Client count: {player_count}");
+                break (player_idx, player_ids, player_count);
             }
             _ => panic!("<= Unexpected message from server"),
         }

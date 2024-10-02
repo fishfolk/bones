@@ -1,202 +1,137 @@
-use bones_matchmaker_proto::{MatchInfo, MatchmakerRequest, MatchmakerResponse};
-use iroh_net::{endpoint::get_remote_node_id, Endpoint, NodeAddr};
+use super::lobbies::{handle_create_lobby, handle_join_lobby, handle_list_lobbies};
+use super::matchmaking::{handle_request_matchaking, handle_stop_matchmaking};
+use crate::helpers::generate_random_seed;
+use anyhow::Result;
+use bones_matchmaker_proto::{
+    GameID, LobbyId, LobbyInfo, MatchInfo, MatchmakerRequest, MatchmakerResponse,
+    PlayerIdxAssignment,
+};
+use iroh_net::{Endpoint, NodeAddr};
 use once_cell::sync::Lazy;
-use quinn::{Connection, ConnectionError};
-use scc::HashMap;
+use quinn::Connection;
+use rand::{prelude::SliceRandom, SeedableRng};
+use scc::HashMap as SccHashMap;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
-pub async fn handle_connection(ep: Endpoint, conn: Connection) {
-    let connection_id = conn.stable_id();
-    debug!(connection_id, "Accepted matchmaker connection");
-
-    if let Err(e) = impl_matchmaker(ep, conn).await {
-        match e.downcast::<ConnectionError>() {
-            Ok(conn_err) => match conn_err {
-                ConnectionError::ApplicationClosed(e) => {
-                    debug!(connection_id, "Application close connection: {e:?}");
-                }
-                e => {
-                    error!(connection_id, "Error in matchmaker connection: {e:?}");
-                }
-            },
-            Err(e) => {
-                error!(connection_id, "Error in matchmaker connection: {e:?}");
-            }
-        }
-    }
+/// Represents the lobbies for a specific game
+pub struct GameLobbies {
+    #[allow(dead_code)]
+    pub game_id: GameID,
+    pub lobbies: HashMap<LobbyId, LobbyInfo>,
 }
 
-/// The matchmaker state
+/// Represents the global state of the matchmaker
 #[derive(Default)]
-struct State {
-    /// The mapping of match info to the vector connected clients in the waiting room.
-    rooms: HashMap<MatchInfo, Vec<Connection>>,
+pub struct State {
+    pub game_lobbies: HashMap<GameID, GameLobbies>,
+    pub lobby_connections: SccHashMap<(GameID, LobbyId), Vec<Connection>>,
+    pub matchmaking_rooms: SccHashMap<MatchInfo, Vec<Connection>>,
 }
 
-static STATE: Lazy<State> = Lazy::new(State::default);
+/// Global state of the matchmaker
+pub static MATCHMAKER_STATE: Lazy<Arc<Mutex<State>>> =
+    Lazy::new(|| Arc::new(Mutex::new(State::default())));
 
-/// After a matchmaker connection is established, it will open a bi-directional channel with the
-/// client.
-///
-/// At this point the client is free to engage in the matchmaking protocol over that channel.
-async fn impl_matchmaker(ep: iroh_net::Endpoint, conn: Connection) -> anyhow::Result<()> {
+/// Handles incoming connections and routes requests to appropriate handlers
+pub async fn handle_connection(ep: Endpoint, conn: Connection) -> Result<()> {
     let connection_id = conn.stable_id();
-
     loop {
-        // Get the next channel open or connection close event
         tokio::select! {
-            close = conn.closed() => {
-                debug!("Connection closed {close:?}");
+            _ = conn.closed() => {
+                info!("[{}] Client closed connection.", connection_id);
                 return Ok(());
             }
             bi = conn.accept_bi() => {
                 let (mut send, mut recv) = bi?;
+                // Parse the incoming request
+                let request: MatchmakerRequest = postcard::from_bytes(&recv.read_to_end(256).await?)?;
 
-                // Parse matchmaker request
-                let request: MatchmakerRequest =
-                    postcard::from_bytes(&recv.read_to_end(256).await?)?;
-
+                // Route the request to the appropriate handler
                 match request {
-                    MatchmakerRequest::RequestMatch(match_info) => {
-                        debug!(connection_id, ?match_info, "Got request for match");
-
-                        // Accept request
-                        let message = postcard::to_allocvec(&MatchmakerResponse::Accepted)?;
-                        send.write_all(&message).await?;
-                        send.finish().await?;
-
-                        let player_count = match_info.client_count;
-
-                        let mut members_to_join = Vec::new();
-                        let mut members_to_notify = Vec::new();
-
-                        // Make sure room exists
-                        STATE
-                            .rooms
-                            .insert_async(match_info.clone(), Vec::new())
-                            .await
-                            .ok();
-
-                        STATE
-                            .rooms
-                            .update_async(&match_info, |match_info, members| {
-                                // Add the current client to the room
-                                members.push(conn.clone());
-
-                                // Spawn task to wait for connction to close and remove it from the room if it does
-                                let conn = conn.clone();
-                                let info = match_info.clone();
-                                tokio::task::spawn(async move {
-                                    conn.closed().await;
-                                    let members = STATE
-                                        .rooms
-                                        .update_async(&info, |_, members| {
-                                            let mut was_removed = false;
-                                            members.retain(|x| {
-                                                if x.stable_id() != conn.stable_id() {
-                                                    true
-                                                } else {
-                                                    was_removed = true;
-                                                    false
-                                                }
-                                            });
-
-                                            if was_removed {
-                                                Some(members.clone())
-                                            } else {
-                                                None
-                                            }
-                                        })
-                                        .await
-                                        .flatten();
-                                    if let Some(members) = members {
-                                        let result = async {
-                                            let message = postcard::to_allocvec(
-                                                &MatchmakerResponse::ClientCount(
-                                                    members.len().try_into()?
-                                                ),
-                                            )?;
-                                            for conn in members {
-                                                let mut send = conn.open_uni().await?;
-                                                send.write_all(&message).await?;
-                                                send.finish().await?;
-                                            }
-                                            Ok::<(), anyhow::Error>(())
-                                        };
-                                        result.await.ok();
-                                    }
-                                });
-
-                                let member_count = members.len();
-
-                                // If we have a complete room
-                                debug!(
-                                    ?match_info,
-                                    "Room now has {}/{} members", member_count, player_count
-                                );
-
-                                if member_count >= player_count as _ {
-                                    // Clear the room
-                                    members_to_join.append(members);
-                                } else {
-                                    members_to_notify = members.clone();
-                                }
-                            })
-                            .await;
-
-                        if !members_to_notify.is_empty() {
-                            let message = postcard::to_allocvec(&MatchmakerResponse::ClientCount(
-                                members_to_notify.len().try_into()?
-                            ))?;
-                            for conn in members_to_notify {
-                                let mut send = conn.open_uni().await?;
-                                send.write_all(&message).await?;
-                                send.finish().await?;
-                            }
-                        }
-
-                        if !members_to_join.is_empty() {
-                            // Send the match ID to all of the clients in the room
-                            let mut player_ids = Vec::new();
-                            let random_seed = rand::random();
-
-                            for (idx, conn) in members_to_join.iter().enumerate() {
-                                let id = get_remote_node_id(conn)?;
-                                let mut addr = NodeAddr::new(id);
-                                if let Some(info) = ep.connection_info(id) {
-                                    if let Some(relay_url) = info.relay_url {
-                                        addr = addr.with_relay_url(relay_url.relay_url);
-                                    }
-                                    addr = addr.with_direct_addresses(
-                                        info.addrs.into_iter().map(|addr| addr.addr),
-                                    );
-                                }
-
-                                player_ids.push((u32::try_from(idx)?, addr));
-                            }
-
-                            for (player_idx, conn) in members_to_join.into_iter().enumerate() {
-                                // Respond with success
-                                let message =
-                                    postcard::to_allocvec(&MatchmakerResponse::Success {
-                                        random_seed,
-                                        client_count: player_count,
-                                        player_idx: player_idx.try_into()?,
-                                        player_ids: player_ids.clone(),
-                                    })?;
-                                let mut send = conn.open_uni().await?;
-                                send.write_all(&message).await?;
-                                send.finish().await?;
-
-                                // Close connection, we are done here
-                                conn.close(0u32.into(), b"done");
-                            }
-
-                            // cleanup
-                            STATE.rooms.remove_async(&match_info).await;
-                        }
+                    MatchmakerRequest::RequestMatchmaking(match_info) => {
+                        handle_request_matchaking(ep.clone(), conn.clone(), match_info, &mut send).await?;
+                    }
+                    MatchmakerRequest::StopMatchmaking(match_info) => {
+                        handle_stop_matchmaking(conn.clone(), match_info, &mut send).await?;
+                    }
+                    MatchmakerRequest::ListLobbies(game_id) => {
+                        handle_list_lobbies(game_id, &mut send).await?;
+                    }
+                    MatchmakerRequest::CreateLobby(lobby_info) => {
+                        handle_create_lobby(conn.clone(), lobby_info, &mut send).await?;
+                    }
+                    MatchmakerRequest::JoinLobby(game_id, lobby_id, password) => {
+                        handle_join_lobby(ep.clone(), conn.clone(), game_id, lobby_id, password, &mut send).await?;
                     }
                 }
             }
         }
     }
+}
+
+/// Starts a match/lobby with the given members
+pub async fn start_game(
+    ep: Endpoint,
+    members: Vec<Connection>,
+    match_info: &MatchInfo,
+) -> Result<()> {
+    let random_seed = generate_random_seed();
+    let mut player_ids = Vec::new();
+    let player_count = members.len();
+
+    // Generate player indices based on the PlayerIdxAssignment
+    let player_indices = match &match_info.player_idx_assignment {
+        PlayerIdxAssignment::Ordered => (0..player_count).collect::<Vec<_>>(),
+        PlayerIdxAssignment::Random => {
+            let mut indices: Vec<_> = (0..player_count).collect();
+            let mut rng = rand::rngs::StdRng::seed_from_u64(random_seed);
+            indices.shuffle(&mut rng);
+            indices
+        }
+        PlayerIdxAssignment::SpecifiedOrder(order) => {
+            let mut indices = order.clone();
+            if indices.len() < player_count {
+                indices.extend(indices.len()..player_count);
+            } else if indices.len() > player_count {
+                indices.truncate(player_count);
+            }
+            indices
+        }
+    };
+
+    // Collect player IDs and addresses
+    for (conn_idx, conn) in members.iter().enumerate() {
+        let id = iroh_net::endpoint::get_remote_node_id(conn)?;
+        let mut addr = NodeAddr::new(id);
+        if let Some(info) = ep.connection_info(id) {
+            if let Some(relay_url) = info.relay_url {
+                addr = addr.with_relay_url(relay_url.relay_url);
+            }
+            addr = addr.with_direct_addresses(info.addrs.into_iter().map(|addr| addr.addr));
+        }
+        let player_idx = player_indices[conn_idx];
+        player_ids.push((player_idx as u32, addr));
+    }
+
+    // Sort player_ids by the assigned player index
+    player_ids.sort_by_key(|&(idx, _)| idx);
+
+    // Send match information to each player
+    for (conn_idx, conn) in members.into_iter().enumerate() {
+        let player_idx = player_indices[conn_idx];
+        let message = postcard::to_allocvec(&MatchmakerResponse::Success {
+            random_seed,
+            player_count: player_ids.len() as u32,
+            player_idx: player_idx as u32,
+            player_ids: player_ids.clone(),
+        })?;
+        let mut send = conn.open_uni().await?;
+        send.write_all(&message).await?;
+        send.finish().await?;
+        conn.close(0u32.into(), b"done");
+    }
+
+    Ok(())
 }
