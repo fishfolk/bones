@@ -16,6 +16,13 @@ pub struct SchemaId {
     id: u32,
 }
 
+impl SchemaId {
+    /// Get schema id
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+}
+
 // Note: The schema type is here in the registry module to prevent modification of registered
 // schemas by other modules. The idea is that once a schema is registered, it is unchangable and
 // "certified" so to speak.

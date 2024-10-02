@@ -20,6 +20,7 @@ pub mod prelude {
     pub use crate::ser_de::*;
     pub use crate::{
         alloc::{SMap, SVec, SchemaMap, SchemaVec},
+        desync_hash::*,
         ptr::*,
         registry::*,
         schema::*,
@@ -34,6 +35,7 @@ mod schema;
 pub use schema::*;
 
 pub mod alloc;
+pub mod desync_hash;
 pub mod ptr;
 pub mod raw_fns;
 pub mod registry;

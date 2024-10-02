@@ -5,6 +5,7 @@
 #![cfg_attr(doc, allow(unknown_lints))]
 #![deny(rustdoc::all)]
 
+use bones_utils::DesyncHash;
 use serde::{de::DeserializeSeed, Deserializer};
 
 /// Helper to export the same types in the crate root and in the prelude.
@@ -277,6 +278,18 @@ impl<T> From<Option<T>> for Maybe<T> {
         match value {
             Some(s) => Maybe::Set(s),
             None => Maybe::Unset,
+        }
+    }
+}
+
+impl<T: DesyncHash> DesyncHash for Maybe<T> {
+    fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        match self {
+            Maybe::Unset => 0.hash(hasher),
+            Maybe::Set(value) => {
+                1.hash(hasher);
+                value.hash(hasher)
+            }
         }
     }
 }

@@ -14,7 +14,7 @@ keywords.workspace      = true
 default = ["derive", "keysize16"]
 miri    = ["derive", "keysize10"]
 derive  = ["dep:bones_ecs_macros"]
-glam    = ["dep:glam", "dep:paste", "bones_schema/glam"]
+glam    = ["dep:glam", "dep:paste", "bones_schema/glam", "bones_utils/glam"]
 serde   = ["dep:serde"]
 
 keysize10 = []
