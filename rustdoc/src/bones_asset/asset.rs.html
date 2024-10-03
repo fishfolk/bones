@@ -437,9 +437,6 @@
 <a href="#437" id="437">437</a>
 <a href="#438" id="438">438</a>
 <a href="#439" id="439">439</a>
-<a href="#440" id="440">440</a>
-<a href="#441" id="441">441</a>
-<a href="#442" id="442">442</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     path::{Path, PathBuf},
     pin::Pin,
@@ -450,9 +447,11 @@
 };
 
 <span class="kw">use </span>append_only_vec::AppendOnlyVec;
-<span class="kw">use </span>bones_utils::{parking_lot::Mutex, prelude::<span class="kw-2">*</span>};
+<span class="kw">use </span>bones_utils::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>dashmap::DashMap;
 <span class="kw">use </span>event_listener::{Event, EventListener};
+<span class="kw">use </span>futures_lite::future::Boxed <span class="kw">as </span>BoxedFuture;
+<span class="kw">use </span>parking_lot::Mutex;
 <span class="kw">use </span>semver::VersionReq;
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -751,11 +750,7 @@
 <span class="doccomment">/// A custom assset loader.
 </span><span class="kw">pub trait </span>AssetLoader: Sync + Send + <span class="lifetime">'static </span>{
     <span class="doccomment">/// Load the asset from raw bytes.
-    </span><span class="kw">fn </span>load(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: AssetLoadCtx,
-        bytes: <span class="kw-2">&amp;</span>[u8],
-    ) -&gt; futures::future::Boxed&lt;anyhow::Result&lt;SchemaBox&gt;&gt;;
+    </span><span class="kw">fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: AssetLoadCtx, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; BoxedFuture&lt;anyhow::Result&lt;SchemaBox&gt;&gt;;
 }
 
 <span class="doccomment">/// A custom asset loader implementation for a metadata asset.
@@ -841,7 +836,6 @@
 ///
 /// ```
 /// # use bones_asset::prelude::*;
-/// # use bones_utils::prelude::*;
 /// #[derive(HasSchema, Default, Clone)]
 /// #[type_data(asset_loader("png", PngLoader))]
 /// #[repr(C)]
@@ -853,7 +847,7 @@
 ///
 /// struct PngLoader;
 /// impl AssetLoader for PngLoader {
-///     fn load(&amp;self, ctx: AssetLoadCtx, data: &amp;[u8]) -&gt; futures::future::Boxed&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
+///     fn load(&amp;self, ctx: AssetLoadCtx, data: &amp;[u8]) -&gt; BoxedFuture&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
 ///         Box::pin(async move {
 ///             todo!("Load PNG from data");
 ///         })

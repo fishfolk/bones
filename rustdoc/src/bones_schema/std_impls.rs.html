@@ -421,18 +421,16 @@
 <a href="#421" id="421">421</a>
 <a href="#422" id="422">422</a>
 <a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
-</pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">"serde"</span>)]
-</span><span class="kw">use </span><span class="kw">crate</span>::ser_de::SchemaDeserialize;
-<span class="kw">use </span>bones_utils::{fxhash::FxHasher, Ustr};
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::{alloc::Layout, any::TypeId, ffi::c_void, hash::Hasher, sync::OnceLock, time::Duration};
+
+<span class="kw">use </span>fxhash::FxHasher;
 <span class="attr">#[cfg(feature = <span class="string">"serde"</span>)]
 </span><span class="kw">use </span>serde::{de::Error, Deserialize};
+<span class="kw">use </span>ustr::Ustr;
 
-<span class="kw">use </span>std::ffi::c_void;
-
+<span class="attr">#[cfg(feature = <span class="string">"serde"</span>)]
+</span><span class="kw">use </span><span class="kw">crate</span>::ser_de::SchemaDeserialize;
 <span class="kw">use crate</span>::{alloc::TypeDatas, prelude::<span class="kw-2">*</span>, raw_fns::<span class="kw-2">*</span>};
-
-<span class="kw">use </span>std::{alloc::Layout, any::TypeId, hash::Hasher, sync::OnceLock, time::Duration};
 
 <span class="macro">macro_rules!</span> impl_primitive {
     (<span class="macro-nonterminal">$t</span>:ty, <span class="macro-nonterminal">$prim</span>:expr ) =&gt; {

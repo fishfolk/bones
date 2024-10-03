@@ -623,11 +623,11 @@
 
 <span class="kw">pub use </span>serializer_deserializer::<span class="kw-2">*</span>;
 <span class="kw">mod </span>serializer_deserializer {
-    <span class="kw">use </span>bones_utils::{ustr, Ustr};
     <span class="kw">use </span>serde::{
         de::{Unexpected, VariantAccess, Visitor},
         ser::{SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant},
     };
+    <span class="kw">use </span>ustr::{ustr, Ustr};
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 

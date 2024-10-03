@@ -468,6 +468,7 @@
 <a href="#468" id="468">468</a>
 <a href="#469" id="469">469</a>
 <a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>proc_macro2::{Punct, Spacing, TokenStream <span class="kw">as </span>TokenStream2, TokenTree <span class="kw">as </span>TokenTree2};
 <span class="kw">use </span>quote::{format_ident, quote, quote_spanned, spanned::Spanned};
@@ -849,7 +850,8 @@
                 <span class="kw">fn </span>schema() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>#schema_mod::Schema {
                     <span class="kw">use </span>::std::sync::{OnceLock};
                     <span class="kw">use </span>::std::any::TypeId;
-                    <span class="kw">use </span>bones_utils::{HashMap, parking_lot::RwLock};
+                    <span class="kw">use </span>bones_utils::HashMap;
+                    <span class="kw">use </span>parking_lot::RwLock;
                     <span class="kw">static </span>S: OnceLock&lt;RwLock&lt;HashMap&lt;TypeId, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Schema&gt;&gt;&gt; = OnceLock::new();
                     <span class="kw">let </span>schema = {
                         S.get_or_init(Default::default)

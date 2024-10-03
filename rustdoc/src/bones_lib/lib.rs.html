@@ -649,6 +649,8 @@
 <a href="#649" id="649">649</a>
 <a href="#650" id="650">650</a>
 <a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The core bones library.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -665,6 +667,7 @@
         ecs::prelude::<span class="kw-2">*</span>, instant::Instant, time::<span class="kw-2">*</span>, Game, GamePlugin, Session, SessionCommand,
         SessionOptions, SessionPlugin, SessionRunner, Sessions,
     };
+    <span class="kw">pub use </span>ustr::{ustr, Ustr, UstrMap, UstrSet};
 }
 
 <span class="kw">pub use </span>instant;
@@ -673,6 +676,7 @@
 <span class="kw">use </span>std::{collections::VecDeque, fmt::Debug, sync::Arc};
 
 <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+
 <span class="doccomment">/// A bones game. This includes all of the game worlds, and systems.
 </span><span class="attr">#[derive(Deref, DerefMut)]
 </span><span class="kw">pub struct </span>Session {

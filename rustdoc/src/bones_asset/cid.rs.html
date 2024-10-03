@@ -110,6 +110,7 @@
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
 <a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>serde::{Deserialize, Serialize};
 
 <span class="attr">#[cfg(feature = <span class="string">"cid_debug_trace"</span>)]
@@ -153,7 +154,8 @@
     <span class="kw">use crate</span>::{AssetLoc, Cid};
     <span class="kw">use </span>std::path::Path;
 
-    <span class="kw">use </span>bones_utils::{default, Ustr};
+    <span class="kw">use </span>bones_utils::default;
+    <span class="kw">use </span>ustr::Ustr;
 
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>CidDebugTrace&lt;<span class="lifetime">'a</span>&gt; {
         <span class="kw">pub </span>schema_full_name: Ustr,

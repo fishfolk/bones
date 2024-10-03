@@ -276,18 +276,6 @@
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-<a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
-<a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Localization module.
 
 </span><span class="kw">use </span>std::{
@@ -447,11 +435,7 @@
 
 <span class="kw">struct </span>FluentResourceLoader;
 <span class="kw">impl </span>AssetLoader <span class="kw">for </span>FluentResourceLoader {
-    <span class="kw">fn </span>load(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _ctx: AssetLoadCtx,
-        bytes: <span class="kw-2">&amp;</span>[u8],
-    ) -&gt; futures::future::Boxed&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
+    <span class="kw">fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>, _ctx: AssetLoadCtx, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; BoxedFuture&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
         <span class="kw">let </span>bytes = bytes.to_vec();
         Box::pin(<span class="kw">async move </span>{
             <span class="kw">let </span>string = String::from_utf8(bytes).context(<span class="string">"Error loading fluent resource file."</span>)<span class="question-mark">?</span>;
@@ -472,11 +456,7 @@
 
 <span class="kw">struct </span>FluentBundleLoader;
 <span class="kw">impl </span>AssetLoader <span class="kw">for </span>FluentBundleLoader {
-    <span class="kw">fn </span>load(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut </span>ctx: AssetLoadCtx,
-        bytes: <span class="kw-2">&amp;</span>[u8],
-    ) -&gt; futures::future::Boxed&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
+    <span class="kw">fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>ctx: AssetLoadCtx, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; BoxedFuture&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
         <span class="kw">let </span>bytes = bytes.to_vec();
         Box::pin(<span class="kw">async move </span>{
             <span class="kw">let </span>self_path = ctx.loc.path.clone();
@@ -515,11 +495,7 @@
 
 <span class="kw">struct </span>LocalizationLoader;
 <span class="kw">impl </span>AssetLoader <span class="kw">for </span>LocalizationLoader {
-    <span class="kw">fn </span>load(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut </span>ctx: AssetLoadCtx,
-        bytes: <span class="kw-2">&amp;</span>[u8],
-    ) -&gt; futures::future::Boxed&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
+    <span class="kw">fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>ctx: AssetLoadCtx, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; BoxedFuture&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
         <span class="kw">let </span>bytes = bytes.to_vec();
         Box::pin(<span class="kw">async move </span>{
             <span class="kw">let </span>self_path = ctx.loc.path.clone();

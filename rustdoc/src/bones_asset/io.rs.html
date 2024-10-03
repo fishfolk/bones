@@ -254,11 +254,13 @@
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
 <a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::path::PathBuf;
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>async_channel::Sender;
-<span class="kw">use </span>bones_utils::{default, futures::future::Boxed <span class="kw">as </span>BoxedFuture, HashMap};
+<span class="kw">use </span>bones_utils::{default, HashMap};
+<span class="kw">use </span>futures_lite::future::Boxed <span class="kw">as </span>BoxedFuture;
 <span class="kw">use </span>path_absolutize::Absolutize;
 
 <span class="kw">use crate</span>::{AssetLocRef, ChangedAsset};
@@ -296,7 +298,7 @@
     <span class="doccomment">/// The directory to load the asset packs from.
     </span><span class="kw">pub </span>packs_dir: PathBuf,
     <span class="doccomment">/// Filesystem watcher if enabled.
-    </span><span class="kw">pub </span>watcher: bones_utils::parking_lot::Mutex&lt;<span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>notify::Watcher + Sync + Send&gt;&gt;&gt;,
+    </span><span class="kw">pub </span>watcher: parking_lot::Mutex&lt;<span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>notify::Watcher + Sync + Send&gt;&gt;&gt;,
 }
 
 <span class="attr">#[cfg(not(target_arch = <span class="string">"wasm32"</span>))]
@@ -309,7 +311,7 @@
         <span class="self">Self </span>{
             core_dir: core_dir.clone(),
             packs_dir: packs_dir.clone(),
-            watcher: bones_utils::parking_lot::Mutex::new(<span class="prelude-val">None</span>),
+            watcher: parking_lot::Mutex::new(<span class="prelude-val">None</span>),
         }
     }
 }

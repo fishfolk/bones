@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["TurboKind"],"struct":["Rng"],"trait":["ForkableCore","GenCore","SecureCore","SeededCore","TurboCore","TurboRand"]};

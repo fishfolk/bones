@@ -253,16 +253,10 @@
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
-<a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>bevy_tasks::ThreadExecutor;
+<span class="kw">use </span>futures_lite::future::Boxed <span class="kw">as </span>BoxedFuture;
 <span class="kw">use </span>piccolo::{
     Callback, CallbackReturn, Closure, Context, Executor, StashedClosure, Table, UserData,
 };
@@ -284,11 +278,7 @@
 <span class="doccomment">/// Asset loader for [`LuaScript`].
 </span><span class="kw">struct </span>LuaScriptLoader;
 <span class="kw">impl </span>AssetLoader <span class="kw">for </span>LuaScriptLoader {
-    <span class="kw">fn </span>load(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _ctx: AssetLoadCtx,
-        bytes: <span class="kw-2">&amp;</span>[u8],
-    ) -&gt; futures::future::Boxed&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
+    <span class="kw">fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>, _ctx: AssetLoadCtx, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; BoxedFuture&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
         <span class="kw">let </span>bytes = bytes.to_vec();
         Box::pin(<span class="kw">async move </span>{
             <span class="kw">let </span>script = LuaScript {
@@ -507,11 +497,7 @@
 
 <span class="kw">struct </span>LuaPluginLoader;
 <span class="kw">impl </span>AssetLoader <span class="kw">for </span>LuaPluginLoader {
-    <span class="kw">fn </span>load(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _ctx: AssetLoadCtx,
-        bytes: <span class="kw-2">&amp;</span>[u8],
-    ) -&gt; futures::future::Boxed&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
+    <span class="kw">fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>, _ctx: AssetLoadCtx, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; BoxedFuture&lt;anyhow::Result&lt;SchemaBox&gt;&gt; {
         <span class="kw">let </span>bytes = bytes.to_vec();
         Box::pin(<span class="kw">async move </span>{
             <span class="kw">let </span>script = LuaPlugin {

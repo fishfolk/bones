@@ -158,6 +158,8 @@
 <a href="#158" id="158">158</a>
 <a href="#159" id="159">159</a>
 <a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The bones framework for game development.
 //!
 </span><span class="attr">#![cfg_attr(feature = <span class="string">"document-features"</span>, doc = <span class="string">"## Features"</span>)]
@@ -183,6 +185,8 @@
         animation::<span class="kw-2">*</span>, input::prelude::<span class="kw-2">*</span>, params::<span class="kw-2">*</span>, render::prelude::<span class="kw-2">*</span>, storage::<span class="kw-2">*</span>, time::<span class="kw-2">*</span>,
         utils::<span class="kw-2">*</span>, AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin, ExitBones,
     };
+
+    <span class="kw">pub use </span>futures_lite::future::Boxed <span class="kw">as </span>BoxedFuture;
 
     <span class="attr">#[cfg(feature = <span class="string">"ui"</span>)]
     </span><span class="kw">pub use </span><span class="kw">crate</span>::debug;
