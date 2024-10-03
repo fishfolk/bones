@@ -41,7 +41,8 @@ mod cid_debug_trace {
     use crate::{AssetLoc, Cid};
     use std::path::Path;
 
-    use bones_utils::{default, Ustr};
+    use bones_utils::default;
+    use ustr::Ustr;
 
     pub(crate) struct CidDebugTrace<'a> {
         pub schema_full_name: Ustr,

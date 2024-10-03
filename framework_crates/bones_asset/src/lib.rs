@@ -14,6 +14,7 @@ macro_rules! pub_use {
         pub use anyhow;
         pub use bones_schema::prelude::*;
         pub use dashmap;
+        pub use futures_lite::future::Boxed as BoxedFuture;
         pub use path_absolutize::Absolutize;
         pub use semver::Version;
     };

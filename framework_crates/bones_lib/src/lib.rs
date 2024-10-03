@@ -14,6 +14,7 @@ pub mod prelude {
         ecs::prelude::*, instant::Instant, time::*, Game, GamePlugin, Session, SessionCommand,
         SessionOptions, SessionPlugin, SessionRunner, Sessions,
     };
+    pub use ustr::{ustr, Ustr, UstrMap, UstrSet};
 }
 
 pub use instant;
@@ -22,6 +23,7 @@ pub mod time;
 use std::{collections::VecDeque, fmt::Debug, sync::Arc};
 
 use crate::prelude::*;
+
 /// A bones game. This includes all of the game worlds, and systems.
 #[derive(Deref, DerefMut)]
 pub struct Session {

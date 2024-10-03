@@ -78,11 +78,7 @@ impl SoundData for &AudioSource {
 /// The audio file asset loader.
 pub struct AudioLoader;
 impl AssetLoader for AudioLoader {
-    fn load(
-        &self,
-        _ctx: AssetLoadCtx,
-        bytes: &[u8],
-    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+    fn load(&self, _ctx: AssetLoadCtx, bytes: &[u8]) -> BoxedFuture<anyhow::Result<SchemaBox>> {
         let bytes = bytes.to_vec();
         Box::pin(async move {
             let data = StaticSoundData::from_cursor(Cursor::new(bytes))?;

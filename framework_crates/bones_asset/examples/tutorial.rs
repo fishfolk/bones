@@ -1,6 +1,5 @@
 use bevy_tasks::{IoTaskPool, TaskPool};
 use bones_asset::prelude::*;
-use bones_utils::futures;
 use glam::{UVec2, Vec2};
 
 use std::path::PathBuf;
@@ -103,11 +102,7 @@ struct Image {
 /// Our custom loader for image assets.
 struct ImageAssetLoader;
 impl AssetLoader for ImageAssetLoader {
-    fn load(
-        &self,
-        _ctx: AssetLoadCtx,
-        bytes: &[u8],
-    ) -> futures::future::Boxed<anyhow::Result<SchemaBox>> {
+    fn load(&self, _ctx: AssetLoadCtx, bytes: &[u8]) -> BoxedFuture<anyhow::Result<SchemaBox>> {
         // We're not going to bother actually loading the image.
         let data = bytes.to_vec();
         Box::pin(async move {

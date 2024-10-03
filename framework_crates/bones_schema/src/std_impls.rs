@@ -1,14 +1,13 @@
-#[cfg(feature = "serde")]
-use crate::ser_de::SchemaDeserialize;
-use bones_utils::{fxhash::FxHasher, Ustr};
+use std::{alloc::Layout, any::TypeId, ffi::c_void, hash::Hasher, sync::OnceLock, time::Duration};
+
+use fxhash::FxHasher;
 #[cfg(feature = "serde")]
 use serde::{de::Error, Deserialize};
+use ustr::Ustr;
 
-use std::ffi::c_void;
-
+#[cfg(feature = "serde")]
+use crate::ser_de::SchemaDeserialize;
 use crate::{alloc::TypeDatas, prelude::*, raw_fns::*};
-
-use std::{alloc::Layout, any::TypeId, hash::Hasher, sync::OnceLock, time::Duration};
 
 macro_rules! impl_primitive {
     ($t:ty, $prim:expr ) => {

@@ -27,7 +27,6 @@ pub mod prelude {
     #[cfg(feature = "derive")]
     pub use bones_schema_macros::*;
     pub use bones_utils;
-    pub use ulid::Ulid;
 }
 
 mod schema;
