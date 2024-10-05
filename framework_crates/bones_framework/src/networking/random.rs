@@ -36,6 +36,16 @@ impl RngGenerator {
         }
     }
 
+    /// Generate a random printable ASCII character
+    pub fn gen_random_ascii_char(&mut self) -> char {
+        self.gen_u8_range(33, 126) as char
+    }
+
+    /// Generate a random ASCII string of the specified length
+    pub fn gen_random_ascii_string(&mut self, length: u64) -> String {
+        (0..length).map(|_| self.gen_random_ascii_char()).collect()
+    }
+
     /// Generate a random u8 within the given range (inclusive)
     pub fn gen_u8_range(&mut self, start: u8, end: u8) -> u8 {
         loop {
