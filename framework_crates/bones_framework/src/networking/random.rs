@@ -8,6 +8,7 @@ use crate::{
         piccolo::{self as lua, Callback},
     },
 };
+use core::ops::RangeBounds;
 pub use turborand::prelude::*;
 
 /// Resource that produces deterministic pseudo-random numbers/strings.
@@ -36,129 +37,169 @@ impl RngGenerator {
         }
     }
 
+    /// Generate a random u8
+    pub fn gen_u8(&mut self) -> u8 {
+        self.internal_generator.gen_u8()
+    }
+
+    /// Generate a random u8 within the given range
+    pub fn gen_u8_range<R: RangeBounds<u8>>(&mut self, range: R) -> u8 {
+        self.internal_generator.u8(range)
+    }
+
+    /// Generate a random i8
+    pub fn gen_i8(&mut self) -> i8 {
+        self.internal_generator.gen_i8()
+    }
+
+    /// Generate a random i8 within the given range
+    pub fn gen_i8_range<R: RangeBounds<i8>>(&mut self, range: R) -> i8 {
+        self.internal_generator.i8(range)
+    }
+
+    /// Generate a random u16
+    pub fn gen_u16(&mut self) -> u16 {
+        self.internal_generator.gen_u16()
+    }
+
+    /// Generate a random u16 within the given range
+    pub fn gen_u16_range<R: RangeBounds<u16>>(&mut self, range: R) -> u16 {
+        self.internal_generator.u16(range)
+    }
+
+    /// Generate a random i16
+    pub fn gen_i16(&mut self) -> i16 {
+        self.internal_generator.gen_i16()
+    }
+
+    /// Generate a random i16 within the given range
+    pub fn gen_i16_range<R: RangeBounds<i16>>(&mut self, range: R) -> i16 {
+        self.internal_generator.i16(range)
+    }
+
+    /// Generate a random u32
+    pub fn gen_u32(&mut self) -> u32 {
+        self.internal_generator.gen_u32()
+    }
+
+    /// Generate a random u32 within the given range
+    pub fn gen_u32_range<R: RangeBounds<u32>>(&mut self, range: R) -> u32 {
+        self.internal_generator.u32(range)
+    }
+
+    /// Generate a random i32
+    pub fn gen_i32(&mut self) -> i32 {
+        self.internal_generator.gen_i32()
+    }
+
+    /// Generate a random i32 within the given range
+    pub fn gen_i32_range<R: RangeBounds<i32>>(&mut self, range: R) -> i32 {
+        self.internal_generator.i32(range)
+    }
+
+    /// Generate a random u64
+    pub fn gen_u64(&mut self) -> u64 {
+        self.internal_generator.gen_u64()
+    }
+
+    /// Generate a random u64 within the given range
+    pub fn gen_u64_range<R: RangeBounds<u64>>(&mut self, range: R) -> u64 {
+        self.internal_generator.u64(range)
+    }
+
+    /// Generate a random i64
+    pub fn gen_i64(&mut self) -> i64 {
+        self.internal_generator.gen_i64()
+    }
+
+    /// Generate a random i64 within the given range
+    pub fn gen_i64_range<R: RangeBounds<i64>>(&mut self, range: R) -> i64 {
+        self.internal_generator.i64(range)
+    }
+
+    /// Generate a random usize
+    pub fn gen_usize(&mut self) -> usize {
+        self.internal_generator.gen_usize()
+    }
+
+    /// Generate a random usize within the given range
+    pub fn gen_usize_range<R: RangeBounds<usize>>(&mut self, range: R) -> usize {
+        self.internal_generator.usize(range)
+    }
+
+    /// Generate a random isize
+    pub fn gen_isize(&mut self) -> isize {
+        self.internal_generator.gen_isize()
+    }
+
+    /// Generate a random isize within the given range
+    pub fn gen_isize_range<R: RangeBounds<isize>>(&mut self, range: R) -> isize {
+        self.internal_generator.isize(range)
+    }
+
+    /// Generate a random f32
+    pub fn gen_f32(&mut self) -> f32 {
+        self.internal_generator.f32()
+    }
+
+    /// Generate a random f32 within the given range
+    pub fn gen_f32_range<R: RangeBounds<f32>>(&mut self, range: R) -> f32 {
+        let start = match range.start_bound() {
+            std::ops::Bound::Included(&n) => n,
+            std::ops::Bound::Excluded(&n) => n,
+            std::ops::Bound::Unbounded => 0.0,
+        };
+        let end = match range.end_bound() {
+            std::ops::Bound::Included(&n) => n,
+            std::ops::Bound::Excluded(&n) => n,
+            std::ops::Bound::Unbounded => 1.0,
+        };
+        loop {
+            let n = self.gen_f32();
+            if n >= start && n <= end {
+                return n;
+            }
+        }
+    }
+
+    /// Generate a random f64
+    pub fn gen_f64(&mut self) -> f64 {
+        self.internal_generator.f64()
+    }
+
+    /// Generate a random f64 within the given range
+    pub fn gen_f64_range<R: RangeBounds<f64>>(&mut self, range: R) -> f64 {
+        let start = match range.start_bound() {
+            std::ops::Bound::Included(&n) => n,
+            std::ops::Bound::Excluded(&n) => n,
+            std::ops::Bound::Unbounded => 0.0,
+        };
+        let end = match range.end_bound() {
+            std::ops::Bound::Included(&n) => n,
+            std::ops::Bound::Excluded(&n) => n,
+            std::ops::Bound::Unbounded => 1.0,
+        };
+        loop {
+            let n = self.gen_f64();
+            if n >= start && n <= end {
+                return n;
+            }
+        }
+    }
+
+    /// Generate a random bool
+    pub fn gen_bool(&mut self) -> bool {
+        self.internal_generator.bool()
+    }
+
     /// Generate a random printable ASCII character
     pub fn gen_random_ascii_char(&mut self) -> char {
-        self.gen_u8_range(33, 126) as char
+        self.gen_u8_range(33..=126) as char
     }
 
     /// Generate a random ASCII string of the specified length
     pub fn gen_random_ascii_string(&mut self, length: u64) -> String {
         (0..length).map(|_| self.gen_random_ascii_char()).collect()
-    }
-
-    /// Generate a random u8 within the given range (inclusive)
-    pub fn gen_u8_range(&mut self, start: u8, end: u8) -> u8 {
-        loop {
-            let n = self.gen_u64() as u8;
-            if n >= start && n <= end {
-                return n;
-            }
-        }
-    }
-
-    /// Generate a random i8 within the given range (inclusive)
-    pub fn gen_i8_range(&mut self, start: i8, end: i8) -> i8 {
-        loop {
-            let n = self.gen_i64() as i8;
-            if n >= start && n <= end {
-                return n;
-            }
-        }
-    }
-
-    /// Generate a random u16 within the given range (inclusive)
-    pub fn gen_u16_range(&mut self, start: u16, end: u16) -> u16 {
-        loop {
-            let n = self.gen_u64() as u16;
-            if n >= start && n <= end {
-                return n;
-            }
-        }
-    }
-
-    /// Generate a random i16 within the given range (inclusive)
-    pub fn gen_i16_range(&mut self, start: i16, end: i16) -> i16 {
-        loop {
-            let n = self.gen_i64() as i16;
-            if n >= start && n <= end {
-                return n;
-            }
-        }
-    }
-
-    /// Generate a random u32 within the given range (inclusive)
-    pub fn gen_u32_range(&mut self, start: u32, end: u32) -> u32 {
-        loop {
-            let n = self.gen_u64() as u32;
-            if n >= start && n <= end {
-                return n;
-            }
-        }
-    }
-
-    /// Generate a random i32 within the given range (inclusive)
-    pub fn gen_i32_range(&mut self, start: i32, end: i32) -> i32 {
-        loop {
-            let n = self.gen_i64() as i32;
-            if n >= start && n <= end {
-                return n;
-            }
-        }
-    }
-
-    /// Generate a random u64 within the given range (inclusive)
-    pub fn gen_u64_range(&mut self, start: u64, end: u64) -> u64 {
-        loop {
-            let n = self.gen_u64();
-            if n >= start && n <= end {
-                return n;
-            }
-        }
-    }
-
-    /// Generate a random i64 within the given range (inclusive)
-    pub fn gen_i64_range(&mut self, start: i64, end: i64) -> i64 {
-        loop {
-            let n = self.gen_i64();
-            if n >= start && n <= end {
-                return n;
-            }
-        }
-    }
-
-    /// Generate a random usize within the given range (inclusive)
-    pub fn gen_usize_range(&mut self, start: usize, end: usize) -> usize {
-        loop {
-            let n = self.gen_u64() as usize;
-            if n >= start && n <= end {
-                return n;
-            }
-        }
-    }
-
-    /// Generate a random isize within the given range (inclusive)
-    pub fn gen_isize_range(&mut self, start: isize, end: isize) -> isize {
-        loop {
-            let n = self.gen_i64() as isize;
-            if n >= start && n <= end {
-                return n;
-            }
-        }
-    }
-}
-
-// Implement Deref and DerefMut to allow direct access to AtomicRng methods
-impl std::ops::Deref for RngGenerator {
-    type Target = AtomicRng;
-
-    fn deref(&self) -> &Self::Target {
-        &self.internal_generator
-    }
-}
-
-impl std::ops::DerefMut for RngGenerator {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.internal_generator
     }
 }
 
