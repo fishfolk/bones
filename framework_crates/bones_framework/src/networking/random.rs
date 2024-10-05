@@ -13,7 +13,7 @@ pub use turborand::prelude::*;
 /// Resource that produces deterministic pseudo-random numbers/strings.
 ///
 /// Access in a system with [`Res<RngGenerator>`].
-#[derive(Clone, HasSchema, Deref, DerefMut)]
+#[derive(Clone, HasSchema)]
 #[type_data(SchemaLuaEcsRefMetatable(lua_metatable))]
 pub struct RngGenerator {
     internal_generator: AtomicRng,
@@ -34,6 +34,121 @@ impl RngGenerator {
         Self {
             internal_generator: AtomicRng::with_seed(seed),
         }
+    }
+
+    /// Generate a random u8 within the given range (inclusive)
+    pub fn gen_u8_range(&mut self, start: u8, end: u8) -> u8 {
+        loop {
+            let n = self.gen_u64() as u8;
+            if n >= start && n <= end {
+                return n;
+            }
+        }
+    }
+
+    /// Generate a random i8 within the given range (inclusive)
+    pub fn gen_i8_range(&mut self, start: i8, end: i8) -> i8 {
+        loop {
+            let n = self.gen_i64() as i8;
+            if n >= start && n <= end {
+                return n;
+            }
+        }
+    }
+
+    /// Generate a random u16 within the given range (inclusive)
+    pub fn gen_u16_range(&mut self, start: u16, end: u16) -> u16 {
+        loop {
+            let n = self.gen_u64() as u16;
+            if n >= start && n <= end {
+                return n;
+            }
+        }
+    }
+
+    /// Generate a random i16 within the given range (inclusive)
+    pub fn gen_i16_range(&mut self, start: i16, end: i16) -> i16 {
+        loop {
+            let n = self.gen_i64() as i16;
+            if n >= start && n <= end {
+                return n;
+            }
+        }
+    }
+
+    /// Generate a random u32 within the given range (inclusive)
+    pub fn gen_u32_range(&mut self, start: u32, end: u32) -> u32 {
+        loop {
+            let n = self.gen_u64() as u32;
+            if n >= start && n <= end {
+                return n;
+            }
+        }
+    }
+
+    /// Generate a random i32 within the given range (inclusive)
+    pub fn gen_i32_range(&mut self, start: i32, end: i32) -> i32 {
+        loop {
+            let n = self.gen_i64() as i32;
+            if n >= start && n <= end {
+                return n;
+            }
+        }
+    }
+
+    /// Generate a random u64 within the given range (inclusive)
+    pub fn gen_u64_range(&mut self, start: u64, end: u64) -> u64 {
+        loop {
+            let n = self.gen_u64();
+            if n >= start && n <= end {
+                return n;
+            }
+        }
+    }
+
+    /// Generate a random i64 within the given range (inclusive)
+    pub fn gen_i64_range(&mut self, start: i64, end: i64) -> i64 {
+        loop {
+            let n = self.gen_i64();
+            if n >= start && n <= end {
+                return n;
+            }
+        }
+    }
+
+    /// Generate a random usize within the given range (inclusive)
+    pub fn gen_usize_range(&mut self, start: usize, end: usize) -> usize {
+        loop {
+            let n = self.gen_u64() as usize;
+            if n >= start && n <= end {
+                return n;
+            }
+        }
+    }
+
+    /// Generate a random isize within the given range (inclusive)
+    pub fn gen_isize_range(&mut self, start: isize, end: isize) -> isize {
+        loop {
+            let n = self.gen_i64() as isize;
+            if n >= start && n <= end {
+                return n;
+            }
+        }
+    }
+}
+
+// Implement Deref and DerefMut to allow direct access to AtomicRng methods
+impl std::ops::Deref for RngGenerator {
+    type Target = AtomicRng;
+
+    fn deref(&self) -> &Self::Target {
+        &self.internal_generator
+    }
+}
+
+impl std::ops::DerefMut for RngGenerator {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.internal_generator
     }
 }
 
