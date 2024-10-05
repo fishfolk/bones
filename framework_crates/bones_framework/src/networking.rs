@@ -60,7 +60,7 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{input, lan, online, proto, DisconnectedPlayers, SyncingInfo, RUNTIME};
+    pub use super::{input, lan, online, proto, DisconnectedPlayers, SyncingInfo, RUNTIME, random};
 
     #[cfg(feature = "net-debug")]
     pub use super::debug::prelude::*;
