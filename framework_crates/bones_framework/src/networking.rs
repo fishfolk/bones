@@ -4,6 +4,7 @@ use self::{
     input::{DenseInput, NetworkInputConfig, NetworkPlayerControl, NetworkPlayerControls},
     socket::Socket,
 };
+use crate::networking::online::OnlineMatchmakerResponse;
 use crate::prelude::*;
 use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
 use ggrs::P2PSession;
@@ -72,6 +73,9 @@ pub mod prelude {
 /// Note that FPS is provided as an integer to ggrs, so network modified fps is rounded to nearest int,
 /// which is then used to compute timestep so ggrs and networking match.
 pub const NETWORK_FRAME_RATE_FACTOR: f32 = 0.9;
+
+/// Default frame rate to run at if user provides none
+pub const NETWORK_DEFAULT_SIMULATION_FRAME_RATE: f32 = 60.0;
 
 /// Number of frames client may predict beyond confirmed frame before freezing and waiting
 /// for inputs from other players. Default value if not specified in [`GgrsSessionRunnerInfo`].
@@ -568,11 +572,43 @@ impl<'a, InputTypes> GgrsSessionRunner<'a, InputTypes>
 where
     InputTypes: NetworkInputConfig<'a>,
 {
-    /// Create a new sessino runner.
-    pub fn new(simulation_fps: f32, info: GgrsSessionRunnerInfo) -> Self
+    /// Creates a new session runner from a `OnlineMatchmakerResponse::GameStarting`
+    /// Any input values set as `None` will be set to default.
+    /// If response is not `GameStarting` returns None.
+    pub fn new_networked_game_starting(
+    target_fps: Option<f32>,
+    max_prediction_window: Option<usize>,
+    local_input_delay: Option<usize>,
+    matchmaker_resp_game_starting: OnlineMatchmakerResponse,
+    ) -> Option<Self> {
+        if let OnlineMatchmakerResponse::GameStarting {
+            socket,
+            player_idx: _,
+            player_count: _,
+            random_seed: _,
+        } = matchmaker_resp_game_starting {
+            Some(Self::new(
+                target_fps,
+                GgrsSessionRunnerInfo::new(
+                    socket.ggrs_socket(),
+                    max_prediction_window,
+                    local_input_delay,
+                ),
+            ))
+        } else {
+            None
+        }
+    }
+
+
+    /// Creates a new session runner from scratch.
+    pub fn new(target_fps: Option<f32>, info: GgrsSessionRunnerInfo) -> Self
     where
         Self: Sized,
     {
+        let simulation_fps = target_fps
+            .unwrap_or(NETWORK_DEFAULT_SIMULATION_FRAME_RATE);
+
         // Modified FPS may not be an integer, but ggrs requires integer fps, so we clamp and round
         // to integer so our computed timestep will match  that of ggrs.
         let network_fps = (simulation_fps * NETWORK_FRAME_RATE_FACTOR) as f64;
@@ -952,7 +988,7 @@ where
             max_prediction_window: Some(self.session.max_prediction()),
             local_input_delay: Some(self.local_input_delay),
         };
-        *self = GgrsSessionRunner::new(self.original_fps as f32, runner_info);
+        *self = GgrsSessionRunner::new(Some(self.original_fps as f32), runner_info);
     }
 
     fn disable_local_input(&mut self, input_disabled: bool) {
