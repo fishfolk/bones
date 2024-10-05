@@ -227,11 +227,8 @@ impl RngGenerator {
     }
 
     /// Shuffle a Vec in place
-    pub fn shuffle_vec<T>(&mut self, vec: &mut Vec<T>) {
-        for i in (1..vec.len()).rev() {
-            let j = self.gen_usize_range(0..=i);
-            vec.swap(i, j);
-        }
+    pub fn shuffle_vec<T>(&mut self, vec: &mut [T]) {
+        self.internal_generator.shuffle(vec);
     }
 
     /// Shuffle an SVec in place
