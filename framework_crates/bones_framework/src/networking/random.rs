@@ -201,6 +201,39 @@ impl RngGenerator {
     pub fn gen_random_ascii_string(&mut self, length: u64) -> String {
         (0..length).map(|_| self.gen_random_ascii_char()).collect()
     }
+
+    /// Generate a random Vec2
+    pub fn gen_vec2(&mut self) -> Vec2 {
+        Vec2::new(self.gen_f32(), self.gen_f32())
+    }
+
+    /// Generate a random Vec2 within the given ranges for each component
+    pub fn gen_vec2_range<R1: RangeBounds<f32>, R2: RangeBounds<f32>>(
+        &mut self,
+        x_range: R1,
+        y_range: R2,
+    ) -> Vec2 {
+        Vec2::new(self.gen_f32_range(x_range), self.gen_f32_range(y_range))
+    }
+
+    /// Generate a random Vec3
+    pub fn gen_vec3(&mut self) -> Vec3 {
+        Vec3::new(self.gen_f32(), self.gen_f32(), self.gen_f32())
+    }
+
+    /// Generate a random Vec3 within the given ranges for each component
+    pub fn gen_vec3_range<R1: RangeBounds<f32>, R2: RangeBounds<f32>, R3: RangeBounds<f32>>(
+        &mut self,
+        x_range: R1,
+        y_range: R2,
+        z_range: R3,
+    ) -> Vec3 {
+        Vec3::new(
+            self.gen_f32_range(x_range),
+            self.gen_f32_range(y_range),
+            self.gen_f32_range(z_range),
+        )
+    }
 }
 
 fn lua_metatable(ctx: lua::Context) -> lua::Table {
