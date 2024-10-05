@@ -9,6 +9,7 @@ use crate::{
     },
 };
 use core::ops::RangeBounds;
+use std::collections::VecDeque;
 pub use turborand::prelude::*;
 
 /// Resource that produces deterministic pseudo-random numbers/strings.
@@ -233,6 +234,31 @@ impl RngGenerator {
             self.gen_f32_range(y_range),
             self.gen_f32_range(z_range),
         )
+    }
+
+    /// Shuffle a Vec in place
+    pub fn shuffle_vec<T>(&mut self, vec: &mut Vec<T>) {
+        for i in (1..vec.len()).rev() {
+            let j = self.gen_usize_range(0..=i);
+            vec.swap(i, j);
+        }
+    }
+
+    /// Shuffle an SVec in place
+    pub fn shuffle_svec<T: HasSchema>(&mut self, svec: &mut SVec<T>) {
+        for i in (1..svec.len()).rev() {
+            let j = self.gen_usize_range(0..=i);
+            svec.swap(i, j);
+        }
+    }
+
+    /// Shuffle a VecDeque in place
+    pub fn shuffle_vecdeque<T>(&mut self, deque: &mut VecDeque<T>) {
+        let len = deque.len();
+        for i in (1..len).rev() {
+            let j = self.gen_usize_range(0..=i);
+            deque.swap(i, j);
+        }
     }
 }
 
