@@ -193,16 +193,6 @@ impl RngGenerator {
         self.internal_generator.bool()
     }
 
-    /// Generate a random printable ASCII character
-    pub fn gen_random_ascii_char(&mut self) -> char {
-        self.gen_u8_range(33..=126) as char
-    }
-
-    /// Generate a random ASCII string of the specified length
-    pub fn gen_random_ascii_string(&mut self, length: u64) -> String {
-        (0..length).map(|_| self.gen_random_ascii_char()).collect()
-    }
-
     /// Generate a random Vec2
     pub fn gen_vec2(&mut self) -> Vec2 {
         Vec2::new(self.gen_f32(), self.gen_f32())
@@ -259,6 +249,124 @@ impl RngGenerator {
             let j = self.gen_usize_range(0..=i);
             deque.swap(i, j);
         }
+    }
+
+    /// Generates a random `char` in ranges a-z and A-Z.
+    pub fn gen_alphabetic(&mut self) -> char {
+        self.internal_generator.alphabetic()
+    }
+
+    /// Generates a random `char` in ranges a-z, A-Z and 0-9.
+    pub fn gen_alphanumeric(&mut self) -> char {
+        self.internal_generator.alphanumeric()
+    }
+
+    /// Generates a random `char` in the range a-z.
+    pub fn gen_lowercase(&mut self) -> char {
+        self.internal_generator.lowercase()
+    }
+
+    /// Generates a random `char` in the range A-Z.
+    pub fn gen_uppercase(&mut self) -> char {
+        self.internal_generator.uppercase()
+    }
+
+    /// Generate a random digit in the given `radix`.
+    /// Digits are represented by `char`s in ranges 0-9 and a-z.
+    ///
+    /// # Panics
+    /// Panics if the `radix` is zero or greater than 36.
+    pub fn gen_digit(&mut self, radix: u8) -> char {
+        self.internal_generator.digit(radix)
+    }
+
+    /// Generates a random `char` in the given range.
+    ///
+    /// # Panics
+    /// Panics if the range is empty.
+    pub fn gen_char<R: RangeBounds<char>>(&mut self, bounds: R) -> char {
+        self.internal_generator.char(bounds)
+    }
+
+    /// Generate a random printable ASCII character
+    pub fn gen_random_ascii_char(&mut self) -> char {
+        self.gen_u8_range(33..=126) as char
+    }
+
+    /// Generate a random ASCII string of the specified length
+    pub fn gen_random_ascii_string(&mut self, length: u64) -> String {
+        (0..length).map(|_| self.gen_random_ascii_char()).collect()
+    }
+
+    /// Returns a boolean, where `success_rate` represents the chance to return a true value,
+    /// with 0.0 being no chance and 1.0 will always return true.
+    pub fn gen_chance(&mut self, success_rate: f64) -> bool {
+        let clamped_rate = success_rate.clamp(0.0, 1.0);
+        self.internal_generator.chance(clamped_rate)
+    }
+
+    /// Samples a random item from a slice of values.
+    pub fn gen_sample<'a, T>(&mut self, list: &'a [T]) -> Option<&'a T> {
+        self.internal_generator.sample(list)
+    }
+
+    /// Samples a random item from an iterator of values.
+    pub fn gen_sample_iter<T: Iterator>(&mut self, list: T) -> Option<T::Item> {
+        self.internal_generator.sample_iter(list)
+    }
+
+    /// Samples a random &mut item from a slice of values.
+    pub fn gen_sample_mut<'a, T>(&mut self, list: &'a mut [T]) -> Option<&'a mut T> {
+        self.internal_generator.sample_mut(list)
+    }
+
+    /// Samples multiple unique items from a slice of values.
+    pub fn gen_sample_multiple<'a, T>(&mut self, list: &'a [T], amount: usize) -> Vec<&'a T> {
+        self.internal_generator.sample_multiple(list, amount)
+    }
+
+    /// Samples multiple unique items from a mutable slice of values.
+    pub fn gen_sample_multiple_mut<'a, T>(
+        &mut self,
+        list: &'a mut [T],
+        amount: usize,
+    ) -> Vec<&'a mut T> {
+        self.internal_generator.sample_multiple_mut(list, amount)
+    }
+
+    /// Samples multiple unique items from an iterator of values.
+    pub fn gen_sample_multiple_iter<T: Iterator>(
+        &mut self,
+        list: T,
+        amount: usize,
+    ) -> Vec<T::Item> {
+        self.internal_generator.sample_multiple_iter(list, amount)
+    }
+
+    /// Stochastic Acceptance implementation of Roulette Wheel weighted selection.
+    pub fn gen_weighted_sample<'a, T, F>(
+        &mut self,
+        list: &'a [T],
+        weight_sampler: F,
+    ) -> Option<&'a T>
+    where
+        F: Fn((&T, usize)) -> f64,
+    {
+        self.internal_generator
+            .weighted_sample(list, weight_sampler)
+    }
+
+    /// Stochastic Acceptance implementation of Roulette Wheel weighted selection for mutable references.
+    pub fn gen_weighted_sample_mut<'a, T, F>(
+        &mut self,
+        list: &'a mut [T],
+        weight_sampler: F,
+    ) -> Option<&'a mut T>
+    where
+        F: Fn((&T, usize)) -> f64,
+    {
+        self.internal_generator
+            .weighted_sample_mut(list, weight_sampler)
     }
 }
 
