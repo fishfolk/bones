@@ -4,7 +4,7 @@ use self::{
     input::{DenseInput, NetworkInputConfig, NetworkPlayerControl, NetworkPlayerControls},
     socket::Socket,
 };
-use crate::networking::online::OnlineMatchmakerResponse;
+use crate::networking::{online::OnlineMatchmakerResponse, random::RngGenerator};
 use crate::prelude::*;
 use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
 use ggrs::P2PSession;
@@ -27,6 +27,7 @@ pub mod online;
 pub mod online_lobby;
 pub mod online_matchmaking;
 pub mod proto;
+pub mod random;
 pub mod socket;
 
 #[cfg(feature = "net-debug")]
@@ -895,6 +896,12 @@ where
                                                     *handle, stats,
                                                 );
                                         }
+                                    }
+
+                                    // Create and insert the RngGenerator resource if it doesn't exist
+                                    if world.resources.get::<RngGenerator>().is_none() {
+                                        let rng_generator = RngGenerator::new(self.random_seed);
+                                        world.insert_resource(rng_generator);
                                     }
 
                                     // TODO: Make sure SyncingInfo is initialized immediately when session is created,
