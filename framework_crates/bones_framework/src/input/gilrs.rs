@@ -1,12 +1,8 @@
-//! Gamepad input session, systems, and resources.
-
+// framework_crates/bones_framework/src/input/gilrs.rs
 use crate::prelude::*;
 use gilrs::{ev::filter::axis_dpad_to_button, EventType, Filter, Gilrs as GilrsContext};
 use once_cell::sync::Lazy;
 use std::sync::{Arc, Mutex};
-
-/// Name of the default bones input session
-pub const DEFAULT_BONES_INPUT_SESSION: &str = "BONES_INPUT";
 
 /// Lazy-initialized GilrsContext
 static GILRS_CONTEXT: Lazy<Arc<Mutex<GilrsContext>>> = Lazy::new(|| {
@@ -15,17 +11,8 @@ static GILRS_CONTEXT: Lazy<Arc<Mutex<GilrsContext>>> = Lazy::new(|| {
     ))
 });
 
-/// Sets up gamepad-related resources and the default bones input session
-pub fn game_plugin(game: &mut Game) {
-    let session = game.sessions.create(DEFAULT_BONES_INPUT_SESSION);
-    // Input doesn't do any rendering
-    session.visible = false;
-    session
-        .stages
-        .add_system_to_stage(CoreStage::First, process_gamepad_events);
-}
-
-fn process_gamepad_events(mut gamepad_inputs: ResMut<GamepadInputs>) {
+pub fn process_gamepad_events() -> GamepadInputs {
+    let mut gamepad_inputs = GamepadInputs::default();
     let mut gilrs = GILRS_CONTEXT.lock().unwrap();
     while let Some(gilrs_event) = gilrs
         .next_event()
@@ -77,6 +64,7 @@ fn process_gamepad_events(mut gamepad_inputs: ResMut<GamepadInputs>) {
             _ => (),
         };
     }
+    gamepad_inputs
 }
 
 fn convert_button(button: gilrs::Button) -> Option<GamepadButton> {

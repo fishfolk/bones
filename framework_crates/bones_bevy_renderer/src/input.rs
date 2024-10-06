@@ -1,13 +1,15 @@
+// framework_crates/bones_bevy_renderer/src/input.rs
+
 use super::*;
 use bevy::{
     input::{
-        gamepad::GamepadEvent,
         keyboard::KeyboardInput,
         mouse::{MouseButtonInput, MouseMotion, MouseWheel},
     },
     window::PrimaryWindow,
 };
 use bones::{MouseScreenPosition, MouseWorldPosition};
+use bones_framework::input::gilrs::process_gamepad_events;
 
 pub fn insert_bones_input(
     In((mouse_inputs, keyboard_inputs, gamepad_inputs)): In<(
@@ -28,7 +30,6 @@ pub fn get_bones_input(
     mut mouse_motion_events: EventReader<MouseMotion>,
     mut mouse_wheel_events: EventReader<MouseWheel>,
     mut keyboard_events: EventReader<KeyboardInput>,
-    mut gamepad_events: EventReader<GamepadEvent>,
 ) -> (
     bones::MouseInputs,
     bones::KeyboardInputs,
@@ -67,35 +68,7 @@ pub fn get_bones_input(
                 })
                 .collect(),
         },
-        bones::GamepadInputs {
-            gamepad_events: gamepad_events
-                .iter()
-                .map(|event| match event {
-                    GamepadEvent::Connection(c) => {
-                        bones::GamepadEvent::Connection(bones::GamepadConnectionEvent {
-                            gamepad: c.gamepad.id as u32,
-                            event: if c.connected() {
-                                bones::GamepadConnectionEventKind::Connected
-                            } else {
-                                bones::GamepadConnectionEventKind::Disconnected
-                            },
-                        })
-                    }
-                    GamepadEvent::Button(b) => {
-                        bones::GamepadEvent::Button(bones::GamepadButtonEvent {
-                            gamepad: b.gamepad.id as u32,
-                            button: b.button_type.into_bones(),
-                            value: b.value,
-                        })
-                    }
-                    GamepadEvent::Axis(a) => bones::GamepadEvent::Axis(bones::GamepadAxisEvent {
-                        gamepad: a.gamepad.id as u32,
-                        axis: a.axis_type.into_bones(),
-                        value: a.value,
-                    }),
-                })
-                .collect(),
-        },
+        process_gamepad_events(),
     )
 }
 
