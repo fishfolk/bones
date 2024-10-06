@@ -154,6 +154,7 @@ iroh-quinn             = "0.10"
 iroh-net               = "0.22"
 tokio                  = { version = "1", features = ["rt-multi-thread", "macros"] }
 turborand              = { version = "0.10.0", features = ["atomic"] }
+gilrs                  = "0.11.0"
 
 directories = "5.0"
 
