@@ -88,3 +88,26 @@ fn supplementary_packs_root_data() {
 
     assert_eq!(actual, vec![10, 20, 30, 100, 200, 300]);
 }
+
+#[test]
+fn all_packs_root_data() {
+    init();
+
+    let world = create_world();
+
+    let actual = world.run_system(
+        |packs: AllPacksData<GameMeta, PackMeta>| {
+            let mut data = packs
+                .iter_with(
+                    |core| core.important_numbers.iter().copied(),
+                    |pack| pack.other_numbers.iter().copied(),
+                )
+                .collect::<Vec<_>>();
+            data.sort();
+            data
+        },
+        (),
+    );
+
+    assert_eq!(actual, vec![1, 2, 3, 10, 20, 30, 100, 200, 300]);
+}

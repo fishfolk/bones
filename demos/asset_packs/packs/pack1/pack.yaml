@@ -1,0 +1,9 @@
+# This is the core asset pack file. It's only job is to specify
+# the path to the root asset.
+
+name: Pack 1
+id: pack1_01J9GBGEDY07CT16AQYPKJRKCY
+version: 0.1.0
+game_version: 0.1.0
+root: ./data.yaml
+schemas: []
