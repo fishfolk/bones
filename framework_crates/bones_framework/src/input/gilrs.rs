@@ -18,7 +18,7 @@ pub fn process_gamepad_events() -> GamepadInputs {
     let mut gilrs = GILRS_CONTEXT.lock().unwrap();
     while let Some(gilrs_event) = gilrs
         .next_event()
-        .filter_ev(&axis_dpad_to_button, &mut *gilrs)
+        .filter_ev(&axis_dpad_to_button, &mut gilrs)
     {
         gilrs.update(&gilrs_event);
 
