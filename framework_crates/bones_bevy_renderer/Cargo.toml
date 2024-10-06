@@ -26,7 +26,7 @@ anyhow              = "1.0"
 
 [dependencies.bevy]
 default-features = false
-features         = ["bevy_render", "bevy_core_pipeline", "bevy_sprite", "x11", "bevy_gilrs"]
+features         = ["bevy_render", "bevy_core_pipeline", "bevy_sprite", "x11"]
 version          = "0.11"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

@@ -5,6 +5,7 @@ use bones_schema::HasSchema;
 use self::prelude::{GamepadInputs, KeyboardInputs};
 
 pub mod gamepad;
+pub mod gilrs;
 pub mod keyboard;
 pub mod mouse;
 pub mod window;
