@@ -4,6 +4,8 @@ use self::{
     input::{DenseInput, NetworkInputConfig, NetworkPlayerControl, NetworkPlayerControls},
     socket::Socket,
 };
+use crate::networking::online::OnlineMatchmakerResponse;
+pub use crate::networking::random::RngGenerator;
 use crate::prelude::*;
 use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
 use ggrs::P2PSession;
@@ -26,6 +28,7 @@ pub mod online;
 pub mod online_lobby;
 pub mod online_matchmaking;
 pub mod proto;
+pub mod random;
 pub mod socket;
 
 #[cfg(feature = "net-debug")]
@@ -58,7 +61,9 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{input, lan, online, proto, DisconnectedPlayers, SyncingInfo, RUNTIME};
+    pub use super::{
+        input, lan, online, proto, random, DisconnectedPlayers, RngGenerator, SyncingInfo, RUNTIME,
+    };
 
     #[cfg(feature = "net-debug")]
     pub use super::debug::prelude::*;
@@ -72,6 +77,9 @@ pub mod prelude {
 /// Note that FPS is provided as an integer to ggrs, so network modified fps is rounded to nearest int,
 /// which is then used to compute timestep so ggrs and networking match.
 pub const NETWORK_FRAME_RATE_FACTOR: f32 = 0.9;
+
+/// Default frame rate to run at if user provides none
+pub const NETWORK_DEFAULT_SIMULATION_FRAME_RATE: f32 = 60.0;
 
 /// Number of frames client may predict beyond confirmed frame before freezing and waiting
 /// for inputs from other players. Default value if not specified in [`GgrsSessionRunnerInfo`].
@@ -203,11 +211,15 @@ pub enum SyncingInfo {
         local_frame_delay: usize,
         /// List of disconnected players (their idx)
         disconnected_players: SVec<usize>,
+        /// The random seed for this session
+        random_seed: u64,
     },
     /// Holds data for an offline session
     Offline {
         /// Current frame of simulation step
         current_frame: i32,
+        /// The random seed for this session
+        random_seed: u64,
     },
 }
 
@@ -226,7 +238,7 @@ impl SyncingInfo {
     pub fn current_frame(&self) -> i32 {
         match self {
             SyncingInfo::Online { current_frame, .. } => *current_frame,
-            SyncingInfo::Offline { current_frame } => *current_frame,
+            SyncingInfo::Offline { current_frame, .. } => *current_frame,
         }
     }
 
@@ -237,7 +249,7 @@ impl SyncingInfo {
                 last_confirmed_frame,
                 ..
             } => *last_confirmed_frame,
-            SyncingInfo::Offline { current_frame } => *current_frame,
+            SyncingInfo::Offline { current_frame, .. } => *current_frame,
         }
     }
     /// Getter for socket.
@@ -467,6 +479,14 @@ impl SyncingInfo {
             SyncingInfo::Offline { .. } => None,
         }
     }
+
+    /// Getter for the random seed.
+    pub fn random_seed(&self) -> u64 {
+        match self {
+            SyncingInfo::Online { random_seed, .. } => *random_seed,
+            SyncingInfo::Offline { random_seed, .. } => *random_seed,
+        }
+    }
 }
 
 /// Resource tracking which players have been disconnected.
@@ -521,6 +541,9 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
 
     /// Local input delay ggrs session was initialized with
     local_input_delay: usize,
+
+    /// The random seed used for this session
+    pub random_seed: u64,
 }
 
 /// The info required to create a [`GgrsSessionRunner`].
@@ -543,6 +566,8 @@ pub struct GgrsSessionRunnerInfo {
     ///
     /// `None` will use Bone's default.
     pub local_input_delay: Option<usize>,
+    /// The random seed used for this session
+    pub random_seed: u64,
 }
 
 impl GgrsSessionRunnerInfo {
@@ -551,6 +576,7 @@ impl GgrsSessionRunnerInfo {
         socket: Socket,
         max_prediction_window: Option<usize>,
         local_input_delay: Option<usize>,
+        random_seed: u64,
     ) -> Self {
         let player_idx = socket.player_idx();
         let player_count = socket.player_count();
@@ -560,6 +586,7 @@ impl GgrsSessionRunnerInfo {
             player_count,
             max_prediction_window,
             local_input_delay,
+            random_seed,
         }
     }
 }
@@ -568,11 +595,43 @@ impl<'a, InputTypes> GgrsSessionRunner<'a, InputTypes>
 where
     InputTypes: NetworkInputConfig<'a>,
 {
-    /// Create a new sessino runner.
-    pub fn new(simulation_fps: f32, info: GgrsSessionRunnerInfo) -> Self
+    /// Creates a new session runner from a `OnlineMatchmakerResponse::GameStarting`
+    /// Any input values set as `None` will be set to default.
+    /// If response is not `GameStarting` returns None.
+    pub fn new_networked_game_starting(
+        target_fps: Option<f32>,
+        max_prediction_window: Option<usize>,
+        local_input_delay: Option<usize>,
+        matchmaker_resp_game_starting: OnlineMatchmakerResponse,
+    ) -> Option<Self> {
+        if let OnlineMatchmakerResponse::GameStarting {
+            socket,
+            player_idx: _,
+            player_count: _,
+            random_seed,
+        } = matchmaker_resp_game_starting
+        {
+            Some(Self::new(
+                target_fps,
+                GgrsSessionRunnerInfo::new(
+                    socket.ggrs_socket(),
+                    max_prediction_window,
+                    local_input_delay,
+                    random_seed,
+                ),
+            ))
+        } else {
+            None
+        }
+    }
+
+    /// Creates a new session runner from scratch.
+    pub fn new(target_fps: Option<f32>, info: GgrsSessionRunnerInfo) -> Self
     where
         Self: Sized,
     {
+        let simulation_fps = target_fps.unwrap_or(NETWORK_DEFAULT_SIMULATION_FRAME_RATE);
+
         // Modified FPS may not be an integer, but ggrs requires integer fps, so we clamp and round
         // to integer so our computed timestep will match  that of ggrs.
         let network_fps = (simulation_fps * NETWORK_FRAME_RATE_FACTOR) as f64;
@@ -634,6 +693,7 @@ where
             socket: info.socket.clone(),
             local_input_delay,
             local_input_disabled: false,
+            random_seed: info.random_seed,
         }
     }
 }
@@ -841,9 +901,14 @@ where
                                         }
                                     }
 
-                                    // TODO: Make sure NetworkInfo is initialized immediately when session is created,
+                                    // Create and insert the RngGenerator resource if it doesn't exist
+                                    if world.resources.get::<RngGenerator>().is_none() {
+                                        let rng_generator = RngGenerator::new(self.random_seed);
+                                        world.insert_resource(rng_generator);
+                                    }
+
+                                    // TODO: Make sure SyncingInfo is initialized immediately when session is created,
                                     // even before a frame has advanced.
-                                    //
                                     // The existance of this resource may be used to determine if in an online match, and there could
                                     // be race if expected it to exist but testing before first frame advance.
                                     world.insert_resource(SyncingInfo::Online {
@@ -857,6 +922,7 @@ where
                                             .disconnected_players
                                             .clone()
                                             .into(),
+                                        random_seed: self.random_seed,
                                     });
 
                                     // Disconnected players persisted on session runner, and updated each frame.
@@ -951,8 +1017,9 @@ where
             player_count: self.session.num_players().try_into().unwrap(),
             max_prediction_window: Some(self.session.max_prediction()),
             local_input_delay: Some(self.local_input_delay),
+            random_seed: self.random_seed,
         };
-        *self = GgrsSessionRunner::new(self.original_fps as f32, runner_info);
+        *self = GgrsSessionRunner::new(Some(self.original_fps as f32), runner_info);
     }
 
     fn disable_local_input(&mut self, input_disabled: bool) {
