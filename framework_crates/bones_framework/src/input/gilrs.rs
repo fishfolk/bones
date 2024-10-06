@@ -1,3 +1,4 @@
+//! Gilrs integration.
 use crate::prelude::*;
 use gilrs::{ev::filter::axis_dpad_to_button, EventType, Filter, Gilrs as GilrsContext};
 use once_cell::sync::Lazy;
