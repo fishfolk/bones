@@ -101,6 +101,7 @@ instant       = { version = "0.1", features = ["wasm-bindgen"] }
 noise         = "0.9"
 once_cell     = "1.17"
 thiserror     = "1.0"
+gilrs         = "0.11.0"
 
 # Tracing
 tracing            = "0.1"
@@ -154,7 +155,6 @@ iroh-quinn             = "0.10"
 iroh-net               = "0.22"
 tokio                  = { version = "1", features = ["rt-multi-thread", "macros"] }
 turborand              = { version = "0.10.0", features = ["atomic"] }
-gilrs                  = "0.11.0"
 
 directories = "5.0"
 

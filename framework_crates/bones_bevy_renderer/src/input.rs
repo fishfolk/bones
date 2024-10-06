@@ -1,5 +1,3 @@
-// framework_crates/bones_bevy_renderer/src/input.rs
-
 use super::*;
 use bevy::{
     input::{

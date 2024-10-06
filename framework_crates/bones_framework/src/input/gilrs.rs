@@ -1,4 +1,3 @@
-// framework_crates/bones_framework/src/input/gilrs.rs
 use crate::prelude::*;
 use gilrs::{ev::filter::axis_dpad_to_button, EventType, Filter, Gilrs as GilrsContext};
 use once_cell::sync::Lazy;
@@ -11,6 +10,7 @@ static GILRS_CONTEXT: Lazy<Arc<Mutex<GilrsContext>>> = Lazy::new(|| {
     ))
 });
 
+/// Processes gilrs gamepad events into Bones-native GamepadInputs
 pub fn process_gamepad_events() -> GamepadInputs {
     let mut gamepad_inputs = GamepadInputs::default();
     let mut gilrs = GILRS_CONTEXT.lock().unwrap();
@@ -67,6 +67,7 @@ pub fn process_gamepad_events() -> GamepadInputs {
     gamepad_inputs
 }
 
+/// Converts a gilrs button to a bones-native button
 fn convert_button(button: gilrs::Button) -> Option<GamepadButton> {
     match button {
         gilrs::Button::South => Some(GamepadButton::South),
@@ -92,6 +93,7 @@ fn convert_button(button: gilrs::Button) -> Option<GamepadButton> {
     }
 }
 
+/// Converts a gilrs axis to a bones-native axis
 fn convert_axis(axis: gilrs::Axis) -> Option<GamepadAxis> {
     match axis {
         gilrs::Axis::LeftStickX => Some(GamepadAxis::LeftStickX),
