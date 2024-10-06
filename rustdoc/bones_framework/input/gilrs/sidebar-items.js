@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["process_gamepad_events"]};

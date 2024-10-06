@@ -98,45 +98,16 @@
 <a href="#98" id="98">98</a>
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
 </pre></div><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
 <span class="kw">use </span>bevy::{
     input::{
-        gamepad::GamepadEvent,
         keyboard::KeyboardInput,
         mouse::{MouseButtonInput, MouseMotion, MouseWheel},
     },
     window::PrimaryWindow,
 };
 <span class="kw">use </span>bones::{MouseScreenPosition, MouseWorldPosition};
+<span class="kw">use </span>bones_framework::input::gilrs::process_gamepad_events;
 
 <span class="kw">pub fn </span>insert_bones_input(
     In((mouse_inputs, keyboard_inputs, gamepad_inputs)): In&lt;(
@@ -157,7 +128,6 @@
     <span class="kw-2">mut </span>mouse_motion_events: EventReader&lt;MouseMotion&gt;,
     <span class="kw-2">mut </span>mouse_wheel_events: EventReader&lt;MouseWheel&gt;,
     <span class="kw-2">mut </span>keyboard_events: EventReader&lt;KeyboardInput&gt;,
-    <span class="kw-2">mut </span>gamepad_events: EventReader&lt;GamepadEvent&gt;,
 ) -&gt; (
     bones::MouseInputs,
     bones::KeyboardInputs,
@@ -196,35 +166,7 @@
                 })
                 .collect(),
         },
-        bones::GamepadInputs {
-            gamepad_events: gamepad_events
-                .iter()
-                .map(|event| <span class="kw">match </span>event {
-                    GamepadEvent::Connection(c) =&gt; {
-                        bones::GamepadEvent::Connection(bones::GamepadConnectionEvent {
-                            gamepad: c.gamepad.id <span class="kw">as </span>u32,
-                            event: <span class="kw">if </span>c.connected() {
-                                bones::GamepadConnectionEventKind::Connected
-                            } <span class="kw">else </span>{
-                                bones::GamepadConnectionEventKind::Disconnected
-                            },
-                        })
-                    }
-                    GamepadEvent::Button(b) =&gt; {
-                        bones::GamepadEvent::Button(bones::GamepadButtonEvent {
-                            gamepad: b.gamepad.id <span class="kw">as </span>u32,
-                            button: b.button_type.into_bones(),
-                            value: b.value,
-                        })
-                    }
-                    GamepadEvent::Axis(a) =&gt; bones::GamepadEvent::Axis(bones::GamepadAxisEvent {
-                        gamepad: a.gamepad.id <span class="kw">as </span>u32,
-                        axis: a.axis_type.into_bones(),
-                        value: a.value,
-                    }),
-                })
-                .collect(),
-        },
+        process_gamepad_events(),
     )
 }
 
