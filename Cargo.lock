@@ -1480,6 +1480,7 @@ dependencies = [
  "postcard",
  "rcgen",
  "rustls 0.21.12",
+ "send_wrapper",
  "serde",
  "serde_yaml",
  "smallvec",
