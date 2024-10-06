@@ -1,6 +1,7 @@
 //! Global, deterministic RNG generation resource.
 
 use crate::prelude::*;
+#[cfg(feature = "scripting")]
 use crate::{
     prelude::bindings::EcsRef,
     scripting::lua::{
@@ -10,7 +11,7 @@ use crate::{
 };
 use core::ops::RangeBounds;
 use std::collections::VecDeque;
-pub use turborand::prelude::*;
+use turborand::prelude::*;
 
 /// Resource that produces deterministic pseudo-random numbers/strings.
 ///
@@ -367,6 +368,7 @@ impl RngGenerator {
     }
 }
 
+#[cfg(feature = "scripting")]
 fn lua_metatable(ctx: lua::Context) -> lua::Table {
     let metatable = lua::Table::new(&ctx);
 

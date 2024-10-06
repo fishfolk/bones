@@ -4,7 +4,8 @@ use self::{
     input::{DenseInput, NetworkInputConfig, NetworkPlayerControl, NetworkPlayerControls},
     socket::Socket,
 };
-use crate::networking::{online::OnlineMatchmakerResponse, random::RngGenerator};
+use crate::networking::online::OnlineMatchmakerResponse;
+pub use crate::networking::random::RngGenerator;
 use crate::prelude::*;
 use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
 use ggrs::P2PSession;
@@ -60,7 +61,7 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{input, lan, online, proto, DisconnectedPlayers, SyncingInfo, RUNTIME, random};
+    pub use super::{input, lan, online, proto, DisconnectedPlayers, SyncingInfo, RUNTIME, random, RngGenerator};
 
     #[cfg(feature = "net-debug")]
     pub use super::debug::prelude::*;
