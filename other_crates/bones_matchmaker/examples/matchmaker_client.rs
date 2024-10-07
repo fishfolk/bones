@@ -2,7 +2,10 @@ use bones_matchmaker_proto::{
     MatchInfo, MatchmakerRequest, MatchmakerResponse, PlayerIdxAssignment, MATCH_ALPN, PLAY_ALPN,
 };
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{
+    net::{Ipv4Addr, SocketAddrV4},
+    time::Duration,
+};
 use tokio::task::JoinSet;
 
 const CLIENT_PORT: u16 = 0;
@@ -37,7 +40,8 @@ async fn client() -> anyhow::Result<()> {
             ]),
         ))
         .secret_key(secret_key)
-        .bind(CLIENT_PORT)
+        .bind_addr_v4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, CLIENT_PORT))
+        .bind()
         .await?;
 
     let i_am = std::env::args().nth(2).unwrap();
