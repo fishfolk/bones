@@ -2,10 +2,24 @@
 use crate::prelude::*;
 use gilrs::{ev::filter::axis_dpad_to_button, EventType, Filter, Gilrs as GilrsContext};
 use once_cell::sync::Lazy;
-use send_wrapper::SendWrapper;
 use std::sync::{Arc, Mutex};
 
+#[cfg(target_arch = "wasm32")]
+use send_wrapper::SendWrapper;
+
 /// Lazy-initialized GilrsContext
+#[cfg(not(target_arch = "wasm32"))]
+static GILRS_CONTEXT: Lazy<Arc<Mutex<GilrsContext>>> = Lazy::new(|| {
+    Arc::new(Mutex::new(
+        GilrsContext::new().expect("Failed to initialize GilrsContext"),
+    ))
+});
+
+// Use SendWrapper when on wasm - GilrsContext is not Sync/Send on wasm,
+// this is ok because bevy is single threaded on wasm, it will only be
+// accessed from one thread.
+/// Lazy-initialized GilrsContext
+#[cfg(target_arch = "wasm32")]
 static GILRS_CONTEXT: Lazy<Arc<Mutex<SendWrapper<GilrsContext>>>> = Lazy::new(|| {
     Arc::new(Mutex::new(SendWrapper::new(
         GilrsContext::new().expect("Failed to initialize GilrsContext"),
