@@ -8,25 +8,23 @@
 
 mod collections;
 mod default;
+#[cfg(feature = "ulid")]
 mod labeled_id;
 mod names;
+#[cfg(feature = "turborand")]
 mod random;
+#[cfg(feature = "ulid")]
 mod ulid;
 
 /// Helper to export the same types in the crate root and in the prelude.
 macro_rules! pub_use {
     () => {
-        pub use crate::{collections::*, default::*, labeled_id::*, names::*, random::*, ulid::*};
+        #[cfg(feature = "turborand")]
+        pub use crate::random::*;
+        pub use crate::{collections::*, default::*, names::*};
+        #[cfg(feature = "ulid")]
+        pub use crate::{labeled_id::*, ulid::*};
         pub use bones_utils_macros::*;
-        pub use branches::{likely, unlikely};
-        pub use futures_lite as futures;
-        pub use fxhash;
-        pub use hashbrown;
-        pub use maybe_owned::*;
-        pub use parking_lot;
-        pub use smallvec::*;
-        pub use turborand::*;
-        pub use ustr::{ustr, Ustr, UstrMap, UstrSet};
     };
 }
 pub_use!();

@@ -6,7 +6,9 @@ use std::{
     sync::OnceLock,
 };
 
-use bones_utils::{default, hashbrown::hash_map, parking_lot::RwLock, HashMap};
+use bones_utils::{default, HashMap};
+use hashbrown::hash_map;
+use parking_lot::RwLock;
 
 use crate::{
     prelude::*,
@@ -665,7 +667,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     pub fn iter(&self) -> SMapIter<K, V> {
         fn map_fn<'a, K: HasSchema, V: HasSchema>(
             (key, value): (&'a SchemaBox, &'a SchemaBox),
-        ) -> (&K, &V) {
+        ) -> (&'a K, &'a V) {
             // SOUND: SMap ensures K and V schemas always match.
             unsafe {
                 (
@@ -711,7 +713,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     #[allow(clippy::type_complexity)]
     pub fn values(
         &self,
-    ) -> std::iter::Map<hash_map::Values<SchemaBox, SchemaBox>, for<'a> fn(&'a SchemaBox) -> &V>
+    ) -> std::iter::Map<hash_map::Values<SchemaBox, SchemaBox>, for<'a> fn(&'a SchemaBox) -> &'a V>
     {
         fn map_fn<V: HasSchema>(value: &SchemaBox) -> &V {
             // SOUND: SMap ensures value schema always matches.
@@ -726,7 +728,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
         &mut self,
     ) -> std::iter::Map<
         hash_map::ValuesMut<SchemaBox, SchemaBox>,
-        for<'a> fn(&'a mut SchemaBox) -> &mut V,
+        for<'a> fn(&'a mut SchemaBox) -> &'a mut V,
     > {
         fn map_fn<V>(value: &mut SchemaBox) -> &mut V {
             // SOUND: SMap ensures value schema always matches

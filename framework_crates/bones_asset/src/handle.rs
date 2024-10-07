@@ -6,7 +6,8 @@ use std::{
 };
 
 use bones_schema::{prelude::*, raw_fns::*};
-use bones_utils::{parking_lot::RwLock, HashMap};
+use bones_utils::HashMap;
+use parking_lot::RwLock;
 use ulid::Ulid;
 
 use crate::{AssetServer, NetworkHandle};

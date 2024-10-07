@@ -6,7 +6,7 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use bones_utils::fxhash::FxHasher;
+use fxhash::FxHasher;
 
 use crate::Unsafe;
 

@@ -24,6 +24,8 @@ pub mod prelude {
         utils::*, AssetServerExt, DefaultGamePlugin, DefaultSessionPlugin, ExitBones,
     };
 
+    pub use futures_lite::future::Boxed as BoxedFuture;
+
     #[cfg(feature = "ui")]
     pub use crate::debug;
 
@@ -42,6 +44,9 @@ pub mod prelude {
 
     #[cfg(feature = "localization")]
     pub use crate::localization::*;
+
+    #[cfg(feature = "logging")]
+    pub use crate::logging::prelude::*;
 }
 
 pub mod animation;
@@ -66,6 +71,9 @@ pub use bones_scripting as scripting;
 
 #[cfg(feature = "localization")]
 pub mod localization;
+
+#[cfg(feature = "logging")]
+pub mod logging;
 
 /// External crate documentation.
 ///

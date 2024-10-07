@@ -402,8 +402,9 @@ impl Timer {
 }
 
 /// Specifies [`Timer`] behavior.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
-#[cfg_attr(feature = "serialize", derive(serde::Deserialize, serde::Serialize))]
+#[derive(
+    Debug, Clone, Copy, Eq, PartialEq, Hash, Default, serde::Deserialize, serde::Serialize,
+)]
 pub enum TimerMode {
     /// Run once and stop.
     #[default]
@@ -413,7 +414,7 @@ pub enum TimerMode {
 }
 
 // To speed up CI, only do these on miri, where they complete without waiting for time to pass.
-#[cfg(miri)]
+#[cfg(all(test, miri))]
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;

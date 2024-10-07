@@ -1,6 +1,6 @@
 Networked multi-player plugin.
 
-Jumpy uses a Peer-to-Peer, rollback networking model built on [GGRS].
+Bones uses a Peer-to-Peer, rollback networking model built on [GGRS].
 
 Messages are serialized/deserialized to a binary representation using [`serde`] and the [`postcard`]
 crate.

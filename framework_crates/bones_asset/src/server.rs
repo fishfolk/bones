@@ -7,6 +7,7 @@ use anyhow::Context;
 use append_only_vec::AppendOnlyVec;
 use async_channel::{Receiver, Sender};
 use bevy_tasks::IoTaskPool;
+use bones_utils::{default, Deref, DerefMut, UlidExt};
 use dashmap::{
     mapref::one::{
         MappedRef as MappedMapRef, MappedRefMut as MappedMapRefMut, Ref as MapRef,
@@ -15,19 +16,14 @@ use dashmap::{
     DashMap,
 };
 use once_cell::sync::Lazy;
+use parking_lot::{MappedMutexGuard, MutexGuard};
 use semver::VersionReq;
 use serde::{de::DeserializeSeed, Deserialize};
-use ulid::Ulid;
-
 #[allow(unused_imports)]
 use tracing::info;
+use ulid::Ulid;
 
 use crate::prelude::*;
-
-use bones_utils::{
-    parking_lot::{MappedMutexGuard, MutexGuard},
-    *,
-};
 
 mod schema_loader;
 
@@ -888,7 +884,7 @@ impl AssetServer {
                 if T::schema() == <SchemaBox as HasSchema>::schema() {
                     // SOUND: the above comparison verifies that T is concretely a SchemaBox so &Schemabox
                     // is the same as &T.
-                    Some(unsafe { std::mem::transmute(asset) })
+                    Some(unsafe { std::mem::transmute::<&SchemaBox, &T>(asset) })
                 } else {
                     asset.try_cast_ref().ok()
                 }
@@ -964,7 +960,7 @@ impl AssetServer {
             if T::schema() == <SchemaBox as HasSchema>::schema() {
                 // SOUND: the above comparison verifies that T is concretely a SchemaBox so &mut Schemabox
                 // is the same as &mut T.
-                unsafe { std::mem::transmute(asset) }
+                unsafe { std::mem::transmute::<&mut SchemaBox, &mut T>(asset) }
             } else {
                 asset.cast_mut()
             }
@@ -1025,7 +1021,9 @@ fn path_is_metadata(path: &Path) -> bool {
 
 pub use metadata::*;
 mod metadata {
+    use bones_utils::LabeledId;
     use serde::de::{DeserializeSeed, Error, Unexpected, VariantAccess, Visitor};
+    use ustr::{ustr, Ustr};
 
     use super::*;
 

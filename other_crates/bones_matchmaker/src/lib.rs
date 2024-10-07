@@ -11,8 +11,10 @@ use bones_matchmaker_proto::MATCH_ALPN;
 use iroh_net::key::SecretKey;
 
 pub mod cli;
-
+mod helpers;
+mod lobbies;
 mod matchmaker;
+mod matchmaking;
 
 #[derive(clap::Parser, Debug)]
 #[command(author, version, about, long_about = None)]

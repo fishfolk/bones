@@ -10,11 +10,11 @@ use crate::prelude::*;
 
 pub use serializer_deserializer::*;
 mod serializer_deserializer {
-    use bones_utils::{ustr, Ustr};
     use serde::{
         de::{Unexpected, VariantAccess, Visitor},
         ser::{SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant},
     };
+    use ustr::{ustr, Ustr};
 
     use super::*;
 

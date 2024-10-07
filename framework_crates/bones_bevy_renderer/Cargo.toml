@@ -15,7 +15,7 @@ default = ["webgl2"]
 webgl2  = ["bevy/webgl2"]
 
 [dependencies]
-bones_framework = { version = "0.3", path = "../bones_framework" }
+bones_framework = { version = "0.4.0", path = "../bones_framework" }
 
 bevy_egui           = "0.22"
 glam                = { version = "0.24", features = ["serde"] }
@@ -26,7 +26,7 @@ anyhow              = "1.0"
 
 [dependencies.bevy]
 default-features = false
-features         = ["bevy_render", "bevy_core_pipeline", "bevy_sprite", "x11", "bevy_gilrs"]
+features         = ["bevy_render", "bevy_core_pipeline", "bevy_sprite", "x11"]
 version          = "0.11"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

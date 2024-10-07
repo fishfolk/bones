@@ -1,8 +1,8 @@
 use std::ffi::c_void;
 
 use bones_schema::alloc::TypeDatas;
-use bones_utils::ustr;
 use serde::Deserialize;
+use ustr::ustr;
 
 use crate::prelude::*;
 

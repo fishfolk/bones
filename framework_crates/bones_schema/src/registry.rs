@@ -6,7 +6,7 @@ use std::{
 };
 
 use append_only_vec::AppendOnlyVec;
-use bones_utils::*;
+use bones_utils::Deref;
 
 use crate::prelude::*;
 
@@ -145,6 +145,8 @@ pub static SCHEMA_REGISTRY: SchemaRegistry = SchemaRegistry {
 
 #[cfg(test)]
 mod test {
+    use bones_utils::default;
+
     use super::*;
 
     #[test]
