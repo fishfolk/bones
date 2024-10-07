@@ -3996,9 +3996,9 @@ checksum = "187674a687eed5fe42285b40c6291f9a01517d415fad1c3cbc6a9f778af7fcd4"
 
 [[package]]
 name = "iroh-base"
-version = "0.24.0"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "961bc5e09fec3eb0bf329670fc50d2daa8d73081842b647bb3a88096ec1b055c"
+checksum = "545424889bce87e44fd08dac9e6889635630fdbdaaa858a3c5a5f0adbb8d3779"
 dependencies = [
  "aead",
  "anyhow",
@@ -4037,9 +4037,9 @@ dependencies = [
 
 [[package]]
 name = "iroh-metrics"
-version = "0.24.0"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "508015311e5982ab48133fc3ce9848a5c6beadc4ceaa99504299ba3da366a398"
+checksum = "9fb6ab80f7cccde80be07a643308e1ff925d5be91721ec65ba96b261a0bcb5e5"
 dependencies = [
  "anyhow",
  "erased_set",
@@ -4058,9 +4058,9 @@ dependencies = [
 
 [[package]]
 name = "iroh-net"
-version = "0.24.0"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19cf421dc1f3069a27e7463f72bddd51353ec531f9294a649baebb6d4fb259eb"
+checksum = "4a099a60478cb9319153756a9cf2ff41aa03d18403690a91e60f049ad467b057"
 dependencies = [
  "anyhow",
  "backoff",
@@ -4102,7 +4102,6 @@ dependencies = [
  "pkarr",
  "postcard",
  "rand",
- "rand_core",
  "rcgen",
  "reqwest",
  "ring",
@@ -7548,6 +7547,8 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
+ "futures-util",
+ "hashbrown 0.14.5",
  "pin-project-lite",
  "tokio",
 ]

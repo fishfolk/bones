@@ -5,7 +5,7 @@
 #[macro_use]
 extern crate tracing;
 
-use std::net::SocketAddr;
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
 use bones_matchmaker_proto::MATCH_ALPN;
 use iroh_net::key::SecretKey;
@@ -64,7 +64,8 @@ async fn server(args: Config) -> anyhow::Result<()> {
             ]),
         ))
         .secret_key(secret_key)
-        .bind(port)
+        .bind_addr_v4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port))
+        .bind()
         .await?;
 
     let my_addr = endpoint.node_addr().await?;

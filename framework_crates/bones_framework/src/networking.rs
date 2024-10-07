@@ -135,7 +135,7 @@ pub async fn get_network_endpoint() -> &'static iroh_net::Endpoint {
                     ]),
                 ))
                 .secret_key(secret_key)
-                .bind(0)
+                .bind()
                 .await
                 .unwrap()
         })
