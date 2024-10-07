@@ -43,7 +43,8 @@ pub async fn handle_stop_matchmaking(
 
     let message = postcard::to_allocvec(&response)?;
     send.write_all(&message).await?;
-    send.finish().await?;
+    send.finish()?;
+    send.stopped().await?;
 
     // If we removed a player, send update to the other players in the room
     if removed {
@@ -122,14 +123,16 @@ pub async fn handle_request_matchaking(
             "Matchmaking room is full. Please try matchmaking again shortly.".to_string(),
         ))?;
         send.write_all(&error_message).await?;
-        send.finish().await?;
+        send.finish()?;
+        send.stopped().await?;
         return Ok(());
     }
 
     // Accept the matchmaking request
     let message = postcard::to_allocvec(&MatchmakerResponse::Accepted)?;
     send.write_all(&message).await?;
-    send.finish().await?;
+    send.finish()?;
+    send.stopped().await?;
 
     // Add the connection to the matchmaking room
     let new_player_count = state
@@ -215,7 +218,10 @@ async fn send_matchmaking_updates(
     // Send first update and check active connections
     for (_index, conn) in connections.into_iter().enumerate() {
         if let Ok(mut send) = conn.open_uni().await {
-            if send.write_all(&first_update_message).await.is_ok() && send.finish().await.is_ok() {
+            if send.write_all(&first_update_message).await.is_ok()
+                && send.finish().is_ok()
+                && send.stopped().await.is_ok()
+            {
                 active_connections.push(conn);
             }
         }
@@ -232,7 +238,9 @@ async fn send_matchmaking_updates(
             if let Ok(mut send) = member.open_uni().await {
                 if let Err(e) = send.write_all(&second_update_message).await {
                     warn!("Connection to client {} has closed. {:?}", index, e);
-                } else if let Err(e) = send.finish().await {
+                } else if let Err(e) = send.finish() {
+                    warn!("Connection to client {} has closed. {:?}", index, e);
+                } else if let Err(e) = send.stopped().await {
                     warn!("Connection to client {} has closed. {:?}", index, e);
                 }
             }
