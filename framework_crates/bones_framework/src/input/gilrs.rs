@@ -2,14 +2,13 @@
 use crate::prelude::*;
 use gilrs::{ev::filter::axis_dpad_to_button, EventType, Filter, Gilrs as GilrsContext};
 use once_cell::sync::Lazy;
-use send_wrapper::SendWrapper;
 use std::sync::{Arc, Mutex};
 
 /// Lazy-initialized GilrsContext
-static GILRS_CONTEXT: Lazy<Arc<Mutex<SendWrapper<GilrsContext>>>> = Lazy::new(|| {
-    Arc::new(Mutex::new(SendWrapper::new(
+static GILRS_CONTEXT: Lazy<Arc<Mutex<GilrsContext>>> = Lazy::new(|| {
+    Arc::new(Mutex::new(
         GilrsContext::new().expect("Failed to initialize GilrsContext"),
-    )))
+    ))
 });
 
 /// Processes gilrs gamepad events into Bones-native GamepadInputs
