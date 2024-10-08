@@ -24,7 +24,8 @@ pub(crate) async fn resolve_list_lobbies(
     let message = MatchmakerRequest::ListLobbies(game_id);
     let message = postcard::to_allocvec(&message)?;
     send.write_all(&message).await?;
-    send.finish().await?;
+    send.finish()?;
+    send.stopped().await?;
 
     let response = recv.read_to_end(5 * 1024).await?;
     let message: MatchmakerResponse = postcard::from_bytes(&response)?;
@@ -50,7 +51,8 @@ pub(crate) async fn resolve_create_lobby(
     let message = MatchmakerRequest::CreateLobby(lobby_info);
     let message = postcard::to_allocvec(&message)?;
     send.write_all(&message).await?;
-    send.finish().await?;
+    send.finish()?;
+    send.stopped().await?;
 
     let response = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
     let message: MatchmakerResponse = postcard::from_bytes(&response)?;
@@ -81,7 +83,8 @@ pub(crate) async fn resolve_join_lobby(
     let message = MatchmakerRequest::JoinLobby(game_id, lobby_id.clone(), password);
     let message = postcard::to_allocvec(&message)?;
     send.write_all(&message).await?;
-    send.finish().await?;
+    send.finish()?;
+    send.stopped().await?;
 
     let response = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
     let message: MatchmakerResponse = postcard::from_bytes(&response)?;

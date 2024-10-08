@@ -5,7 +5,7 @@
 #[macro_use]
 extern crate tracing;
 
-use std::net::SocketAddr;
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
 use bones_matchmaker_proto::MATCH_ALPN;
 use iroh_net::key::SecretKey;
@@ -52,6 +52,11 @@ async fn server(args: Config) -> anyhow::Result<()> {
         .alpns(vec![MATCH_ALPN.to_vec()])
         .discovery(Box::new(
             iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
+                Box::new(
+                    iroh_net::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
+                        secret_key.public(),
+                    )?,
+                ),
                 Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
                 Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
                     secret_key.clone(),
@@ -59,7 +64,8 @@ async fn server(args: Config) -> anyhow::Result<()> {
             ]),
         ))
         .secret_key(secret_key)
-        .bind(port)
+        .bind_addr_v4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port))
+        .bind()
         .await?;
 
     let my_addr = endpoint.node_addr().await?;
@@ -76,6 +82,7 @@ async fn server(args: Config) -> anyhow::Result<()> {
             Ok(conn) => {
                 info!(
                     connection_id = conn.stable_id(),
+                    addr = ?conn.remote_address(),
                     "Accepted connection from client"
                 );
 

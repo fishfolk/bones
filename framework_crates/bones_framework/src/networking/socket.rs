@@ -152,7 +152,8 @@ impl NetworkSocket for Socket {
                     let result = async move {
                         let mut stream = conn.open_uni().await?;
                         stream.write_chunk(message).await?;
-                        stream.finish().await?;
+                        stream.finish()?;
+                        stream.stopped().await?;
                         anyhow::Ok(())
                     };
                     if let Err(err) = result.await {
@@ -168,7 +169,8 @@ impl NetworkSocket for Socket {
                         let result = async move {
                             let mut stream = conn.open_uni().await?;
                             stream.write_chunk(message).await?;
-                            stream.finish().await?;
+                            stream.finish()?;
+                            stream.stopped().await?;
                             anyhow::Ok(())
                         };
                         if let Err(err) = result.await {
@@ -233,18 +235,19 @@ pub(super) async fn establish_peer_connections(
     info!(players=?range, "Waiting for {} peer connections", range.len());
     for i in range {
         // Wait for connection
-        let mut conn = ep
+        let conn = ep
             .accept()
             .await
             .ok_or_else(|| anyhow::anyhow!("no connection for {}", i))?;
-        let alpn = conn.alpn().await?;
+        let mut connecting = conn.accept()?;
+        let alpn = connecting.alpn().await?;
         anyhow::ensure!(
             alpn == PLAY_ALPN,
             "invalid ALPN: {:?}",
             std::str::from_utf8(&alpn).unwrap_or("<bytes>")
         );
 
-        let conn = conn.await?;
+        let conn = connecting.await?;
 
         // Receive the player index
         let idx = {
@@ -271,7 +274,8 @@ pub(super) async fn establish_peer_connections(
         // Send player index
         let mut channel = conn.open_uni().await?;
         channel.write(&player_idx.to_le_bytes()).await?;
-        channel.finish().await?;
+        channel.finish()?;
+        channel.stopped().await?;
 
         out_connections.push((i, conn));
     }

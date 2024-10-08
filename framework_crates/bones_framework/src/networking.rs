@@ -122,6 +122,12 @@ pub async fn get_network_endpoint() -> &'static iroh_net::Endpoint {
                 .alpns(vec![MATCH_ALPN.to_vec(), PLAY_ALPN.to_vec()])
                 .discovery(Box::new(
                     iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
+                        Box::new(
+                            iroh_net::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
+                                secret_key.public(),
+                            )
+                            .unwrap(),
+                        ),
                         Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
                         Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
                             secret_key.clone(),
@@ -129,7 +135,7 @@ pub async fn get_network_endpoint() -> &'static iroh_net::Endpoint {
                     ]),
                 ))
                 .secret_key(secret_key)
-                .bind(0)
+                .bind()
                 .await
                 .unwrap()
         })

@@ -41,7 +41,8 @@ pub async fn handle_list_lobbies(game_id: GameID, send: &mut quinn::SendStream) 
     // Send the lobby list back to the client
     let message = postcard::to_allocvec(&MatchmakerResponse::LobbiesList(lobbies))?;
     send.write_all(&message).await?;
-    send.finish().await?;
+    send.finish()?;
+    send.stopped().await?;
 
     Ok(())
 }
@@ -77,7 +78,8 @@ pub async fn handle_create_lobby(
     // Send confirmation to the client
     let message = postcard::to_allocvec(&MatchmakerResponse::LobbyCreated(lobby_id))?;
     send.write_all(&message).await?;
-    send.finish().await?;
+    send.finish()?;
+    send.stopped().await?;
 
     Ok(())
 }
@@ -102,7 +104,8 @@ pub async fn handle_join_lobby(
                         "Incorrect password".to_string(),
                     ))?;
                     send.write_all(&message).await?;
-                    send.finish().await?;
+                    send.finish()?;
+                    send.stopped().await?;
                     return Ok(());
                 }
             }
@@ -130,7 +133,8 @@ pub async fn handle_join_lobby(
                     let message =
                         postcard::to_allocvec(&MatchmakerResponse::LobbyJoined(lobby_id.clone()))?;
                     send.write_all(&message).await?;
-                    send.finish().await?;
+                    send.finish()?;
+                    send.stopped().await?;
 
                     // Always notify all players in the lobby about the update
                     let lobby_update_message =
@@ -144,7 +148,8 @@ pub async fn handle_join_lobby(
                         for connection in connections.get().iter() {
                             let mut send = connection.open_uni().await?;
                             send.write_all(&lobby_update_message).await?;
-                            send.finish().await?;
+                            send.finish()?;
+                            send.stopped().await?;
                         }
                     }
 
@@ -176,20 +181,23 @@ pub async fn handle_join_lobby(
                         "Lobby is full".to_string(),
                     ))?;
                     send.write_all(&message).await?;
-                    send.finish().await?;
+                    send.finish()?;
+                    send.stopped().await?;
                 }
             }
         } else {
             let message =
                 postcard::to_allocvec(&MatchmakerResponse::Error("Lobby not found".to_string()))?;
             send.write_all(&message).await?;
-            send.finish().await?;
+            send.finish()?;
+            send.stopped().await?;
         }
     } else {
         let message =
             postcard::to_allocvec(&MatchmakerResponse::Error("Game not found".to_string()))?;
         send.write_all(&message).await?;
-        send.finish().await?;
+        send.finish()?;
+        send.stopped().await?;
     }
 
     Ok(())

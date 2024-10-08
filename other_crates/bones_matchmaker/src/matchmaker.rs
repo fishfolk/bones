@@ -52,6 +52,8 @@ pub async fn handle_connection(ep: Endpoint, conn: Connection) -> Result<()> {
                 match request {
                     MatchmakerRequest::RequestMatchmaking(match_info) => {
                         handle_request_matchaking(ep.clone(), conn.clone(), match_info, &mut send).await?;
+                        send.finish()?;
+                        send.stopped().await?;
                     }
                     MatchmakerRequest::StopMatchmaking(match_info) => {
                         handle_stop_matchmaking(conn.clone(), match_info, &mut send).await?;
@@ -105,7 +107,7 @@ pub async fn start_game(
     for (conn_idx, conn) in members.iter().enumerate() {
         let id = iroh_net::endpoint::get_remote_node_id(conn)?;
         let mut addr = NodeAddr::new(id);
-        if let Some(info) = ep.connection_info(id) {
+        if let Some(info) = ep.remote_info(id) {
             if let Some(relay_url) = info.relay_url {
                 addr = addr.with_relay_url(relay_url.relay_url);
             }
@@ -129,7 +131,8 @@ pub async fn start_game(
         })?;
         let mut send = conn.open_uni().await?;
         send.write_all(&message).await?;
-        send.finish().await?;
+        send.finish()?;
+        send.stopped().await?;
         conn.close(0u32.into(), b"done");
     }
 

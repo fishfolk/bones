@@ -27,7 +27,8 @@ pub(crate) async fn resolve_search_for_match(
     info!(request=?message, "Resolve: Sending match request");
     let message = postcard::to_allocvec(&message)?;
     send.write_all(&message).await?;
-    send.finish().await?;
+    send.finish()?;
+    send.stopped().await?;
 
     let res = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
     let _response: MatchmakerResponse = postcard::from_bytes(&res)?;
@@ -114,7 +115,8 @@ pub(crate) async fn resolve_stop_search_for_match(
 
     let message = postcard::to_allocvec(&message)?;
     send.write_all(&message).await?;
-    send.finish().await?;
+    send.finish()?;
+    send.stopped().await?;
 
     let res = recv.read_to_end(READ_TO_END_BYTE_COUNT).await?;
     let response: MatchmakerResponse = postcard::from_bytes(&res)?;
