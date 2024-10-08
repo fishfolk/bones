@@ -306,6 +306,10 @@
 <a href="#306" id="306">306</a>
 <a href="#307" id="307">307</a>
 <a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
 </pre></div><pre class="rust"><code><span class="comment">// TODO
 </span><span class="attr">#![allow(missing_docs)]
 
@@ -460,7 +464,8 @@
                     <span class="kw">let </span>result = <span class="kw">async move </span>{
                         <span class="kw">let </span><span class="kw-2">mut </span>stream = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
                         stream.write_chunk(message).<span class="kw">await</span><span class="question-mark">?</span>;
-                        stream.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+                        stream.finish()<span class="question-mark">?</span>;
+                        stream.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
                         anyhow::Ok(())
                     };
                     <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = result.<span class="kw">await </span>{
@@ -476,7 +481,8 @@
                         <span class="kw">let </span>result = <span class="kw">async move </span>{
                             <span class="kw">let </span><span class="kw-2">mut </span>stream = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
                             stream.write_chunk(message).<span class="kw">await</span><span class="question-mark">?</span>;
-                            stream.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+                            stream.finish()<span class="question-mark">?</span>;
+                            stream.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
                             anyhow::Ok(())
                         };
                         <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = result.<span class="kw">await </span>{
@@ -541,18 +547,19 @@
     <span class="macro">info!</span>(players=<span class="question-mark">?</span>range, <span class="string">"Waiting for {} peer connections"</span>, range.len());
     <span class="kw">for </span>i <span class="kw">in </span>range {
         <span class="comment">// Wait for connection
-        </span><span class="kw">let </span><span class="kw-2">mut </span>conn = ep
+        </span><span class="kw">let </span>conn = ep
             .accept()
             .<span class="kw">await
             </span>.ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no connection for {}"</span>, i))<span class="question-mark">?</span>;
-        <span class="kw">let </span>alpn = conn.alpn().<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>connecting = conn.accept()<span class="question-mark">?</span>;
+        <span class="kw">let </span>alpn = connecting.alpn().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="macro">anyhow::ensure!</span>(
             alpn == PLAY_ALPN,
             <span class="string">"invalid ALPN: {:?}"</span>,
             std::str::from_utf8(<span class="kw-2">&amp;</span>alpn).unwrap_or(<span class="string">"&lt;bytes&gt;"</span>)
         );
 
-        <span class="kw">let </span>conn = conn.<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let </span>conn = connecting.<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="comment">// Receive the player index
         </span><span class="kw">let </span>idx = {
@@ -579,7 +586,8 @@
         <span class="comment">// Send player index
         </span><span class="kw">let </span><span class="kw-2">mut </span>channel = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
         channel.write(<span class="kw-2">&amp;</span>player_idx.to_le_bytes()).<span class="kw">await</span><span class="question-mark">?</span>;
-        channel.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+        channel.finish()<span class="question-mark">?</span>;
+        channel.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
 
         out_connections.push((i, conn));
     }

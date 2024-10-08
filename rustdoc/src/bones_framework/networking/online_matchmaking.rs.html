@@ -137,6 +137,8 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(missing_docs)]
 
 </span><span class="kw">use </span><span class="kw">super</span>::online::{
@@ -166,7 +168,8 @@
     <span class="macro">info!</span>(request=<span class="question-mark">?</span>message, <span class="string">"Resolve: Sending match request"</span>);
     <span class="kw">let </span>message = postcard::to_allocvec(<span class="kw-2">&amp;</span>message)<span class="question-mark">?</span>;
     send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-    send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+    send.finish()<span class="question-mark">?</span>;
+    send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">let </span>res = recv.read_to_end(READ_TO_END_BYTE_COUNT).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>_response: MatchmakerResponse = postcard::from_bytes(<span class="kw-2">&amp;</span>res)<span class="question-mark">?</span>;
@@ -253,7 +256,8 @@
 
     <span class="kw">let </span>message = postcard::to_allocvec(<span class="kw-2">&amp;</span>message)<span class="question-mark">?</span>;
     send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-    send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+    send.finish()<span class="question-mark">?</span>;
+    send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">let </span>res = recv.read_to_end(READ_TO_END_BYTE_COUNT).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>response: MatchmakerResponse = postcard::from_bytes(<span class="kw-2">&amp;</span>res)<span class="question-mark">?</span>;

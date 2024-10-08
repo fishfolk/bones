@@ -547,6 +547,8 @@
 <a href="#547" id="547">547</a>
 <a href="#548" id="548">548</a>
 <a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! LAN matchmaking and socket implementation.
 //!
 //! ## Matchmaking
@@ -877,14 +879,15 @@
             }
 
             <span class="comment">// Handle new connections
-            </span>new_connection = ep.accept() =&gt; {
-                <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>new_connection) = new_connection <span class="kw">else </span>{
+            </span>incomming = ep.accept() =&gt; {
+                <span class="kw">let </span><span class="prelude-val">Some</span>(incomming) = incomming <span class="kw">else </span>{
                     <span class="macro">anyhow::bail!</span>(<span class="string">"unable to accept new connections"</span>);
                 };
                 <span class="kw">let </span>result = <span class="kw">async move </span>{
-                    <span class="kw">let </span>alpn = new_connection.alpn().<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="kw">let </span><span class="kw-2">mut </span>connecting = incomming.accept()<span class="question-mark">?</span>;
+                    <span class="kw">let </span>alpn = connecting.alpn().<span class="kw">await</span><span class="question-mark">?</span>;
                     <span class="macro">anyhow::ensure!</span>(alpn == PLAY_ALPN, <span class="string">"unexpected ALPN"</span>);
-                    <span class="kw">let </span>conn = new_connection.<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="kw">let </span>conn = connecting.<span class="kw">await</span><span class="question-mark">?</span>;
                     anyhow::Ok(conn)
                 };
 
@@ -932,7 +935,7 @@
                     .for_each(|(i, conn)| {
                         <span class="kw">let </span>id = get_remote_node_id(conn).expect(<span class="string">"invalid connection"</span>);
                         <span class="kw">let </span><span class="kw-2">mut </span>addr = NodeAddr::new(id);
-                        <span class="kw">if let </span><span class="prelude-val">Some</span>(info) = endpoint.connection_info(id) {
+                        <span class="kw">if let </span><span class="prelude-val">Some</span>(info) = endpoint.remote_info(id) {
                             <span class="kw">if let </span><span class="prelude-val">Some</span>(relay_url) = info.relay_url {
                                 addr = addr.with_relay_url(relay_url.relay_url);
                             }
@@ -951,7 +954,8 @@
                     player_count,
                 })<span class="question-mark">?</span>)
                 .<span class="kw">await</span><span class="question-mark">?</span>;
-                uni.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+                uni.finish()<span class="question-mark">?</span>;
+                uni.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
             }
 
             <span class="kw">let </span>connections = connections

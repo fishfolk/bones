@@ -135,6 +135,9 @@
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::lobbies::{handle_create_lobby, handle_join_lobby, handle_list_lobbies};
 <span class="kw">use </span><span class="kw">super</span>::matchmaking::{handle_request_matchaking, handle_stop_matchmaking};
 <span class="kw">use </span><span class="kw">crate</span>::helpers::generate_random_seed;
@@ -189,6 +192,8 @@
                 </span><span class="kw">match </span>request {
                     MatchmakerRequest::RequestMatchmaking(match_info) =&gt; {
                         handle_request_matchaking(ep.clone(), conn.clone(), match_info, <span class="kw-2">&amp;mut </span>send).<span class="kw">await</span><span class="question-mark">?</span>;
+                        send.finish()<span class="question-mark">?</span>;
+                        send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
                     }
                     MatchmakerRequest::StopMatchmaking(match_info) =&gt; {
                         handle_stop_matchmaking(conn.clone(), match_info, <span class="kw-2">&amp;mut </span>send).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -242,7 +247,7 @@
     </span><span class="kw">for </span>(conn_idx, conn) <span class="kw">in </span>members.iter().enumerate() {
         <span class="kw">let </span>id = iroh_net::endpoint::get_remote_node_id(conn)<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>addr = NodeAddr::new(id);
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(info) = ep.connection_info(id) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(info) = ep.remote_info(id) {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(relay_url) = info.relay_url {
                 addr = addr.with_relay_url(relay_url.relay_url);
             }
@@ -266,7 +271,8 @@
         })<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>send = conn.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
         send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-        send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+        send.finish()<span class="question-mark">?</span>;
+        send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
         conn.close(<span class="number">0u32</span>.into(), <span class="string">b"done"</span>);
     }
 

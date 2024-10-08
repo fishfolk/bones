@@ -90,6 +90,13 @@
 <a href="#90" id="90">90</a>
 <a href="#91" id="91">91</a>
 <a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 </span><span class="comment">// This cfg_attr is needed because `rustdoc::all` includes lints not supported on stable
 </span><span class="attr">#![cfg_attr(doc, allow(unknown_lints))]
@@ -97,7 +104,7 @@
 #[macro_use]
 </span><span class="kw">extern crate </span>tracing;
 
-<span class="kw">use </span>std::net::SocketAddr;
+<span class="kw">use </span>std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
 <span class="kw">use </span>bones_matchmaker_proto::MATCH_ALPN;
 <span class="kw">use </span>iroh_net::key::SecretKey;
@@ -144,6 +151,11 @@
         .alpns(<span class="macro">vec!</span>[MATCH_ALPN.to_vec()])
         .discovery(Box::new(
             iroh_net::discovery::ConcurrentDiscovery::from_services(<span class="macro">vec!</span>[
+                Box::new(
+                    iroh_net::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
+                        secret_key.public(),
+                    )<span class="question-mark">?</span>,
+                ),
                 Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
                 Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
                     secret_key.clone(),
@@ -151,7 +163,8 @@
             ]),
         ))
         .secret_key(secret_key)
-        .bind(port)
+        .bind_addr_v4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port))
+        .bind()
         .<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">let </span>my_addr = endpoint.node_addr().<span class="kw">await</span><span class="question-mark">?</span>;
@@ -168,6 +181,7 @@
             <span class="prelude-val">Ok</span>(conn) =&gt; {
                 <span class="macro">info!</span>(
                     connection_id = conn.stable_id(),
+                    addr = <span class="question-mark">?</span>conn.remote_address(),
                     <span class="string">"Accepted connection from client"
                 </span>);
 

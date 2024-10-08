@@ -141,6 +141,9 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(missing_docs)]
 
 </span><span class="kw">use </span><span class="kw">super</span>::online::{
@@ -167,7 +170,8 @@
     <span class="kw">let </span>message = MatchmakerRequest::ListLobbies(game_id);
     <span class="kw">let </span>message = postcard::to_allocvec(<span class="kw-2">&amp;</span>message)<span class="question-mark">?</span>;
     send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-    send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+    send.finish()<span class="question-mark">?</span>;
+    send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">let </span>response = recv.read_to_end(<span class="number">5 </span>* <span class="number">1024</span>).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>message: MatchmakerResponse = postcard::from_bytes(<span class="kw-2">&amp;</span>response)<span class="question-mark">?</span>;
@@ -193,7 +197,8 @@
     <span class="kw">let </span>message = MatchmakerRequest::CreateLobby(lobby_info);
     <span class="kw">let </span>message = postcard::to_allocvec(<span class="kw-2">&amp;</span>message)<span class="question-mark">?</span>;
     send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-    send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+    send.finish()<span class="question-mark">?</span>;
+    send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">let </span>response = recv.read_to_end(READ_TO_END_BYTE_COUNT).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>message: MatchmakerResponse = postcard::from_bytes(<span class="kw-2">&amp;</span>response)<span class="question-mark">?</span>;
@@ -224,7 +229,8 @@
     <span class="kw">let </span>message = MatchmakerRequest::JoinLobby(game_id, lobby_id.clone(), password);
     <span class="kw">let </span>message = postcard::to_allocvec(<span class="kw-2">&amp;</span>message)<span class="question-mark">?</span>;
     send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-    send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+    send.finish()<span class="question-mark">?</span>;
+    send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">let </span>response = recv.read_to_end(READ_TO_END_BYTE_COUNT).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>message: MatchmakerResponse = postcard::from_bytes(<span class="kw-2">&amp;</span>response)<span class="question-mark">?</span>;

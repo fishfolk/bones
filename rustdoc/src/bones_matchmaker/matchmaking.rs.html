@@ -284,6 +284,14 @@
 <a href="#284" id="284">284</a>
 <a href="#285" id="285">285</a>
 <a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::matchmaker::{start_game, MATCHMAKER_STATE};
 <span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>bones_matchmaker_proto::{MatchInfo, MatchmakerResponse};
@@ -329,7 +337,8 @@
 
     <span class="kw">let </span>message = postcard::to_allocvec(<span class="kw-2">&amp;</span>response)<span class="question-mark">?</span>;
     send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-    send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+    send.finish()<span class="question-mark">?</span>;
+    send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="comment">// If we removed a player, send update to the other players in the room
     </span><span class="kw">if </span>removed {
@@ -408,14 +417,16 @@
             <span class="string">"Matchmaking room is full. Please try matchmaking again shortly."</span>.to_string(),
         ))<span class="question-mark">?</span>;
         send.write_all(<span class="kw-2">&amp;</span>error_message).<span class="kw">await</span><span class="question-mark">?</span>;
-        send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+        send.finish()<span class="question-mark">?</span>;
+        send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">return </span><span class="prelude-val">Ok</span>(());
     }
 
     <span class="comment">// Accept the matchmaking request
     </span><span class="kw">let </span>message = postcard::to_allocvec(<span class="kw-2">&amp;</span>MatchmakerResponse::Accepted)<span class="question-mark">?</span>;
     send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-    send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+    send.finish()<span class="question-mark">?</span>;
+    send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="comment">// Add the connection to the matchmaking room
     </span><span class="kw">let </span>new_player_count = state
@@ -501,7 +512,10 @@
     <span class="comment">// Send first update and check active connections
     </span><span class="kw">for </span>(_index, conn) <span class="kw">in </span>connections.into_iter().enumerate() {
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>send) = conn.open_uni().<span class="kw">await </span>{
-            <span class="kw">if </span>send.write_all(<span class="kw-2">&amp;</span>first_update_message).<span class="kw">await</span>.is_ok() &amp;&amp; send.finish().<span class="kw">await</span>.is_ok() {
+            <span class="kw">if </span>send.write_all(<span class="kw-2">&amp;</span>first_update_message).<span class="kw">await</span>.is_ok()
+                &amp;&amp; send.finish().is_ok()
+                &amp;&amp; send.stopped().<span class="kw">await</span>.is_ok()
+            {
                 active_connections.push(conn);
             }
         }
@@ -518,7 +532,9 @@
             <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>send) = member.open_uni().<span class="kw">await </span>{
                 <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = send.write_all(<span class="kw-2">&amp;</span>second_update_message).<span class="kw">await </span>{
                     <span class="macro">warn!</span>(<span class="string">"Connection to client {} has closed. {:?}"</span>, index, e);
-                } <span class="kw">else if let </span><span class="prelude-val">Err</span>(e) = send.finish().<span class="kw">await </span>{
+                } <span class="kw">else if let </span><span class="prelude-val">Err</span>(e) = send.finish() {
+                    <span class="macro">warn!</span>(<span class="string">"Connection to client {} has closed. {:?}"</span>, index, e);
+                } <span class="kw">else if let </span><span class="prelude-val">Err</span>(e) = send.stopped().<span class="kw">await </span>{
                     <span class="macro">warn!</span>(<span class="string">"Connection to client {} has closed. {:?}"</span>, index, e);
                 }
             }

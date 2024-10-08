@@ -194,6 +194,14 @@
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
 <a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::matchmaker::{start_game, GameLobbies, MATCHMAKER_STATE};
 <span class="kw">use </span><span class="kw">crate</span>::helpers::{generate_unique_id, hash_password};
 <span class="kw">use </span>anyhow::Result;
@@ -237,7 +245,8 @@
     <span class="comment">// Send the lobby list back to the client
     </span><span class="kw">let </span>message = postcard::to_allocvec(<span class="kw-2">&amp;</span>MatchmakerResponse::LobbiesList(lobbies))<span class="question-mark">?</span>;
     send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-    send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+    send.finish()<span class="question-mark">?</span>;
+    send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
 }
@@ -273,7 +282,8 @@
     <span class="comment">// Send confirmation to the client
     </span><span class="kw">let </span>message = postcard::to_allocvec(<span class="kw-2">&amp;</span>MatchmakerResponse::LobbyCreated(lobby_id))<span class="question-mark">?</span>;
     send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-    send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+    send.finish()<span class="question-mark">?</span>;
+    send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
 }
@@ -298,7 +308,8 @@
                         <span class="string">"Incorrect password"</span>.to_string(),
                     ))<span class="question-mark">?</span>;
                     send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-                    send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+                    send.finish()<span class="question-mark">?</span>;
+                    send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                 }
             }
@@ -326,7 +337,8 @@
                     </span><span class="kw">let </span>message =
                         postcard::to_allocvec(<span class="kw-2">&amp;</span>MatchmakerResponse::LobbyJoined(lobby_id.clone()))<span class="question-mark">?</span>;
                     send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-                    send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+                    send.finish()<span class="question-mark">?</span>;
+                    send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
 
                     <span class="comment">// Always notify all players in the lobby about the update
                     </span><span class="kw">let </span>lobby_update_message =
@@ -340,7 +352,8 @@
                         <span class="kw">for </span>connection <span class="kw">in </span>connections.get().iter() {
                             <span class="kw">let </span><span class="kw-2">mut </span>send = connection.open_uni().<span class="kw">await</span><span class="question-mark">?</span>;
                             send.write_all(<span class="kw-2">&amp;</span>lobby_update_message).<span class="kw">await</span><span class="question-mark">?</span>;
-                            send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+                            send.finish()<span class="question-mark">?</span>;
+                            send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
                         }
                     }
 
@@ -372,20 +385,23 @@
                         <span class="string">"Lobby is full"</span>.to_string(),
                     ))<span class="question-mark">?</span>;
                     send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-                    send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+                    send.finish()<span class="question-mark">?</span>;
+                    send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
                 }
             }
         } <span class="kw">else </span>{
             <span class="kw">let </span>message =
                 postcard::to_allocvec(<span class="kw-2">&amp;</span>MatchmakerResponse::Error(<span class="string">"Lobby not found"</span>.to_string()))<span class="question-mark">?</span>;
             send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-            send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+            send.finish()<span class="question-mark">?</span>;
+            send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
         }
     } <span class="kw">else </span>{
         <span class="kw">let </span>message =
             postcard::to_allocvec(<span class="kw-2">&amp;</span>MatchmakerResponse::Error(<span class="string">"Game not found"</span>.to_string()))<span class="question-mark">?</span>;
         send.write_all(<span class="kw-2">&amp;</span>message).<span class="kw">await</span><span class="question-mark">?</span>;
-        send.finish().<span class="kw">await</span><span class="question-mark">?</span>;
+        send.finish()<span class="question-mark">?</span>;
+        send.stopped().<span class="kw">await</span><span class="question-mark">?</span>;
     }
 
     <span class="prelude-val">Ok</span>(())
