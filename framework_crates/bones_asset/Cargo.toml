@@ -43,6 +43,7 @@ sha2            = "0.10"
 tracing         = "0.1"
 ulid            = "1.0"
 ustr            = { workspace = true }
+async-recursion = "1.1.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 notify = "6.0"

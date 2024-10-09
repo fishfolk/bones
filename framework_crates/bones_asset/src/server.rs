@@ -22,8 +22,8 @@ use serde::{de::DeserializeSeed, Deserialize};
 #[allow(unused_imports)]
 use tracing::info;
 use ulid::Ulid;
-
 use crate::prelude::*;
+use async_recursion::async_recursion;
 
 mod schema_loader;
 
@@ -639,6 +639,8 @@ impl AssetServer {
             schema,
             dependencies: &mut dependencies,
         };
+        let linked_files = loader.collect_and_load_linked_files(contents).await?;
+
         let data = if loc.path.extension().unwrap().to_str().unwrap() == "json" {
             let mut deserializer = serde_json::Deserializer::from_slice(contents);
             loader.deserialize(&mut deserializer)?
@@ -1038,6 +1040,167 @@ mod metadata {
         pub loc: AssetLocRef<'srv>,
         /// The schema of the asset being loaded.
         pub schema: &'static Schema,
+    }
+
+    impl<'srv> MetaAssetLoadCtx<'srv> {
+        /// Collects and loads all path-based value
+        /// TODO: Collection doesn't work yet
+        pub async fn collect_and_load_linked_files(
+            &self,
+            contents: &[u8],
+        ) -> anyhow::Result<DashMap<PathBuf, SchemaBox>> {
+            let mut linked_files = DashMap::new();
+            self.recursively_collect_linked_files(contents, &mut linked_files)
+                .await?;
+            Ok(linked_files)
+        }
+
+        async fn recursively_collect_linked_files(
+            &self,
+            contents: &[u8],
+            linked_files: &mut DashMap<PathBuf, SchemaBox>,
+        ) -> anyhow::Result<()> {
+            let yaml_docs = serde_yaml::from_slice::<serde_yaml::Value>(contents)?;
+            self.process_yaml_value(&yaml_docs, linked_files).await?;
+            Ok(())
+        }
+
+        #[async_recursion]
+        async fn process_yaml_value(
+            &self,
+            value: &serde_yaml::Value,
+            linked_files: &mut DashMap<PathBuf, SchemaBox>,
+        ) -> anyhow::Result<()> {
+            println!("Processing YAML value: {:?}", value);
+            match value {
+                serde_yaml::Value::String(s) => {
+                    println!("Found string value: {}", s);
+                    let path = self.resolve_relative_path(s);
+                    if path.exists() {
+                        println!("Valid file path found: {:?}", path);
+                        self.load_and_add_linked_file(path, linked_files).await?;
+                    } else {
+                        println!("Not a valid file path: {:?}", path);
+                    }
+                }
+                serde_yaml::Value::Sequence(seq) => {
+                    println!("Processing sequence with {} items", seq.len());
+                    for (index, item) in seq.iter().enumerate() {
+                        println!("Processing sequence item {}", index);
+                        self.process_yaml_value(item, linked_files).await?;
+                    }
+                }
+                serde_yaml::Value::Mapping(map) => {
+                    println!("Processing mapping with {} items", map.len());
+                    for (key, v) in map {
+                        println!("Processing mapping key: {:?}", key);
+                        self.process_yaml_value(v, linked_files).await?;
+                    }
+                }
+                _ => {
+                    println!("Ignoring YAML value type: {:?}", value);
+                }
+            }
+            Ok(())
+        }
+
+        fn resolve_relative_path(&self, s: &str) -> PathBuf {
+            println!("Resolving relative path: {}", s);
+            let relative_path = PathBuf::from(s);
+            let base_dir = self.loc.path.parent().unwrap_or(Path::new("/"));
+            let resolved_path = base_dir.join(relative_path);
+            println!("Resolved path: {:?}", resolved_path);
+            resolved_path
+        }
+
+        #[async_recursion]
+        async fn load_and_add_linked_file(
+            &self,
+            path: PathBuf,
+            linked_files: &mut DashMap<PathBuf, SchemaBox>,
+        ) -> anyhow::Result<()> {
+            println!("Loading and adding linked file: {:?}", path);
+            if linked_files.contains_key(&path) {
+                println!("File already loaded: {:?}", path);
+                return Ok(());
+            }
+
+            let contents = self
+                .server
+                .io
+                .load_file(AssetLocRef {
+                    path: &path,
+                    pack: self.loc.pack,
+                })
+                .await?;
+            println!("File contents loaded, size: {} bytes", contents.len());
+            let schema_box = self.load_file_contents(&path, &contents).await?;
+            println!("File contents loaded into SchemaBox");
+            linked_files.insert(path.clone(), schema_box);
+            println!("SchemaBox inserted into linked_files");
+
+            println!("Recursively processing loaded file");
+            self.recursively_collect_linked_files(&contents, linked_files)
+                .await?;
+
+            Ok(())
+        }
+
+        async fn load_file_contents(
+            &self,
+            path: &Path,
+            contents: &[u8],
+        ) -> anyhow::Result<SchemaBox> {
+            println!("Loading file contents for: {:?}", path);
+            let file_extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
+            println!("File extension: {}", file_extension);
+            let schema = SCHEMA_REGISTRY
+                .schemas
+                .iter()
+                .find(|schema| {
+                    schema
+                        .type_data
+                        .get::<AssetKind>()
+                        .and_then(|asset_kind| match asset_kind {
+                            AssetKind::Custom { extensions, .. } => {
+                                Some(extensions.contains(&file_extension.to_string()))
+                            }
+                            _ => Some(false),
+                        })
+                        .unwrap_or(false)
+                })
+                .ok_or_else(|| {
+                    anyhow::anyhow!("No schema found for file extension: {}", file_extension)
+                })?;
+            println!("Schema found: {:?}", schema.name);
+
+            let loader = schema
+                .type_data
+                .get::<AssetKind>()
+                .and_then(|asset_kind| {
+                    if let AssetKind::Custom { loader, .. } = asset_kind {
+                        Some(loader)
+                    } else {
+                        None
+                    }
+                })
+                .ok_or_else(|| anyhow::anyhow!("No loader found for file type"))?;
+            println!("Loader found for file type");
+
+            let ctx = AssetLoadCtx {
+                asset_server: self.server.clone(),
+                loc: AssetLoc {
+                    path: path.to_path_buf(),
+                    pack: self.loc.pack.map(|s| s.to_string()),
+                },
+                dependencies: Arc::new(AppendOnlyVec::new()),
+            };
+
+            println!("Loading file with custom loader");
+            let schema_box = loader.load(ctx, contents).await?;
+            println!("File loaded into SchemaBox");
+            Ok(schema_box)
+        }
     }
 
     impl<'asset, 'de> DeserializeSeed<'de> for MetaAssetLoadCtx<'asset> {
