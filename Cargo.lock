@@ -2209,6 +2209,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 
 [[package]]
+name = "demo_asset_packs"
+version = "0.4.0"
+dependencies = [
+ "bones_bevy_renderer",
+ "bones_framework",
+]
+
+[[package]]
 name = "demo_assets_minimal"
 version = "0.4.0"
 dependencies = [
