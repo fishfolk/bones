@@ -11,7 +11,7 @@ pub struct KeyboardInputs {
 }
 
 /// A keyboard input event.
-#[derive(HasSchema, Clone, Debug, Copy, Default)]
+#[derive(HasSchema, Clone, Copy, Debug, Default)]
 #[repr(C)]
 pub struct KeyboardEvent {
     /// The scan code of the pressed key.
