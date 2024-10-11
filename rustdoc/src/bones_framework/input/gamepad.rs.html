@@ -431,7 +431,7 @@
 }
 
 <span class="doccomment">/// A gamepad event.
-</span><span class="attr">#[derive(HasSchema, Clone, Debug)]
+</span><span class="attr">#[derive(HasSchema, Clone, Copy, Debug)]
 #[repr(C, u8)]
 </span><span class="kw">pub enum </span>GamepadEvent {
     <span class="doccomment">/// A connection event.
@@ -449,7 +449,7 @@
 }
 
 <span class="doccomment">/// A gamepad connection event.
-</span><span class="attr">#[derive(HasSchema, Clone, Debug, Default)]
+</span><span class="attr">#[derive(HasSchema, Clone, Copy, Debug, Default)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>GamepadConnectionEvent {
     <span class="doccomment">/// The ID of the gamepad.
@@ -459,7 +459,7 @@
 }
 
 <span class="doccomment">/// The kind of gamepad connection event.
-</span><span class="attr">#[derive(HasSchema, Clone, Debug, Default)]
+</span><span class="attr">#[derive(HasSchema, Clone, Copy, Debug, Default)]
 #[repr(u8)]
 </span><span class="kw">pub enum </span>GamepadConnectionEventKind {
     <span class="attr">#[default]
@@ -470,7 +470,7 @@
 }
 
 <span class="doccomment">/// A gamepad button event.
-</span><span class="attr">#[derive(HasSchema, Clone, Debug, Default)]
+</span><span class="attr">#[derive(HasSchema, Clone, Copy, Debug, Default)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>GamepadButtonEvent {
     <span class="doccomment">/// The ID of the gamepad.
@@ -484,7 +484,7 @@
 
 <span class="doccomment">/// A specific button on a gamepad.
 </span><span class="attr">#[allow(missing_docs)]
-#[derive(HasSchema, Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(HasSchema, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[repr(C, u8)]
 </span><span class="kw">pub enum </span>GamepadButton {
     <span class="attr">#[default]
@@ -542,7 +542,7 @@
 }
 
 <span class="doccomment">/// A gamepad axis event.
-</span><span class="attr">#[derive(HasSchema, Clone, Debug)]
+</span><span class="attr">#[derive(HasSchema, Clone, Copy, Debug)]
 #[schema(no_default)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>GamepadAxisEvent {
@@ -555,7 +555,7 @@
 }
 
 <span class="doccomment">/// A specific gamepad axis that may have changed.
-</span><span class="attr">#[derive(HasSchema, Clone, Debug, PartialEq, Eq, Hash)]
+</span><span class="attr">#[derive(HasSchema, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[schema(no_default)]
 #[allow(missing_docs)]
 #[repr(C, u8)]
@@ -588,7 +588,7 @@
 }
 
 <span class="doccomment">/// Struct that represents intensity of a rumble
-</span><span class="attr">#[derive(HasSchema, Default, Clone, Debug, Copy)]
+</span><span class="attr">#[derive(HasSchema, Default, Clone, Copy, Debug)]
 </span><span class="kw">pub struct </span>GamepadRumbleIntensity {
     <span class="doccomment">/// The intensity of the strong motor, between 0.0 - 1.0.
     </span>strong_motor: f32,
