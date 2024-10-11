@@ -11,7 +11,7 @@ pub struct GamepadInputs {
 }
 
 /// A gamepad event.
-#[derive(HasSchema, Clone, Debug)]
+#[derive(HasSchema, Clone, Copy, Debug)]
 #[repr(C, u8)]
 pub enum GamepadEvent {
     /// A connection event.
@@ -29,7 +29,7 @@ impl Default for GamepadEvent {
 }
 
 /// A gamepad connection event.
-#[derive(HasSchema, Clone, Debug, Default)]
+#[derive(HasSchema, Clone, Copy, Debug, Default)]
 #[repr(C)]
 pub struct GamepadConnectionEvent {
     /// The ID of the gamepad.
@@ -39,7 +39,7 @@ pub struct GamepadConnectionEvent {
 }
 
 /// The kind of gamepad connection event.
-#[derive(HasSchema, Clone, Debug, Default)]
+#[derive(HasSchema, Clone, Copy, Debug, Default)]
 #[repr(u8)]
 pub enum GamepadConnectionEventKind {
     #[default]
@@ -50,7 +50,7 @@ pub enum GamepadConnectionEventKind {
 }
 
 /// A gamepad button event.
-#[derive(HasSchema, Clone, Debug, Default)]
+#[derive(HasSchema, Clone, Copy, Debug, Default)]
 #[repr(C)]
 pub struct GamepadButtonEvent {
     /// The ID of the gamepad.
@@ -64,7 +64,7 @@ pub struct GamepadButtonEvent {
 
 /// A specific button on a gamepad.
 #[allow(missing_docs)]
-#[derive(HasSchema, Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(HasSchema, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[repr(C, u8)]
 pub enum GamepadButton {
     #[default]
@@ -122,7 +122,7 @@ impl std::fmt::Display for GamepadButton {
 }
 
 /// A gamepad axis event.
-#[derive(HasSchema, Clone, Debug)]
+#[derive(HasSchema, Clone, Copy, Debug)]
 #[schema(no_default)]
 #[repr(C)]
 pub struct GamepadAxisEvent {
@@ -135,7 +135,7 @@ pub struct GamepadAxisEvent {
 }
 
 /// A specific gamepad axis that may have changed.
-#[derive(HasSchema, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(HasSchema, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[schema(no_default)]
 #[allow(missing_docs)]
 #[repr(C, u8)]
@@ -168,7 +168,7 @@ impl std::fmt::Display for GamepadAxis {
 }
 
 /// Struct that represents intensity of a rumble
-#[derive(HasSchema, Default, Clone, Debug, Copy)]
+#[derive(HasSchema, Default, Clone, Copy, Debug)]
 pub struct GamepadRumbleIntensity {
     /// The intensity of the strong motor, between 0.0 - 1.0.
     strong_motor: f32,
