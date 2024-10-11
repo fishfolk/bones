@@ -13,6 +13,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["bones_scripting",["",[["lua",[["bindings",[],["assets.rs","components.rs","ecsref.rs","entities.rs","resources.rs","schema.rs","world.rs"]]],["asset.rs","bindings.rs","ext.rs","freeze.rs"]]],["lib.rs","lua.rs"]]],\
 ["bones_utils",["",[],["collections.rs","default.rs","labeled_id.rs","lib.rs","names.rs","random.rs","ulid.rs"]]],\
 ["bones_utils_macros",["",[],["lib.rs"]]],\
+["demo_asset_packs",["",[],["main.rs"]]],\
 ["demo_assets_minimal",["",[],["main.rs"]]],\
 ["demo_features",["",[],["main.rs"]]],\
 ["demo_hello_world",["",[],["main.rs"]]],\

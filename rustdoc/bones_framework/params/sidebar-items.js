@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Root"]};
+window.SIDEBAR_ITEMS = {"struct":["AllPacksData","AllPacksDataIter","Packs","PacksIter","Root"]};
