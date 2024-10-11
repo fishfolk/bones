@@ -1,0 +1,4 @@
+# This is our root asset file, which corresponds to our `GameMeta` struct.
+
+title: Asset Packs
+core_items: [1, 2, 3]
