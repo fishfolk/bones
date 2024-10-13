@@ -20,15 +20,13 @@ fn create_world() -> World {
     let mut asset_server = world.init_resource::<AssetServer>();
     asset_server.set_io(io);
 
-    {
-        let scope = async move {
-            asset_server.load_assets().await.expect("load test assets");
-            while !asset_server.load_progress.is_finished() {
-                yield_now().await;
-            }
-        };
-        block_on(scope.boxed());
-    }
+    let scope = async move {
+        asset_server.load_assets().await.expect("load test assets");
+        while !asset_server.load_progress.is_finished() {
+            yield_now().await;
+        }
+    };
+    block_on(scope.boxed());
 
     world
 }
