@@ -37,10 +37,15 @@ get_default_workspace_members() {
 # The crates to test
 declare -a CRATES
 
+if (( $# > 0 )); then
+CRATES=( "$@" )
+else
+CRATES=( $(get_default_workspace_members) )
+fi
+
 # Extra flags to pass to `cargo test` for crates
 declare -A FLAGS
 
-CRATES=( $(get_default_workspace_members) )
 FLAGS[bones_ecs]='--no-default-features -F miri'
 
 # Try multiple seeds to catch possible alignment issues
