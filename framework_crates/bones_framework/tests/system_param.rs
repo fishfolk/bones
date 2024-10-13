@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::path::PathBuf;
 
 use bones_framework::prelude::*;
@@ -59,6 +61,7 @@ fn init() {
 }
 
 #[test]
+#[cfg(not(miri))]
 fn core_root_data() {
     init();
     let world = create_world();
@@ -67,6 +70,7 @@ fn core_root_data() {
 }
 
 #[test]
+#[cfg(not(miri))]
 fn supplementary_packs_root_data() {
     init();
 
@@ -88,6 +92,7 @@ fn supplementary_packs_root_data() {
 }
 
 #[test]
+#[cfg(not(miri))]
 fn all_packs_root_data() {
     init();
 
