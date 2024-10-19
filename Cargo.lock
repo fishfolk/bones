@@ -1609,12 +1609,15 @@ dependencies = [
 name = "bones_utils"
 version = "0.4.0"
 dependencies = [
+ "bones_schema",
+ "bones_utils",
  "bones_utils_macros",
  "fxhash",
  "getrandom",
  "glam 0.24.2",
  "hashbrown 0.14.5",
  "instant",
+ "paste",
  "serde",
  "turborand",
  "ulid",
@@ -1624,6 +1627,7 @@ dependencies = [
 name = "bones_utils_macros"
 version = "0.4.0"
 dependencies = [
+ "proc-macro2",
  "quote",
  "venial",
 ]
