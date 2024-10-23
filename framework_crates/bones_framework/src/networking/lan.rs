@@ -227,7 +227,11 @@ pub async fn prepare_to_host<'a>(
     let create_service_info = || async {
         info!("New service hosting");
         let ep = get_network_endpoint().await;
-        let my_addr = ep.node_addr().await.expect("network endpoint dead");
+        let mut my_addr = ep.node_addr().await.expect("network endpoint dead");
+        my_addr
+            .info
+            .direct_addresses
+            .retain(std::net::SocketAddr::is_ipv4);
         let port = my_addr.info.direct_addresses.first().unwrap().port();
         let mut props = std::collections::HashMap::default();
         let addr_encoded = hex::encode(postcard::to_stdvec(&my_addr).unwrap());
