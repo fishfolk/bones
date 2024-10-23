@@ -549,6 +549,10 @@
 <a href="#549" id="549">549</a>
 <a href="#550" id="550">550</a>
 <a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! LAN matchmaking and socket implementation.
 //!
 //! ## Matchmaking
@@ -778,7 +782,11 @@
     <span class="kw">let </span>create_service_info = || <span class="kw">async </span>{
         <span class="macro">info!</span>(<span class="string">"New service hosting"</span>);
         <span class="kw">let </span>ep = get_network_endpoint().<span class="kw">await</span>;
-        <span class="kw">let </span>my_addr = ep.node_addr().<span class="kw">await</span>.expect(<span class="string">"network endpoint dead"</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>my_addr = ep.node_addr().<span class="kw">await</span>.expect(<span class="string">"network endpoint dead"</span>);
+        my_addr
+            .info
+            .direct_addresses
+            .retain(std::net::SocketAddr::is_ipv4);
         <span class="kw">let </span>port = my_addr.info.direct_addresses.first().unwrap().port();
         <span class="kw">let </span><span class="kw-2">mut </span>props = std::collections::HashMap::default();
         <span class="kw">let </span>addr_encoded = hex::encode(postcard::to_stdvec(<span class="kw-2">&amp;</span>my_addr).unwrap());
