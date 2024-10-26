@@ -11,6 +11,7 @@ use once_cell::sync::Lazy;
 use quinn::Connection;
 use rand::{prelude::SliceRandom, SeedableRng};
 use scc::HashMap as SccHashMap;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -94,10 +95,14 @@ pub async fn start_game(
         }
         PlayerIdxAssignment::SpecifiedOrder(order) => {
             let mut indices = order.clone();
-            if indices.len() < player_count {
-                indices.extend(indices.len()..player_count);
-            } else if indices.len() > player_count {
-                indices.truncate(player_count);
+            match indices.len().cmp(&player_count) {
+                Ordering::Less => {
+                    indices.extend(indices.len()..player_count);
+                }
+                Ordering::Greater => {
+                    indices.truncate(player_count);
+                }
+                _ => (),
             }
             indices
         }
