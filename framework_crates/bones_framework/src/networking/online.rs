@@ -145,7 +145,7 @@ impl MatchmakerConnectionState {
             if self.conn.is_none() {
                 info!("Connecting to online matchmaker");
                 let ep = get_network_endpoint().await;
-                let conn = ep.connect(id.into(), MATCH_ALPN).await?;
+                let conn = ep.connect(id, MATCH_ALPN).await?;
                 self.ep = Some(ep.clone());
                 self.conn = Some(conn);
                 info!("Connected to online matchmaker");
