@@ -486,7 +486,7 @@
             <span class="kw">if </span><span class="self">self</span>.conn.is_none() {
                 <span class="macro">info!</span>(<span class="string">"Connecting to online matchmaker"</span>);
                 <span class="kw">let </span>ep = get_network_endpoint().<span class="kw">await</span>;
-                <span class="kw">let </span>conn = ep.connect(id.into(), MATCH_ALPN).<span class="kw">await</span><span class="question-mark">?</span>;
+                <span class="kw">let </span>conn = ep.connect(id, MATCH_ALPN).<span class="kw">await</span><span class="question-mark">?</span>;
                 <span class="self">self</span>.ep = <span class="prelude-val">Some</span>(ep.clone());
                 <span class="self">self</span>.conn = <span class="prelude-val">Some</span>(conn);
                 <span class="macro">info!</span>(<span class="string">"Connected to online matchmaker"</span>);

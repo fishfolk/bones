@@ -138,6 +138,11 @@
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::lobbies::{handle_create_lobby, handle_join_lobby, handle_list_lobbies};
 <span class="kw">use </span><span class="kw">super</span>::matchmaking::{handle_request_matchaking, handle_stop_matchmaking};
 <span class="kw">use </span><span class="kw">crate</span>::helpers::generate_random_seed;
@@ -151,6 +156,7 @@
 <span class="kw">use </span>quinn::Connection;
 <span class="kw">use </span>rand::{prelude::SliceRandom, SeedableRng};
 <span class="kw">use </span>scc::HashMap <span class="kw">as </span>SccHashMap;
+<span class="kw">use </span>std::cmp::Ordering;
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>tokio::sync::Mutex;
@@ -234,10 +240,14 @@
         }
         PlayerIdxAssignment::SpecifiedOrder(order) =&gt; {
             <span class="kw">let </span><span class="kw-2">mut </span>indices = order.clone();
-            <span class="kw">if </span>indices.len() &lt; player_count {
-                indices.extend(indices.len()..player_count);
-            } <span class="kw">else if </span>indices.len() &gt; player_count {
-                indices.truncate(player_count);
+            <span class="kw">match </span>indices.len().cmp(<span class="kw-2">&amp;</span>player_count) {
+                Ordering::Less =&gt; {
+                    indices.extend(indices.len()..player_count);
+                }
+                Ordering::Greater =&gt; {
+                    indices.truncate(player_count);
+                }
+                <span class="kw">_ </span>=&gt; (),
             }
             indices
         }
