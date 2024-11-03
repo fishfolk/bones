@@ -225,6 +225,7 @@ pub fn derive_desync_hash(input: TokenStream) -> TokenStream {
                 .enumerate()
                 .map(|(idx, (field, _))| {
                     let ty = &field.ty;
+                    let idx = syn::Index::from(idx);
                     quote! {<#ty as #desync_hash_module::DesyncHash>::hash(&self.#idx, hasher);}
                 })
                 .collect::<Vec<_>>(),
