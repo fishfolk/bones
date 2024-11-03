@@ -2,7 +2,7 @@
 
 use fxhash::FxHasher;
 use once_map::OnceMap;
-use std::{any::Any, sync::Arc};
+use std::sync::Arc;
 
 use crate::prelude::*;
 
@@ -81,12 +81,16 @@ impl DesyncHash for ComponentStores {
     }
 }
 
-impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for ComponentStores {
+impl BuildDesyncNode for ComponentStores {
     fn desync_tree_node<H: std::hash::Hasher + Default>(
         &self,
         include_unhashable: bool,
     ) -> DefaultDesyncTreeNode {
         let mut any_hashable = false;
+
+        // We get the Name component store so we can lookup entity names and set those on component leaves.
+        let names = self.get::<Name>().borrow();
+
         let mut child_nodes = self
             .components
             .read_only_view()
@@ -104,7 +108,24 @@ impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for ComponentStores {
                 }
 
                 if include_unhashable || is_hashable {
-                    let child_node = component_store.desync_tree_node::<H>(include_unhashable);
+                    let mut child_node = component_store.desync_tree_node::<H>(include_unhashable);
+
+                    // Our child here is a component store, and its children are component leaves.
+                    // Iterate through children, retrieve metadata storing entity_idx if set, and use this
+                    // to update the node's name from Name component.
+                    //
+                    // This is fairly hacky, but should be good enough for now.
+                    for component_node in child_node.children_mut().iter_mut() {
+                        if let DesyncNodeMetadata::Component { entity_idx } =
+                            component_node.metadata()
+                        {
+                            // Constructing Entity with fake generation is bit of a hack - but component store does not
+                            // use generation, only the index.
+                            if let Some(name) = names.get(Entity::new(*entity_idx, 0)) {
+                                component_node.set_name(name.0.clone());
+                            }
+                        }
+                    }
 
                     return Some(child_node);
                 }
@@ -126,7 +147,12 @@ impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for ComponentStores {
             None
         };
 
-        DefaultDesyncTreeNode::new(hash, Some("Components".into()), child_nodes)
+        DefaultDesyncTreeNode::new(
+            hash,
+            Some("Components".into()),
+            child_nodes,
+            DesyncNodeMetadata::None,
+        )
     }
 }
 

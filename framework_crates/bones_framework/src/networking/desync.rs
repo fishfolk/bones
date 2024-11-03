@@ -7,6 +7,7 @@ use bones_lib::{ecs::World, prelude::default};
 /// but is private so cannot be used directly.
 const MAX_DESYNC_HISTORY_BUFFER: usize = 32;
 
+/// Settings for desync detection
 #[derive(Clone)]
 pub struct DetectDesyncs {
     /// Interval in frames of how often to hash state and check for desync with other clients.

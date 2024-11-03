@@ -43,7 +43,7 @@ impl DesyncHash for World {
     }
 }
 
-impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for World {
+impl BuildDesyncNode for World {
     fn desync_tree_node<H: std::hash::Hasher + Default>(
         &self,
         include_unhashable: bool,
@@ -64,7 +64,12 @@ impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for World {
         }
         child_nodes.push(resources_node);
 
-        DefaultDesyncTreeNode::new(Some(hasher.finish()), Some("World".into()), child_nodes)
+        DefaultDesyncTreeNode::new(
+            Some(hasher.finish()),
+            Some("World".into()),
+            child_nodes,
+            DesyncNodeMetadata::None,
+        )
     }
 }
 
@@ -245,6 +250,22 @@ impl World {
 
         // Always maintain to clean up any killed entities
         self.maintain();
+    }
+    /// Build [`DefaultDesyncTree`] from [`World`].
+    ///
+    /// `include_unhashable` sets whether components or resources be included as non-contributing nodes
+    /// in tree, to see what could be opted-in to desync hashing.
+    ///
+    /// # Panics
+    ///
+    /// This will immutably borrow all components and resources, if any are mutably borrowed, this will panic.
+    pub fn desync_hash_tree<H: std::hash::Hasher + Default>(
+        &self,
+        include_unhashable: bool,
+    ) -> DefaultDesyncTree {
+        let root = self.desync_tree_node::<H>(include_unhashable);
+
+        DefaultDesyncTree::from_root(root)
     }
 }
 

@@ -34,7 +34,7 @@ impl DesyncHash for UntypedResource {
     }
 }
 
-impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for UntypedResource {
+impl BuildDesyncNode for UntypedResource {
     fn desync_tree_node<H: std::hash::Hasher + Default>(
         &self,
         _include_unhashable: bool,
@@ -49,10 +49,10 @@ impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for UntypedResource {
             } else {
                 None
             };
-            return DefaultDesyncTreeNode::new(hash, name, vec![]);
+            return DefaultDesyncTreeNode::new(hash, name, vec![], DesyncNodeMetadata::None);
         }
 
-        DefaultDesyncTreeNode::new(None, name, vec![])
+        DefaultDesyncTreeNode::new(None, name, vec![], DesyncNodeMetadata::None)
     }
 }
 
@@ -197,7 +197,7 @@ impl DesyncHash for UntypedResources {
     }
 }
 
-impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for UntypedResources {
+impl BuildDesyncNode for UntypedResources {
     fn desync_tree_node<H: std::hash::Hasher + Default>(
         &self,
         include_unhashable: bool,
@@ -230,7 +230,12 @@ impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for UntypedResources {
             }
         }
 
-        DefaultDesyncTreeNode::new(Some(hasher.finish()), Some("Resources".into()), child_nodes)
+        DefaultDesyncTreeNode::new(
+            Some(hasher.finish()),
+            Some("Resources".into()),
+            child_nodes,
+            DesyncNodeMetadata::None,
+        )
     }
 }
 
@@ -314,7 +319,7 @@ impl DesyncHash for Resources {
     }
 }
 
-impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for Resources {
+impl BuildDesyncNode for Resources {
     fn desync_tree_node<H: std::hash::Hasher + Default>(
         &self,
         include_unhashable: bool,

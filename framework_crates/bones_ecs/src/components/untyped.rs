@@ -82,29 +82,42 @@ impl DesyncHash for UntypedComponentStore {
     }
 }
 
-impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for UntypedComponentStore {
+impl BuildDesyncNode for UntypedComponentStore {
     fn desync_tree_node<H: std::hash::Hasher + Default>(
         &self,
         _include_unhashable: bool,
     ) -> DefaultDesyncTreeNode {
         let mut hasher = H::default();
-        let child_nodes: Vec<DefaultDesyncTreeNode> = self
-            .iter()
-            .map(|component| -> DefaultDesyncTreeNode {
-                let hash = if component
-                    .schema()
-                    .type_data
-                    .get::<SchemaDesyncHash>()
-                    .is_some()
-                {
-                    // Update parent node hash from data
-                    DesyncHash::hash(&component, &mut hasher);
-                    Some(component.compute_hash::<H>())
-                } else {
-                    None
-                };
 
-                DefaultDesyncTreeNode::new(hash, None, vec![])
+        // Iterate over components by index so we can save entity ID.
+        let iter = 0..self.bitset().bit_len();
+        let child_nodes: Vec<DefaultDesyncTreeNode> = iter
+            .filter_map(|entity_idx| -> Option<DefaultDesyncTreeNode> {
+                if let Some(component) = self.get_idx(entity_idx) {
+                    let hash = if component
+                        .schema()
+                        .type_data
+                        .get::<SchemaDesyncHash>()
+                        .is_some()
+                    {
+                        // Update parent node hash from data
+                        DesyncHash::hash(&component, &mut hasher);
+                        Some(component.compute_hash::<H>())
+                    } else {
+                        None
+                    };
+
+                    return Some(DefaultDesyncTreeNode::new(
+                        hash,
+                        None,
+                        vec![],
+                        DesyncNodeMetadata::Component {
+                            entity_idx: entity_idx as u32,
+                        },
+                    ));
+                }
+
+                None
             })
             .collect();
 
@@ -114,7 +127,12 @@ impl BuildDesyncNode<DefaultDesyncTreeNode, u64> for UntypedComponentStore {
             None
         };
 
-        DefaultDesyncTreeNode::new(hash, Some(self.schema().full_name.to_string()), child_nodes)
+        DefaultDesyncTreeNode::new(
+            hash,
+            Some(self.schema().full_name.to_string()),
+            child_nodes,
+            DesyncNodeMetadata::None,
+        )
     }
 }
 

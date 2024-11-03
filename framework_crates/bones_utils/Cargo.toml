@@ -12,22 +12,23 @@ keywords.workspace      = true
 
 [features]
 default = ["ulid"]
-glam  = ["dep:glam"]
-serde = ["dep:serde", "hashbrown/serde"]
-ulid = ["dep:ulid", "instant", "turborand"]
+glam    = ["dep:glam"]
+serde   = ["dep:serde", "hashbrown/serde"]
+ulid    = ["dep:ulid", "instant", "turborand"]
 
 [dependencies]
 bones_utils_macros = { version = "0.4", path = "./macros" }
 fxhash             = { workspace = true }
 hashbrown          = { workspace = true }
+tree_iterators_rs  = { version = "1.2.1" }
 
 # Optional
 instant   = { version = "0.1", features = ["wasm-bindgen"], optional = true }
 serde     = { version = "1.0", optional = true }
 turborand = { version = "0.10", optional = true }
 ulid      = { version = "1.0", optional = true }
-glam               = { version = "0.24", optional = true }
-paste              = { version = "1.0" }
+glam      = { version = "0.24", optional = true }
+paste     = { version = "1.0" }
 
 # Make sure that the getrandom package, used in `ulid` works on web
 # when compiling for WASM.

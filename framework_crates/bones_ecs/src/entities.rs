@@ -85,6 +85,22 @@ impl Default for Entities {
     }
 }
 
+/// Utility component storing a name for entity
+#[derive(HasSchema, Clone, Debug)]
+pub struct Name(pub String);
+
+impl Default for Name {
+    fn default() -> Self {
+        Self("Unnamed".to_string())
+    }
+}
+
+impl From<&str> for Name {
+    fn from(value: &str) -> Self {
+        Self(value.into())
+    }
+}
+
 /// A type representing a component-joining entity query.
 pub trait QueryItem {
     /// The type of iterator this query item creates
