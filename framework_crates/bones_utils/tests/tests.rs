@@ -23,6 +23,7 @@ struct StructB {
 
 #[derive(HasSchema, DesyncHash, Debug, Clone, Default)]
 #[desync_hash_module(crate)]
+#[allow(dead_code)]
 struct StructC {
     a: f32,
     #[desync_exclude]

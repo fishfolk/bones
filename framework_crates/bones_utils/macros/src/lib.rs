@@ -23,7 +23,7 @@ fn is_simple_named_attr(attr: &venial::Attribute, name: &str) -> bool {
 /// Attribute adding extra functionality for networking.
 ///
 /// For example, provides sugar for `#[derive_type_data(SchemaDesyncHash)]`, which
-/// opts in [`SchemaRef`] to support [`DesyncHash`], so it maybe be included in hash for desync detection.
+/// opts in `SchemaRef` to support [`DesyncHash`], so it maybe be included in hash for desync detection.
 #[proc_macro_attribute]
 pub fn net(_attr: TokenStream, item: TokenStream) -> TokenStream {
     // Error if #[net] is used with #[schema(no_clone)].

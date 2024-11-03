@@ -1,11 +1,12 @@
-//!
+//! Desync detection and history buffer for desync trees.
+
 use std::collections::VecDeque;
 
-use bones_lib::{ecs::World, prelude::default};
+use bones_lib::prelude::*;
 
 /// Max frames of data in desync history buffer - this is set to match `ggrs::MAX_CHECKSUM_HISTORY_SIZE`,
 /// but is private so cannot be used directly.
-const MAX_DESYNC_HISTORY_BUFFER: usize = 32;
+pub const MAX_DESYNC_HISTORY_BUFFER: usize = 32;
 
 /// Settings for desync detection
 #[derive(Clone)]
@@ -18,7 +19,7 @@ pub struct DetectDesyncs {
     /// By default, [`World`]'s [`DesyncHash`] impl is used.
     pub world_hash_func: Option<fn(&World) -> u64>,
 
-    /// When using feature `desync-debug`, a [`DesyncTree`] will be built. Resources and Components
+    /// When using feature `desync-debug`, a [`bones_utils::DesyncTree`] will be built. Resources and Components
     /// that do not support hashing can be optionally included in tree to help highlight candidates
     /// to be opted into desync-detection.
     pub include_unhashable_nodes: bool,
@@ -33,7 +34,7 @@ impl Default for DetectDesyncs {
         }
     }
 }
-/// Store history of desync detection data, such as a [`DesyncTree`]. When ggrs finds a desync in past,
+/// Store history of desync detection data, such as a [`bones_utils::DesyncTree`]. When ggrs finds a desync in past,
 /// we can retrieve this data for debugging. Ggrs has a fixed limit of pending desync frames it tests,
 /// so we match it by keeping the last [`MAX_DESYNC_HISTORY_BUFFER`] of frame data at the desync detect interval.
 ///
