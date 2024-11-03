@@ -36,6 +36,7 @@ serde            = { version = "1", features = ["derive"], optional = true }
 
 anyhow      = "1.0"
 branches    = { workspace = true }
+fxhash      = { workspace = true }
 atomicell   = "0.2"
 bitset-core = "0.1"
 once_map    = "0.4.12"

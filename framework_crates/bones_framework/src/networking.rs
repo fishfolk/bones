@@ -65,7 +65,8 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 /// Module prelude.
 pub mod prelude {
     pub use super::{
-        desync::DetectDesyncs, input, lan, online, proto, random, DisconnectedPlayers, RngGenerator, SyncingInfo, RUNTIME,
+        desync::DetectDesyncs, input, lan, online, proto, random, DisconnectedPlayers,
+        RngGenerator, SyncingInfo, RUNTIME,
     };
 
     #[cfg(feature = "net-debug")]
@@ -553,9 +554,9 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
 
     /// The random seed used for this session
     pub random_seed: u64,
-    
+
     /// When provided, desync detection is enabled. Contains settings for desync detection.
-    detect_desyncs: Option<DetectDesyncs>,    
+    detect_desyncs: Option<DetectDesyncs>,
 
     /// History buffer for desync debug data to fetch it upon detected desyncs.
     /// [`DefaultDesyncTree`] will be generated and saved here if feature `desync-debug` is enabled.
@@ -582,13 +583,12 @@ pub struct GgrsSessionRunnerInfo {
     ///
     /// `None` will use Bone's default.
     pub local_input_delay: Option<usize>,
-    
+
     /// The random seed used for this session
     pub random_seed: u64,
-    
+
     /// When provided, desync detection is enabled. Contains settings for desync detection.
     pub detect_desyncs: Option<DetectDesyncs>,
-
 }
 
 impl GgrsSessionRunnerInfo {
@@ -625,6 +625,7 @@ where
         target_fps: Option<f32>,
         max_prediction_window: Option<usize>,
         local_input_delay: Option<usize>,
+        detect_desyncs: Option<DetectDesyncs>,
         matchmaker_resp_game_starting: OnlineMatchmakerResponse,
     ) -> Option<Self> {
         if let OnlineMatchmakerResponse::GameStarting {
@@ -641,6 +642,7 @@ where
                     max_prediction_window,
                     local_input_delay,
                     random_seed,
+                    detect_desyncs,
                 ),
             ))
         } else {

@@ -21,6 +21,7 @@ bones_utils_macros = { version = "0.4", path = "./macros" }
 fxhash             = { workspace = true }
 hashbrown          = { workspace = true }
 tree_iterators_rs  = { version = "1.2.1" }
+ustr               = { workspace = true }
 
 # Optional
 instant   = { version = "0.1", features = ["wasm-bindgen"], optional = true }
