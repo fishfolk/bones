@@ -173,6 +173,10 @@ impl<'a> BorrowedTreeNode<'a> for DefaultDesyncTreeNode {
     fn get_value_and_children_iter(
         &'a self,
     ) -> (Self::BorrowedValue, Option<Self::BorrowedChildren>) {
+        if self.children.is_empty() {
+            return (self, None);
+        }
+
         (self, Some(self.children.iter()))
     }
 }
