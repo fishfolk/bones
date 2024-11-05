@@ -153,8 +153,7 @@ fn desync_hash_glam() {
 
 #[test]
 fn desync_hash_schemaref() {
-    // Test that these hash to different values, StructA
-    // has SchemaDesyncHash typedata.
+    // Test that these hash to different values.
     let a = StructA {
         a: 1.0,
         b: "foo".to_string(),
@@ -167,9 +166,9 @@ fn desync_hash_schemaref() {
     let b_hash = hash_value(&b.as_schema_ref());
     assert_ne!(a_hash, b_hash);
 
-    // StructB does not have SchemaDesyncHash typedata,
+    // StructB does not support hashing,
     // its SchemaRef does not have impl for DesyncHash,
-    // even if data is different, should just get 0.
+    // even if data is different, it will hash to 0.
     let a = StructB {
         a: 1.0,
         b: "foo".to_string(),
@@ -180,8 +179,8 @@ fn desync_hash_schemaref() {
     };
     let a_hash = hash_value(&a.as_schema_ref());
     let b_hash = hash_value(&b.as_schema_ref());
-    // Test that these hash to differnet values, StructA
-    // has SchemaDesyncHash typedata.
+
+    // They should both hash to 0, StructB doesn't support hashing.
     assert_eq!(a_hash, b_hash);
     assert_eq!(a_hash, 0);
 }
