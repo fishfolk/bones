@@ -2,6 +2,7 @@
 
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
+use fxhash::FxHasher;
 use once_map::OnceMap;
 
 use crate::prelude::*;
@@ -21,6 +22,37 @@ pub struct UntypedResource {
 impl std::fmt::Debug for UntypedResource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("UntypedResource").finish_non_exhaustive()
+    }
+}
+
+impl DesyncHash for UntypedResource {
+    fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        if let Some(schema_box) = self.cell.borrow().as_ref() {
+            DesyncHash::hash(&schema_box.schema().full_name, hasher);
+            DesyncHash::hash(&schema_box.as_ref(), hasher);
+        }
+    }
+}
+
+impl BuildDesyncNode for UntypedResource {
+    fn desync_tree_node<H: std::hash::Hasher + Default>(
+        &self,
+        _include_unhashable: bool,
+    ) -> DefaultDesyncTreeNode {
+        let name = Some(self.schema().full_name.to_string());
+
+        let hashable = self.schema().type_data.get::<SchemaDesyncHash>().is_some();
+
+        if let Some(schema_box) = self.cell.borrow().as_ref() {
+            let hash = if hashable {
+                Some(schema_box.as_ref().compute_hash::<H>())
+            } else {
+                None
+            };
+            return DefaultDesyncTreeNode::new(hash, name, vec![], DesyncNodeMetadata::None);
+        }
+
+        DefaultDesyncTreeNode::new(None, name, vec![], DesyncNodeMetadata::None)
     }
 }
 
@@ -136,6 +168,77 @@ impl Clone for UntypedResources {
     }
 }
 
+impl DesyncHash for UntypedResources {
+    fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        let mut child_hashes: Vec<u64> = self
+            .resources
+            .read_only_view()
+            .iter()
+            .filter_map(|(schema_id, resource_cell)| {
+                let is_shared = self.shared_resources.contains_key(schema_id);
+
+                if !is_shared {
+                    // Only build child node if hashable
+                    let schema = resource_cell.schema();
+                    if schema.type_data.get::<SchemaDesyncHash>().is_some() {
+                        return Some(resource_cell.compute_hash::<FxHasher>());
+                    }
+                }
+                None
+            })
+            .collect();
+
+        child_hashes.sort();
+
+        for hash in child_hashes {
+            // Update parent hash
+            hash.hash(hasher);
+        }
+    }
+}
+
+impl BuildDesyncNode for UntypedResources {
+    fn desync_tree_node<H: std::hash::Hasher + Default>(
+        &self,
+        include_unhashable: bool,
+    ) -> DefaultDesyncTreeNode {
+        let mut hasher = H::default();
+        let mut child_nodes: Vec<DefaultDesyncTreeNode> = self
+            .resources
+            .read_only_view()
+            .iter()
+            .filter_map(|(schema_id, resource_cell)| {
+                let is_shared = self.shared_resources.contains_key(schema_id);
+
+                if !is_shared {
+                    // Only build child node if hashable
+                    let schema = resource_cell.schema();
+                    if include_unhashable || schema.type_data.get::<SchemaDesyncHash>().is_some() {
+                        return Some(resource_cell.desync_tree_node::<H>(include_unhashable));
+                    }
+                }
+                None
+            })
+            .collect();
+
+        child_nodes.sort();
+
+        for node in child_nodes.iter() {
+            // Update parent hash
+            if let Some(hash) = node.get_hash() {
+                DesyncHash::hash(&hash, &mut hasher);
+            }
+        }
+
+        DefaultDesyncTreeNode::new(
+            Some(hasher.finish()),
+            Some("Resources".into()),
+            child_nodes,
+            DesyncNodeMetadata::None,
+        )
+    }
+}
+
 /// Error thrown when a resource cell cannot be inserted because it already exists.
 #[derive(Debug, Clone, Copy)]
 pub struct CellAlreadyPresentError;
@@ -208,6 +311,21 @@ impl UntypedResources {
 #[derive(Clone, Default)]
 pub struct Resources {
     untyped: UntypedResources,
+}
+
+impl DesyncHash for Resources {
+    fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        self.untyped.hash(hasher);
+    }
+}
+
+impl BuildDesyncNode for Resources {
+    fn desync_tree_node<H: std::hash::Hasher + Default>(
+        &self,
+        include_unhashable: bool,
+    ) -> DefaultDesyncTreeNode {
+        self.untyped.desync_tree_node::<H>(include_unhashable)
+    }
 }
 
 impl Resources {

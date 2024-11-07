@@ -30,6 +30,9 @@ scripting = ["dep:bones_scripting"]
 ## Enable networking debug window + frame prediction history.
 net-debug = ["ui"]
 
+## Enables advanced desync debugging, generates hash tree of world for frames
+desync-debug = ["dep:serde_json"]
+
 #! ### Audio formats
 #! These features enable different audio formats
 
@@ -95,6 +98,7 @@ bevy_tasks    = "0.11"
 bytemuck      = "1.12"
 either        = "1.8"
 futures-lite  = { workspace = true }
+fxhash        = { workspace = true }
 glam          = "0.24"
 hex           = "0.4"
 instant       = { version = "0.1", features = ["wasm-bindgen"] }
@@ -157,6 +161,7 @@ iroh-quinn             = { version = "0.11" }
 tokio                  = { version = "1", features = ["rt-multi-thread", "macros"] }
 turborand              = { version = "0.10.0", features = ["atomic"] }
 iroh-net               = { workspace = true, features = ["discovery-local-network"] }
+serde_json             = { workspace = true, optional = true }
 
 directories = "5.0"
 

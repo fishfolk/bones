@@ -36,6 +36,43 @@ impl Default for World {
     }
 }
 
+impl DesyncHash for World {
+    fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        self.components.hash(hasher);
+        self.resources.hash(hasher);
+    }
+}
+
+impl BuildDesyncNode for World {
+    fn desync_tree_node<H: std::hash::Hasher + Default>(
+        &self,
+        include_unhashable: bool,
+    ) -> DefaultDesyncTreeNode {
+        let mut hasher = H::default();
+
+        let mut child_nodes: Vec<DefaultDesyncTreeNode> = vec![];
+
+        let components_node = self.components.desync_tree_node::<H>(include_unhashable);
+        if let Some(hash) = components_node.get_hash() {
+            hash.hash(&mut hasher);
+        }
+        child_nodes.push(components_node);
+
+        let resources_node = self.resources.desync_tree_node::<H>(include_unhashable);
+        if let Some(hash) = resources_node.get_hash() {
+            hash.hash(&mut hasher);
+        }
+        child_nodes.push(resources_node);
+
+        DefaultDesyncTreeNode::new(
+            Some(hasher.finish()),
+            Some("World".into()),
+            child_nodes,
+            DesyncNodeMetadata::None,
+        )
+    }
+}
+
 impl World {
     /// Create a new [`World`].
     pub fn new() -> Self {
@@ -213,6 +250,22 @@ impl World {
 
         // Always maintain to clean up any killed entities
         self.maintain();
+    }
+    /// Build [`DefaultDesyncTree`] from [`World`].
+    ///
+    /// `include_unhashable` sets whether components or resources be included as non-contributing nodes
+    /// in tree, to see what could be opted-in to desync hashing.
+    ///
+    /// # Panics
+    ///
+    /// This will immutably borrow all components and resources, if any are mutably borrowed, this will panic.
+    pub fn desync_hash_tree<H: std::hash::Hasher + Default>(
+        &self,
+        include_unhashable: bool,
+    ) -> DefaultDesyncTree {
+        let root = self.desync_tree_node::<H>(include_unhashable);
+
+        DefaultDesyncTree::from_root(root)
     }
 }
 

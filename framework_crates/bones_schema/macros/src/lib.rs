@@ -115,6 +115,11 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 
     // Get the type datas that have been added and derived
     let derive_type_data_flags = get_flags_for_attr(&input, "derive_type_data");
+
+    let has_td_schema_desync_hash = derive_type_data_flags
+        .iter()
+        .any(|flag| flag.as_str() == "SchemaDesyncHash");
+
     let type_datas = {
         let add_derive_type_datas = derive_type_data_flags.into_iter().map(|ty| {
             let ty = format_ident!("{ty}");
@@ -122,6 +127,23 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                 tds.insert(<#ty as #schema_mod::FromType<#name>>::from_type()).unwrap();
             }
         });
+
+        // Do we have #[net] attribute?
+        let has_net_attribute = input
+            .attributes()
+            .iter()
+            .any(|attr| attr.path.iter().any(|p| p.to_string().contains("net")));
+
+        // Only insert SchemaDesyncHash w/ #[net] sugar when #[derive_type_data(SchemaDesyncHash)] not present
+        // (Avoid double insert)
+        let add_desync_hash_type_data = if has_net_attribute && !has_td_schema_desync_hash {
+            quote! {
+                tds.insert(<#schema_mod::desync_hash::SchemaDesyncHash as #schema_mod::FromType<#name>>::from_type()).unwrap();
+            }
+        } else {
+            quote! {}
+        };
+
         let add_type_datas = input
             .attributes()
             .iter()
@@ -132,6 +154,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         quote! {
             {
                 let tds = #schema_mod::alloc::TypeDatas::default();
+                #add_desync_hash_type_data
                 #(#add_derive_type_datas),*
                 #(
                     tds.insert(#add_type_datas).unwrap();

@@ -8,10 +8,12 @@ use crate::networking::online::OnlineMatchmakerResponse;
 pub use crate::networking::random::RngGenerator;
 use crate::prelude::*;
 use bones_matchmaker_proto::{MATCH_ALPN, PLAY_ALPN};
-use ggrs::P2PSession;
+use desync::{DesyncDebugHistoryBuffer, DetectDesyncs};
+use fxhash::FxHasher;
+use ggrs::{DesyncDetection, P2PSession};
 use instant::Duration;
 use once_cell::sync::Lazy;
-use std::{fmt::Debug, marker::PhantomData, sync::Arc};
+use std::{fmt::Debug, hash::Hasher, marker::PhantomData, sync::Arc};
 use tracing::{debug, error, info, trace, warn};
 
 #[cfg(feature = "net-debug")]
@@ -22,6 +24,7 @@ use {
 
 use crate::input::PlayerControls as PlayerControlsTrait;
 
+pub mod desync;
 pub mod input;
 pub mod lan;
 pub mod online;
@@ -62,7 +65,8 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 /// Module prelude.
 pub mod prelude {
     pub use super::{
-        input, lan, online, proto, random, DisconnectedPlayers, RngGenerator, SyncingInfo, RUNTIME,
+        desync::DetectDesyncs, input, lan, online, proto, random, DisconnectedPlayers,
+        RngGenerator, SyncingInfo, RUNTIME,
     };
 
     #[cfg(feature = "net-debug")]
@@ -550,6 +554,13 @@ pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
 
     /// The random seed used for this session
     pub random_seed: u64,
+
+    /// When provided, desync detection is enabled. Contains settings for desync detection.
+    detect_desyncs: Option<DetectDesyncs>,
+
+    /// History buffer for desync debug data to fetch it upon detected desyncs.
+    /// [`DefaultDesyncTree`] will be generated and saved here if feature `desync-debug` is enabled.
+    pub desync_debug_history: Option<DesyncDebugHistoryBuffer<DefaultDesyncTree>>,
 }
 
 /// The info required to create a [`GgrsSessionRunner`].
@@ -572,8 +583,12 @@ pub struct GgrsSessionRunnerInfo {
     ///
     /// `None` will use Bone's default.
     pub local_input_delay: Option<usize>,
+
     /// The random seed used for this session
     pub random_seed: u64,
+
+    /// When provided, desync detection is enabled. Contains settings for desync detection.
+    pub detect_desyncs: Option<DetectDesyncs>,
 }
 
 impl GgrsSessionRunnerInfo {
@@ -583,6 +598,7 @@ impl GgrsSessionRunnerInfo {
         max_prediction_window: Option<usize>,
         local_input_delay: Option<usize>,
         random_seed: u64,
+        detect_desyncs: Option<DetectDesyncs>,
     ) -> Self {
         let player_idx = socket.player_idx();
         let player_count = socket.player_count();
@@ -593,6 +609,7 @@ impl GgrsSessionRunnerInfo {
             max_prediction_window,
             local_input_delay,
             random_seed,
+            detect_desyncs,
         }
     }
 }
@@ -608,6 +625,7 @@ where
         target_fps: Option<f32>,
         max_prediction_window: Option<usize>,
         local_input_delay: Option<usize>,
+        detect_desyncs: Option<DetectDesyncs>,
         matchmaker_resp_game_starting: OnlineMatchmakerResponse,
     ) -> Option<Self> {
         if let OnlineMatchmakerResponse::GameStarting {
@@ -624,6 +642,7 @@ where
                     max_prediction_window,
                     local_input_delay,
                     random_seed,
+                    detect_desyncs,
                 ),
             ))
         } else {
@@ -662,11 +681,19 @@ where
             .try_send(NetworkDebugMessage::SetMaxPrediction(max_prediction))
             .unwrap();
 
+        let desync_detection = match info.detect_desyncs.as_ref() {
+            Some(config) => DesyncDetection::On {
+                interval: config.detection_interval,
+            },
+            None => DesyncDetection::Off,
+        };
+
         let mut builder = ggrs::SessionBuilder::new()
             .with_num_players(info.player_count as usize)
             .with_input_delay(local_input_delay)
             .with_fps(network_fps)
             .unwrap()
+            .with_desync_detection_mode(desync_detection)
             .with_max_prediction_window(max_prediction)
             .unwrap();
 
@@ -685,6 +712,18 @@ where
 
         let session = builder.start_p2p_session(info.socket.clone()).unwrap();
 
+        #[cfg(feature = "desync-debug")]
+        let desync_debug_history = if let Some(detect_desync) = info.detect_desyncs.as_ref() {
+            Some(DesyncDebugHistoryBuffer::<DefaultDesyncTree>::new(
+                detect_desync.detection_interval,
+            ))
+        } else {
+            None
+        };
+
+        #[cfg(not(feature = "desync-debug"))]
+        let desync_debug_history = None;
+
         Self {
             last_player_input: InputTypes::Dense::default(),
             session,
@@ -700,6 +739,8 @@ where
             local_input_delay,
             local_input_disabled: false,
             random_seed: info.random_seed,
+            detect_desyncs: info.detect_desyncs,
+            desync_debug_history,
         }
     }
 }
@@ -822,6 +863,19 @@ where
                     addr,
                 } => {
                     error!(%frame, %local_checksum, %remote_checksum, player=%addr, "Network de-sync detected");
+
+                    #[cfg(feature = "desync-debug")]
+                    {
+                        if let Some(desync_debug_history) = &self.desync_debug_history {
+                            if let Some(desync_hash_tree) =
+                                desync_debug_history.get_frame_data(frame as u32)
+                            {
+                                let string = serde_json::to_string_pretty(desync_hash_tree)
+                                    .expect("Failed to serialize desync hash tree");
+                                error!("Desync hash tree: frame: {frame}\n{}", string);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -845,9 +899,10 @@ where
                         .unwrap();
                 }
 
+                let current_frame = self.session.current_frame();
+
                 #[cfg(feature = "net-debug")]
                 {
-                    let current_frame = self.session.current_frame();
                     let confirmed_frame = self.session.confirmed_frame();
 
                     NETWORK_DEBUG_CHANNEL
@@ -869,9 +924,45 @@ where
                         for request in requests {
                             match request {
                                 ggrs::GgrsRequest::SaveGameState { cell, frame } => {
-                                    cell.save(frame, Some(world.clone()), None)
+                                    // TODO: Do we only need to compute hash for desync interval frames?
+                                    // GGRS should only use hashes from fixed interval.
+
+                                    // If desync detection enabled, hash world.
+                                    let checksum = if let Some(detect_desyncs) =
+                                        self.detect_desyncs.as_ref()
+                                    {
+                                        #[cfg(feature = "desync-debug")]
+                                        {
+                                            if let Some(desync_debug_history) =
+                                                &mut self.desync_debug_history
+                                            {
+                                                if desync_debug_history
+                                                    .is_desync_detect_frame(frame as u32)
+                                                {
+                                                    let tree = DefaultDesyncTree::from(
+                                                        world.desync_tree_node::<FxHasher>(
+                                                            detect_desyncs.include_unhashable_nodes,
+                                                        ),
+                                                    );
+                                                    desync_debug_history.record(frame as u32, tree);
+                                                }
+                                            }
+                                        }
+
+                                        if let Some(hash_func) = detect_desyncs.world_hash_func {
+                                            Some(hash_func(world) as u128)
+                                        } else {
+                                            let mut hasher = FxHasher::default();
+                                            world.hash(&mut hasher);
+                                            Some(hasher.finish() as u128)
+                                        }
+                                    } else {
+                                        None
+                                    };
+
+                                    cell.save(frame, Some(world.clone()), checksum);
                                 }
-                                ggrs::GgrsRequest::LoadGameState { cell, .. } => {
+                                ggrs::GgrsRequest::LoadGameState { cell, frame } => {
                                     // Swap out sessions to preserve them after world save.
                                     // Sessions clone makes empty copy, so saved snapshots do not include sessions.
                                     // Sessions are borrowed from Game for execution of this session,
@@ -886,6 +977,8 @@ where
                                         &mut sessions,
                                         &mut world.resource_mut::<Sessions>(),
                                     );
+
+                                    trace!("Loading (rollback) frame: {frame}");
                                 }
                                 ggrs::GgrsRequest::AdvanceFrame {
                                     inputs: network_inputs,
@@ -949,8 +1042,8 @@ where
                                             network_inputs.into_iter().enumerate()
                                         {
                                             trace!(
-                                                "Net player({player_idx}) local: {}, status: {status:?}, input: {:?}",
-                                                self.local_player_idx as usize == player_idx,
+                                                "Net player({player_idx}) local: {}, status: {status:?}, frame: {current_frame} input: {:?}",
+                                                self.local_player_idx == player_idx as u32,
                                                 input
                                             );
                                             player_inputs.network_update(
@@ -1024,6 +1117,7 @@ where
             max_prediction_window: Some(self.session.max_prediction()),
             local_input_delay: Some(self.local_input_delay),
             random_seed: self.random_seed,
+            detect_desyncs: self.detect_desyncs.clone(),
         };
         *self = GgrsSessionRunner::new(Some(self.original_fps as f32), runner_info);
     }

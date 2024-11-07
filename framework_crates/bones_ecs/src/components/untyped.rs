@@ -73,6 +73,69 @@ impl Drop for UntypedComponentStore {
     }
 }
 
+impl DesyncHash for UntypedComponentStore {
+    fn hash(&self, hasher: &mut dyn std::hash::Hasher) {
+        self.schema().full_name.hash(hasher);
+        for component in self.iter() {
+            DesyncHash::hash(&component, hasher);
+        }
+    }
+}
+
+impl BuildDesyncNode for UntypedComponentStore {
+    fn desync_tree_node<H: std::hash::Hasher + Default>(
+        &self,
+        _include_unhashable: bool,
+    ) -> DefaultDesyncTreeNode {
+        let mut hasher = H::default();
+
+        // Iterate over components by index so we can save entity ID.
+        let iter = 0..self.bitset().bit_len();
+        let child_nodes: Vec<DefaultDesyncTreeNode> = iter
+            .filter_map(|entity_idx| -> Option<DefaultDesyncTreeNode> {
+                if let Some(component) = self.get_idx(entity_idx) {
+                    let hash = if component
+                        .schema()
+                        .type_data
+                        .get::<SchemaDesyncHash>()
+                        .is_some()
+                    {
+                        // Update parent node hash from data
+                        DesyncHash::hash(&component, &mut hasher);
+                        Some(component.compute_hash::<H>())
+                    } else {
+                        None
+                    };
+
+                    return Some(DefaultDesyncTreeNode::new(
+                        hash,
+                        None,
+                        vec![],
+                        DesyncNodeMetadata::Component {
+                            entity_idx: entity_idx as u32,
+                        },
+                    ));
+                }
+
+                None
+            })
+            .collect();
+
+        let hash = if !child_nodes.is_empty() {
+            Some(hasher.finish())
+        } else {
+            None
+        };
+
+        DefaultDesyncTreeNode::new(
+            hash,
+            Some(self.schema().full_name.to_string()),
+            child_nodes,
+            DesyncNodeMetadata::None,
+        )
+    }
+}
+
 impl UntypedComponentStore {
     /// Create a arbitrary [`UntypedComponentStore`].
     ///
