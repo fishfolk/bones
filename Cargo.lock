@@ -1503,6 +1503,7 @@ dependencies = [
  "rustls 0.21.12",
  "send_wrapper",
  "serde",
+ "serde_json",
  "serde_yaml",
  "smallvec",
  "sys-locale",

@@ -870,7 +870,7 @@ where
                             if let Some(desync_hash_tree) =
                                 desync_debug_history.get_frame_data(frame as u32)
                             {
-                                let string = serde_yaml::to_string(desync_hash_tree)
+                                let string = serde_json::to_string_pretty(desync_hash_tree)
                                     .expect("Failed to serialize desync hash tree");
                                 error!("Desync hash tree: frame: {frame}\n{}", string);
                             }
