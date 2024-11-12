@@ -57,10 +57,13 @@ impl SystemStages {
         }
 
         // Run single success systems
-        self.single_success_systems.retain_mut(|system| {
-            let result = system.run(world, ());
-            result.is_none() // Keep the system if it didn't succeed (returned None)
-        });
+        for (index, system) in self.single_success_systems.iter_mut().enumerate() {
+            let should_run = !Self::has_single_success_system_succeeded(index, world);
+
+            if should_run && system.run(world, ()).is_some() {
+                Self::mark_single_success_system_succeeded(index, world);
+            }
+        }
 
         // Run each stage
         for stage in &mut self.stages {
@@ -202,6 +205,28 @@ impl SystemStages {
     /// Set whether the session has been started and startup systems executed.
     fn set_session_started(started: bool, world: &mut World) {
         world.init_resource::<SessionStarted>().has_started = started;
+    }
+
+    /// Check if single success system is marked as succeeded in [`SingleSuccessSystems`] [`Resource`].
+    fn has_single_success_system_succeeded(system_index: usize, world: &World) -> bool {
+        if let Some(system_success) = world.get_resource::<SingleSuccessSystems>() {
+            return system_success.has_system_succeeded(system_index);
+        }
+
+        false
+    }
+
+    /// Mark a single success system as succeeded in [`SingleSuccessSystems`] [`Resource`].
+    fn mark_single_success_system_succeeded(system_index: usize, world: &mut World) {
+        if let Some(mut system_succes) = world.get_resource_mut::<SingleSuccessSystems>() {
+            system_succes.set_system_completed(system_index);
+            return;
+        }
+
+        // Resource does not exist - must initialize it
+        world
+            .init_resource::<SingleSuccessSystems>()
+            .set_system_completed(system_index);
     }
 }
 
@@ -378,4 +403,29 @@ impl<'a> SystemParam for Commands<'a> {
 struct SessionStarted {
     /// Has the session started, and startup systems executed?
     pub has_started: bool,
+}
+
+/// Resource tracking which of single success systems in [`Session`]'s [`SystemStages`] have completed.
+/// Success is tracked to
+#[derive(HasSchema, Clone, Default)]
+struct SingleSuccessSystems {
+    /// Set of indices of [`SystemStages`]'s single success systems that have succeeded.
+    pub systems_succeeded: HashSet<usize>,
+}
+
+impl SingleSuccessSystems {
+    /// Reset single success systems completion status. so they run again until success.
+    pub fn reset(&mut self) {
+        self.systems_succeeded.clear();
+    }
+
+    /// Check if system has completed
+    pub fn has_system_succeeded(&self, index: usize) -> bool {
+        self.systems_succeeded.contains(&index)
+    }
+
+    /// Mark system as completed.
+    pub fn set_system_completed(&mut self, index: usize) {
+        self.systems_succeeded.insert(index);
+    }
 }
