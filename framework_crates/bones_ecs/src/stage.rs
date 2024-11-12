@@ -15,9 +15,8 @@ pub struct CurrentSystemStage(pub Ulid);
 pub struct SystemStages {
     /// The stages in the collection, in the order that they will be run.
     pub stages: Vec<Box<dyn SystemStage>>,
-    /// Whether or not the startup systems have been run yet.
-    pub has_started: bool,
     /// The systems that should run at startup.
+    /// They will be executed next step based on if [`SessionStarted`] resource in world says session has not started, or if resource does not exist.
     pub startup_systems: Vec<StaticSystem<(), ()>>,
     /// Systems that are continously run until they succeed(return Some). These run before all stages. Uses Option to allow for easy usage of `?`.
     pub single_success_systems: Vec<StaticSystem<(), Option<()>>>,
@@ -43,7 +42,7 @@ impl SystemStages {
     /// Execute the systems on the given `world`.
     pub fn run(&mut self, world: &mut World) {
         // If we haven't run our startup systems yet
-        if !self.has_started {
+        if !Self::has_session_started(world) {
             // Set the current stage resource
             world.insert_resource(CurrentSystemStage(Ulid(0)));
 
@@ -54,7 +53,7 @@ impl SystemStages {
             }
 
             // Don't run startup systems again
-            self.has_started = true;
+            Self::set_session_started(true, world);
         }
 
         // Run single success systems
@@ -89,13 +88,13 @@ impl SystemStages {
                 Box::new(SimpleSystemStage::new(CoreStage::PostUpdate)),
                 Box::new(SimpleSystemStage::new(CoreStage::Last)),
             ],
-            has_started: false,
             startup_systems: default(),
             single_success_systems: Vec::new(),
         }
     }
 
     /// Add a system that will run only once, before all of the other non-startup systems.
+    /// If wish to reset session and run again, can modify [`SessionStarted`] resource in world.
     pub fn add_startup_system<Args, S>(&mut self, system: S) -> &mut Self
     where
         S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
@@ -174,7 +173,6 @@ impl SystemStages {
     /// Remove all systems from all stages, including startup and single success systems. Resets has_started as well, allowing for startup systems to run once again.
     pub fn reset_remove_all_systems(&mut self) {
         // Reset the has_started flag
-        self.has_started = false;
         self.remove_all_systems();
     }
 
@@ -190,6 +188,20 @@ impl SystemStages {
         for stage in &mut self.stages {
             stage.remove_all_systems();
         }
+    }
+
+    /// Has session started and startup systems been executed?
+    fn has_session_started(world: &World) -> bool {
+        if let Some(session_started) = world.get_resource::<SessionStarted>() {
+            return session_started.has_started;
+        }
+
+        false
+    }
+
+    /// Set whether the session has been started and startup systems executed.
+    fn set_session_started(started: bool, world: &mut World) {
+        world.init_resource::<SessionStarted>().has_started = started;
     }
 }
 
@@ -357,4 +369,13 @@ impl<'a> SystemParam for Commands<'a> {
     fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
         Commands(state.borrow_mut().unwrap())
     }
+}
+
+/// Resource tracking if Session has started and startup systems executed.
+/// If reset to false, startup systems should be re-triggered.
+/// If resource is not present, assumed to have not started (and will be initialized upon execution).
+#[derive(Copy, Clone, HasSchema, Default)]
+struct SessionStarted {
+    /// Has the session started, and startup systems executed?
+    pub has_started: bool,
 }
