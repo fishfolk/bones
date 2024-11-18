@@ -200,6 +200,16 @@ impl UntypedResources {
             |_, cell| cell.clone(),
         )
     }
+
+    /// Removes all resourcse that are not shared resources.
+    pub fn clear_owned_resources(&mut self) {
+        for (schema_id, resource_cell) in self.resources.iter_mut() {
+            let is_shared = self.shared_resources.contains_key(schema_id);
+            if !is_shared {
+                resource_cell.remove();
+            }
+        }
+    }
 }
 
 /// A collection of resources.
@@ -284,6 +294,11 @@ impl Resources {
     /// Consume [`Resources`] and extract the underlying [`UntypedResources`].
     pub fn into_untyped(self) -> UntypedResources {
         self.untyped
+    }
+
+    /// Removes all resources that are not shared. Shared resources are preserved.
+    pub fn clear_owned_resources(&mut self) {
+        self.untyped.clear_owned_resources();
     }
 }
 
@@ -436,18 +451,19 @@ impl<T: HasSchema + FromWorld> AtomicResource<T> {
 
 #[cfg(test)]
 mod test {
+    use std::sync::Arc;
+
     use crate::prelude::*;
+    #[derive(HasSchema, Clone, Debug, Default)]
+    #[repr(C)]
+    struct A(String);
+
+    #[derive(HasSchema, Clone, Debug, Default)]
+    #[repr(C)]
+    struct B(u32);
 
     #[test]
     fn sanity_check() {
-        #[derive(HasSchema, Clone, Debug, Default)]
-        #[repr(C)]
-        struct A(String);
-
-        #[derive(HasSchema, Clone, Debug, Default)]
-        #[repr(C)]
-        struct B(u32);
-
         let r1 = Resources::new();
 
         r1.insert(A(String::from("hi")));
@@ -469,5 +485,29 @@ mod test {
         r1.insert(B(2));
         assert_eq!(r1b.borrow().unwrap().0, 2);
         assert_eq!(r1a.borrow().unwrap().0, "world");
+    }
+
+    #[test]
+    fn resources_clear_owned_values() {
+        let mut r = Resources::new();
+
+        // insert A as non-shared resource
+        r.insert(A(String::from("foo")));
+
+        // Insert B as shared resource
+        r.untyped
+            .insert_cell(Arc::new(UntypedResource::new(SchemaBox::new(B(1)))))
+            .unwrap();
+
+        // Should only clear non-shared resources
+        r.clear_owned_resources();
+
+        // Verify non-shared was removed
+        let res_a = r.get::<A>();
+        assert!(res_a.is_none());
+
+        // Verify shared is still present
+        let res_b = r.get::<B>().unwrap();
+        assert_eq!(res_b.0, 1);
     }
 }
