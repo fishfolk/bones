@@ -229,7 +229,7 @@ impl Resources {
     ///
     /// See [get()][Self::get]
     pub fn contains<T: HasSchema>(&self) -> bool {
-        self.untyped.resources.contains_key(&T::schema().id())
+        self.untyped.contains(T::schema().id())
     }
 
     /// Remove a resource from the store, if it is present.
