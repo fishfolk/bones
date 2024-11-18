@@ -91,7 +91,7 @@ pub mod external {
 /// Default plugins for bones framework sessions.
 pub struct DefaultSessionPlugin;
 impl lib::SessionPlugin for DefaultSessionPlugin {
-    fn install(self, session: &mut lib::Session) {
+    fn install(self, session: &mut lib::SessionBuilder) {
         session
             .install_plugin(animation::animation_plugin)
             .install_plugin(render::render_plugin);

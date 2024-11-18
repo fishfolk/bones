@@ -3,7 +3,7 @@
 use crate::prelude::*;
 
 /// Sprite session plugin.
-pub fn sprite_plugin(_session: &mut Session) {
+pub fn sprite_plugin(_session: &mut SessionBuilder) {
     Sprite::register_schema();
     AtlasSprite::register_schema();
 }
