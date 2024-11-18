@@ -201,7 +201,6 @@ impl SessionRunner for DefaultSessionRunner {
 /// Games are made up of one or more [`Session`]s, each of which contains it's own [`World`] and
 /// [`SystemStages`]. These different sessions can be used for parts of the game with independent
 /// states, such as the main menu and the gameplay.
-#[derive(Default)]
 pub struct Game {
     /// The sessions that make up the game.
     pub sessions: Sessions,
@@ -216,6 +215,22 @@ pub struct Game {
     /// Collection of resources that will have a shared instance of each be inserted into each
     /// session automatically.
     pub shared_resources: Vec<AtomicUntypedResource>,
+}
+
+impl Default for Game {
+    fn default() -> Self {
+        let mut game = Self {
+            sessions: default(),
+            systems: default(),
+            sorted_session_keys: default(),
+            shared_resources: default(),
+        };
+
+        // Init Sessions shared resource so it exists for game step.
+        // (Game's sessions temporarily moved to this resource during execution)
+        game.init_shared_resource::<Sessions>();
+        game
+    }
 }
 
 impl Game {
