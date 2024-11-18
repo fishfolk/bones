@@ -51,7 +51,7 @@ pub struct FrameTimeWindowState {
 
 /// If installed, allows opening egui window with [`FrameTimeWindowState`] in [`EguiCtx`] state
 /// to get frame time information.
-pub fn frame_time_diagnostics_plugin(core: &mut Session) {
+pub fn frame_time_diagnostics_plugin(core: &mut SessionBuilder) {
     core.stages
         .add_system_to_stage(CoreStage::Last, frame_diagnostic_window);
 }
