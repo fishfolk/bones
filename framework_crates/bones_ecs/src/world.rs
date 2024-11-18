@@ -214,6 +214,12 @@ impl World {
         // Always maintain to clean up any killed entities
         self.maintain();
     }
+
+    /// Load snapshot of [`World`] into self.
+    pub fn load_snapshot(&mut self, snapshot: World) {
+        self.components = snapshot.components;
+        self.resources = snapshot.resources;
+    }
 }
 
 /// Creates an instance of the type this trait is implemented for
