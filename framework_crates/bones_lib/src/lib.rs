@@ -99,20 +99,6 @@ impl Session {
     pub fn set_session_runner(&mut self, runner: Box<dyn SessionRunner>) {
         self.runner = runner;
     }
-
-    /// Provides an interface for resetting various internal parts of the Session.
-    /// Note this does not fully reset the entire Session.
-    pub fn reset_internals(
-        &mut self,
-        reset_components: bool,
-        reset_entities: bool,
-        reset_systems: bool,
-    ) {
-        self.world.reset_internals(reset_components, reset_entities);
-        if reset_systems {
-            self.reset_remove_all_systems();
-        }
-    }
 }
 
 impl Default for Session {
