@@ -282,7 +282,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 
                     let register_schema = if input.generic_params().is_some() {
                         quote! {
-                            static S: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
+                            static S: OnceLock<RwLock<HashMap<TypeId, &'static #schema_mod::Schema>>> = OnceLock::new();
                             let schema = {
                                 S.get_or_init(Default::default)
                                     .read()
@@ -377,11 +377,11 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         quote! {
             unsafe impl #sync_send_generic_params #schema_mod::HasSchema for #name #generic_params {
                 fn schema() -> &'static #schema_mod::Schema {
-                    use ::std::sync::{OnceLock};
+                    use ::std::sync::OnceLock;
                     use ::std::any::TypeId;
                     use bones_utils::HashMap;
                     use parking_lot::RwLock;
-                    static S: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
+                    static S: OnceLock<RwLock<HashMap<TypeId, &'static #schema_mod::Schema>>> = OnceLock::new();
                     let schema = {
                         S.get_or_init(Default::default)
                             .read()
