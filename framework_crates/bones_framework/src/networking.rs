@@ -949,6 +949,17 @@ where
 
                                     // Run game session stages, advancing simulation
                                     stages.run(world);
+
+                                    // Handle any triggered resets of world + preserve runner's managed resources like RngGenerator.
+                                    if world.reset_triggered() {
+                                        let rng = world
+                                            .get_resource::<RngGenerator>()
+                                            .map(|r| (*r).clone());
+                                        world.handle_world_reset();
+                                        if let Some(rng) = rng {
+                                            world.resources.insert(rng);
+                                        }
+                                    }
                                 }
                             }
                         }
