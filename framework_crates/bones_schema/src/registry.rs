@@ -2,11 +2,16 @@
 
 use std::{
     alloc::Layout,
-    sync::atomic::{AtomicU32, Ordering::SeqCst},
+    any::TypeId,
+    sync::{
+        atomic::{AtomicU32, Ordering::SeqCst},
+        LazyLock,
+    },
 };
 
 use append_only_vec::AppendOnlyVec;
-use bones_utils::Deref;
+use bones_utils::{Deref, HashMap};
+use parking_lot::RwLock;
 
 use crate::prelude::*;
 
@@ -142,6 +147,10 @@ pub static SCHEMA_REGISTRY: SchemaRegistry = SchemaRegistry {
     next_id: AtomicU32::new(0),
     schemas: AppendOnlyVec::new(),
 };
+
+#[doc(hidden)]
+pub static GENERIC_SCHEMA_CACHE: LazyLock<RwLock<HashMap<TypeId, &'static Schema>>> =
+    LazyLock::new(Default::default);
 
 #[cfg(test)]
 mod test {

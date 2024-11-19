@@ -282,9 +282,8 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 
                     let register_schema = if input.generic_params().is_some() {
                         quote! {
-                            static S: OnceLock<RwLock<HashMap<TypeId, &'static #schema_mod::Schema>>> = OnceLock::new();
                             let schema = {
-                                S.get_or_init(Default::default)
+                                #schema_mod::registry::GENERIC_SCHEMA_CACHE
                                     .read()
                                     .get(&TypeId::of::<Self>())
                                     .copied()
@@ -292,7 +291,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                             schema.unwrap_or_else(|| {
                                 let schema = compute_schema();
 
-                                S.get_or_init(Default::default)
+                                #schema_mod::registry::GENERIC_SCHEMA_CACHE
                                     .write()
                                     .insert(TypeId::of::<Self>(), schema);
 
@@ -395,13 +394,9 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         quote! {
             unsafe impl<#impl_bounds> #schema_mod::HasSchema for #name<#struct_params> {
                 fn schema() -> &'static #schema_mod::Schema {
-                    use ::std::sync::OnceLock;
                     use ::std::any::TypeId;
-                    use bones_utils::HashMap;
-                    use parking_lot::RwLock;
-                    static S: OnceLock<RwLock<HashMap<TypeId, &'static #schema_mod::Schema>>> = OnceLock::new();
                     let schema = {
-                        S.get_or_init(Default::default)
+                        #schema_mod::registry::GENERIC_SCHEMA_CACHE
                             .read()
                             .get(&TypeId::of::<Self>())
                             .copied()
@@ -409,13 +404,12 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                     schema.unwrap_or_else(|| {
                         let schema = #schema_register;
 
-                        S.get_or_init(Default::default)
+                        #schema_mod::registry::GENERIC_SCHEMA_CACHE
                             .write()
                             .insert(TypeId::of::<Self>(), schema);
 
                         schema
                     })
-
                 }
             }
         }
