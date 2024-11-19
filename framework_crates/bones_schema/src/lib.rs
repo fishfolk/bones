@@ -63,6 +63,11 @@ mod test {
             Set(T),
         }
 
+        #[derive(HasSchema, Clone, Default)]
+        #[schema_module(crate)]
+        #[repr(C)]
+        struct WrapperWithDefault<T: Default>(T);
+
         #[derive(HasSchema, Clone, Copy, Debug, PartialEq, Eq, Default)]
         #[schema_module(crate)]
         #[repr(u8)]
