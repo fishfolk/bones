@@ -149,8 +149,9 @@ pub static SCHEMA_REGISTRY: SchemaRegistry = SchemaRegistry {
 };
 
 #[doc(hidden)]
-pub static GENERIC_SCHEMA_CACHE: LazyLock<RwLock<HashMap<TypeId, &'static Schema>>> =
-    LazyLock::new(Default::default);
+pub static GENERIC_SCHEMA_CACHE: LazyLock<
+    RwLock<HashMap<(TypeId, &'static str), &'static Schema>>,
+> = LazyLock::new(Default::default);
 
 #[cfg(test)]
 mod test {

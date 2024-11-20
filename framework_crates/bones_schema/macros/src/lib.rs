@@ -285,7 +285,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                             let schema = {
                                 #schema_mod::registry::GENERIC_SCHEMA_CACHE
                                     .read()
-                                    .get(&TypeId::of::<Self>())
+                                    .get(&(TypeId::of::<Self>(), #variant_schema_name))
                                     .copied()
                             };
                             schema.unwrap_or_else(|| {
@@ -293,7 +293,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 
                                 #schema_mod::registry::GENERIC_SCHEMA_CACHE
                                     .write()
-                                    .insert(TypeId::of::<Self>(), schema);
+                                    .insert((TypeId::of::<Self>(), #variant_schema_name), schema);
 
                                 schema
                             })
@@ -398,7 +398,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                     let schema = {
                         #schema_mod::registry::GENERIC_SCHEMA_CACHE
                             .read()
-                            .get(&TypeId::of::<Self>())
+                            .get(&(TypeId::of::<Self>(), stringify!(#name)))
                             .copied()
                     };
                     schema.unwrap_or_else(|| {
@@ -406,7 +406,7 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 
                         #schema_mod::registry::GENERIC_SCHEMA_CACHE
                             .write()
-                            .insert(TypeId::of::<Self>(), schema);
+                            .insert((TypeId::of::<Self>(), stringify!(name)), schema);
 
                         schema
                     })
