@@ -313,7 +313,7 @@ pub trait SessionRunner: Sync + Send + 'static {
     ///
     ///     // Not required for runner - but calling this allows [`ResetWorld`] resource to
     ///     // reset world state from gameplay.
-    ///     world.handle_world_reset();
+    ///     world.handle_world_reset(stages);
     ///
     /// }
     /// fn restart_session(&mut self) {}
@@ -341,7 +341,7 @@ impl SessionRunner for DefaultSessionRunner {
         stages.run(world);
 
         // Checks if reset of world has been triggered by [`ResetWorld`] and handles a reset.
-        world.handle_world_reset();
+        world.handle_world_reset(stages);
     }
 
     // This is a no-op as no state, but implemented this way in case that changes later.

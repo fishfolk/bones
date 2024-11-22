@@ -92,13 +92,13 @@ pub fn single_success_system_reset() {
         );
     }
 
-    // step again, world should be reset after step. The Counter resource will not be present
-    // until next step re-inits startup resources.
-    // (at 0.unwrap())
+    // step again, world should be reset after this step. Counter should be back at default state of 0,
+    // single successs system not yet run until beginning of next step.
     game.step(Instant::now());
     {
         let session = game.sessions.get("game").unwrap();
-        assert!(session.world.get_resource::<Counter>().is_none());
+        let counter = session.world.get_resource::<Counter>().unwrap();
+        assert_eq!(counter.0, 0);
     }
 
     // Startup resource should be re-initialized, and completion status of single single success system reset.

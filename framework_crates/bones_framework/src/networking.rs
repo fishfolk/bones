@@ -956,7 +956,7 @@ where
                                         let rng = world
                                             .get_resource::<RngGenerator>()
                                             .map(|r| (*r).clone());
-                                        world.handle_world_reset();
+                                        world.handle_world_reset(stages);
                                         if let Some(rng) = rng {
                                             world.resources.insert(rng);
                                         }

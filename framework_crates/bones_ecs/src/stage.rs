@@ -232,22 +232,8 @@ impl SystemStages {
 
     /// Execute the systems on the given `world`.
     pub fn run(&mut self, world: &mut World) {
-        // If we haven't run our startup systems yet
-        if !Self::has_session_started(world) {
-            self.insert_startup_resources(world);
-
-            // Set the current stage resource
-            world.insert_resource(CurrentSystemStage(Ulid(0)));
-
-            // For each startup system
-            for system in &mut self.startup_systems {
-                // Run the system
-                system.run(world, ());
-            }
-
-            // Don't run startup systems again
-            Self::set_session_started(true, world);
-        }
+        // If we haven't run startup systems and setup resources yet, do so
+        self.handle_startup(world);
 
         // Run single success systems
         for (index, system) in self.single_success_systems.iter_mut().enumerate() {
@@ -272,6 +258,30 @@ impl SystemStages {
 
         // Remove the current system stage resource
         world.resources.remove::<CurrentSystemStage>();
+    }
+
+    /// If [`SessionStarted`] resource indicates have not yet started,
+    /// perform startup tasks (insert startup resources, run startup systems).
+    ///
+    /// While this is used internally by [`SystemStages::run`], this is also used
+    /// for resetting world. This allows world to immediately startup and re-initialize after reset.
+    pub fn handle_startup(&mut self, world: &mut World) {
+        if !Self::has_session_started(world) {
+            self.insert_startup_resources(world);
+
+            // Set the current stage resource
+            world.insert_resource(CurrentSystemStage(Ulid(0)));
+
+            // For each startup system
+            for system in &mut self.startup_systems {
+                // Run the system
+                system.run(world, ());
+            }
+
+            // Don't run startup systems again
+            Self::set_session_started(true, world);
+            world.resources.remove::<CurrentSystemStage>();
+        }
     }
 
     /// Has session started and startup systems been executed?
