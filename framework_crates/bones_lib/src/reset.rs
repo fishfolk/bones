@@ -15,7 +15,10 @@ pub struct ResetWorld {
 pub trait WorldExt {
     /// May be called by [`SessionRunner`] before or after [`SystemStages::run`] to allow triggering reset
     /// of world with the [`ResetWorld`] resource.
-    fn handle_world_reset(&mut self);
+    ///
+    /// `stages` is required, so that after reset, will immediatelly run startup tasks, instead of waiting until next step of [`SystemStages`].
+    /// This avoids edge cases where other sessions may read expected resources from this session before its next step.
+    fn handle_world_reset(&mut self, stages: &mut SystemStages);
 
     /// Check if reset has been triggered by [`ResetWorld`] resource. If [`SessionRunner`] needs to do anything special
     /// for a world reset (preserve managed resources, etc) - can check this before calling `handle_world_reset` to see
@@ -24,15 +27,18 @@ pub trait WorldExt {
 
     /// Provides a low-level interface for resetting entities, components, and resources.
     ///
+    /// `stages` is required, so that after reset, will immediatelly run startup tasks, instead of waiting until next step of [`SystemStages`].
+    /// This avoids edge cases where other sessions may read expected resources from this session before its next step.
+    ///
     /// Waring: Calling this function on World in a [`Session`] using network session runner is likely to introduce non-determinism.
     /// It is strongly recommended to use the [`ResetWorld`] Resource to trigger this in manner compatible with net rollback.
-    fn reset_internals(&mut self);
+    fn reset_internals(&mut self, stages: &mut SystemStages);
 }
 
 impl WorldExt for World {
-    fn handle_world_reset(&mut self) {
+    fn handle_world_reset(&mut self, stages: &mut SystemStages) {
         if self.reset_triggered() {
-            self.reset_internals();
+            self.reset_internals(stages);
         }
     }
 
@@ -40,7 +46,7 @@ impl WorldExt for World {
         self.get_resource::<ResetWorld>().map_or(false, |r| r.reset)
     }
 
-    fn reset_internals(&mut self) {
+    fn reset_internals(&mut self, stages: &mut SystemStages) {
         // Clear all component stores
         self.components = ComponentStores::default();
 
@@ -63,5 +69,8 @@ impl WorldExt for World {
         if let Some(session_opts) = session_opts {
             self.insert_resource(session_opts);
         }
+
+        // Immediately run startup tasks, ensuring startup resources are present and run startup systems.
+        stages.handle_startup(self);
     }
 }
