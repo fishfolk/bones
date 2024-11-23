@@ -20,7 +20,7 @@ pub struct SystemStagesBuilder {
     startup_systems: Vec<StaticSystem<(), ()>>,
 
     /// Resources installed during session plugin installs. Copied to world as first step on startup of stages' execution.
-    startup_resources: Vec<UntypedResource>,
+    startup_resources: UntypedResourceSet,
 
     /// Systems that are continously run until they succeed(return Some). These run before all stages. Uses Option to allow for easy usage of `?`.
     single_success_systems: Vec<StaticSystem<(), Option<()>>>,
@@ -140,55 +140,19 @@ impl SystemStagesBuilder {
     ///
     /// If already exists, will be overwritten.
     pub fn insert_startup_resource<T: HasSchema>(&mut self, resource: T) {
-        // Update an existing resource of the same type.
-        for r in &mut self.startup_resources {
-            if r.schema() == T::schema() {
-                let mut borrow = r.borrow_mut();
-
-                if let Some(b) = borrow.as_mut() {
-                    *b.cast_mut() = resource;
-                } else {
-                    *borrow = Some(SchemaBox::new(resource))
-                }
-                return;
-            }
-        }
-
-        // Or insert a new resource if we couldn't find one
-        self.startup_resources
-            .push(UntypedResource::new(SchemaBox::new(resource)));
+        self.startup_resources.insert_resource(resource);
     }
 
     /// Init startup resource with default, and return mutable ref for modification.
     /// If already exists, returns mutable ref to existing resource.
     pub fn init_startup_resource<T: HasSchema + Default>(&mut self) -> RefMut<T> {
-        if !self
-            .startup_resources
-            .iter()
-            .any(|x| x.schema() == T::schema())
-        {
-            self.insert_startup_resource(T::default());
-        }
-        self.startup_resource_mut::<T>().unwrap()
+        self.startup_resources.init_resource::<T>()
     }
 
     /// Get mutable reference to startup resource if found.
     #[track_caller]
     pub fn startup_resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
-        let res = self
-            .startup_resources
-            .iter()
-            .find(|x| x.schema() == T::schema())?;
-        let borrow = res.borrow_mut();
-
-        if borrow.is_some() {
-            // SOUND: We know the type matches T
-            Some(RefMut::map(borrow, |b| unsafe {
-                b.as_mut().unwrap().as_mut().cast_into_mut_unchecked()
-            }))
-        } else {
-            None
-        }
+        self.startup_resources.resource_mut()
     }
 }
 
@@ -202,7 +166,7 @@ pub struct SystemStages {
     startup_systems: Vec<StaticSystem<(), ()>>,
 
     /// Resources installed during session plugin installs. Copied to world as first step on startup of stages' execution.
-    startup_resources: Vec<UntypedResource>,
+    startup_resources: UntypedResourceSet,
 
     /// Systems that are continously run until they succeed(return Some). These run before all stages. Uses Option to allow for easy usage of `?`.
     single_success_systems: Vec<StaticSystem<(), Option<()>>>,
@@ -322,7 +286,7 @@ impl SystemStages {
 
     /// Insert the startup resources that [`SystemStages`] and session were built with into [`World`].
     fn insert_startup_resources(&self, world: &mut World) {
-        for resource in self.startup_resources.iter() {
+        for resource in self.startup_resources.resources().iter() {
             // Deep copy startup resource and insert into world.
             let resource_copy = resource.clone_data().unwrap();
             let resource_cell = world.resources.untyped().get_cell(resource.schema());

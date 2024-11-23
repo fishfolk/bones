@@ -120,3 +120,82 @@ pub fn single_success_system_reset() {
         assert_eq!(counter.0, 2);
     }
 }
+
+#[test]
+pub fn reset_world_resource_override() {
+    let mut game = Game::new();
+
+    // insert counter resource
+    game.sessions.create_with("game", |builder| {
+        builder.init_resource::<Counter>();
+    });
+
+    game.step(Instant::now());
+    {
+        let session = game.sessions.get("game").unwrap();
+        let counter = session.world.get_resource::<Counter>().unwrap();
+        // asert in default state of 0
+        assert_eq!(counter.0, 0);
+    }
+
+    // Add command that will trigger reset on next step,
+    // and add reset resource of Counter with value 1
+    {
+        let game_session = game.sessions.get_mut("game").unwrap();
+        game_session.world.init_resource::<CommandQueue>().add(
+            |mut reset: ResMutInit<ResetWorld>| {
+                reset.reset = true;
+                reset.insert_reset_resource(Counter(1));
+            },
+        );
+    }
+
+    // Step to reset
+    game.step(Instant::now());
+    {
+        let session = game.sessions.get("game").unwrap();
+        let counter = session.world.get_resource::<Counter>().unwrap();
+        // Verify the reset resource of value 1 was applied, instead of resetting to default state
+        assert_eq!(counter.0, 1);
+    }
+}
+
+#[test]
+pub fn reset_world_emtpy_resource() {
+    let mut game = Game::new();
+
+    // insert counter resource
+    game.sessions.create_with("game", |builder| {
+        builder.init_resource::<Counter>();
+    });
+
+    game.step(Instant::now());
+    {
+        let session = game.sessions.get("game").unwrap();
+        let counter = session.world.get_resource::<Counter>().unwrap();
+        // asert in default state of 0
+        assert_eq!(counter.0, 0);
+    }
+
+    // Add command that will trigger reset on next step,
+    // and add reset resource of Counter with value 1
+    {
+        let game_session = game.sessions.get_mut("game").unwrap();
+        game_session.world.init_resource::<CommandQueue>().add(
+            |mut reset: ResMutInit<ResetWorld>| {
+                reset.reset = true;
+                reset.insert_empty_reset_resource::<Counter>();
+            },
+        );
+    }
+
+    // Step to reset
+    game.step(Instant::now());
+    {
+        let session = game.sessions.get("game").unwrap();
+        let counter = session.world.get_resource::<Counter>();
+
+        // Verify resource was removed instead of reseting to initial state of session build.
+        assert!(counter.is_none())
+    }
+}
