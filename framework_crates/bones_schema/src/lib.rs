@@ -168,5 +168,22 @@ mod test {
             assert_eq!(A::schema().layout(), B::schema().layout());
             assert_eq!(C::schema().layout(), D::schema().layout());
         }
+
+        #[test]
+        fn generic_no_clone() {
+            #[derive(HasSchema, Default)]
+            #[schema(no_clone)]
+            #[schema_module(crate)]
+            #[repr(C)]
+            struct Meta<T: HasSchema + Default>(T);
+
+            #[derive(HasSchema, Default)]
+            #[schema(no_clone)]
+            #[schema_module(crate)]
+            #[repr(C)]
+            struct NotClonable;
+
+            _ = Meta::<NotClonable>::schema();
+        }
     }
 }

@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use proc_macro2::{Punct, Spacing, TokenStream as TokenStream2, TokenTree as TokenTree2};
+use proc_macro2::{Ident, Punct, Spacing, TokenStream as TokenStream2, TokenTree as TokenTree2};
 use quote::{format_ident, quote, quote_spanned, spanned::Spanned, TokenStreamExt};
 use venial::StructFields;
 
@@ -376,7 +376,11 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         let mut impl_bounds = TokenStream2::new();
         for (param, comma) in generic_params.params.iter() {
             let name = &param.name;
-            impl_bounds.extend(quote!(#name : HasSchema + Clone));
+            impl_bounds.extend(quote!(#name : HasSchema));
+            if !no_clone {
+                impl_bounds.append(Punct::new('+', Spacing::Alone));
+                impl_bounds.append(Ident::new("Clone", input.__span()));
+            }
             if let Some(bound) = &param.bound {
                 impl_bounds.append(Punct::new('+', Spacing::Alone));
                 impl_bounds.extend(bound.tokens.iter().cloned());
