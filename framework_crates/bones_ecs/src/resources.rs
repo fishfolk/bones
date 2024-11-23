@@ -449,6 +449,121 @@ impl<T: HasSchema + FromWorld> AtomicResource<T> {
     }
 }
 
+/// Utility container for storing set of [`UntypedResource`].
+/// Cloning
+#[derive(Default)]
+pub struct UntypedResourceSet {
+    resources: Vec<UntypedResource>,
+}
+
+impl Clone for UntypedResourceSet {
+    fn clone(&self) -> Self {
+        Self {
+            resources: self
+                .resources
+                .iter()
+                .map(|res| {
+                    if let Some(clone) = res.clone_data() {
+                        UntypedResource::new(clone)
+                    } else {
+                        UntypedResource::empty(res.schema())
+                    }
+                })
+                .collect(),
+        }
+    }
+}
+
+impl UntypedResourceSet {
+    /// Insert a startup resource. On stage / session startup (first step), will be inserted into [`World`].
+    ///
+    /// If already exists, will be overwritten.
+    pub fn insert_resource<T: HasSchema>(&mut self, resource: T) {
+        // Update an existing resource of the same type.
+        for r in &mut self.resources {
+            if r.schema() == T::schema() {
+                let mut borrow = r.borrow_mut();
+
+                if let Some(b) = borrow.as_mut() {
+                    *b.cast_mut() = resource;
+                } else {
+                    *borrow = Some(SchemaBox::new(resource))
+                }
+                return;
+            }
+        }
+
+        // Or insert a new resource if we couldn't find one
+        self.resources
+            .push(UntypedResource::new(SchemaBox::new(resource)))
+    }
+
+    /// Init resource with default, and return mutable ref for modification.
+    /// If already exists, returns mutable ref to existing resource.
+    pub fn init_resource<T: HasSchema + Default>(&mut self) -> RefMut<T> {
+        if !self.resources.iter().any(|x| x.schema() == T::schema()) {
+            self.insert_resource(T::default());
+        }
+        self.resource_mut::<T>().unwrap()
+    }
+
+    /// Get mutable reference to startup resource if found.
+    #[track_caller]
+    pub fn resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
+        let res = self.resources.iter().find(|x| x.schema() == T::schema())?;
+        let borrow = res.borrow_mut();
+
+        if borrow.is_some() {
+            // SOUND: We know the type matches T
+            Some(RefMut::map(borrow, |b| unsafe {
+                b.as_mut().unwrap().as_mut().cast_into_mut_unchecked()
+            }))
+        } else {
+            None
+        }
+    }
+
+    /// Insert an [`UntypedResource`] with empty cell for [`Schema`] of `T`.
+    /// If resource already exists for this schema, overwrite it with empty.
+    pub fn insert_empty<T: HasSchema>(&mut self) {
+        for r in &mut self.resources {
+            if r.schema() == T::schema() {
+                let mut borrow = r.borrow_mut();
+                *borrow = None;
+                return;
+            }
+        }
+
+        // Or insert a new empty resource if we couldn't find one
+        self.resources.push(UntypedResource::empty(T::schema()));
+    }
+
+    /// Get immutable ref to Vec of resources
+    pub fn resources(&self) -> &Vec<UntypedResource> {
+        &self.resources
+    }
+
+    /// Insert resources in world. If resource already exists, overwrites it.
+    ///
+    /// If `remove_empty` is set, if resource cell is empty, it will remove the
+    /// resource from cell on world.
+    pub fn insert_on_world(&self, world: &mut World, remove_empty: bool) {
+        for resource in self.resources.iter() {
+            let resource_cell = world.resources.untyped().get_cell(resource.schema());
+
+            // Deep copy resource and insert into world.
+            if let Some(resource_copy) = resource.clone_data() {
+                resource_cell
+                    .insert(resource_copy)
+                    .expect("Schema mismatch error");
+            } else if remove_empty {
+                // Remove the resource on world
+                resource_cell.remove();
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::sync::Arc;

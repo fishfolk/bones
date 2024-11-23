@@ -5,10 +5,35 @@ use crate::prelude::*;
 /// This is supported in bone's default session runners - but if implementing custom runner, must call `world.handle_world_reset` inside step.
 ///
 /// `reset_world: ResMutInit<ResetWorld>` and setting `reset_world.reset = true;` may be used to trigger a reset from system execution.
-#[derive(Copy, Clone, HasSchema, Default)]
+#[derive(HasSchema, Clone, Default)]
 pub struct ResetWorld {
     /// Set to true to trigger reset of [`World`].
     pub reset: bool,
+
+    /// List of resources that will be inserted into [`World`] after the reset.
+    /// These override any `startup resources` captured during session build.
+    /// If want to preserve a resource instead of having it reset, insert it here.
+    pub reset_resources: UntypedResourceSet,
+}
+
+impl ResetWorld {
+    /// Insert a resource that will be applied after reset. If resource was created
+    /// on session iniialization, this will overwrite it using reset resource instead.
+    pub fn insert_reset_resource<T: HasSchema>(&mut self, resource: T) {
+        self.reset_resources.insert_resource(resource);
+    }
+
+    /// Get a mutable reference to a reset resource if found.
+    pub fn reset_resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
+        self.reset_resources.resource_mut::<T>()
+    }
+
+    /// Insert resource in "empty" state - If resource was created
+    /// on session iniialization, instead of being reset to that state,
+    /// after reset this resource will not be on [`World`].
+    pub fn insert_empty_reset_resource<T: HasSchema>(&mut self) {
+        self.reset_resources.insert_empty::<T>();
+    }
 }
 
 /// Extension of [`World`]
@@ -47,6 +72,11 @@ impl WorldExt for World {
     }
 
     fn reset_internals(&mut self, stages: &mut SystemStages) {
+        // Copy resources to be inserted after the reset.
+        let post_reset_resources = self
+            .get_resource::<ResetWorld>()
+            .map(|x| x.reset_resources.clone());
+
         // Clear all component stores
         self.components = ComponentStores::default();
 
@@ -72,5 +102,11 @@ impl WorldExt for World {
 
         // Immediately run startup tasks, ensuring startup resources are present and run startup systems.
         stages.handle_startup(self);
+
+        // Apply any reset resources to world, overwriting startup resources.
+        if let Some(resources) = post_reset_resources {
+            let remove_empty = true;
+            resources.insert_on_world(self, remove_empty);
+        }
     }
 }
