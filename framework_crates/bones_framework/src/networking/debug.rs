@@ -25,7 +25,7 @@ pub mod prelude {
 /// Session plugin for network debug window. Is not installed by default.
 /// After installing plugin, [`NetworkDebugMenuState`] on [`EguiCtx`] state
 /// may be modified to open menu.
-pub fn network_debug_session_plugin(session: &mut Session) {
+pub fn network_debug_session_plugin(session: &mut SessionBuilder) {
     session.add_system_to_stage(CoreStage::First, network_debug_window);
 }
 

@@ -199,20 +199,10 @@ impl World {
         self.components.get::<T>().borrow_mut()
     }
 
-    /// Provides an interface for resetting entities, and components.
-    pub fn reset_internals(&mut self, reset_components: bool, reset_entities: bool) {
-        if reset_entities {
-            let mut entities = self.resource_mut::<Entities>();
-            entities.kill_all();
-        }
-
-        if reset_components {
-            // Clear all component stores
-            self.components = ComponentStores::default();
-        }
-
-        // Always maintain to clean up any killed entities
-        self.maintain();
+    /// Load snapshot of [`World`] into self.
+    pub fn load_snapshot(&mut self, snapshot: World) {
+        self.components = snapshot.components;
+        self.resources = snapshot.resources;
     }
 }
 

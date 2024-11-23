@@ -125,7 +125,7 @@ pub fn create_game() -> Game {
     TilemapDemoMeta::register_schema();
 
     // Create our menu session
-    game.sessions.create("menu").install_plugin(menu_plugin);
+    game.sessions.create_with("menu", menu_plugin);
 
     game
 }
@@ -139,12 +139,11 @@ struct MenuData {
 }
 
 /// Menu plugin
-pub fn menu_plugin(session: &mut Session) {
+pub fn menu_plugin(session: &mut SessionBuilder) {
     // Register our menu system
     session
         // Install the bones_framework default plugins for this session
         .install_plugin(DefaultSessionPlugin)
-        .world
         // Initialize our menu data resource
         .init_resource::<MenuData>();
 
@@ -198,9 +197,7 @@ fn menu_system(
                         session_options.delete = true;
 
                         // Create a session for the match
-                        sessions
-                            .create("sprite_demo")
-                            .install_plugin(sprite_demo_plugin);
+                        sessions.create_with("sprite_demo", sprite_demo_plugin);
                     }
 
                     if BorderedButton::themed(&meta.button_style, localization.get("atlas-demo"))
@@ -211,9 +208,7 @@ fn menu_system(
                         session_options.delete = true;
 
                         // Create a session for the match
-                        sessions
-                            .create("atlas_demo")
-                            .install_plugin(atlas_demo_plugin);
+                        sessions.create_with("atlas_demo", atlas_demo_plugin);
                     }
 
                     if BorderedButton::themed(&meta.button_style, localization.get("tilemap-demo"))
@@ -224,9 +219,7 @@ fn menu_system(
                         session_options.delete = true;
 
                         // Create a session for the match
-                        sessions
-                            .create("tilemap_demo")
-                            .install_plugin(tilemap_demo_plugin);
+                        sessions.create_with("tilemap_demo", tilemap_demo_plugin);
                     }
 
                     if BorderedButton::themed(&meta.button_style, localization.get("audio-demo"))
@@ -237,9 +230,7 @@ fn menu_system(
                         session_options.delete = true;
 
                         // Create a session for the match
-                        sessions
-                            .create("audio_demo")
-                            .install_plugin(audio_demo_plugin);
+                        sessions.create_with("audio_demo", audio_demo_plugin);
                     }
 
                     if BorderedButton::themed(&meta.button_style, localization.get("storage-demo"))
@@ -250,9 +241,7 @@ fn menu_system(
                         session_options.delete = true;
 
                         // Create a session for the match
-                        sessions
-                            .create("storage_demo")
-                            .install_plugin(storage_demo_plugin);
+                        sessions.create_with("storage_demo", storage_demo_plugin);
                     }
 
                     if BorderedButton::themed(&meta.button_style, localization.get("path2d-demo"))
@@ -263,9 +252,7 @@ fn menu_system(
                         session_options.delete = true;
 
                         // Create a session for the match
-                        sessions
-                            .create("path2d_demo")
-                            .install_plugin(path2d_demo_plugin);
+                        sessions.create_with("path2d_demo", path2d_demo_plugin);
                     }
 
                     if let Some(exit_bones) = &mut exit_bones {
@@ -293,7 +280,7 @@ fn menu_system(
 }
 
 /// Plugin for running the sprite demo.
-fn sprite_demo_plugin(session: &mut Session) {
+fn sprite_demo_plugin(session: &mut SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_startup_system(sprite_demo_startup)
@@ -357,7 +344,7 @@ fn move_sprite(
 }
 
 /// Plugin for running the tilemap demo.
-fn tilemap_demo_plugin(session: &mut Session) {
+fn tilemap_demo_plugin(session: &mut SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_startup_system(tilemap_startup_system)
@@ -403,7 +390,7 @@ fn tilemap_startup_system(
 }
 
 /// Plugin for running the atlas demo.
-fn atlas_demo_plugin(session: &mut Session) {
+fn atlas_demo_plugin(session: &mut SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_startup_system(atlas_demo_startup)
@@ -451,7 +438,7 @@ fn atlas_demo_startup(
     );
 }
 
-fn audio_demo_plugin(session: &mut Session) {
+fn audio_demo_plugin(session: &mut SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_system_to_stage(Update, back_to_menu_ui)
@@ -477,7 +464,7 @@ fn audio_demo_ui(
         });
 }
 
-fn storage_demo_plugin(session: &mut Session) {
+fn storage_demo_plugin(session: &mut SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_system_to_stage(Update, storage_demo_ui)
@@ -507,7 +494,7 @@ fn storage_demo_ui(
     });
 }
 
-fn path2d_demo_plugin(session: &mut Session) {
+fn path2d_demo_plugin(session: &mut SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_startup_system(path2d_demo_startup)
@@ -558,7 +545,7 @@ fn back_to_menu_ui(
                 ui.add_space(20.0);
                 if ui.button(localization.get("back-to-menu")).clicked() {
                     session_options.delete = true;
-                    sessions.create("menu").install_plugin(menu_plugin);
+                    sessions.create_with("menu", menu_plugin);
                 }
             });
         });
