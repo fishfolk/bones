@@ -63,6 +63,11 @@ mod test {
             Set(T),
         }
 
+        #[derive(HasSchema, Clone, Default)]
+        #[schema_module(crate)]
+        #[repr(C)]
+        struct WrapperWithDefault<T: Default>(T);
+
         #[derive(HasSchema, Clone, Copy, Debug, PartialEq, Eq, Default)]
         #[schema_module(crate)]
         #[repr(u8)]
@@ -162,6 +167,23 @@ mod test {
         fn schema_layout_for_repr_c_matches_repr_rust() {
             assert_eq!(A::schema().layout(), B::schema().layout());
             assert_eq!(C::schema().layout(), D::schema().layout());
+        }
+
+        #[test]
+        fn generic_no_clone() {
+            #[derive(HasSchema, Default)]
+            #[schema(no_clone)]
+            #[schema_module(crate)]
+            #[repr(C)]
+            struct Meta<T: HasSchema + Default>(T);
+
+            #[derive(HasSchema, Default)]
+            #[schema(no_clone)]
+            #[schema_module(crate)]
+            #[repr(C)]
+            struct NotClonable;
+
+            _ = Meta::<NotClonable>::schema();
         }
     }
 }
