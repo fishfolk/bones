@@ -29,7 +29,7 @@ maybe-owned  = "0.3"
 parking_lot  = "0.12"
 smallvec     = "1.11"
 ustr         = "0.10"
-iroh-net     = "0.27"
+iroh         = "0.29"
 
 [profile.release]
 lto = true

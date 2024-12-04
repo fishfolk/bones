@@ -6,9 +6,8 @@ use bones_matchmaker_proto::{
     GameID, LobbyId, LobbyInfo, MatchInfo, MatchmakerRequest, MatchmakerResponse,
     PlayerIdxAssignment,
 };
-use iroh_net::{Endpoint, NodeAddr};
+use iroh::{endpoint::Connection, Endpoint, NodeAddr};
 use once_cell::sync::Lazy;
-use quinn::Connection;
 use rand::{prelude::SliceRandom, SeedableRng};
 use scc::HashMap as SccHashMap;
 use std::cmp::Ordering;
@@ -110,7 +109,7 @@ pub async fn start_game(
 
     // Collect player IDs and addresses
     for (conn_idx, conn) in members.iter().enumerate() {
-        let id = iroh_net::endpoint::get_remote_node_id(conn)?;
+        let id = iroh::endpoint::get_remote_node_id(conn)?;
         let mut addr = NodeAddr::new(id);
         if let Some(info) = ep.remote_info(id) {
             if let Some(relay_url) = info.relay_url {

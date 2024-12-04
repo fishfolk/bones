@@ -156,7 +156,7 @@ smallvec               = "1.10"
 iroh-quinn             = { version = "0.11" }
 tokio                  = { version = "1", features = ["rt-multi-thread", "macros"] }
 turborand              = { version = "0.10.0", features = ["atomic"] }
-iroh-net               = { workspace = true, features = ["discovery-local-network"] }
+iroh                   = { workspace = true, features = ["discovery-local-network"] }
 
 directories = "5.0"
 

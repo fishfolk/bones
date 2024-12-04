@@ -23,18 +23,18 @@ async fn main() {
 }
 
 async fn client() -> anyhow::Result<()> {
-    let secret_key = iroh_net::key::SecretKey::generate();
-    let endpoint = iroh_net::Endpoint::builder()
+    let secret_key = iroh::key::SecretKey::generate();
+    let endpoint = iroh::Endpoint::builder()
         .alpns(vec![MATCH_ALPN.to_vec(), PLAY_ALPN.to_vec()])
         .discovery(Box::new(
-            iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
+            iroh::discovery::ConcurrentDiscovery::from_services(vec![
                 Box::new(
-                    iroh_net::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
+                    iroh::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
                         secret_key.public(),
                     )?,
                 ),
-                Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
-                Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
+                Box::new(iroh::discovery::dns::DnsDiscovery::n0_dns()),
+                Box::new(iroh::discovery::pkarr::PkarrPublisher::n0_dns(
                     secret_key.clone(),
                 )),
             ]),
@@ -48,8 +48,8 @@ async fn client() -> anyhow::Result<()> {
     let hello = Hello { i_am };
     println!("o  Opened client ID: {}. {hello:?}", endpoint.node_id());
 
-    let server_id: iroh_net::NodeId = std::env::args().nth(3).expect("missing node id").parse()?;
-    let server_addr = iroh_net::NodeAddr::new(server_id);
+    let server_id: iroh::NodeId = std::env::args().nth(3).expect("missing node id").parse()?;
+    let server_addr = iroh::NodeAddr::new(server_id);
 
     // Connect to the server
     let conn = endpoint.connect(server_addr, MATCH_ALPN).await?;
@@ -178,7 +178,7 @@ async fn client() -> anyhow::Result<()> {
     }
 
     // Shutdown the endpoint
-    endpoint.close(0u8.into(), b"done").await?;
+    endpoint.close().await?;
 
     Ok(())
 }

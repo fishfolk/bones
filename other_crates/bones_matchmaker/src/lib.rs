@@ -8,7 +8,7 @@ extern crate tracing;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
 use bones_matchmaker_proto::MATCH_ALPN;
-use iroh_net::key::SecretKey;
+use iroh::key::SecretKey;
 
 pub mod cli;
 mod helpers;
@@ -27,7 +27,7 @@ struct Config {
     print_secret_key: bool,
     /// Use this secret key for the node
     #[clap(short, long, env = "BONES_MATCHMAKER_SECRET_KEY")]
-    secret_key: Option<iroh_net::key::SecretKey>,
+    secret_key: Option<iroh::key::SecretKey>,
 }
 
 async fn server(args: Config) -> anyhow::Result<()> {
@@ -48,17 +48,17 @@ async fn server(args: Config) -> anyhow::Result<()> {
         println!("Secret Key: {}", secret_key);
     }
 
-    let endpoint = iroh_net::Endpoint::builder()
+    let endpoint = iroh::Endpoint::builder()
         .alpns(vec![MATCH_ALPN.to_vec()])
         .discovery(Box::new(
-            iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
+            iroh::discovery::ConcurrentDiscovery::from_services(vec![
                 Box::new(
-                    iroh_net::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
+                    iroh::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
                         secret_key.public(),
                     )?,
                 ),
-                Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
-                Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
+                Box::new(iroh::discovery::dns::DnsDiscovery::n0_dns()),
+                Box::new(iroh::discovery::pkarr::PkarrPublisher::n0_dns(
                     secret_key.clone(),
                 )),
             ]),

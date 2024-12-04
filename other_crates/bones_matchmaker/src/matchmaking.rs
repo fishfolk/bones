@@ -1,15 +1,14 @@
 use super::matchmaker::{start_game, MATCHMAKER_STATE};
 use anyhow::Result;
 use bones_matchmaker_proto::{MatchInfo, MatchmakerResponse};
-use iroh_net::Endpoint;
-use quinn::Connection;
+use iroh::{endpoint::Connection, Endpoint};
 use tokio::time::{sleep, Duration};
 
 /// Handles a stop matchmaking request from a client
 pub async fn handle_stop_matchmaking(
     conn: Connection,
     match_info: MatchInfo,
-    send: &mut quinn::SendStream,
+    send: &mut iroh::endpoint::SendStream,
 ) -> Result<()> {
     let stable_id = conn.stable_id();
     info!("[{}] Handling stop matchmaking request", stable_id);
@@ -71,7 +70,7 @@ pub async fn handle_request_matchaking(
     ep: Endpoint,
     conn: Connection,
     match_info: MatchInfo,
-    send: &mut quinn::SendStream,
+    send: &mut iroh::endpoint::SendStream,
 ) -> Result<()> {
     let stable_id = conn.stable_id();
     info!("[{}] Handling start matchmaking search request", stable_id);

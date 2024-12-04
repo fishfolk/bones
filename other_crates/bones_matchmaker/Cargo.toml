@@ -23,6 +23,5 @@ postcard               = { version = "1.0", default-features = false, features =
 serde                  = { version = "1.0", features = ["derive"] }
 tracing-subscriber     = { version = "0.3", features = ["env-filter"] }
 tokio                  = { version = "1", features = ["rt-multi-thread", "macros"] }
-iroh-net               = { workspace = true, features = ["discovery-local-network"] }
-quinn                  = { version = "0.11", package = "iroh-quinn" }
+iroh                   = { workspace = true, features = ["discovery-local-network"] }
 blake3                 = "1.5.3"
