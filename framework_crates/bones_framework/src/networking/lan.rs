@@ -12,7 +12,7 @@
 
 use std::{net::IpAddr, time::Duration};
 
-use iroh_net::{endpoint::get_remote_node_id, NodeAddr};
+use iroh::{endpoint::get_remote_node_id, NodeAddr};
 use mdns_sd::{ServiceDaemon, ServiceInfo};
 use smallvec::SmallVec;
 use tracing::warn;

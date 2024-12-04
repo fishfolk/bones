@@ -9,9 +9,7 @@ use crate::{
 pub use bones_matchmaker_proto::{
     GameID, LobbyId, LobbyInfo, LobbyListItem, MatchInfo, PlayerIdxAssignment, MATCH_ALPN,
 };
-use iroh_net::Endpoint;
-use iroh_net::NodeId;
-use iroh_quinn::Connection;
+use iroh::{endpoint::Connection, Endpoint, NodeId};
 use once_cell::sync::Lazy;
 use tracing::{info, warn};
 

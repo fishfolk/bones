@@ -3,7 +3,7 @@
 
 use bones_matchmaker_proto::PLAY_ALPN;
 use bytes::Bytes;
-use iroh_net::NodeAddr;
+use iroh::NodeAddr;
 use tracing::{info, warn};
 
 use crate::networking::get_network_endpoint;
@@ -13,7 +13,7 @@ use super::{GameMessage, NetworkSocket, SocketTarget, RUNTIME};
 /// The [`NetworkSocket`] implementation.
 #[derive(Debug, Clone)]
 pub struct Socket {
-    pub connections: Vec<(u32, iroh_quinn::Connection)>,
+    pub connections: Vec<(u32, iroh::endpoint::Connection)>,
     pub ggrs_receiver: async_channel::Receiver<(u32, GameMessage)>,
     pub reliable_receiver: async_channel::Receiver<(u32, Vec<u8>)>,
     pub player_idx: u32,
@@ -23,7 +23,7 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn new(player_idx: u32, connections: Vec<(u32, iroh_quinn::Connection)>) -> Self {
+    pub fn new(player_idx: u32, connections: Vec<(u32, iroh::endpoint::Connection)>) -> Self {
         let (ggrs_sender, ggrs_receiver) = async_channel::unbounded();
         let (reliable_sender, reliable_receiver) = async_channel::unbounded();
 
@@ -129,7 +129,7 @@ impl Socket {
         }
     }
 
-    fn get_connection(&self, idx: u32) -> &iroh_quinn::Connection {
+    fn get_connection(&self, idx: u32) -> &iroh::endpoint::Connection {
         debug_assert!(idx < self.player_count);
         // TODO: if this is too slow, optimize storage
         self.connections
@@ -217,8 +217,8 @@ pub(super) async fn establish_peer_connections(
     player_idx: u32,
     player_count: u32,
     peer_addrs: Vec<(u32, NodeAddr)>,
-    conn: Option<iroh_quinn::Connection>,
-) -> anyhow::Result<Vec<(u32, iroh_quinn::Connection)>> {
+    conn: Option<iroh::endpoint::Connection>,
+) -> anyhow::Result<Vec<(u32, iroh::endpoint::Connection)>> {
     let mut peer_connections = Vec::new();
     let had_og_conn = conn.is_some();
     if let Some(conn) = conn {

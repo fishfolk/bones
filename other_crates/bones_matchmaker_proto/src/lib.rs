@@ -99,7 +99,7 @@ pub enum MatchmakerResponse {
         /// The number of connected clients in the match
         player_count: u32,
         /// The node ids of all players.
-        player_ids: Vec<(u32, iroh_net::NodeAddr)>,
+        player_ids: Vec<(u32, iroh::NodeAddr)>,
     },
     /// Response that specifies updates about the current lobby (ie. player count updates)
     LobbyUpdate { player_count: u32 },

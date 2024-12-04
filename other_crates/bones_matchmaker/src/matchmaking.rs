@@ -1,15 +1,14 @@
 use super::matchmaker::{start_game, MATCHMAKER_STATE};
 use anyhow::Result;
 use bones_matchmaker_proto::{MatchInfo, MatchmakerResponse};
-use iroh_net::Endpoint;
-use quinn::Connection;
+use iroh::{endpoint::Connection, Endpoint};
 use tokio::time::{sleep, Duration};
 
 /// Handles a stop matchmaking request from a client
 pub async fn handle_stop_matchmaking(
     conn: Connection,
     match_info: MatchInfo,
-    send: &mut quinn::SendStream,
+    send: &mut iroh::endpoint::SendStream,
 ) -> Result<()> {
     let stable_id = conn.stable_id();
     info!("[{}] Handling stop matchmaking request", stable_id);
@@ -68,10 +67,10 @@ pub async fn handle_stop_matchmaking(
 
 /// Handles a start matchmaking request from a client
 pub async fn handle_request_matchaking(
-    ep: Endpoint,
+    ep: &Endpoint,
     conn: Connection,
     match_info: MatchInfo,
-    send: &mut quinn::SendStream,
+    send: &mut iroh::endpoint::SendStream,
 ) -> Result<()> {
     let stable_id = conn.stable_id();
     info!("[{}] Handling start matchmaking search request", stable_id);
@@ -268,7 +267,7 @@ async fn send_matchmaking_updates(
 }
 
 /// Starts a matchmade game if the room is ready with sufficient players
-async fn start_matchmaked_game_if_ready(ep: Endpoint, match_info: &MatchInfo) -> Result<()> {
+async fn start_matchmaked_game_if_ready(ep: &Endpoint, match_info: &MatchInfo) -> Result<()> {
     let members = {
         let state = MATCHMAKER_STATE.lock().await;
         state
@@ -280,6 +279,7 @@ async fn start_matchmaked_game_if_ready(ep: Endpoint, match_info: &MatchInfo) ->
     if let Some(members) = members {
         let cloned_match_info = match_info.clone();
         let players_len = members.len();
+        let ep = ep.clone();
         tokio::spawn(async move {
             match start_game(ep, members, &cloned_match_info).await {
                 Ok(_) => info!("Starting matchmaked game with {} players", players_len),
