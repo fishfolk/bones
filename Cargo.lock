@@ -1489,7 +1489,6 @@ dependencies = [
  "instant",
  "intl-memoizer",
  "iroh",
- "iroh-quinn 0.11.3",
  "kira",
  "mdns-sd",
  "noise",
@@ -4044,8 +4043,8 @@ dependencies = [
  "iroh-base",
  "iroh-metrics",
  "iroh-net-report",
- "iroh-quinn 0.12.0",
- "iroh-quinn-proto 0.12.0",
+ "iroh-quinn",
+ "iroh-quinn-proto",
  "iroh-quinn-udp",
  "iroh-relay",
  "libc",
@@ -4186,30 +4185,12 @@ dependencies = [
 
 [[package]]
 name = "iroh-quinn"
-version = "0.11.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fd590a39a14cfc168efa4d894de5039d65641e62d8da4a80733018ababe3c33"
-dependencies = [
- "bytes",
- "iroh-quinn-proto 0.11.6",
- "iroh-quinn-udp",
- "pin-project-lite",
- "rustc-hash 2.0.0",
- "rustls 0.23.12",
- "socket2 0.5.7",
- "thiserror 1.0.63",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "iroh-quinn"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "35ba75a5c57cff299d2d7ca1ddee053f66339d1756bd79ec637bcad5aa61100e"
 dependencies = [
  "bytes",
- "iroh-quinn-proto 0.12.0",
+ "iroh-quinn-proto",
  "iroh-quinn-udp",
  "pin-project-lite",
  "rustc-hash 2.0.0",
@@ -4217,24 +4198,6 @@ dependencies = [
  "socket2 0.5.7",
  "thiserror 1.0.63",
  "tokio",
- "tracing",
-]
-
-[[package]]
-name = "iroh-quinn-proto"
-version = "0.11.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fd0538ff12efe3d61ea1deda2d7913f4270873a519d43e6995c6e87a1558538"
-dependencies = [
- "bytes",
- "rand",
- "ring",
- "rustc-hash 2.0.0",
- "rustls 0.23.12",
- "rustls-platform-verifier",
- "slab",
- "thiserror 1.0.63",
- "tinyvec",
  "tracing",
 ]
 
@@ -4295,8 +4258,8 @@ dependencies = [
  "hyper-util",
  "iroh-base",
  "iroh-metrics",
- "iroh-quinn 0.12.0",
- "iroh-quinn-proto 0.12.0",
+ "iroh-quinn",
+ "iroh-quinn-proto",
  "libc",
  "num_enum 0.7.3",
  "once_cell",

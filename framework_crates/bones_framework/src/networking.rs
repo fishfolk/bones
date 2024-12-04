@@ -110,26 +110,25 @@ impl<T: DenseInput + Debug> ggrs::Config for GgrsConfig<T> {
 }
 
 /// The network endpoint used for all network communications.
-static NETWORK_ENDPOINT: tokio::sync::OnceCell<iroh_net::Endpoint> =
-    tokio::sync::OnceCell::const_new();
+static NETWORK_ENDPOINT: tokio::sync::OnceCell<iroh::Endpoint> = tokio::sync::OnceCell::const_new();
 
 /// Get the network endpoint used for all communications.
-pub async fn get_network_endpoint() -> &'static iroh_net::Endpoint {
+pub async fn get_network_endpoint() -> &'static iroh::Endpoint {
     NETWORK_ENDPOINT
         .get_or_init(|| async move {
-            let secret_key = iroh_net::key::SecretKey::generate();
-            iroh_net::Endpoint::builder()
+            let secret_key = iroh::key::SecretKey::generate();
+            iroh::Endpoint::builder()
                 .alpns(vec![MATCH_ALPN.to_vec(), PLAY_ALPN.to_vec()])
                 .discovery(Box::new(
-                    iroh_net::discovery::ConcurrentDiscovery::from_services(vec![
+                    iroh::discovery::ConcurrentDiscovery::from_services(vec![
                         Box::new(
-                            iroh_net::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
+                            iroh::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
                                 secret_key.public(),
                             )
                             .unwrap(),
                         ),
-                        Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
-                        Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
+                        Box::new(iroh::discovery::dns::DnsDiscovery::n0_dns()),
+                        Box::new(iroh::discovery::pkarr::PkarrPublisher::n0_dns(
                             secret_key.clone(),
                         )),
                     ]),
