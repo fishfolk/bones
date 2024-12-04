@@ -1069,7 +1069,6 @@
 <a href="#1069" id="1069">1069</a>
 <a href="#1070" id="1070">1070</a>
 <a href="#1071" id="1071">1071</a>
-<a href="#1072" id="1072">1072</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"./networking.md"</span>)]
 
 </span><span class="kw">use </span><span class="self">self</span>::{
@@ -1182,26 +1181,25 @@
 }
 
 <span class="doccomment">/// The network endpoint used for all network communications.
-</span><span class="kw">static </span>NETWORK_ENDPOINT: tokio::sync::OnceCell&lt;iroh_net::Endpoint&gt; =
-    tokio::sync::OnceCell::const_new();
+</span><span class="kw">static </span>NETWORK_ENDPOINT: tokio::sync::OnceCell&lt;iroh::Endpoint&gt; = tokio::sync::OnceCell::const_new();
 
 <span class="doccomment">/// Get the network endpoint used for all communications.
-</span><span class="kw">pub async fn </span>get_network_endpoint() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>iroh_net::Endpoint {
+</span><span class="kw">pub async fn </span>get_network_endpoint() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>iroh::Endpoint {
     NETWORK_ENDPOINT
         .get_or_init(|| <span class="kw">async move </span>{
-            <span class="kw">let </span>secret_key = iroh_net::key::SecretKey::generate();
-            iroh_net::Endpoint::builder()
+            <span class="kw">let </span>secret_key = iroh::key::SecretKey::generate();
+            iroh::Endpoint::builder()
                 .alpns(<span class="macro">vec!</span>[MATCH_ALPN.to_vec(), PLAY_ALPN.to_vec()])
                 .discovery(Box::new(
-                    iroh_net::discovery::ConcurrentDiscovery::from_services(<span class="macro">vec!</span>[
+                    iroh::discovery::ConcurrentDiscovery::from_services(<span class="macro">vec!</span>[
                         Box::new(
-                            iroh_net::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
+                            iroh::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
                                 secret_key.public(),
                             )
                             .unwrap(),
                         ),
-                        Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
-                        Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
+                        Box::new(iroh::discovery::dns::DnsDiscovery::n0_dns()),
+                        Box::new(iroh::discovery::pkarr::PkarrPublisher::n0_dns(
                             secret_key.clone(),
                         )),
                     ]),

@@ -91,12 +91,6 @@
 <a href="#91" id="91">91</a>
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
-<a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 </span><span class="comment">// This cfg_attr is needed because `rustdoc::all` includes lints not supported on stable
 </span><span class="attr">#![cfg_attr(doc, allow(unknown_lints))]
@@ -105,9 +99,11 @@
 </span><span class="kw">extern crate </span>tracing;
 
 <span class="kw">use </span>std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+<span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>bones_matchmaker_proto::MATCH_ALPN;
-<span class="kw">use </span>iroh_net::key::SecretKey;
+<span class="kw">use </span>iroh::key::SecretKey;
+<span class="kw">use </span>matchmaker::Matchmaker;
 
 <span class="kw">pub mod </span>cli;
 <span class="kw">mod </span>helpers;
@@ -126,7 +122,7 @@
     </span>print_secret_key: bool,
     <span class="doccomment">/// Use this secret key for the node
     </span><span class="attr">#[clap(short, long, env = <span class="string">"BONES_MATCHMAKER_SECRET_KEY"</span>)]
-    </span>secret_key: <span class="prelude-ty">Option</span>&lt;iroh_net::key::SecretKey&gt;,
+    </span>secret_key: <span class="prelude-ty">Option</span>&lt;iroh::key::SecretKey&gt;,
 }
 
 <span class="kw">async fn </span>server(args: Config) -&gt; anyhow::Result&lt;()&gt; {
@@ -147,17 +143,17 @@
         <span class="macro">println!</span>(<span class="string">"Secret Key: {}"</span>, secret_key);
     }
 
-    <span class="kw">let </span>endpoint = iroh_net::Endpoint::builder()
+    <span class="kw">let </span>endpoint = iroh::Endpoint::builder()
         .alpns(<span class="macro">vec!</span>[MATCH_ALPN.to_vec()])
         .discovery(Box::new(
-            iroh_net::discovery::ConcurrentDiscovery::from_services(<span class="macro">vec!</span>[
+            iroh::discovery::ConcurrentDiscovery::from_services(<span class="macro">vec!</span>[
                 Box::new(
-                    iroh_net::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
+                    iroh::discovery::local_swarm_discovery::LocalSwarmDiscovery::new(
                         secret_key.public(),
                     )<span class="question-mark">?</span>,
                 ),
-                Box::new(iroh_net::discovery::dns::DnsDiscovery::n0_dns()),
-                Box::new(iroh_net::discovery::pkarr::PkarrPublisher::n0_dns(
+                Box::new(iroh::discovery::dns::DnsDiscovery::n0_dns()),
+                Box::new(iroh::discovery::pkarr::PkarrPublisher::n0_dns(
                     secret_key.clone(),
                 )),
             ]),
@@ -173,24 +169,16 @@
 
     <span class="macro">println!</span>(<span class="string">"Node ID: {}"</span>, my_addr.node_id);
 
-    <span class="comment">// Listen for incomming connections
-    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(connecting) = endpoint.accept().<span class="kw">await </span>{
-        <span class="kw">let </span>connection = connecting.<span class="kw">await</span>;
+    <span class="kw">let </span>matchmaker = Matchmaker::new(endpoint.clone());
+    <span class="kw">let </span>router = iroh::protocol::Router::builder(endpoint)
+        .accept(MATCH_ALPN, Arc::new(matchmaker))
+        .spawn()
+        .<span class="kw">await</span><span class="question-mark">?</span>;
 
-        <span class="kw">match </span>connection {
-            <span class="prelude-val">Ok</span>(conn) =&gt; {
-                <span class="macro">info!</span>(
-                    connection_id = conn.stable_id(),
-                    addr = <span class="question-mark">?</span>conn.remote_address(),
-                    <span class="string">"Accepted connection from client"
-                </span>);
+    <span class="comment">// wait for shutdown
+    </span>tokio::signal::ctrl_c().<span class="kw">await</span><span class="question-mark">?</span>;
 
-                <span class="comment">// Spawn a task to handle the new connection
-                </span>tokio::task::spawn(matchmaker::handle_connection(endpoint.clone(), conn));
-            }
-            <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">error!</span>(<span class="string">"Error opening client connection: {e:?}"</span>),
-        }
-    }
+    router.shutdown().<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="macro">info!</span>(<span class="string">"Server shutdown"</span>);
 

@@ -315,7 +315,7 @@
 
 </span><span class="kw">use </span>bones_matchmaker_proto::PLAY_ALPN;
 <span class="kw">use </span>bytes::Bytes;
-<span class="kw">use </span>iroh_net::NodeAddr;
+<span class="kw">use </span>iroh::NodeAddr;
 <span class="kw">use </span>tracing::{info, warn};
 
 <span class="kw">use </span><span class="kw">crate</span>::networking::get_network_endpoint;
@@ -325,7 +325,7 @@
 <span class="doccomment">/// The [`NetworkSocket`] implementation.
 </span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>Socket {
-    <span class="kw">pub </span>connections: Vec&lt;(u32, iroh_quinn::Connection)&gt;,
+    <span class="kw">pub </span>connections: Vec&lt;(u32, iroh::endpoint::Connection)&gt;,
     <span class="kw">pub </span>ggrs_receiver: async_channel::Receiver&lt;(u32, GameMessage)&gt;,
     <span class="kw">pub </span>reliable_receiver: async_channel::Receiver&lt;(u32, Vec&lt;u8&gt;)&gt;,
     <span class="kw">pub </span>player_idx: u32,
@@ -335,7 +335,7 @@
 }
 
 <span class="kw">impl </span>Socket {
-    <span class="kw">pub fn </span>new(player_idx: u32, connections: Vec&lt;(u32, iroh_quinn::Connection)&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(player_idx: u32, connections: Vec&lt;(u32, iroh::endpoint::Connection)&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>(ggrs_sender, ggrs_receiver) = async_channel::unbounded();
         <span class="kw">let </span>(reliable_sender, reliable_receiver) = async_channel::unbounded();
 
@@ -441,7 +441,7 @@
         }
     }
 
-    <span class="kw">fn </span>get_connection(<span class="kw-2">&amp;</span><span class="self">self</span>, idx: u32) -&gt; <span class="kw-2">&amp;</span>iroh_quinn::Connection {
+    <span class="kw">fn </span>get_connection(<span class="kw-2">&amp;</span><span class="self">self</span>, idx: u32) -&gt; <span class="kw-2">&amp;</span>iroh::endpoint::Connection {
         <span class="macro">debug_assert!</span>(idx &lt; <span class="self">self</span>.player_count);
         <span class="comment">// TODO: if this is too slow, optimize storage
         </span><span class="self">self</span>.connections
@@ -529,8 +529,8 @@
     player_idx: u32,
     player_count: u32,
     peer_addrs: Vec&lt;(u32, NodeAddr)&gt;,
-    conn: <span class="prelude-ty">Option</span>&lt;iroh_quinn::Connection&gt;,
-) -&gt; anyhow::Result&lt;Vec&lt;(u32, iroh_quinn::Connection)&gt;&gt; {
+    conn: <span class="prelude-ty">Option</span>&lt;iroh::endpoint::Connection&gt;,
+) -&gt; anyhow::Result&lt;Vec&lt;(u32, iroh::endpoint::Connection)&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>peer_connections = Vec::new();
     <span class="kw">let </span>had_og_conn = conn.is_some();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(conn) = conn {

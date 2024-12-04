@@ -295,15 +295,14 @@
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::matchmaker::{start_game, MATCHMAKER_STATE};
 <span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>bones_matchmaker_proto::{MatchInfo, MatchmakerResponse};
-<span class="kw">use </span>iroh_net::Endpoint;
-<span class="kw">use </span>quinn::Connection;
+<span class="kw">use </span>iroh::{endpoint::Connection, Endpoint};
 <span class="kw">use </span>tokio::time::{sleep, Duration};
 
 <span class="doccomment">/// Handles a stop matchmaking request from a client
 </span><span class="kw">pub async fn </span>handle_stop_matchmaking(
     conn: Connection,
     match_info: MatchInfo,
-    send: <span class="kw-2">&amp;mut </span>quinn::SendStream,
+    send: <span class="kw-2">&amp;mut </span>iroh::endpoint::SendStream,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span>stable_id = conn.stable_id();
     <span class="macro">info!</span>(<span class="string">"[{}] Handling stop matchmaking request"</span>, stable_id);
@@ -362,10 +361,10 @@
 
 <span class="doccomment">/// Handles a start matchmaking request from a client
 </span><span class="kw">pub async fn </span>handle_request_matchaking(
-    ep: Endpoint,
+    ep: <span class="kw-2">&amp;</span>Endpoint,
     conn: Connection,
     match_info: MatchInfo,
-    send: <span class="kw-2">&amp;mut </span>quinn::SendStream,
+    send: <span class="kw-2">&amp;mut </span>iroh::endpoint::SendStream,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span>stable_id = conn.stable_id();
     <span class="macro">info!</span>(<span class="string">"[{}] Handling start matchmaking search request"</span>, stable_id);
@@ -562,7 +561,7 @@
 }
 
 <span class="doccomment">/// Starts a matchmade game if the room is ready with sufficient players
-</span><span class="kw">async fn </span>start_matchmaked_game_if_ready(ep: Endpoint, match_info: <span class="kw-2">&amp;</span>MatchInfo) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+</span><span class="kw">async fn </span>start_matchmaked_game_if_ready(ep: <span class="kw-2">&amp;</span>Endpoint, match_info: <span class="kw-2">&amp;</span>MatchInfo) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span>members = {
         <span class="kw">let </span>state = MATCHMAKER_STATE.lock().<span class="kw">await</span>;
         state
@@ -574,6 +573,7 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(members) = members {
         <span class="kw">let </span>cloned_match_info = match_info.clone();
         <span class="kw">let </span>players_len = members.len();
+        <span class="kw">let </span>ep = ep.clone();
         tokio::spawn(<span class="kw">async move </span>{
             <span class="kw">match </span>start_game(ep, members, <span class="kw-2">&amp;</span>cloned_match_info).<span class="kw">await </span>{
                 <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">info!</span>(<span class="string">"Starting matchmaked game with {} players"</span>, players_len),

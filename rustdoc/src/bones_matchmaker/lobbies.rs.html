@@ -202,18 +202,23 @@
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::matchmaker::{start_game, GameLobbies, MATCHMAKER_STATE};
 <span class="kw">use </span><span class="kw">crate</span>::helpers::{generate_unique_id, hash_password};
 <span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>bones_matchmaker_proto::{
     GameID, LobbyId, LobbyInfo, LobbyListItem, MatchInfo, MatchmakerResponse,
 };
-<span class="kw">use </span>iroh_net::Endpoint;
-<span class="kw">use </span>quinn::Connection;
+<span class="kw">use </span>iroh::{endpoint::Connection, Endpoint};
 <span class="kw">use </span>std::collections::HashMap;
 
 <span class="doccomment">/// Handles a request to list lobbies for a specific game
-</span><span class="kw">pub async fn </span>handle_list_lobbies(game_id: GameID, send: <span class="kw-2">&amp;mut </span>quinn::SendStream) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+</span><span class="kw">pub async fn </span>handle_list_lobbies(
+    game_id: GameID,
+    send: <span class="kw-2">&amp;mut </span>iroh::endpoint::SendStream,
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span>state = MATCHMAKER_STATE.lock().<span class="kw">await</span>;
     <span class="comment">// Retrieve and format lobby information for the specified game
     </span><span class="kw">let </span>lobbies = state
@@ -255,7 +260,7 @@
 </span><span class="kw">pub async fn </span>handle_create_lobby(
     conn: Connection,
     lobby_info: LobbyInfo,
-    send: <span class="kw-2">&amp;mut </span>quinn::SendStream,
+    send: <span class="kw-2">&amp;mut </span>iroh::endpoint::SendStream,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span>lobby_id = LobbyId(generate_unique_id());
     <span class="kw">let </span><span class="kw-2">mut </span>state = MATCHMAKER_STATE.lock().<span class="kw">await</span>;
@@ -290,12 +295,12 @@
 
 <span class="doccomment">/// Handles a request to join an existing lobby
 </span><span class="kw">pub async fn </span>handle_join_lobby(
-    ep: Endpoint,
+    ep: <span class="kw-2">&amp;</span>Endpoint,
     conn: Connection,
     game_id: GameID,
     lobby_id: LobbyId,
     password: <span class="prelude-ty">Option</span>&lt;String&gt;,
-    send: <span class="kw-2">&amp;mut </span>quinn::SendStream,
+    send: <span class="kw-2">&amp;mut </span>iroh::endpoint::SendStream,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>state = MATCHMAKER_STATE.lock().<span class="kw">await</span>;
 
@@ -371,6 +376,7 @@
                         {
                             <span class="kw">let </span>members = connections.<span class="number">1</span>;
                             drop(state);
+                            <span class="kw">let </span>ep = ep.clone();
                             tokio::spawn(<span class="kw">async move </span>{
                                 <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = start_game(ep, members, <span class="kw-2">&amp;</span>match_info).<span class="kw">await </span>{
                                     <span class="macro">error!</span>(<span class="string">"Error starting match from full lobby: {:?}"</span>, e);
