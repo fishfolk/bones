@@ -6,9 +6,11 @@
 extern crate tracing;
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::sync::Arc;
 
 use bones_matchmaker_proto::MATCH_ALPN;
 use iroh::key::SecretKey;
+use matchmaker::Matchmaker;
 
 pub mod cli;
 mod helpers;
@@ -74,24 +76,16 @@ async fn server(args: Config) -> anyhow::Result<()> {
 
     println!("Node ID: {}", my_addr.node_id);
 
-    // Listen for incomming connections
-    while let Some(connecting) = endpoint.accept().await {
-        let connection = connecting.await;
+    let matchmaker = Matchmaker::new(endpoint.clone());
+    let router = iroh::protocol::Router::builder(endpoint)
+        .accept(MATCH_ALPN, Arc::new(matchmaker))
+        .spawn()
+        .await?;
 
-        match connection {
-            Ok(conn) => {
-                info!(
-                    connection_id = conn.stable_id(),
-                    addr = ?conn.remote_address(),
-                    "Accepted connection from client"
-                );
+    // wait for shutdown
+    tokio::signal::ctrl_c().await?;
 
-                // Spawn a task to handle the new connection
-                tokio::task::spawn(matchmaker::handle_connection(endpoint.clone(), conn));
-            }
-            Err(e) => error!("Error opening client connection: {e:?}"),
-        }
-    }
+    router.shutdown().await?;
 
     info!("Server shutdown");
 

@@ -88,7 +88,7 @@ pub async fn handle_create_lobby(
 
 /// Handles a request to join an existing lobby
 pub async fn handle_join_lobby(
-    ep: Endpoint,
+    ep: &Endpoint,
     conn: Connection,
     game_id: GameID,
     lobby_id: LobbyId,
@@ -169,6 +169,7 @@ pub async fn handle_join_lobby(
                         {
                             let members = connections.1;
                             drop(state);
+                            let ep = ep.clone();
                             tokio::spawn(async move {
                                 if let Err(e) = start_game(ep, members, &match_info).await {
                                     error!("Error starting match from full lobby: {:?}", e);
