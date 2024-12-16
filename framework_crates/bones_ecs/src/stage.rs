@@ -197,7 +197,7 @@ impl SystemStages {
     /// Execute the systems on the given `world`.
     pub fn run(&mut self, world: &mut World) {
         // If we haven't run startup systems and setup resources yet, do so
-        self.handle_startup(world);
+        self.handle_startup(world, false);
 
         // Run single success systems
         for (index, system) in self.single_success_systems.iter_mut().enumerate() {
@@ -227,12 +227,31 @@ impl SystemStages {
     /// If [`SessionStarted`] resource indicates have not yet started,
     /// perform startup tasks (insert startup resources, run startup systems).
     ///
+    /// If `only_insert_resources` is set, will not run startup systems, but insert startup resources
+    /// (If they have not already been inserted, tracked by [`SessionStarted`]).
+    ///
     /// While this is used internally by [`SystemStages::run`], this is also used
     /// for resetting world. This allows world to immediately startup and re-initialize after reset.
-    pub fn handle_startup(&mut self, world: &mut World) {
-        if !Self::has_session_started(world) {
-            self.insert_startup_resources(world);
+    ///
+    /// # Panics
+    ///
+    /// May panic if resources are borrowed, should not borrow resources when calling.
+    pub fn handle_startup(&mut self, world: &mut World, only_insert_resources: bool) {
+        let (mut resources_inserted, mut systems_run) =
+            match world.get_resource_mut::<SessionStarted>() {
+                Some(session_started) => (
+                    session_started.startup_resources_inserted,
+                    session_started.startup_systems_executed,
+                ),
+                None => (false, false),
+            };
 
+        if !resources_inserted {
+            self.insert_startup_resources(world);
+            resources_inserted = true;
+        }
+
+        if !systems_run && !only_insert_resources {
             // Set the current stage resource
             world.insert_resource(CurrentSystemStage(Ulid(0)));
 
@@ -242,24 +261,14 @@ impl SystemStages {
                 system.run(world, ());
             }
 
-            // Don't run startup systems again
-            Self::set_session_started(true, world);
             world.resources.remove::<CurrentSystemStage>();
-        }
-    }
-
-    /// Has session started and startup systems been executed?
-    fn has_session_started(world: &World) -> bool {
-        if let Some(session_started) = world.get_resource::<SessionStarted>() {
-            return session_started.has_started;
+            systems_run = true;
         }
 
-        false
-    }
-
-    /// Set whether the session has been started and startup systems executed.
-    fn set_session_started(started: bool, world: &mut World) {
-        world.init_resource::<SessionStarted>().has_started = started;
+        world.insert_resource(SessionStarted {
+            startup_systems_executed: systems_run,
+            startup_resources_inserted: resources_inserted,
+        });
     }
 
     /// Check if single success system is marked as succeeded in [`SingleSuccessSystems`] [`Resource`].
@@ -285,6 +294,8 @@ impl SystemStages {
     }
 
     /// Insert the startup resources that [`SystemStages`] and session were built with into [`World`].
+    ///
+    /// This will update [`SessionStarted`] resource to flag that startup resources are inserted.
     fn insert_startup_resources(&self, world: &mut World) {
         for resource in self.startup_resources.resources().iter() {
             // Deep copy startup resource and insert into world.
@@ -468,13 +479,16 @@ impl<'a> SystemParam for Commands<'a> {
     }
 }
 
-/// Resource tracking if Session has started and startup systems executed.
-/// If reset to false, startup systems should be re-triggered.
-/// If resource is not present, assumed to have not started (and will be initialized upon execution).
+/// Resource tracking if Session has started (startup systems executed and resources inserted).
+/// If field is set to false, that operation needs to be handled on next stage run.
+/// If resource is not present, assumed to have not started (and will be initialized upon next stage execution).
 #[derive(Copy, Clone, HasSchema, Default)]
 pub struct SessionStarted {
-    /// Has the session started, and startup systems executed?
-    pub has_started: bool,
+    /// Have startup systems executed?
+    pub startup_systems_executed: bool,
+
+    /// Have startup resources beeen inserted into [`World`]?
+    pub startup_resources_inserted: bool,
 }
 
 /// Resource tracking which of single success systems in `Session`'s [`SystemStages`] have completed.

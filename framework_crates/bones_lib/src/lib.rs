@@ -179,7 +179,7 @@ impl SessionBuilder {
     ///
     /// Alternatively, you may directly pass a [`SessionBuilder`] to [`Sessions::create`] to add and finalize.
     pub fn finish_and_add(mut self, sessions: &mut Sessions) -> &mut Session {
-        let session = Session {
+        let mut session = Session {
             world: {
                 let mut w = World::default();
                 w.init_resource::<Time>();
@@ -194,6 +194,13 @@ impl SessionBuilder {
 
         // mark guard as finished to avoid warning on drop of SessionBuilder.
         self.finish_guard.finished = true;
+
+        // Insert startup resources so if other sessions look for them, they are present.
+        // Startup systems are deferred until first step of stages.
+        let only_insert_startup_resources = true;
+        session
+            .stages
+            .handle_startup(&mut session.world, only_insert_startup_resources);
 
         sessions.add(self.name, session)
     }

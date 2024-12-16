@@ -101,7 +101,7 @@ impl WorldExt for World {
         }
 
         // Immediately run startup tasks, ensuring startup resources are present and run startup systems.
-        stages.handle_startup(self);
+        stages.handle_startup(self, false);
 
         // Apply any reset resources to world, overwriting startup resources.
         if let Some(resources) = post_reset_resources {
