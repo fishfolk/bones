@@ -197,10 +197,7 @@ impl SessionBuilder {
 
         // Insert startup resources so if other sessions look for them, they are present.
         // Startup systems are deferred until first step of stages.
-        let only_insert_startup_resources = true;
-        session
-            .stages
-            .handle_startup(&mut session.world, only_insert_startup_resources);
+        session.stages.handle_startup_resources(&mut session.world);
 
         sessions.add(self.name, session)
     }

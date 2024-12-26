@@ -10,7 +10,8 @@ pub struct ResetWorld {
     /// Set to true to trigger reset of [`World`].
     pub reset: bool,
 
-    /// List of resources that will be inserted into [`World`] after the reset.
+    /// List of resources that will be inserted into [`World`] after the resources are reset,
+    /// before startup systems are executed.
     /// These override any `startup resources` captured during session build.
     /// If want to preserve a resource instead of having it reset, insert it here.
     pub reset_resources: UntypedResourceSet,
@@ -100,13 +101,17 @@ impl WorldExt for World {
             self.insert_resource(session_opts);
         }
 
-        // Immediately run startup tasks, ensuring startup resources are present and run startup systems.
-        stages.handle_startup(self, false);
+        // Insert startup resources, but do not yet run startup systems. (We do this after applying additional preserved "reset resources", as
+        // startup systems may want to access these).
+        stages.handle_startup_resources(self);
 
         // Apply any reset resources to world, overwriting startup resources.
         if let Some(resources) = post_reset_resources {
             let remove_empty = true;
             resources.insert_on_world(self, remove_empty);
         }
+
+        // Now run the startup systems after updating resources.
+        stages.handle_startup_systems(self);
     }
 }

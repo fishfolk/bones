@@ -197,7 +197,7 @@ impl SystemStages {
     /// Execute the systems on the given `world`.
     pub fn run(&mut self, world: &mut World) {
         // If we haven't run startup systems and setup resources yet, do so
-        self.handle_startup(world, false);
+        self.handle_startup(world);
 
         // Run single success systems
         for (index, system) in self.single_success_systems.iter_mut().enumerate() {
@@ -227,8 +227,9 @@ impl SystemStages {
     /// If [`SessionStarted`] resource indicates have not yet started,
     /// perform startup tasks (insert startup resources, run startup systems).
     ///
-    /// If `only_insert_resources` is set, will not run startup systems, but insert startup resources
-    /// (If they have not already been inserted, tracked by [`SessionStarted`]).
+    /// For advanced use cases in which want to only insert startup resources, or run startup systems and split this
+    /// behavior, see [`SystemStages::handle_startup_systems`] and `[SystemStages::handle_startup_resources`].
+    ///
     ///
     /// While this is used internally by [`SystemStages::run`], this is also used
     /// for resetting world. This allows world to immediately startup and re-initialize after reset.
@@ -236,22 +237,59 @@ impl SystemStages {
     /// # Panics
     ///
     /// May panic if resources are borrowed, should not borrow resources when calling.
-    pub fn handle_startup(&mut self, world: &mut World, only_insert_resources: bool) {
-        let (mut resources_inserted, mut systems_run) =
-            match world.get_resource_mut::<SessionStarted>() {
-                Some(session_started) => (
-                    session_started.startup_resources_inserted,
-                    session_started.startup_systems_executed,
-                ),
-                None => (false, false),
-            };
+    pub fn handle_startup(&mut self, world: &mut World) {
+        self.handle_startup_resources(world);
+        self.handle_startup_systems(world);
+    }
+
+    /// If [`SessionStarted`] resource indicates startup resources have not yet been inserted, will do so and update `SessionStarted`.
+    ///
+    /// This function contains only half of stage's startup behavior, see [`SystemStages::handle_startup`] if not intending to split
+    /// resource insertion from startup systems (Splitting these is more for advanced special cases).
+    ///
+    /// # Panics
+    ///
+    /// May panic if resources are borrowed, should not borrow resources when calling.
+    pub fn handle_startup_resources(&mut self, world: &mut World) {
+        let (mut resources_inserted, systems_run) = match world.get_resource_mut::<SessionStarted>()
+        {
+            Some(session_started) => (
+                session_started.startup_resources_inserted,
+                session_started.startup_systems_executed,
+            ),
+            None => (false, false),
+        };
 
         if !resources_inserted {
             self.insert_startup_resources(world);
             resources_inserted = true;
-        }
 
-        if !systems_run && !only_insert_resources {
+            world.insert_resource(SessionStarted {
+                startup_systems_executed: systems_run,
+                startup_resources_inserted: resources_inserted,
+            });
+        }
+    }
+
+    /// If [`SessionStarted`] resource indicates startup systems have not yet been executed, will do so and update `SessionStarted`.
+    ///
+    /// This function contains only half of stage's startup behavior, see [`SystemStages::handle_startup`] if not intending to split
+    /// startup system execution from startup resource insertion (Splitting these is more for advanced special cases).
+    ///
+    /// # Panics
+    ///
+    /// May panic if resources are borrowed, should not borrow resources when calling.
+    pub fn handle_startup_systems(&mut self, world: &mut World) {
+        let (resources_inserted, mut systems_run) = match world.get_resource_mut::<SessionStarted>()
+        {
+            Some(session_started) => (
+                session_started.startup_resources_inserted,
+                session_started.startup_systems_executed,
+            ),
+            None => (false, false),
+        };
+
+        if !systems_run {
             // Set the current stage resource
             world.insert_resource(CurrentSystemStage(Ulid(0)));
 
@@ -260,15 +298,14 @@ impl SystemStages {
                 // Run the system
                 system.run(world, ());
             }
+            systems_run = true;
 
             world.resources.remove::<CurrentSystemStage>();
-            systems_run = true;
+            world.insert_resource(SessionStarted {
+                startup_systems_executed: systems_run,
+                startup_resources_inserted: resources_inserted,
+            });
         }
-
-        world.insert_resource(SessionStarted {
-            startup_systems_executed: systems_run,
-            startup_resources_inserted: resources_inserted,
-        });
     }
 
     /// Check if single success system is marked as succeeded in [`SingleSuccessSystems`] [`Resource`].
