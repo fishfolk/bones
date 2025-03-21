@@ -1,0 +1,642 @@
+use bevy_tasks::{IoTaskPool, TaskPool};
+use crossbeam_channel::{unbounded, Receiver, Sender};
+use pollster::FutureExt;
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Instant,
+};
+use texture::Texture;
+use wgpu::util::DeviceExt;
+use winit::{
+    application::ApplicationHandler,
+    event::WindowEvent,
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+    window::{Window, WindowId},
+};
+
+use bones_framework::prelude::{self as bones, BitSet, ComponentIterBitset};
+
+mod texture;
+
+/// The prelude
+pub mod prelude {
+    pub use crate::*;
+}
+
+//Wgpu utils Bones types
+
+#[derive(bones_schema::HasSchema, Default, Clone)]
+#[repr(C)]
+#[schema(opaque)]
+struct WgpuDevice(Option<Arc<wgpu::Device>>);
+
+impl WgpuDevice {
+    fn get(&self) -> &wgpu::Device {
+        self.0.as_ref().unwrap()
+    }
+}
+
+#[derive(bones_schema::HasSchema, Default, Clone)]
+#[repr(C)]
+#[schema(opaque)]
+struct WgpuQueue(Option<Arc<wgpu::Queue>>);
+
+impl WgpuQueue {
+    fn get(&self) -> &wgpu::Queue {
+        self.0.as_ref().unwrap()
+    }
+}
+
+// Texture sender to the wgpu thread
+#[derive(bones_schema::HasSchema, Clone)]
+#[repr(C)]
+#[schema(opaque)]
+#[schema(no_default)]
+struct TextureSender(Sender<Texture>);
+
+// Indicates that we already loaded the sprite texture
+// and sent it to the wgpu thread
+#[derive(bones_schema::HasSchema, Default, Clone)]
+#[repr(C)]
+struct TextureLoaded;
+
+#[derive(bones_schema::HasSchema, Default, Clone)]
+#[repr(C)]
+struct PixelArt(bool);
+
+struct App {
+    state: Option<State>,
+    instance: Arc<wgpu::Instance>,
+    adapter: Arc<wgpu::Adapter>,
+    device: Arc<wgpu::Device>,
+    queue: Arc<wgpu::Queue>,
+    texture_bind_group_layout: Arc<wgpu::BindGroupLayout>,
+    receiver: Receiver<Texture>,
+    game: bones::Game,
+}
+
+/// Renderer for [`bones_framework`] [`Game`][bones::Game]s using wgpu.
+pub struct BonesWgpuRenderer {
+    /// Whether or not to load all assets on startup with a loading screen,
+    /// or skip straight to running the bones game immedietally.
+    pub preload: bool,
+    /// Whether or not to use nearest-neighbor sampling for textures.
+    pub pixel_art: bool,
+    /// The bones game to run.
+    pub game: bones::Game,
+    /// The version of the game, used for the asset loader.
+    pub game_version: bones::Version,
+    /// The (qualifier, organization, application) that will be used to pick a persistent storage
+    /// location for the game.
+    ///
+    /// For example: `("org", "fishfolk", "jumpy")`
+    pub app_namespace: (String, String, String),
+    /// The path to load assets from.
+    pub asset_dir: PathBuf,
+    /// The path to load asset packs from.
+    pub packs_dir: PathBuf,
+}
+
+impl BonesWgpuRenderer {
+    pub fn new(game: bones::Game) -> Self {
+        BonesWgpuRenderer {
+            preload: true,
+            pixel_art: true,
+            game,
+            game_version: bones::Version::new(0, 1, 0),
+            app_namespace: ("local".into(), "developer".into(), "bones_demo_game".into()),
+            asset_dir: PathBuf::from("assets"),
+            packs_dir: PathBuf::from("packs"),
+        }
+    }
+
+    pub fn run(mut self) {
+        let (instance, adapter, device, queue, texture_bind_group_layout) = async {
+            let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());
+            let adapter = instance
+                .request_adapter(&wgpu::RequestAdapterOptions::default())
+                .await
+                .unwrap();
+            let (device, queue) = adapter
+                .request_device(
+                    &wgpu::DeviceDescriptor::default(),
+                    None, // Trace path
+                )
+                .await
+                .unwrap();
+            let texture_bind_group_layout =
+                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    entries: &[
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Texture {
+                                multisampled: false,
+                                view_dimension: wgpu::TextureViewDimension::D2,
+                                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            },
+                            count: None,
+                        },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 1,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            // This should match the filterable field of the textures
+                            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                            count: None,
+                        },
+                    ],
+                    label: Some("texture_bind_group_layout"),
+                });
+            (
+                Arc::new(instance),
+                Arc::new(adapter),
+                Arc::new(device),
+                Arc::new(queue),
+                Arc::new(texture_bind_group_layout),
+            )
+        }
+        .block_on();
+
+        self.game
+            .insert_shared_resource(WgpuDevice(Some(device.clone())));
+        self.game
+            .insert_shared_resource(WgpuQueue(Some(queue.clone())));
+        self.game.insert_shared_resource(PixelArt(self.pixel_art));
+
+        let (sender, receiver) = unbounded();
+        self.game.insert_shared_resource(TextureSender(sender));
+
+        IoTaskPool::init(TaskPool::default);
+        if let Some(mut asset_server) = self.game.shared_resource_mut::<bones::AssetServer>() {
+            asset_server.set_game_version(self.game_version.clone());
+            asset_server.set_io(asset_io(&self.asset_dir, &self.packs_dir));
+
+            if self.preload {
+                // Load assets
+                let s = asset_server.clone();
+                println!("Loading Assets...");
+
+                // Spawn a task to load the assets
+                IoTaskPool::get()
+                    .spawn(async move {
+                        s.load_assets().await.unwrap();
+                    })
+                    .detach();
+            }
+
+            // Enable asset hot reload.
+            asset_server.watch_for_changes();
+        }
+
+        // Insert empty inputs that will be updated by the `insert_bones_input` system later.
+        self.game.init_shared_resource::<bones::KeyboardInputs>();
+        self.game.init_shared_resource::<bones::MouseInputs>();
+        self.game.init_shared_resource::<bones::GamepadInputs>();
+
+        //Insert needed systems
+        for (_, session) in self.game.sessions.iter_mut() {
+            session.add_system_to_stage(bones::First, load_sprite);
+            session.add_system_to_stage(bones::First, insert_bones_input);
+        }
+
+        // wgpu uses `log` for all of our logging, so we initialize a logger with the `env_logger` crate.
+        env_logger::init();
+
+        let event_loop = EventLoop::builder().build().unwrap();
+
+        // When the current loop iteration finishes, immediately begin a new
+        // iteration regardless of whether or not new events are available to
+        // process.
+        event_loop.set_control_flow(ControlFlow::Poll);
+
+        let mut app = App {
+            state: None,
+            instance,
+            adapter,
+            device,
+            queue,
+            texture_bind_group_layout,
+            receiver,
+            game: self.game,
+        };
+        event_loop.run_app(&mut app).unwrap();
+    }
+}
+
+//TODO Fix sprite deletion
+fn load_sprite(
+    entities: bones::Res<bones::Entities>,
+    sprites: bones::Comp<bones::Sprite>,
+    transforms: bones::Comp<bones::Transform>,
+    assets: bones::Res<bones::AssetServer>,
+    device: bones::Res<WgpuDevice>,
+    queue: bones::Res<WgpuQueue>,
+    texture_sender: bones::Res<TextureSender>,
+    pixel_art: bones::Res<PixelArt>,
+    texture_loaded: bones::Comp<TextureLoaded>
+) {
+    let mut not_loaded = texture_loaded.bitset().clone();
+    not_loaded.bit_not();
+
+    for entity in entities.iter_with_bitset(&not_loaded) {
+        let (Some(sprite), Some(_transform)) = (sprites.get(entity), transforms.get(entity)) else {
+            continue;
+        };
+
+        //Load and send texture
+        let image = assets.get(sprite.image);
+        if let bones::Image::Data(img) = &*image {
+            let texture =
+                Texture::from_image(device.get(), queue.get(), img, None, pixel_art.0).unwrap();
+            texture_sender.0.send(texture).unwrap();
+        } else {
+            unreachable!()
+        };
+    }
+}
+
+fn insert_bones_input() {}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct Vertex {
+    position: [f32; 3],
+    tex_coords: [f32; 2],
+}
+
+impl Vertex {
+    fn desc() -> wgpu::VertexBufferLayout<'static> {
+        use std::mem;
+        wgpu::VertexBufferLayout {
+            array_stride: mem::size_of::<Vertex>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    offset: 0,
+                    shader_location: 0,
+                    format: wgpu::VertexFormat::Float32x3,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    shader_location: 1,
+                    format: wgpu::VertexFormat::Float32x2,
+                },
+            ],
+        }
+    }
+}
+
+struct State {
+    window: Arc<Window>,
+    device: Arc<wgpu::Device>,
+    queue: Arc<wgpu::Queue>,
+    size: winit::dpi::PhysicalSize<u32>,
+    surface: wgpu::Surface<'static>,
+    surface_format: wgpu::TextureFormat,
+    render_pipeline: wgpu::RenderPipeline,
+    binds: Vec<wgpu::BindGroup>,
+}
+
+impl State {
+    fn new(
+        window: Arc<Window>,
+        device: Arc<wgpu::Device>,
+        queue: Arc<wgpu::Queue>,
+        instance: &wgpu::Instance,
+        adapter: &wgpu::Adapter,
+        texture_bind_group_layout: &wgpu::BindGroupLayout,
+    ) -> Self {
+        let size = window.inner_size();
+        let surface = instance.create_surface(window.clone()).unwrap();
+        let cap = surface.get_capabilities(adapter);
+        let surface_format = cap.formats[0];
+
+        // Configure surface for the first time
+        let surface_config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: surface_format,
+            // Request compatibility with the sRGB-format texture view we‘re going to create later.
+            view_formats: vec![surface_format.add_srgb_suffix()],
+            alpha_mode: wgpu::CompositeAlphaMode::Auto,
+            width: size.width,
+            height: size.height,
+            desired_maximum_frame_latency: 2,
+            present_mode: wgpu::PresentMode::AutoVsync,
+        };
+        surface.configure(&device, &surface_config);
+
+        let surface_caps = surface.get_capabilities(adapter);
+        // This accounts only for Srgb surfaces
+        let surface_format = surface_caps
+            .formats
+            .iter()
+            .copied()
+            .find(|f| f.is_srgb())
+            .unwrap_or(surface_caps.formats[0]);
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: surface_format,
+            width: size.width,
+            height: size.height,
+            present_mode: surface_caps.present_modes[0],
+            alpha_mode: surface_caps.alpha_modes[0],
+            view_formats: vec![],
+            desired_maximum_frame_latency: 2,
+        };
+
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+        });
+
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[texture_bind_group_layout],
+                push_constant_ranges: &[],
+            });
+
+        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Render Pipeline"),
+            layout: Some(&render_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vs_main"),
+                buffers: &[Vertex::desc()],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: config.format,
+                    blend: Some(wgpu::BlendState {
+                        color: wgpu::BlendComponent::REPLACE,
+                        alpha: wgpu::BlendComponent::REPLACE,
+                    }),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: Some(wgpu::Face::Back),
+                // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
+                // or Features::POLYGON_MODE_POINT
+                polygon_mode: wgpu::PolygonMode::Fill,
+                // Requires Features::DEPTH_CLIP_CONTROL
+                unclipped_depth: false,
+                // Requires Features::CONSERVATIVE_RASTERIZATION
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            // If the pipeline will be used with a multiview render pass, this
+            // indicates how many array layers the attachments will have.
+            multiview: None,
+            // Useful for optimizing shader compilation on Android
+            cache: None,
+        });
+
+        State {
+            window,
+            device: device.clone(),
+            queue,
+            size,
+            surface,
+            surface_format,
+            render_pipeline,
+            binds: vec![],
+        }
+    }
+
+    fn get_window(&self) -> &Window {
+        &self.window
+    }
+
+    fn configure_surface(&self) {
+        let surface_config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: self.surface_format,
+            // Request compatibility with the sRGB-format texture view we‘re going to create later.
+            view_formats: vec![self.surface_format.add_srgb_suffix()],
+            alpha_mode: wgpu::CompositeAlphaMode::Auto,
+            width: self.size.width,
+            height: self.size.height,
+            desired_maximum_frame_latency: 2,
+            present_mode: wgpu::PresentMode::AutoVsync,
+        };
+        self.surface.configure(&self.device, &surface_config);
+    }
+
+    fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+        self.size = new_size;
+
+        // reconfigure the surface
+        self.configure_surface();
+    }
+
+    fn render(&mut self) {
+        // Create texture view
+        let surface_texture = self
+            .surface
+            .get_current_texture()
+            .expect("failed to acquire next swapchain texture");
+        let texture_view = surface_texture
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor {
+                // Without add_srgb_suffix() the image we will be working with
+                // might not be "gamma correct".
+                format: Some(self.surface_format.add_srgb_suffix()),
+                ..Default::default()
+            });
+
+        // Renders a gray background
+        let gray = wgpu::Color {
+            r: 0.10,
+            g: 0.10,
+            b: 0.10,
+            ..Default::default()
+        };
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        // Create the renderpass which will clear the screen.
+        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: None,
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &texture_view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(gray),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+        });
+
+        //TODO Add sprite batching 
+        for bind_group in &self.binds {
+            let vertex_buffer = self
+                .device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Vertex Buffer"),
+                    contents: bytemuck::cast_slice(VERTICES),
+                    usage: wgpu::BufferUsages::VERTEX,
+                });
+            let index_buffer = self
+                .device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Index Buffer"),
+                    contents: bytemuck::cast_slice(INDICES),
+                    usage: wgpu::BufferUsages::INDEX,
+                });
+            let num_indices = INDICES.len() as u32;
+
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_bind_group(0, bind_group, &[]);
+            render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+            render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.draw_indexed(0..num_indices, 0, 0..1);
+        }
+
+        // End the renderpass.
+        drop(render_pass);
+
+        // Submit the command in the queue to execute
+        self.queue.submit([encoder.finish()]);
+        self.window.pre_present_notify();
+        surface_texture.present();
+    }
+}
+
+const VERTICES: &[Vertex] = &[
+    // Top-left vertex
+    Vertex {
+        position: [-0.5, 0.5, 0.0],
+        tex_coords: [0.0, 0.0],
+    },
+    // Bottom-left vertex
+    Vertex {
+        position: [-0.5, -0.5, 0.0],
+        tex_coords: [0.0, 1.0],
+    },
+    // Bottom-right vertex
+    Vertex {
+        position: [0.5, -0.5, 0.0],
+        tex_coords: [1.0, 1.0],
+    },
+    // Top-right vertex
+    Vertex {
+        position: [0.5, 0.5, 0.0],
+        tex_coords: [1.0, 0.0],
+    },
+];
+
+const INDICES: &[u16] = &[
+    0, 1, 2, // first triangle
+    0, 2, 3, // second triangle
+];
+
+impl ApplicationHandler for App {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        // Create window object
+        let window = Arc::new(
+            event_loop
+                .create_window(Window::default_attributes())
+                .unwrap(),
+        );
+
+        if let Some(state) = &mut self.state {
+            state.window = window.clone();
+            state.size = window.inner_size();
+
+            state.surface = self.instance.create_surface(window.clone()).unwrap();
+            let cap = state.surface.get_capabilities(&self.adapter);
+            state.surface_format = cap.formats[0];
+
+            state.configure_surface();
+        } else {
+            let state = State::new(
+                window.clone(),
+                self.device.clone(),
+                self.queue.clone(),
+                &self.instance,
+                &self.adapter,
+                &self.texture_bind_group_layout,
+            );
+
+            self.state = Some(state);
+        }
+
+        window.request_redraw();
+    }
+
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
+        let state = self.state.as_mut().unwrap();
+
+        for texture in self.receiver.try_iter() {
+            let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &self.texture_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&texture.view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&texture.sampler),
+                    },
+                ],
+                label: Some("diffuse_bind_group"),
+            });
+
+            state.binds.push(bind_group);
+        }
+
+        match event {
+            WindowEvent::CloseRequested => {
+                //Close window
+                event_loop.exit();
+            }
+            WindowEvent::RedrawRequested => {
+                state.render();
+                // Emits a new redraw requested event.
+                state.get_window().request_redraw();
+
+                //Step bones
+                self.game.step(Instant::now());
+            }
+            WindowEvent::Resized(size) => {
+                // Reconfigures the size of the surface. We do not re-render
+                // here as this event is always followed up by redraw request.
+                state.resize(size);
+            }
+            _ => (),
+        }
+    }
+}
+
+/// A [`bones::AssetIo`] configured for web and local file access
+pub fn asset_io(asset_dir: &Path, packs_dir: &Path) -> impl bones::AssetIo + 'static {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        bones::FileAssetIo::new(asset_dir, packs_dir)
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = asset_dir;
+        let _ = packs_dir;
+        let window = web_sys::window().unwrap();
+        let path = window.location().pathname().unwrap();
+        let base = path.rsplit_once('/').map(|x| x.0).unwrap_or(&path);
+        bones::WebAssetIo::new(&format!("{base}/assets"))
+    }
+}
