@@ -47,4 +47,11 @@ impl Transform {
     pub fn from_scale(scale: Vec3) -> Self {
         Self { scale, ..default() }
     }
+
+    /// Converts the transform to a 4x4 matrix for rendering
+    pub fn to_matrix(&self) -> Mat4 {
+        let rotation = Quat::from_xyzw(0., 0., self.rotation.normalize().z, 1.);
+
+        glam::Mat4::from_scale_rotation_translation(self.scale, rotation, self.translation)
+    }
 }

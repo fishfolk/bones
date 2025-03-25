@@ -15,7 +15,7 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use bones_framework::prelude::{self as bones, BitSet, ComponentIterBitset};
+use bones_framework::{prelude::{self as bones, BitSet, ComponentIterBitset}, glam::*};
 
 mod texture;
 
@@ -53,7 +53,9 @@ impl WgpuQueue {
 #[repr(C)]
 #[schema(opaque)]
 #[schema(no_default)]
-struct TextureSender(Sender<Texture>);
+struct TextureSender(Sender<(Texture, bones::Entity)>);
+
+type TextureReceiver = Receiver<(Texture, bones::Entity)>;
 
 // Indicates that we already loaded the sprite texture
 // and sent it to the wgpu thread
@@ -72,7 +74,7 @@ struct App {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
     texture_bind_group_layout: Arc<wgpu::BindGroupLayout>,
-    receiver: Receiver<Texture>,
+    receiver: TextureReceiver,
     game: bones::Game,
 }
 
@@ -228,19 +230,18 @@ impl BonesWgpuRenderer {
 fn load_sprite(
     entities: bones::Res<bones::Entities>,
     sprites: bones::Comp<bones::Sprite>,
-    transforms: bones::Comp<bones::Transform>,
     assets: bones::Res<bones::AssetServer>,
     device: bones::Res<WgpuDevice>,
     queue: bones::Res<WgpuQueue>,
     texture_sender: bones::Res<TextureSender>,
     pixel_art: bones::Res<PixelArt>,
-    texture_loaded: bones::Comp<TextureLoaded>
+    mut texture_loaded: bones::CompMut<TextureLoaded>,
 ) {
     let mut not_loaded = texture_loaded.bitset().clone();
     not_loaded.bit_not();
 
     for entity in entities.iter_with_bitset(&not_loaded) {
-        let (Some(sprite), Some(_transform)) = (sprites.get(entity), transforms.get(entity)) else {
+        let Some(sprite) = sprites.get(entity) else {
             continue;
         };
 
@@ -249,7 +250,8 @@ fn load_sprite(
         if let bones::Image::Data(img) = &*image {
             let texture =
                 Texture::from_image(device.get(), queue.get(), img, None, pixel_art.0).unwrap();
-            texture_sender.0.send(texture).unwrap();
+            texture_sender.0.send((texture, entity)).unwrap();
+            texture_loaded.insert(entity, TextureLoaded);
         } else {
             unreachable!()
         };
@@ -295,7 +297,7 @@ struct State {
     surface: wgpu::Surface<'static>,
     surface_format: wgpu::TextureFormat,
     render_pipeline: wgpu::RenderPipeline,
-    binds: Vec<wgpu::BindGroup>,
+    sprites: Vec<(wgpu::BindGroup, bones::Entity)>,
 }
 
 impl State {
@@ -413,7 +415,7 @@ impl State {
             surface,
             surface_format,
             render_pipeline,
-            binds: vec![],
+            sprites: vec![],
         }
     }
 
@@ -443,7 +445,7 @@ impl State {
         self.configure_surface();
     }
 
-    fn render(&mut self) {
+    fn render(&mut self, sessions: &bones::Sessions) {
         // Create texture view
         let surface_texture = self
             .surface
@@ -465,8 +467,21 @@ impl State {
             b: 0.10,
             ..Default::default()
         };
+
+        // Create the command encoder.
         let mut encoder = self.device.create_command_encoder(&Default::default());
-        // Create the renderpass which will clear the screen.
+
+        //Index buffer is the same for all sprites
+        let index_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Index Buffer"),
+                contents: bytemuck::cast_slice(INDICES),
+                usage: wgpu::BufferUsages::INDEX,
+            });
+        let num_indices = INDICES.len() as u32;
+
+        // Create one render pass that clears the screen once.
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: None,
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -482,23 +497,40 @@ impl State {
             occlusion_query_set: None,
         });
 
-        //TODO Add sprite batching 
-        for bind_group in &self.binds {
+        // Render each sprite with its own transform.
+        for (bind_group, entity) in &self.sprites {
+            // Get the transform from the ECS.
+            let transform = sessions
+                .iter()
+                .find_map(|(_, session)| {
+                    session
+                        .world
+                        .component::<bones::Transform>()
+                        .get(*entity)
+                        .cloned()
+                })
+                .unwrap_or_else(|| panic!("Missing transform for entity {:?}", entity));
+
+            // Get the 4×4 transform matrix.
+            let mat4 = transform.to_matrix();
+
+            // Compute transformed vertices on the CPU.
+            let transformed_vertices: Vec<Vertex> = VERTICES
+                .iter()
+                .map(|v| Vertex {
+                    position: transform_vertex(v.position.into(), mat4, transform.translation).into(),
+                    tex_coords: v.tex_coords, // Texture coordinates remain unchanged.
+                })
+                .collect();
+
+            // Create a dynamic vertex buffer with the transformed vertices.
             let vertex_buffer = self
                 .device
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Vertex Buffer"),
-                    contents: bytemuck::cast_slice(VERTICES),
+                    label: Some("Transformed Vertex Buffer"),
+                    contents: bytemuck::cast_slice(&transformed_vertices),
                     usage: wgpu::BufferUsages::VERTEX,
                 });
-            let index_buffer = self
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Index Buffer"),
-                    contents: bytemuck::cast_slice(INDICES),
-                    usage: wgpu::BufferUsages::INDEX,
-                });
-            let num_indices = INDICES.len() as u32;
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, bind_group, &[]);
@@ -510,7 +542,7 @@ impl State {
         // End the renderpass.
         drop(render_pass);
 
-        // Submit the command in the queue to execute
+        // Submit the command queue.
         self.queue.submit([encoder.finish()]);
         self.window.pre_present_notify();
         surface_texture.present();
@@ -582,7 +614,7 @@ impl ApplicationHandler for App {
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         let state = self.state.as_mut().unwrap();
 
-        for texture in self.receiver.try_iter() {
+        for (texture, entity) in self.receiver.try_iter() {
             let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 layout: &self.texture_bind_group_layout,
                 entries: &[
@@ -598,7 +630,7 @@ impl ApplicationHandler for App {
                 label: Some("diffuse_bind_group"),
             });
 
-            state.binds.push(bind_group);
+            state.sprites.push((bind_group, entity));
         }
 
         match event {
@@ -607,7 +639,7 @@ impl ApplicationHandler for App {
                 event_loop.exit();
             }
             WindowEvent::RedrawRequested => {
-                state.render();
+                state.render(&self.game.sessions);
                 // Emits a new redraw requested event.
                 state.get_window().request_redraw();
 
@@ -623,6 +655,19 @@ impl ApplicationHandler for App {
         }
     }
 }
+
+//TODO Add quaternion rotations, and move this calculation to
+// wgsl code 
+
+fn transform_vertex(pos: Vec3, transform: Mat4, pivot: Vec3) -> Vec3 {
+    let to_origin = Mat4::from_translation(-pivot);
+    let from_origin = Mat4::from_translation(pivot);
+    let combined = from_origin * transform * to_origin;
+    
+    let pos4 = combined * pos.extend(1.0);
+    pos4.truncate() / pos4.w
+}
+
 
 /// A [`bones::AssetIo`] configured for web and local file access
 pub fn asset_io(asset_dir: &Path, packs_dir: &Path) -> impl bones::AssetIo + 'static {
