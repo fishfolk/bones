@@ -1,4 +1,5 @@
 use bevy_tasks::{IoTaskPool, TaskPool};
+use convert::IntoBones;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use pollster::FutureExt;
 use std::{
@@ -15,8 +16,13 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use bones_framework::{prelude::{self as bones, BitSet, ComponentIterBitset}, glam::*};
+use bones_framework::{
+    glam::*,
+    input::gilrs::process_gamepad_events,
+    prelude::{self as bones, BitSet, ComponentIterBitset},
+};
 
+mod convert;
 mod texture;
 
 /// The prelude
@@ -195,11 +201,14 @@ impl BonesWgpuRenderer {
         self.game.init_shared_resource::<bones::KeyboardInputs>();
         self.game.init_shared_resource::<bones::MouseInputs>();
         self.game.init_shared_resource::<bones::GamepadInputs>();
+        self.game
+            .init_shared_resource::<bones::MouseScreenPosition>();
+        self.game
+            .init_shared_resource::<bones::MouseWorldPosition>();
 
         //Insert needed systems
         for (_, session) in self.game.sessions.iter_mut() {
             session.add_system_to_stage(bones::First, load_sprite);
-            session.add_system_to_stage(bones::First, insert_bones_input);
         }
 
         // wgpu uses `log` for all of our logging, so we initialize a logger with the `env_logger` crate.
@@ -226,7 +235,6 @@ impl BonesWgpuRenderer {
     }
 }
 
-//TODO Fix sprite deletion
 fn load_sprite(
     entities: bones::Res<bones::Entities>,
     sprites: bones::Comp<bones::Sprite>,
@@ -257,8 +265,6 @@ fn load_sprite(
         };
     }
 }
-
-fn insert_bones_input() {}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -512,13 +518,19 @@ impl State {
                 .unwrap_or_else(|| panic!("Missing transform for entity {:?}", entity));
 
             // Get the 4×4 transform matrix.
-            let mat4 = transform.to_matrix();
+            let mat4 = transform.to_matrix_with_pivots(Vec3::ZERO, Vec3::ZERO);
 
             // Compute transformed vertices on the CPU.
             let transformed_vertices: Vec<Vertex> = VERTICES
                 .iter()
                 .map(|v| Vertex {
-                    position: transform_vertex(v.position.into(), mat4, transform.translation).into(),
+                    position: transform_vertex(
+                        v.position.into(),
+                        mat4,
+                        Vec3::ZERO, // Use Vec3::ZERO as the pivot point for transformations
+                    )
+                    .into(),
+
                     tex_coords: v.tex_coords, // Texture coordinates remain unchanged.
                 })
                 .collect();
@@ -613,6 +625,11 @@ impl ApplicationHandler for App {
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         let state = self.state.as_mut().unwrap();
+        // TODO: investigate possible ways to avoid allocating vectors every frame for event lists.
+        // TODO: Maybe add some multithreading for the diferent fors in the function?
+        let mut keyboard_inputs = bones::KeyboardInputs::default();
+        let mut wheel_events = Vec::new();
+        let mut button_events = Vec::new();
 
         for (texture, entity) in self.receiver.try_iter() {
             let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -651,23 +668,105 @@ impl ApplicationHandler for App {
                 // here as this event is always followed up by redraw request.
                 state.resize(size);
             }
+            WindowEvent::KeyboardInput { event, .. } => {
+                let ev = match event.physical_key {
+                    winit::keyboard::PhysicalKey::Code(code) => bones::KeyboardEvent {
+                        scan_code: bones::Unset,
+                        key_code: bones::Set(code.into_bones()),
+                        button_state: event.state.into_bones(),
+                    },
+                    winit::keyboard::PhysicalKey::Unidentified(native_key_code) => {
+                        let scan_code = match native_key_code {
+                            winit::keyboard::NativeKeyCode::Android(u) => bones::Set(u),
+                            winit::keyboard::NativeKeyCode::MacOS(u) => bones::Set(u as u32),
+                            winit::keyboard::NativeKeyCode::Windows(u) => bones::Set(u as u32),
+                            winit::keyboard::NativeKeyCode::Xkb(u) => bones::Set(u),
+                            winit::keyboard::NativeKeyCode::Unidentified => bones::Unset,
+                        };
+                        bones::KeyboardEvent {
+                            scan_code,
+                            key_code: bones::Unset,
+                            button_state: event.state.into_bones(),
+                        }
+                    }
+                };
+                keyboard_inputs.key_events.push(ev);
+            }
+            WindowEvent::MouseWheel { delta, .. } => {
+                let ev: bones::MouseScrollEvent = delta.into_bones();
+                wheel_events.push(ev);
+            }
+            WindowEvent::MouseInput { state, button, .. } => {
+                let ev = bones::MouseButtonEvent {
+                    button: button.into_bones(),
+                    state: state.into_bones(),
+                };
+                button_events.push(ev);
+            }
+            WindowEvent::CursorMoved { position, .. } => {
+                let screen_pos = Some(Vec2::new(position.x as f32, position.y as f32));
+                self.game
+                    .insert_shared_resource(bones::MouseScreenPosition(screen_pos));
+            }
+            WindowEvent::CursorLeft { .. } => {
+                self.game
+                    .insert_shared_resource(bones::MouseScreenPosition(None));
+            }
             _ => (),
         }
+
+        // Add the game inputs
+        //TODO: Add world position
+        //self.game.insert_shared_resource(MouseWorldPosition(world_pos));
+        self.game
+            .shared_resource_mut::<bones::MouseInputs>()
+            .unwrap()
+            .wheel_events = wheel_events;
+        self.game
+            .shared_resource_mut::<bones::MouseInputs>()
+            .unwrap()
+            .button_events = button_events;
+        self.game.insert_shared_resource(keyboard_inputs);
+        self.game.insert_shared_resource(process_gamepad_events());
+    }
+
+    fn device_event(
+        &mut self,
+        _event_loop: &ActiveEventLoop,
+        _device_id: winit::event::DeviceId,
+        event: winit::event::DeviceEvent,
+    ) {
+        let mut movement = Vec2::default();
+
+        if let winit::event::DeviceEvent::MouseMotion { delta } = event {
+            let delta = Vec2::new(delta.0 as f32, delta.1 as f32);
+            movement += delta;
+        };
+
+        self.game
+            .shared_resource_mut::<bones::MouseInputs>()
+            .unwrap()
+            .movement = movement;
     }
 }
 
 //TODO Add quaternion rotations, and move this calculation to
-// wgsl code 
+// wgsl code
 
 fn transform_vertex(pos: Vec3, transform: Mat4, pivot: Vec3) -> Vec3 {
+    // Translate the vertex to the pivot point.
     let to_origin = Mat4::from_translation(-pivot);
     let from_origin = Mat4::from_translation(pivot);
-    let combined = from_origin * transform * to_origin;
-    
-    let pos4 = combined * pos.extend(1.0);
-    pos4.truncate() / pos4.w
-}
 
+    // Apply the transformation: first translate to origin, then transform, then translate back.
+    let combined = from_origin * transform * to_origin;
+
+    // Apply the transformation matrix to the position
+    let pos4 = combined * pos.extend(1.0);
+
+    // Return the truncated Vec3 position (ignoring the w-component)
+    pos4.truncate()
+}
 
 /// A [`bones::AssetIo`] configured for web and local file access
 pub fn asset_io(asset_dir: &Path, packs_dir: &Path) -> impl bones::AssetIo + 'static {

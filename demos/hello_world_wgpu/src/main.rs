@@ -17,6 +17,7 @@ use bones_wgpu_renderer::BonesWgpuRenderer;
 struct GameMeta {
     title: String,
     sprite: Handle<Image>,
+    sprite2: Handle<Image>,
 }
 
 fn main() {
@@ -77,6 +78,18 @@ fn sprite_demo_startup(
             ..default()
         },
     );
+    let sprite_ent = entities.create();
+    transforms.insert(
+        sprite_ent,
+        Transform::from_translation(Vec3::new(0.5, 0.5, 0.0)),
+    );
+    sprites.insert(
+        sprite_ent,
+        Sprite {
+            image: meta.sprite2,
+            ..default()
+        },
+    );
 }
 
 fn move_sprite(
@@ -84,24 +97,86 @@ fn move_sprite(
     sprite: Comp<Sprite>,
     mut transforms: CompMut<Transform>,
     input: Res<KeyboardInputs>,
+    input_mouse: Res<MouseInputs>,
+    gamepad: Res<GamepadInputs>,
+    //mouse_position: Res<MouseScreenPosition>
 ) {
     let mut left = false;
     let mut right = false;
+    let mut up = false;
+    let mut down = false;
+    let mut rotate_left = false;
+    let mut rotate_right = false;
 
     for input in &input.key_events {
         match input.key_code {
-            Set(KeyCode::Right) => right = true,
-            Set(KeyCode::Left) => left = true,
+            Set(KeyCode::D) => right = true,
+            Set(KeyCode::A) => left = true,
+            Set(KeyCode::W) => up = true,
+            Set(KeyCode::S) => down = true,
+            Set(KeyCode::Q) => rotate_left = true,
+            Set(KeyCode::E) => rotate_right = true,
             _ => (),
         }
     }
 
     for (_ent, (_sprite, transform)) in entities.iter_with((&sprite, &mut transforms)) {
+        for event in gamepad.gamepad_events.iter() {
+            match event {
+                GamepadEvent::Axis(axis) => match axis.axis {
+                    GamepadAxis::LeftStickX => {
+                        transform.translation.x += axis.value * 0.1;
+                    }
+                    GamepadAxis::LeftStickY => {
+                        transform.translation.y += axis.value * 0.1;
+                    }
+                    GamepadAxis::RightStickX => {
+                        transform.translation.x += axis.value * 0.1;
+                    }
+                    GamepadAxis::RightStickY => {
+                        transform.translation.y += axis.value * 0.1;
+                    }
+                    _ => (),
+                },
+                GamepadEvent::Button(button) => {
+                    if button.button == GamepadButton::LeftTrigger {
+                        transform.rotation.z += 0.1;
+                    }
+                    if button.button == GamepadButton::RightTrigger {
+                        transform.rotation.z -= 0.1;
+                    }
+                    if button.button == GamepadButton::LeftTrigger2 {
+                        transform.scale -= button.value * 0.05;
+                    }
+                    if button.button == GamepadButton::RightTrigger2 {
+                        transform.scale += button.value * 0.05;
+                    }
+                }
+                _ => (),
+            }
+        }
+
         if left {
-            transform.translation.x -= 2.0;
+            transform.translation.x -= 0.1;
         }
         if right {
-            transform.translation.x += 2.0;
+            transform.translation.x += 0.1;
+        }
+        if up {
+            transform.translation.y += 0.1;
+        }
+        if down {
+            transform.translation.y -= 0.1;
+        }
+        if rotate_left {
+            transform.rotation.z -= 0.1;
+        }
+        if rotate_right {
+            transform.rotation.z += 0.1;
+        }
+
+        for event in &input_mouse.wheel_events {
+            transform.scale += event.movement.y * 0.1;
         }
     }
 }
