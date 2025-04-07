@@ -15,7 +15,7 @@ pub struct KeyboardInputs {
 #[repr(C)]
 pub struct KeyboardEvent {
     /// The scan code of the pressed key.
-    pub scan_code: u32,
+    pub scan_code: Maybe<u32>,
     /// The key code of the pressed key, if applicable.
     pub key_code: Maybe<KeyCode>,
     /// The state of the keyboard button.

@@ -1,6 +1,7 @@
 //! Transform component.
 
 use crate::prelude::*;
+use std::f32::consts::PI;
 
 /// The main transform component.
 ///
@@ -50,8 +51,40 @@ impl Transform {
 
     /// Converts the transform to a 4x4 matrix for rendering
     pub fn to_matrix(&self) -> Mat4 {
-        let rotation = Quat::from_xyzw(0., 0., self.rotation.normalize().z, 1.);
+        let angle = self.rotation.z.rem_euclid(2.0 * PI);
+        let rotation = Mat4::from_rotation_z(angle);
 
-        glam::Mat4::from_scale_rotation_translation(self.scale, rotation, self.translation)
+        let scale_rotation = rotation * Mat4::from_scale(self.scale);
+
+        Mat4::from_translation(self.translation) * scale_rotation
+    }
+
+    /// Converts the transform to a 4x4 matrix for rendering,
+    /// scaling off from the given pivot (for example, the center of the screen).
+    pub fn to_matrix_with_pivot(&self, pivot: Vec3) -> Mat4 {
+        let angle = self.rotation.z.rem_euclid(2.0 * PI);
+        let rotation = Mat4::from_rotation_z(angle);
+
+        let scale_offset = Mat4::from_translation(pivot)
+            * Mat4::from_scale(self.scale)
+            * Mat4::from_translation(-pivot);
+
+        Mat4::from_translation(self.translation) * rotation * scale_offset
+    }
+
+    /// Converts the transform to a 4x4 matrix for rendering,
+    /// using a separate pivot for scaling and for rotation.
+    pub fn to_matrix_with_pivots(&self, pivot_scale: Vec3, pivot_rot: Vec3) -> Mat4 {
+        let scale_transform = Mat4::from_translation(pivot_scale)
+            * Mat4::from_scale(self.scale)
+            * Mat4::from_translation(-pivot_scale);
+
+        let angle = self.rotation.z.rem_euclid(2.0 * std::f32::consts::PI);
+        let rotation = Mat4::from_rotation_z(angle);
+
+        let rotation_transform =
+            Mat4::from_translation(pivot_rot) * rotation * Mat4::from_translation(-pivot_rot);
+
+        Mat4::from_translation(self.translation) * rotation_transform * scale_transform
     }
 }
