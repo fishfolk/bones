@@ -11,6 +11,8 @@ use crate::prelude::*;
 // TODO: make repr(C) when `Option`s are supported.
 // We don't have `Option` support in `bones_schema` right now.
 // Once we do, we can make this type `#[repr(C)]` instead of `#[schema(opaque)]`.
+// TODO: Support different Render Targets, for example, multiple windows,
+// for now the camera will always render to the main window.
 #[repr(C)]
 pub struct Camera {
     /// The height of the camera in in-game pixels.
@@ -27,6 +29,10 @@ pub struct Camera {
     pub viewport: Maybe<Viewport>,
     /// Cameras with a higher priority will be rendered on top of cameras with a lower priority.
     pub priority: i32,
+    /// The color to clear the screen to before rendering.
+    pub background_color: Color,
+    /// Whether or not the camera should draw the background color.
+    pub draw_background_color: bool,
 }
 
 /// A size setting for a camera.
@@ -68,6 +74,8 @@ impl Default for Camera {
             viewport: Unset,
             priority: 0,
             size: default(),
+            background_color: Color::GRAY,
+            draw_background_color: true,
         }
     }
 }
