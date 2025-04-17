@@ -1,6 +1,7 @@
 use bevy_tasks::{IoTaskPool, TaskPool};
 use convert::IntoBones;
 use crossbeam_channel::{unbounded, Receiver, Sender};
+use image::{DynamicImage, RgbaImage};
 use pollster::FutureExt;
 use std::{
     path::{Path, PathBuf},
@@ -466,14 +467,6 @@ impl State {
                 ..Default::default()
             });
 
-        // Renders a gray background
-        let gray = wgpu::Color {
-            r: 0.10,
-            g: 0.10,
-            b: 0.10,
-            ..Default::default()
-        };
-
         // Create the command encoder.
         let mut encoder = self.device.create_command_encoder(&Default::default());
 
@@ -487,72 +480,198 @@ impl State {
             });
         let num_indices = INDICES.len() as u32;
 
-        // Create one render pass that clears the screen once.
-        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: None,
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: &texture_view,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(gray),
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-        });
+        for (_, session) in sessions.iter() {
+            //Get cameras and sort them
+            let cameras = session.world.component::<bones::Camera>();
+            let transforms = session.world.component::<bones::Transform>();
+            let entities = session.world.resource::<bones::Entities>();
 
-        // Render each sprite with its own transform.
-        for (bind_group, entity) in &self.sprites {
-            // Get the transform from the ECS.
-            let transform = sessions
-                .iter()
-                .find_map(|(_, session)| {
-                    session
+            let mut bitset = cameras.bitset().clone();
+            bitset.bit_and(transforms.bitset());
+
+            let mut cameras_vec = vec![];
+            for ent in entities.iter_with_bitset(&bitset) {
+                let Some(camera) = cameras.get(ent) else {
+                    continue;
+                };
+
+                if !camera.active {
+                    continue;
+                }
+
+                // Get the transform from the ECS.
+                let Some(transform) = transforms.get(ent).cloned() else {
+                    continue;
+                };
+
+                cameras_vec.push((camera, transform));
+            }
+            cameras_vec.sort_by(|a, b| a.0.priority.cmp(&b.0.priority));
+
+            for (camera, mut camera_transform) in cameras_vec {
+                // Create one render pass for each camera
+                let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: None,
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: &texture_view,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Load,
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                });
+                render_pass.set_pipeline(&self.render_pipeline);
+
+                let scale_ratio;
+                if let Some(viewport) = camera.viewport.option() {
+                    let size = IVec2::new(self.size.width as i32, self.size.height as i32)
+                        - viewport.position.as_ivec2();
+                    let size = IVec2::new(
+                        (viewport.size.x as i32).min(size.x),
+                        (viewport.size.y as i32).min(size.y),
+                    );
+
+                    if size.x <= 0 || size.y <= 0 {
+                        continue;
+                    }
+
+                    render_pass.set_viewport(
+                        viewport.position.x as f32,
+                        viewport.position.y as f32,
+                        size.x as f32,
+                        size.y as f32,
+                        viewport.depth_min,
+                        viewport.depth_max,
+                    );
+                    if viewport.size.y <= viewport.size.x {
+                        scale_ratio = Mat4::from_scale(Vec3::new(
+                            size.x as f32 / viewport.size.x as f32,
+                            viewport.size.y as f32 / viewport.size.x as f32 * size.y as f32
+                                / viewport.size.y as f32,
+                            1.,
+                        ))
+                        .inverse();
+                    } else {
+                        scale_ratio = Mat4::from_scale(Vec3::new(
+                            viewport.size.x as f32 / viewport.size.y as f32 * size.x as f32
+                                / viewport.size.x as f32,
+                            size.y as f32 / viewport.size.y as f32,
+                            1.,
+                        ))
+                        .inverse();
+                    }
+                } else if self.size.height <= self.size.width {
+                    scale_ratio = Mat4::from_scale(Vec3::new(
+                        1.,
+                        self.size.height as f32 / self.size.width as f32,
+                        1.,
+                    ))
+                    .inverse();
+                } else {
+                    scale_ratio = Mat4::from_scale(Vec3::new(
+                        self.size.width as f32 / self.size.height as f32,
+                        1.,
+                        1.,
+                    ))
+                    .inverse();
+                }
+
+                if camera.draw_background_color {
+                    let vertex_buffer =
+                        self.device
+                            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                                label: Some("Vertex Buffer"),
+                                contents: bytemuck::cast_slice(&VERTICES_FULL),
+                                usage: wgpu::BufferUsages::VERTEX,
+                            });
+
+                    let rgba = RgbaImage::from_pixel(
+                        1,
+                        1,
+                        image::Rgba(camera.background_color.as_rgba_u8()),
+                    );
+                    let img = DynamicImage::ImageRgba8(rgba);
+                    let texture = Texture::from_image(
+                        &self.device,
+                        &self.queue,
+                        &img,
+                        Some("background_color"),
+                        false,
+                    )
+                    .unwrap();
+                    let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        layout: &self.render_pipeline.get_bind_group_layout(0),
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: wgpu::BindingResource::TextureView(&texture.view),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: wgpu::BindingResource::Sampler(&texture.sampler),
+                            },
+                        ],
+                        label: Some("diffuse_bind_group"),
+                    });
+
+                    render_pass.set_bind_group(0, &bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+                    render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                    render_pass.draw_indexed(0..num_indices, 0, 0..1);
+                }
+
+                // Render each sprite with its own transform.
+                for (bind_group, entity) in &self.sprites {
+                    // Get the entity transform from the ECS.
+                    let Some(transform) = session
                         .world
                         .component::<bones::Transform>()
                         .get(*entity)
                         .cloned()
-                })
-                .unwrap_or_else(|| panic!("Missing transform for entity {:?}", entity));
+                    else {
+                        continue;
+                    };
 
-            // Get the 4×4 transform matrix.
-            let mat4 = transform.to_matrix_with_pivots(Vec3::ZERO, Vec3::ZERO);
+                    camera_transform.translation.z = 0.;
+                    let camera_mat4 = camera_transform.to_matrix().inverse();
 
-            // Compute transformed vertices on the CPU.
-            let transformed_vertices: Vec<Vertex> = VERTICES
-                .iter()
-                .map(|v| Vertex {
-                    position: transform_vertex(
-                        v.position.into(),
-                        mat4,
-                        Vec3::ZERO, // Use Vec3::ZERO as the pivot point for transformations
-                    )
-                    .into(),
+                    // Get the 4×4 transform matrix.
+                    let mat4 = scale_ratio * camera_mat4 * transform.to_matrix();
 
-                    tex_coords: v.tex_coords, // Texture coordinates remain unchanged.
-                })
-                .collect();
+                    // Compute transformed vertices on the CPU.
+                    let transformed_vertices: Vec<Vertex> = VERTICES
+                        .iter()
+                        .map(|v: &Vertex| Vertex {
+                            position: transform_vertex(
+                                v.position.into(),
+                                mat4,
+                                Vec3::ZERO, // Use Vec3::ZERO as the pivot point for transformations
+                            )
+                            .into(),
+                            tex_coords: v.tex_coords, // Texture coordinates remain unchanged.
+                        })
+                        .collect();
 
-            // Create a dynamic vertex buffer with the transformed vertices.
-            let vertex_buffer = self
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Transformed Vertex Buffer"),
-                    contents: bytemuck::cast_slice(&transformed_vertices),
-                    usage: wgpu::BufferUsages::VERTEX,
-                });
+                    // Create a dynamic vertex buffer with the transformed vertices.
+                    let vertex_buffer =
+                        self.device
+                            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                                label: Some("Transformed Vertex Buffer"),
+                                contents: bytemuck::cast_slice(&transformed_vertices),
+                                usage: wgpu::BufferUsages::VERTEX,
+                            });
 
-            render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, bind_group, &[]);
-            render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-            render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.draw_indexed(0..num_indices, 0, 0..1);
+                    render_pass.set_bind_group(0, bind_group, &[]);
+                    render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+                    render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                    render_pass.draw_indexed(0..num_indices, 0, 0..1);
+                }
+            }
         }
-
-        // End the renderpass.
-        drop(render_pass);
 
         // Submit the command queue.
         self.queue.submit([encoder.finish()]);
@@ -580,6 +699,29 @@ const VERTICES: &[Vertex] = &[
     // Top-right vertex
     Vertex {
         position: [0.5, 0.5, 0.0],
+        tex_coords: [1.0, 0.0],
+    },
+];
+
+const VERTICES_FULL: &[Vertex] = &[
+    // Top-left vertex
+    Vertex {
+        position: [-1.0, 1.0, 0.0],
+        tex_coords: [0.0, 0.0],
+    },
+    // Bottom-left vertex
+    Vertex {
+        position: [-1.0, -1.0, 0.0],
+        tex_coords: [0.0, 1.0],
+    },
+    // Bottom-right vertex
+    Vertex {
+        position: [1.0, -1.0, 0.0],
+        tex_coords: [1.0, 1.0],
+    },
+    // Top-right vertex
+    Vertex {
+        position: [1.0, 1.0, 0.0],
         tex_coords: [1.0, 0.0],
     },
 ];

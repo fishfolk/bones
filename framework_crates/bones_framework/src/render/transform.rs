@@ -55,7 +55,6 @@ impl Transform {
         let rotation = Mat4::from_rotation_z(angle);
 
         let scale_rotation = rotation * Mat4::from_scale(self.scale);
-
         Mat4::from_translation(self.translation) * scale_rotation
     }
 

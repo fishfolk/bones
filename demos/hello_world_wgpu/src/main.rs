@@ -68,6 +68,19 @@ fn sprite_demo_startup(
     meta: Root<GameMeta>,
 ) {
     spawn_default_camera(&mut entities, &mut transforms, &mut cameras);
+    let second_camera = Camera {
+        priority: 1,
+        viewport: Maybe::Set(Viewport {
+            position: UVec2::new(10, 10),
+            size: UVec2::new(100, 100),
+            ..Default::default()
+        }),
+        background_color: Color::ORANGE,
+        ..Default::default()
+    };
+    let camera_ent = entities.create();
+    transforms.insert(camera_ent, default());
+    cameras.insert(camera_ent, second_camera);
 
     let sprite_ent = entities.create();
     transforms.insert(sprite_ent, default());
@@ -99,6 +112,7 @@ fn move_sprite(
     input: Res<KeyboardInputs>,
     input_mouse: Res<MouseInputs>,
     gamepad: Res<GamepadInputs>,
+    camera: Comp<Camera>,
     //mouse_position: Res<MouseScreenPosition>
 ) {
     let mut left = false;
@@ -120,7 +134,36 @@ fn move_sprite(
         }
     }
 
-    for (_ent, (_sprite, transform)) in entities.iter_with((&sprite, &mut transforms)) {
+    let mut i = 0;
+    for (_ent, (_sprite, transform)) in entities.iter_with((&camera, &mut transforms)) {
+        if i == 0 {
+            //mouse and keyboard
+            if left {
+                transform.translation.x -= 0.1;
+            }
+            if right {
+                transform.translation.x += 0.1;
+            }
+            if up {
+                transform.translation.y += 0.1;
+            }
+            if down {
+                transform.translation.y -= 0.1;
+            }
+            if rotate_left {
+                transform.rotation.z -= 0.1;
+            }
+            if rotate_right {
+                transform.rotation.z += 0.1;
+            }
+
+            for event in &input_mouse.wheel_events {
+                transform.scale += event.movement.y * 0.1;
+            }
+            i += 1;
+            continue;
+        }
+        //gamepad
         for event in gamepad.gamepad_events.iter() {
             match event {
                 GamepadEvent::Axis(axis) => match axis.axis {
@@ -154,29 +197,6 @@ fn move_sprite(
                 }
                 _ => (),
             }
-        }
-
-        if left {
-            transform.translation.x -= 0.1;
-        }
-        if right {
-            transform.translation.x += 0.1;
-        }
-        if up {
-            transform.translation.y += 0.1;
-        }
-        if down {
-            transform.translation.y -= 0.1;
-        }
-        if rotate_left {
-            transform.rotation.z -= 0.1;
-        }
-        if rotate_right {
-            transform.rotation.z += 0.1;
-        }
-
-        for event in &input_mouse.wheel_events {
-            transform.scale += event.movement.y * 0.1;
         }
     }
 }
