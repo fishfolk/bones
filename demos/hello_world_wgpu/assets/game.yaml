@@ -3,3 +3,4 @@
 title: Assets Minimal
 sprite: ./sprite/fractal.png
 sprite2: ./sprite/example.png
+atlas: ./atlas/fishy-body.atlas.yaml

@@ -60,9 +60,9 @@ impl WgpuQueue {
 #[repr(C)]
 #[schema(opaque)]
 #[schema(no_default)]
-struct TextureSender(Sender<(Texture, bones::Entity)>);
+struct TextureSender(Sender<(Texture, bones::Entity, Arc<wgpu::Buffer>)>);
 
-type TextureReceiver = Receiver<(Texture, bones::Entity)>;
+type TextureReceiver = Receiver<(Texture, bones::Entity, Arc<wgpu::Buffer>)>;
 
 // Indicates that we already loaded the sprite texture
 // and sent it to the wgpu thread
@@ -83,6 +83,7 @@ struct App {
     texture_bind_group_layout: Arc<wgpu::BindGroupLayout>,
     receiver: TextureReceiver,
     game: bones::Game,
+    _now: Instant,
 }
 
 /// Renderer for [`bones_framework`] [`Game`][bones::Game]s using wgpu.
@@ -139,6 +140,16 @@ impl BonesWgpuRenderer {
                     entries: &[
                         wgpu::BindGroupLayoutEntry {
                             binding: 0,
+                            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 1,
                             visibility: wgpu::ShaderStages::FRAGMENT,
                             ty: wgpu::BindingType::Texture {
                                 multisampled: false,
@@ -148,7 +159,7 @@ impl BonesWgpuRenderer {
                             count: None,
                         },
                         wgpu::BindGroupLayoutEntry {
-                            binding: 1,
+                            binding: 2,
                             visibility: wgpu::ShaderStages::FRAGMENT,
                             // This should match the filterable field of the textures
                             ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
@@ -210,6 +221,9 @@ impl BonesWgpuRenderer {
         //Insert needed systems
         for (_, session) in self.game.sessions.iter_mut() {
             session.add_system_to_stage(bones::First, load_sprite);
+            session.add_system_to_stage(bones::First, load_atlas_sprite);
+            session.add_system_to_stage(bones::First, update_atlas_uniforms);
+            session.add_system_to_stage(bones::First, update_sprite_uniforms);
         }
 
         // wgpu uses `log` for all of our logging, so we initialize a logger with the `env_logger` crate.
@@ -231,8 +245,70 @@ impl BonesWgpuRenderer {
             texture_bind_group_layout,
             receiver,
             game: self.game,
+            _now: Instant::now(),
         };
         event_loop.run_app(&mut app).unwrap();
+    }
+}
+
+// Uniform data struct matching the WGSL `AtlasSpriteUniform` layout.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct AtlasSpriteUniform {
+    // Atlas parameters
+    pub tile_size: [f32; 2],
+    pub image_size: [f32; 2],
+    pub padding: [f32; 2], //TODO Check if it really works
+    pub offset: [f32; 2],  //TODO Check if it really works
+    pub columns: u32,
+    pub index: u32,
+
+    // State flags
+    pub use_atlas: u32,
+    pub flip_x: u32,
+    pub flip_y: u32,
+    pub _pad: [u32; 3], // Explicit padding
+
+    // Color tint
+    pub color_tint: [f32; 4],
+}
+
+#[derive(bones_schema::HasSchema, Clone)]
+#[repr(C)]
+#[schema(opaque)]
+#[schema(no_default)]
+pub struct AtlasSpriteBuffer(Arc<wgpu::Buffer>);
+
+impl AtlasSpriteUniform {
+    fn from_atlas_sprite(atlas_sprite: &bones::AtlasSprite, atlas: &bones::Atlas) -> Self {
+        let image_size = [
+            atlas.offset.x + ((atlas.tile_size.x + atlas.padding.x) * atlas.columns as f32),
+            atlas.offset.y + ((atlas.tile_size.y + atlas.padding.y) * atlas.rows as f32),
+        ];
+
+        Self {
+            tile_size: atlas.tile_size.into(),
+            columns: atlas.columns,
+            padding: atlas.padding.into(),
+            offset: atlas.offset.into(),
+            index: atlas_sprite.index,
+            image_size,
+            use_atlas: 1,
+            flip_x: atlas_sprite.flip_x as u32,
+            flip_y: atlas_sprite.flip_y as u32,
+            color_tint: atlas_sprite.color.as_rgba_f32(),
+            ..Default::default()
+        }
+    }
+
+    fn from_sprite(sprite: &bones::Sprite) -> Self {
+        Self {
+            color_tint: sprite.color.as_rgba_f32(),
+            flip_x: sprite.flip_x as u32,
+            flip_y: sprite.flip_y as u32,
+            use_atlas: 0,
+            ..Default::default()
+        }
     }
 }
 
@@ -244,14 +320,16 @@ fn load_sprite(
     queue: bones::Res<WgpuQueue>,
     texture_sender: bones::Res<TextureSender>,
     pixel_art: bones::Res<PixelArt>,
+    mut buffers: bones::CompMut<AtlasSpriteBuffer>,
     mut texture_loaded: bones::CompMut<TextureLoaded>,
 ) {
     let mut not_loaded = texture_loaded.bitset().clone();
     not_loaded.bit_not();
+    not_loaded.bit_and(sprites.bitset());
 
     for entity in entities.iter_with_bitset(&not_loaded) {
         let Some(sprite) = sprites.get(entity) else {
-            continue;
+            unreachable!();
         };
 
         //Load and send texture
@@ -259,11 +337,120 @@ fn load_sprite(
         if let bones::Image::Data(img) = &*image {
             let texture =
                 Texture::from_image(device.get(), queue.get(), img, None, pixel_art.0).unwrap();
-            texture_sender.0.send((texture, entity)).unwrap();
+
+            let atlas_uniform = AtlasSpriteUniform {
+                use_atlas: 0,
+                flip_x: sprite.flip_x as u32,
+                flip_y: sprite.flip_y as u32,
+                color_tint: sprite.color.as_rgba_f32(),
+                ..Default::default()
+            };
+
+            let atlas_sprite_buffer = Arc::new(device.get().create_buffer_init(
+                &wgpu::util::BufferInitDescriptor {
+                    label: Some("Atlas Sprite Buffer"),
+                    contents: bytemuck::cast_slice(&[atlas_uniform]),
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                },
+            ));
+
+            //Add buffer to bones so we can update it
+            buffers.insert(entity, AtlasSpriteBuffer(atlas_sprite_buffer.clone()));
+
+            texture_sender
+                .0
+                .send((texture, entity, atlas_sprite_buffer))
+                .unwrap();
             texture_loaded.insert(entity, TextureLoaded);
         } else {
             unreachable!()
         };
+    }
+}
+
+fn load_atlas_sprite(
+    entities: bones::Res<bones::Entities>,
+    atlas_sprites: bones::Comp<bones::AtlasSprite>,
+    assets: bones::Res<bones::AssetServer>,
+    device: bones::Res<WgpuDevice>,
+    queue: bones::Res<WgpuQueue>,
+    texture_sender: bones::Res<TextureSender>,
+    pixel_art: bones::Res<PixelArt>,
+    mut buffers: bones::CompMut<AtlasSpriteBuffer>,
+    mut texture_loaded: bones::CompMut<TextureLoaded>,
+) {
+    let mut not_loaded = texture_loaded.bitset().clone();
+    not_loaded.bit_not();
+    not_loaded.bit_and(atlas_sprites.bitset());
+
+    for entity in entities.iter_with_bitset(&not_loaded) {
+        let Some(atlas_sprite) = atlas_sprites.get(entity) else {
+            unreachable!();
+        };
+
+        //Load and send texture
+        let atlas = assets.get(atlas_sprite.atlas);
+        let image = assets.get(atlas.image);
+        if let bones::Image::Data(img) = &*image {
+            let texture =
+                Texture::from_image(device.get(), queue.get(), img, None, pixel_art.0).unwrap();
+            // create and send the atlas sprite uniform along with the texture and entity
+            let uniform = AtlasSpriteUniform::from_atlas_sprite(
+                atlas_sprite,
+                &assets.get(atlas_sprite.atlas),
+            );
+
+            let atlas_sprite_buffer = Arc::new(device.get().create_buffer_init(
+                &wgpu::util::BufferInitDescriptor {
+                    label: Some("Atlas Sprite Buffer"),
+                    contents: bytemuck::cast_slice(&[uniform]),
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                },
+            ));
+
+            //Add buffer to bones so we can update it
+            buffers.insert(entity, AtlasSpriteBuffer(atlas_sprite_buffer.clone()));
+
+            texture_sender
+                .0
+                .send((texture, entity, atlas_sprite_buffer))
+                .unwrap();
+            texture_loaded.insert(entity, TextureLoaded);
+        } else {
+            unreachable!()
+        };
+    }
+}
+
+// System for updating atlas uniforms
+fn update_atlas_uniforms(
+    entities: bones::Res<bones::Entities>,
+    atlases: bones::Comp<bones::AtlasSprite>,
+    mut buffers: bones::CompMut<AtlasSpriteBuffer>,
+    assets: bones::Res<bones::AssetServer>,
+    queue: bones::Res<WgpuQueue>,
+) {
+    for (_, (atlas_sprite, atlas_sprite_buffer)) in entities.iter_with((&atlases, &mut buffers)) {
+        let atlas = assets.get(atlas_sprite.atlas).clone();
+        let uniform = AtlasSpriteUniform::from_atlas_sprite(atlas_sprite, &atlas);
+        queue
+            .get()
+            .write_buffer(&atlas_sprite_buffer.0, 0, bytemuck::bytes_of(&uniform));
+    }
+}
+
+// System for updating sprite uniforms
+fn update_sprite_uniforms(
+    entities: bones::Res<bones::Entities>,
+    sprites: bones::Comp<bones::Sprite>,
+    mut buffers: bones::CompMut<AtlasSpriteBuffer>,
+    queue: bones::Res<WgpuQueue>,
+) {
+    for (_, (sprite, atlas_sprite_buffer)) in entities.iter_with((&sprites, &mut buffers)) {
+        let uniform = AtlasSpriteUniform::from_sprite(sprite);
+        queue
+            .get()
+            .write_buffer(&atlas_sprite_buffer.0, 0, bytemuck::bytes_of(&uniform));
     }
 }
 
@@ -356,7 +543,7 @@ impl State {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("atlas_sprite.wgsl").into()),
         });
 
         let render_pipeline_layout =
@@ -381,8 +568,8 @@ impl State {
                 targets: &[Some(wgpu::ColorTargetState {
                     format: config.format,
                     blend: Some(wgpu::BlendState {
-                        color: wgpu::BlendComponent::REPLACE,
-                        alpha: wgpu::BlendComponent::REPLACE,
+                        color: wgpu::BlendComponent::OVER,
+                        alpha: wgpu::BlendComponent::OVER,
                     }),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
@@ -581,11 +768,12 @@ impl State {
                 }
 
                 if camera.draw_background_color {
+                    //TODO Stop creating buffers every frame
                     let vertex_buffer =
                         self.device
                             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                                 label: Some("Vertex Buffer"),
-                                contents: bytemuck::cast_slice(&VERTICES_FULL),
+                                contents: bytemuck::cast_slice(VERTICES_FULL),
                                 usage: wgpu::BufferUsages::VERTEX,
                             });
 
@@ -603,15 +791,30 @@ impl State {
                         false,
                     )
                     .unwrap();
+                    let atlas_sprite_buffer =
+                        self.device
+                            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                                label: Some("Atlas Sprite Buffer"),
+                                contents: bytemuck::cast_slice(&[AtlasSpriteUniform {
+                                    use_atlas: 0,
+                                    ..Default::default()
+                                }]),
+                                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                            });
+
                     let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                         layout: &self.render_pipeline.get_bind_group_layout(0),
                         entries: &[
                             wgpu::BindGroupEntry {
                                 binding: 0,
-                                resource: wgpu::BindingResource::TextureView(&texture.view),
+                                resource: atlas_sprite_buffer.as_entire_binding(),
                             },
                             wgpu::BindGroupEntry {
                                 binding: 1,
+                                resource: wgpu::BindingResource::TextureView(&texture.view),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 2,
                                 resource: wgpu::BindingResource::Sampler(&texture.sampler),
                             },
                         ],
@@ -773,16 +976,20 @@ impl ApplicationHandler for App {
         let mut wheel_events = Vec::new();
         let mut button_events = Vec::new();
 
-        for (texture, entity) in self.receiver.try_iter() {
+        for (texture, entity, atlas_sprite_buffer) in self.receiver.try_iter() {
             let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 layout: &self.texture_bind_group_layout,
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&texture.view),
+                        resource: atlas_sprite_buffer.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
+                        resource: wgpu::BindingResource::TextureView(&texture.view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
                         resource: wgpu::BindingResource::Sampler(&texture.sampler),
                     },
                 ],
@@ -798,6 +1005,9 @@ impl ApplicationHandler for App {
                 event_loop.exit();
             }
             WindowEvent::RedrawRequested => {
+                //println!("{}", self.now.elapsed().as_secs_f32());
+                //self.now = Instant::now();
+
                 state.render(&self.game.sessions);
                 // Emits a new redraw requested event.
                 state.get_window().request_redraw();

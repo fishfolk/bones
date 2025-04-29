@@ -18,6 +18,7 @@ struct GameMeta {
     title: String,
     sprite: Handle<Image>,
     sprite2: Handle<Image>,
+    atlas: Handle<Atlas>,
 }
 
 fn main() {
@@ -63,6 +64,7 @@ fn sprite_demo_plugin(session: &mut Session) {
 fn sprite_demo_startup(
     mut entities: ResMut<Entities>,
     mut sprites: CompMut<Sprite>,
+    mut atlas_sprites: CompMut<AtlasSprite>,
     mut transforms: CompMut<Transform>,
     mut cameras: CompMut<Camera>,
     meta: Root<GameMeta>,
@@ -100,6 +102,23 @@ fn sprite_demo_startup(
         sprite_ent,
         Sprite {
             image: meta.sprite2,
+            flip_x: true,
+            ..default()
+        },
+    );
+
+    let atlas_ent = entities.create();
+    transforms.insert(
+        atlas_ent,
+        Transform::from_translation(Vec3::new(1.5, 1.5, 0.0)),
+    );
+    atlas_sprites.insert(
+        atlas_ent,
+        AtlasSprite {
+            atlas: meta.atlas,
+            index: 0,
+            flip_x: false,
+            flip_y: false,
             ..default()
         },
     );
@@ -107,7 +126,8 @@ fn sprite_demo_startup(
 
 fn move_sprite(
     entities: Res<Entities>,
-    sprite: Comp<Sprite>,
+    mut atlases: CompMut<AtlasSprite>,
+    mut sprites: CompMut<Sprite>,
     mut transforms: CompMut<Transform>,
     input: Res<KeyboardInputs>,
     input_mouse: Res<MouseInputs>,
@@ -121,6 +141,10 @@ fn move_sprite(
     let mut down = false;
     let mut rotate_left = false;
     let mut rotate_right = false;
+    let mut idx_up = false;
+    let mut idx_down = false;
+    let mut flip_x = false;
+    let mut flip_y = false;
 
     for input in &input.key_events {
         match input.key_code {
@@ -130,7 +154,35 @@ fn move_sprite(
             Set(KeyCode::S) => down = true,
             Set(KeyCode::Q) => rotate_left = true,
             Set(KeyCode::E) => rotate_right = true,
+            Set(KeyCode::P) => idx_up = true,
+            Set(KeyCode::O) => idx_down = true,
+            Set(KeyCode::L) => flip_y = true,
+            Set(KeyCode::K) => flip_x = true,
             _ => (),
+        }
+    }
+
+    for (_, atlas) in entities.iter_with(&mut atlases) {
+        if idx_up {
+            atlas.index += 1;
+        }
+        if idx_down {
+            atlas.index -= 1;
+        }
+        if flip_x {
+            atlas.flip_x = !atlas.flip_x;
+        }
+        if flip_y {
+            atlas.flip_y = !atlas.flip_y;
+        }
+    }
+
+    for (_, sprite) in entities.iter_with(&mut sprites) {
+        if flip_x {
+            sprite.flip_x = !sprite.flip_x;
+        }
+        if flip_y {
+            sprite.flip_y = !sprite.flip_y;
         }
     }
 
