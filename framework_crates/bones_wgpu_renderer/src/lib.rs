@@ -60,9 +60,9 @@ impl WgpuQueue {
 #[repr(C)]
 #[schema(opaque)]
 #[schema(no_default)]
-struct TextureSender(Sender<(Texture, bones::Entity, Arc<wgpu::Buffer>)>);
+struct TextureSender(Sender<(Arc<Texture>, bones::Entity, Arc<wgpu::Buffer>)>);
 
-type TextureReceiver = Receiver<(Texture, bones::Entity, Arc<wgpu::Buffer>)>;
+type TextureReceiver = Receiver<(Arc<Texture>, bones::Entity, Arc<wgpu::Buffer>)>;
 
 // Indicates that we already loaded the sprite texture
 // and sent it to the wgpu thread
@@ -222,8 +222,10 @@ impl BonesWgpuRenderer {
         for (_, session) in self.game.sessions.iter_mut() {
             session.add_system_to_stage(bones::First, load_sprite);
             session.add_system_to_stage(bones::First, load_atlas_sprite);
+            session.add_system_to_stage(bones::First, load_tile_sprite);
             session.add_system_to_stage(bones::First, update_atlas_uniforms);
             session.add_system_to_stage(bones::First, update_sprite_uniforms);
+            session.add_system_to_stage(bones::First, update_tiles_uniforms);
         }
 
         // wgpu uses `log` for all of our logging, so we initialize a logger with the `env_logger` crate.
@@ -301,6 +303,27 @@ impl AtlasSpriteUniform {
         }
     }
 
+    fn from_tile(tile: &bones::Tile, atlas: &bones::Atlas) -> Self {
+        let image_size = [
+            atlas.offset.x + ((atlas.tile_size.x + atlas.padding.x) * atlas.columns as f32),
+            atlas.offset.y + ((atlas.tile_size.y + atlas.padding.y) * atlas.rows as f32),
+        ];
+
+        Self {
+            tile_size: atlas.tile_size.into(),
+            columns: atlas.columns,
+            padding: atlas.padding.into(),
+            offset: atlas.offset.into(),
+            index: tile.idx,
+            image_size,
+            use_atlas: 1,
+            flip_x: tile.flip_x as u32,
+            flip_y: tile.flip_y as u32,
+            color_tint: tile.color.as_rgba_f32(),
+            ..Default::default()
+        }
+    }
+
     fn from_sprite(sprite: &bones::Sprite) -> Self {
         Self {
             color_tint: sprite.color.as_rgba_f32(),
@@ -335,8 +358,9 @@ fn load_sprite(
         //Load and send texture
         let image = assets.get(sprite.image);
         if let bones::Image::Data(img) = &*image {
-            let texture =
-                Texture::from_image(device.get(), queue.get(), img, None, pixel_art.0).unwrap();
+            let texture = Arc::new(
+                Texture::from_image(device.get(), queue.get(), img, None, pixel_art.0).unwrap(),
+            );
 
             let atlas_uniform = AtlasSpriteUniform {
                 use_atlas: 0,
@@ -392,8 +416,9 @@ fn load_atlas_sprite(
         let atlas = assets.get(atlas_sprite.atlas);
         let image = assets.get(atlas.image);
         if let bones::Image::Data(img) = &*image {
-            let texture =
-                Texture::from_image(device.get(), queue.get(), img, None, pixel_art.0).unwrap();
+            let texture = Arc::new(
+                Texture::from_image(device.get(), queue.get(), img, None, pixel_art.0).unwrap(),
+            );
             // create and send the atlas sprite uniform along with the texture and entity
             let uniform = AtlasSpriteUniform::from_atlas_sprite(
                 atlas_sprite,
@@ -416,6 +441,68 @@ fn load_atlas_sprite(
                 .send((texture, entity, atlas_sprite_buffer))
                 .unwrap();
             texture_loaded.insert(entity, TextureLoaded);
+        } else {
+            unreachable!()
+        };
+    }
+}
+
+fn load_tile_sprite(
+    entities: bones::Res<bones::Entities>,
+    tile_layers: bones::Comp<bones::TileLayer>,
+    tiles: bones::Comp<bones::Tile>,
+    assets: bones::Res<bones::AssetServer>,
+    device: bones::Res<WgpuDevice>,
+    queue: bones::Res<WgpuQueue>,
+    texture_sender: bones::Res<TextureSender>,
+    pixel_art: bones::Res<PixelArt>,
+    mut buffers: bones::CompMut<AtlasSpriteBuffer>,
+    mut texture_loaded: bones::CompMut<TextureLoaded>,
+) {
+    let mut not_loaded = texture_loaded.bitset().clone();
+    not_loaded.bit_not();
+    not_loaded.bit_and(tile_layers.bitset());
+
+    for entity in entities.iter_with_bitset(&not_loaded) {
+        let Some(tile_layer) = tile_layers.get(entity) else {
+            unreachable!();
+        };
+
+        //Load and send texture
+        let atlas = assets.get(tile_layer.atlas);
+        let image = assets.get(atlas.image);
+        if let bones::Image::Data(img) = &*image {
+            let texture = Arc::new(
+                Texture::from_image(device.get(), queue.get(), img, None, pixel_art.0).unwrap(),
+            );
+
+            for tile in &tile_layer.tiles {
+                let Some(tile) = tile else {
+                    continue;
+                };
+                let Some(tile) = tiles.get(*tile) else {
+                    panic!("Couldn't find tile entity!");
+                };
+                // create and send the atlas sprite uniform along with the texture and entity
+                let uniform = AtlasSpriteUniform::from_tile(tile, &assets.get(tile_layer.atlas));
+
+                let atlas_sprite_buffer = Arc::new(device.get().create_buffer_init(
+                    &wgpu::util::BufferInitDescriptor {
+                        label: Some("Atlas Sprite Buffer"),
+                        contents: bytemuck::cast_slice(&[uniform]),
+                        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    },
+                ));
+
+                //Add buffer to bones so we can update it
+                buffers.insert(entity, AtlasSpriteBuffer(atlas_sprite_buffer.clone()));
+
+                texture_sender
+                    .0
+                    .send((texture.clone(), entity, atlas_sprite_buffer))
+                    .unwrap();
+                texture_loaded.insert(entity, TextureLoaded);
+            }
         } else {
             unreachable!()
         };
@@ -451,6 +538,33 @@ fn update_sprite_uniforms(
         queue
             .get()
             .write_buffer(&atlas_sprite_buffer.0, 0, bytemuck::bytes_of(&uniform));
+    }
+}
+
+// System for updating tiles uniforms
+fn update_tiles_uniforms(
+    entities: bones::Res<bones::Entities>,
+    tile_layers: bones::Comp<bones::TileLayer>,
+    tiles: bones::Comp<bones::Tile>,
+    mut buffers: bones::CompMut<AtlasSpriteBuffer>,
+    assets: bones::Res<bones::AssetServer>,
+    queue: bones::Res<WgpuQueue>,
+) {
+    for (_, (tile_layer, atlas_sprite_buffer)) in entities.iter_with((&tile_layers, &mut buffers)) {
+        let atlas = assets.get(tile_layer.atlas).clone();
+        for tile in &tile_layer.tiles {
+            let Some(tile) = tile else {
+                continue;
+            };
+            let Some(tile) = tiles.get(*tile) else {
+                panic!("Couldn't find tile entity!");
+            };
+
+            let uniform = AtlasSpriteUniform::from_tile(tile, &atlas);
+            queue
+                .get()
+                .write_buffer(&atlas_sprite_buffer.0, 0, bytemuck::bytes_of(&uniform));
+        }
     }
 }
 
