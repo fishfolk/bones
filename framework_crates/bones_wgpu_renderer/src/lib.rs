@@ -23,11 +23,15 @@ use bones_framework::{
     prelude::{self as bones, BitSet, ComponentIterBitset},
 };
 
+use egui_wgpu::ScreenDescriptor;
+
 mod convert;
 mod sprite;
 mod texture;
+mod ui;
 
 use sprite::*;
+use ui::EguiRenderer;
 
 /// The prelude
 pub mod prelude {
@@ -321,6 +325,11 @@ impl ApplicationHandler for App {
             state.sprites.push((bind_group, entity));
         }
 
+        // Egui input handling
+        state
+            .egui_renderer
+            .handle_input(&state.get_window(), &event);
+
         match event {
             WindowEvent::CloseRequested => {
                 //Close window
@@ -330,12 +339,9 @@ impl ApplicationHandler for App {
                 //println!("{}", self.now.elapsed().as_secs_f32());
                 //self.now = Instant::now();
 
-                state.render(&self.game.sessions);
+                state.render(&mut self.game);
                 // Emits a new redraw requested event.
                 state.get_window().request_redraw();
-
-                //Step bones
-                self.game.step(Instant::now());
             }
             WindowEvent::Resized(size) => {
                 // Reconfigures the size of the surface. We do not re-render
@@ -433,6 +439,8 @@ struct State {
     surface_format: wgpu::TextureFormat,
     render_pipeline: wgpu::RenderPipeline,
     sprites: Vec<(wgpu::BindGroup, bones::Entity)>,
+    egui_renderer: EguiRenderer,
+    egui_scale_factor: f32,
 }
 
 impl State {
@@ -542,6 +550,8 @@ impl State {
             cache: None,
         });
 
+        let egui_renderer = EguiRenderer::new(&device, surface_config.format, None, 1, &window);
+
         State {
             window,
             device: device.clone(),
@@ -551,11 +561,13 @@ impl State {
             surface_format,
             render_pipeline,
             sprites: vec![],
+            egui_renderer,
+            egui_scale_factor: 1.0,
         }
     }
 
-    fn get_window(&self) -> &Window {
-        &self.window
+    fn get_window(&self) -> Arc<Window> {
+        self.window.clone()
     }
 
     fn configure_surface(&self) {
@@ -580,7 +592,7 @@ impl State {
         self.configure_surface();
     }
 
-    fn render(&mut self, sessions: &bones::Sessions) {
+    fn render(&mut self, game: &mut bones::Game) {
         // Create texture view
         let surface_texture = self
             .surface
@@ -608,7 +620,7 @@ impl State {
             });
         let num_indices = INDICES.len() as u32;
 
-        for (_, session) in sessions.iter() {
+        for (_, session) in game.sessions.iter() {
             //Get cameras and sort them
             let cameras = session.world.component::<bones::Camera>();
             let transforms = session.world.component::<bones::Transform>();
@@ -815,6 +827,57 @@ impl State {
                     render_pass.draw_indexed(0..num_indices, 0, 0..1);
                 }
             }
+        }
+
+        // Draw the egui UI
+        {
+            let screen_descriptor = ScreenDescriptor {
+                size_in_pixels: [self.size.width, self.size.height],
+                pixels_per_point: self.window.as_ref().scale_factor() as f32
+                    * self.egui_scale_factor,
+            };
+
+            self.egui_renderer.begin_frame(&self.window);
+
+            //Insert the egui ctx
+            //game.insert_shared_resource(bones::EguiCtx(self.egui_renderer.context().clone()));
+            //Step bones
+            game.step(Instant::now());
+
+            egui::Window::new("winit + egui + wgpu says hello!")
+                .resizable(true)
+                .vscroll(true)
+                .default_open(false)
+                .show(self.egui_renderer.context(), |ui| {
+                    ui.label("Label!");
+
+                    if ui.button("Button!").clicked() {
+                        println!("boom!")
+                    }
+
+                    ui.separator();
+                    ui.horizontal(|ui| {
+                        ui.label(format!(
+                            "Pixels per point: {}",
+                            self.egui_renderer.context().pixels_per_point()
+                        ));
+                        if ui.button("-").clicked() {
+                            self.egui_scale_factor = (self.egui_scale_factor - 0.1).max(0.3);
+                        }
+                        if ui.button("+").clicked() {
+                            self.egui_scale_factor = (self.egui_scale_factor + 0.1).min(3.0);
+                        }
+                    });
+                });
+
+            self.egui_renderer.end_frame_and_draw(
+                &self.device,
+                &self.queue,
+                &mut encoder,
+                &self.window,
+                &texture_view,
+                screen_descriptor,
+            );
         }
 
         // Submit the command queue.
