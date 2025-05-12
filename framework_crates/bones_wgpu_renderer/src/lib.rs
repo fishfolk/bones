@@ -68,9 +68,9 @@ impl WgpuQueue {
 #[repr(C)]
 #[schema(opaque)]
 #[schema(no_default)]
-struct TextureSender(Sender<(Arc<Texture>, bones::Entity, Arc<wgpu::Buffer>)>);
+struct TextureSender(Sender<(Arc<Texture>, bones::Entity, Arc<wgpu::Buffer>, bones::Ustr)>);
 
-type TextureReceiver = Receiver<(Arc<Texture>, bones::Entity, Arc<wgpu::Buffer>)>;
+type TextureReceiver = Receiver<(Arc<Texture>, bones::Entity, Arc<wgpu::Buffer>, bones::Ustr)>;
 
 // Indicates that we already loaded the sprite texture
 // and sent it to the wgpu thread
@@ -239,9 +239,9 @@ impl BonesWgpuRenderer {
             .init_shared_resource::<bones::MouseWorldPosition>();
 
         //Insert needed systems
-        self.game.systems.add_before_system(load_sprite);
-        self.game.systems.add_before_system(load_atlas_sprite);
-        self.game.systems.add_before_system(load_tile_sprite);
+        self.game.systems.add_after_system(load_sprite);
+        self.game.systems.add_after_system(load_atlas_sprite);
+        self.game.systems.add_after_system(load_tile_sprite);
         self.game.systems.add_before_system(update_atlas_uniforms);
         self.game.systems.add_before_system(update_sprite_uniforms);
         self.game.systems.add_before_system(update_tiles_uniforms);
@@ -437,7 +437,7 @@ impl ApplicationHandler for App {
         let mut wheel_events = Vec::new();
         let mut button_events = Vec::new();
 
-        for (texture, entity, atlas_sprite_buffer) in self.receiver.try_iter() {
+        for (texture, entity, atlas_sprite_buffer, session_name) in self.receiver.try_iter() {
             let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 layout: &self.texture_bind_group_layout,
                 entries: &[
@@ -457,9 +457,12 @@ impl ApplicationHandler for App {
                 label: Some("diffuse_bind_group"),
             });
 
-            state.sprites.push((bind_group, entity));
+            if let Some(v) = state.sprites.get_mut(&session_name) {
+                v.push((bind_group, entity));
+            } else {
+                state.sprites.insert(session_name.clone(), vec![(bind_group, entity)]);
+            }
         }
-
         // Egui input handling
         state
             .egui_renderer
@@ -577,7 +580,7 @@ struct State {
     surface: wgpu::Surface<'static>,
     surface_format: wgpu::TextureFormat,
     render_pipeline: wgpu::RenderPipeline,
-    sprites: Vec<(wgpu::BindGroup, bones::Entity)>,
+    sprites: bones::UstrMap<Vec<(wgpu::BindGroup, bones::Entity)>>,
     egui_renderer: EguiRenderer,
     egui_scale_factor: f32,
 }
@@ -699,7 +702,7 @@ impl State {
             surface,
             surface_format,
             render_pipeline,
-            sprites: vec![],
+            sprites: bones::UstrMap::default(),
             egui_renderer,
             egui_scale_factor: 1.0,
         }
@@ -759,7 +762,11 @@ impl State {
             });
         let num_indices = INDICES.len() as u32;
 
-        for (_, session) in game.sessions.iter() {
+        for (session_name, session) in game.sessions.iter() {
+            if !session.visible {
+                continue;
+            }
+
             //Get cameras and sort them
             let cameras = session.world.component::<bones::Camera>();
             let transforms = session.world.component::<bones::Transform>();
@@ -860,6 +867,14 @@ impl State {
                 }
 
                 if camera.draw_background_color {
+                    let clear_color = session.world.get_resource::<bones::ClearColor>();
+
+                    let background_color = match (camera.background_color.option(), clear_color) {
+                        (Some(color), _) => color,
+                        (None, Some(color)) => color.0,
+                        (None, None) => bones::Color::BLACK,
+                    };
+
                     //TODO Stop creating buffers every frame
                     let vertex_buffer =
                         self.device
@@ -869,11 +884,8 @@ impl State {
                                 usage: wgpu::BufferUsages::VERTEX,
                             });
 
-                    let rgba = RgbaImage::from_pixel(
-                        1,
-                        1,
-                        image::Rgba(camera.background_color.as_rgba_u8()),
-                    );
+                    let rgba =
+                        RgbaImage::from_pixel(1, 1, image::Rgba(background_color.as_rgba_u8()));
                     let img = DynamicImage::ImageRgba8(rgba);
                     let texture = Texture::from_image(
                         &self.device,
@@ -920,7 +932,8 @@ impl State {
                 }
 
                 // Render each sprite with its own transform.
-                for (bind_group, entity) in &self.sprites {
+                for (bind_group, entity) in &self.sprites[session_name] {
+                    
                     // Get the entity transform from the ECS.
                     let Some(transform) = session
                         .world

@@ -95,7 +95,11 @@ pub fn load_sprite(game: &mut bones::Game) {
     let texture_sender = game.shared_resource_cell::<TextureSender>().unwrap();
     let pixel_art = game.shared_resource_cell::<PixelArt>().unwrap();
 
-    for (_, session) in game.sessions.iter_mut() {
+    for (session_name, session) in game.sessions.iter_mut() {
+        if !session.visible {
+            continue;
+        }
+
         let entities = session.world.resource::<bones::Entities>();
         let sprites = session.world.component::<bones::Sprite>();
         let mut buffers = session.world.component_mut::<AtlasSpriteBuffer>();
@@ -151,7 +155,7 @@ pub fn load_sprite(game: &mut bones::Game) {
                     .borrow()
                     .unwrap()
                     .0
-                    .send((texture, entity, atlas_sprite_buffer))
+                    .send((texture, entity, atlas_sprite_buffer, *session_name))
                     .unwrap();
                 texture_loaded.insert(entity, TextureLoaded);
             } else {
@@ -168,7 +172,11 @@ pub fn load_atlas_sprite(game: &mut bones::Game) {
     let texture_sender = game.shared_resource_cell::<TextureSender>().unwrap();
     let pixel_art = game.shared_resource_cell::<PixelArt>().unwrap();
 
-    for (_, session) in game.sessions.iter_mut() {
+    for (session_name, session) in game.sessions.iter_mut() {
+        if !session.visible {
+            continue;
+        }
+
         let entities = session.world.resource::<bones::Entities>();
         let atlas_sprites = session.world.component::<bones::AtlasSprite>();
         let mut buffers = session.world.component_mut::<AtlasSpriteBuffer>();
@@ -220,7 +228,7 @@ pub fn load_atlas_sprite(game: &mut bones::Game) {
                     .borrow()
                     .unwrap()
                     .0
-                    .send((texture, entity, atlas_sprite_buffer))
+                    .send((texture, entity, atlas_sprite_buffer, *session_name))
                     .unwrap();
                 texture_loaded.insert(entity, TextureLoaded);
             } else {
@@ -237,7 +245,11 @@ pub fn load_tile_sprite(game: &mut bones::Game) {
     let texture_sender = game.shared_resource_cell::<TextureSender>().unwrap();
     let pixel_art = game.shared_resource_cell::<PixelArt>().unwrap();
 
-    for (_, session) in game.sessions.iter_mut() {
+    for (session_name, session) in game.sessions.iter_mut() {
+        if !session.visible {
+            continue;
+        }
+
         let entities = session.world.resource::<bones::Entities>();
         let tile_layers = session.world.component::<bones::TileLayer>();
         let tiles = session.world.component::<bones::Tile>();
@@ -296,7 +308,7 @@ pub fn load_tile_sprite(game: &mut bones::Game) {
                         .borrow()
                         .unwrap()
                         .0
-                        .send((texture.clone(), entity, atlas_sprite_buffer))
+                        .send((texture.clone(), entity, atlas_sprite_buffer, *session_name))
                         .unwrap();
                     texture_loaded.insert(entity, TextureLoaded);
                 }
@@ -313,6 +325,10 @@ pub fn update_atlas_uniforms(game: &mut bones::Game) {
     let queue = game.shared_resource_cell::<WgpuQueue>().unwrap();
 
     for (_, session) in game.sessions.iter_mut() {
+        if !session.visible {
+            continue;
+        }
+
         let entities = session.world.resource::<bones::Entities>();
         let atlases = session.world.component::<bones::AtlasSprite>();
         let mut buffers = session.world.component_mut::<AtlasSpriteBuffer>();
@@ -336,6 +352,10 @@ pub fn update_sprite_uniforms(game: &mut bones::Game) {
     let queue = game.shared_resource_cell::<WgpuQueue>().unwrap();
 
     for (_, session) in game.sessions.iter_mut() {
+        if !session.visible {
+            continue;
+        }
+
         let entities = session.world.resource::<bones::Entities>();
         let sprites = session.world.component::<bones::Sprite>();
         let mut buffers = session.world.component_mut::<AtlasSpriteBuffer>();
@@ -357,6 +377,10 @@ pub fn update_tiles_uniforms(game: &mut bones::Game) {
     let queue = game.shared_resource_cell::<WgpuQueue>().unwrap();
 
     for (_, session) in game.sessions.iter_mut() {
+        if !session.visible {
+            continue;
+        }
+
         let entities = session.world.resource::<bones::Entities>();
         let tile_layers = session.world.component::<bones::TileLayer>();
         let tiles = session.world.component::<bones::Tile>();
