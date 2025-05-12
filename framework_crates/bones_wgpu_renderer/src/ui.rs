@@ -5,6 +5,8 @@ use egui_winit::State;
 use winit::event::WindowEvent;
 use winit::window::Window;
 
+use crate::bones;
+
 pub struct EguiRenderer {
     state: State,
     renderer: Renderer,
@@ -115,4 +117,45 @@ impl EguiRenderer {
 
         self.frame_started = false;
     }
+}
+
+pub fn default_load_progress(asset_server: &bones::AssetServer, ctx: &egui::Context) {
+    let errored = asset_server.load_progress.errored();
+
+    egui::CentralPanel::default().show(ctx, |ui| {
+        let height = ui.available_height();
+        let ctx = ui.ctx().clone();
+
+        let space_size = 0.03;
+        let spinner_size = 0.07;
+        let text_size = 0.034;
+        ui.vertical_centered(|ui| {
+            ui.add_space(height * 0.3);
+
+            if errored > 0 {
+                ui.label(
+                    egui::RichText::new("⚠")
+                        .color(egui::Color32::RED)
+                        .size(height * spinner_size),
+                );
+                ui.add_space(height * space_size);
+                ui.label(
+                    egui::RichText::new(format!(
+                        "Error loading {errored} asset{}.",
+                        if errored > 1 { "s" } else { "" }
+                    ))
+                    .color(egui::Color32::RED)
+                    .size(height * text_size * 0.75),
+                );
+            } else {
+                ui.add(egui::Spinner::new().size(height * spinner_size));
+                ui.add_space(height * space_size);
+                ui.label(egui::RichText::new("Loading").size(height * text_size));
+            }
+        });
+
+        ctx.data_mut(|d| {
+            d.insert_temp(ui.id(), (spinner_size, space_size, text_size));
+        })
+    });
 }

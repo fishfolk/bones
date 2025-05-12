@@ -45,9 +45,10 @@ fn main() {
         .install_plugin(sprite_demo_plugin);
     world_session
         // Install the default bones_framework plugin for this session
-        .install_plugin(DefaultSessionPlugin);
-    // Add our menu system to the update stage
-    //.add_system_to_stage(Update, menu_system);
+        .install_plugin(DefaultSessionPlugin)
+        // Add our menu system to the update stage
+        //.add_system_to_stage(Update, menu_system)
+        .add_system_to_stage(Update, test);
 
     BonesWgpuRenderer::new(game).run();
 }
@@ -254,8 +255,32 @@ fn move_sprite(
 }
 
 /// System to render the home menu.
-fn _menu_system(ctx: Res<EguiCtx>) {
+fn menu_system(ctx: Res<EguiCtx>) {
     egui::CentralPanel::default().show(&ctx, |ui| {
         ui.label("Hello World");
     });
+}
+
+fn test(ctx: Res<EguiCtx>) {
+    egui::Window::new("winit + egui + wgpu + bones :0")
+        .resizable(true)
+        .vscroll(true)
+        .default_open(false)
+        .show(&ctx, |ui| {
+            ui.label("Label!");
+
+            if ui.button("Button!").clicked() {
+                println!("boom!")
+            }
+
+            ui.separator();
+            ui.horizontal(|ui| {
+                if ui.button("-").clicked() {
+                    println!("Sei la");
+                }
+                if ui.button("+").clicked() {
+                    println!("Sei la");
+                }
+            });
+        });
 }

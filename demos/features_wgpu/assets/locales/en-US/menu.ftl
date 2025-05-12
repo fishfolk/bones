@@ -1,0 +1,12 @@
+title = Bones Features Demo
+back-to-menu = Back to Menu
+sprite-demo = Sprite Demo
+atlas-demo = Atlas Demo
+audio-demo = Audio Demo
+storage-demo = Storage Demo
+tilemap-demo = Tilemap Demo
+path2d-demo = Path2D Demo
+quit = Quit
+save = Save
+play-sound = Play Sound
+persisted-text-box-content = Persisted text box content

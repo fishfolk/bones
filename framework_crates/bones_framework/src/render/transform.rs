@@ -50,12 +50,12 @@ impl Transform {
     }
 
     /// Converts the transform to a 4x4 matrix for rendering
-    pub fn to_matrix(&self) -> Mat4 {
+    pub fn to_matrix(&self, translation_scale: Vec3) -> Mat4 {
         let angle = self.rotation.z.rem_euclid(2.0 * PI);
         let rotation = Mat4::from_rotation_z(angle);
 
         let scale_rotation = rotation * Mat4::from_scale(self.scale);
-        Mat4::from_translation(self.translation) * scale_rotation
+        Mat4::from_translation(self.translation * translation_scale) * scale_rotation
     }
 
     /// Converts the transform to a 4x4 matrix for rendering,

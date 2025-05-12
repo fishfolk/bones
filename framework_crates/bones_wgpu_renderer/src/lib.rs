@@ -27,11 +27,12 @@ use egui_wgpu::ScreenDescriptor;
 
 mod convert;
 mod sprite;
+mod storage;
 mod texture;
 mod ui;
 
 use sprite::*;
-use ui::EguiRenderer;
+use ui::{default_load_progress, EguiRenderer};
 
 /// The prelude
 pub mod prelude {
@@ -81,11 +82,18 @@ struct TextureLoaded;
 #[repr(C)]
 struct PixelArt(bool);
 
+#[derive(bones_schema::HasSchema, Default, bones::Deref, bones::DerefMut)]
+#[schema(no_clone)]
+struct LoadingContext(pub Option<LoadingFunction>);
+type LoadingFunction = Box<dyn FnMut(&bones::AssetServer, &egui::Context) + Sync + Send + 'static>;
+
 /// Renderer for [`bones_framework`] [`Game`][bones::Game]s using wgpu.
 pub struct BonesWgpuRenderer {
     /// Whether or not to load all assets on startup with a loading screen,
     /// or skip straight to running the bones game immedietally.
     pub preload: bool,
+    /// Optional field to implement your own loading screen. Does nothing if [`Self::preload`] = false
+    pub custom_load_progress: Option<LoadingFunction>,
     /// Whether or not to use nearest-neighbor sampling for textures.
     pub pixel_art: bool,
     /// The bones game to run.
@@ -107,6 +115,7 @@ impl BonesWgpuRenderer {
     pub fn new(game: bones::Game) -> Self {
         BonesWgpuRenderer {
             preload: true,
+            custom_load_progress: None,
             pixel_art: true,
             game,
             game_version: bones::Version::new(0, 1, 0),
@@ -173,6 +182,7 @@ impl BonesWgpuRenderer {
         }
         .block_on();
 
+        //Insert wgpu resources
         self.game
             .insert_shared_resource(WgpuDevice(Some(device.clone())));
         self.game
@@ -181,6 +191,9 @@ impl BonesWgpuRenderer {
 
         let (sender, receiver) = unbounded();
         self.game.insert_shared_resource(TextureSender(sender));
+
+        self.game
+            .insert_shared_resource(LoadingContext(self.custom_load_progress));
 
         IoTaskPool::init(TaskPool::default);
         if let Some(mut asset_server) = self.game.shared_resource_mut::<bones::AssetServer>() {
@@ -204,6 +217,18 @@ impl BonesWgpuRenderer {
             asset_server.watch_for_changes();
         }
 
+        // Configure and load the persitent storage
+        let mut storage = bones::Storage::with_backend(Box::new(storage::StorageBackend::new(
+            &self.app_namespace.0,
+            &self.app_namespace.1,
+            &self.app_namespace.2,
+        )));
+        storage.load();
+        self.game.insert_shared_resource(storage);
+        self.game
+            .insert_shared_resource(bones::EguiTextures::default());
+                self.game.insert_shared_resource(bones::ExitBones(false));
+
         // Insert empty inputs that will be updated by the `insert_bones_input` system later.
         self.game.init_shared_resource::<bones::KeyboardInputs>();
         self.game.init_shared_resource::<bones::MouseInputs>();
@@ -214,14 +239,15 @@ impl BonesWgpuRenderer {
             .init_shared_resource::<bones::MouseWorldPosition>();
 
         //Insert needed systems
-        for (_, session) in self.game.sessions.iter_mut() {
-            session.add_system_to_stage(bones::First, load_sprite);
-            session.add_system_to_stage(bones::First, load_atlas_sprite);
-            session.add_system_to_stage(bones::First, load_tile_sprite);
-            session.add_system_to_stage(bones::First, update_atlas_uniforms);
-            session.add_system_to_stage(bones::First, update_sprite_uniforms);
-            session.add_system_to_stage(bones::First, update_tiles_uniforms);
-        }
+        self.game.systems.add_before_system(load_sprite);
+        self.game.systems.add_before_system(load_atlas_sprite);
+        self.game.systems.add_before_system(load_tile_sprite);
+        self.game.systems.add_before_system(update_atlas_uniforms);
+        self.game.systems.add_before_system(update_sprite_uniforms);
+        self.game.systems.add_before_system(update_tiles_uniforms);
+
+        self.game.systems.add_startup_system(load_egui_textures);
+        self.game.systems.add_startup_system(asset_load_status);
 
         // wgpu uses `log` for all of our logging, so we initialize a logger with the `env_logger` crate.
         env_logger::init();
@@ -245,9 +271,118 @@ impl BonesWgpuRenderer {
             _now: Instant::now(),
         };
         event_loop.run_app(&mut app).unwrap();
+
+        app.device.poll(wgpu::Maintain::Wait);
     }
 }
 
+fn asset_load_status(game: &mut bones::Game) {
+    let asset_server = game.shared_resource::<bones::AssetServer>().unwrap();
+    let ctx = game.shared_resource::<bones::EguiCtx>().unwrap();
+    let mut function = game.shared_resource_mut::<LoadingContext>().unwrap();
+
+    if asset_server.load_progress.is_finished() {
+        return;
+    }
+
+    if let Some(function) = &mut function.0 {
+        (function)(&asset_server, &ctx);
+    } else {
+        default_load_progress(&asset_server, &ctx);
+    }
+}
+
+/// Startup system to load egui fonts and textures.
+pub fn setup_egui(game: &mut bones::Game, ctx: &egui::Context) {
+    // Insert the egui context as a shared resource
+    game.insert_shared_resource(bones::EguiCtx(ctx.clone()));
+
+    let asset_server = game.shared_resource::<bones::AssetServer>();
+
+    if let Some(bones_assets) = asset_server {
+        update_egui_fonts(ctx, &bones_assets);
+
+        // Insert the bones egui textures
+        ctx.data_mut(|map| {
+            map.insert_temp(
+                egui::Id::NULL,
+                game.shared_resource_cell::<bones::EguiTextures>().unwrap(),
+            );
+        });
+    }
+}
+
+pub fn update_egui_fonts(ctx: &egui::Context, bones_assets: &bones::AssetServer) {
+    let mut fonts = egui::FontDefinitions::default();
+
+    for entry in bones_assets.store.assets.iter() {
+        let asset = entry.value();
+        if let Ok(font) = asset.try_cast_ref::<bones::Font>() {
+            let previous = fonts
+                .font_data
+                .insert(font.family_name.to_string(), font.data.clone().into());
+            if previous.is_some() {
+                log::warn!(
+                    "{} Found two fonts with the same family name, using \
+                    only the latest one",
+                    font.family_name
+                );
+            }
+            fonts
+                .families
+                .entry(egui::FontFamily::Name(font.family_name.clone()))
+                .or_default()
+                .push(font.family_name.to_string());
+        }
+    }
+
+    ctx.set_fonts(fonts);
+}
+//TODO Handle asset changes
+fn load_egui_textures(game: &mut bones::Game) {
+    let asset_server = game.shared_resource::<bones::AssetServer>().unwrap();
+    let ctx = game.shared_resource::<bones::EguiCtx>().unwrap();
+    let mut egui_textures = game.shared_resource_mut::<bones::EguiTextures>().unwrap();
+    let pixel_art = game.shared_resource::<PixelArt>().unwrap();
+
+    for entry in asset_server.store.asset_ids.iter() {
+        let id = entry.key().typed();
+        if egui_textures.contains_key(&id) {
+            // we already loaded this one
+            continue;
+        }
+
+        let asset = asset_server.store.assets.get_mut(entry.value()).unwrap();
+        if let Ok(image) = asset.data.try_cast_ref::<bones::Image>() {
+            if let bones::Image::Data(data) = image {
+                let rgba: RgbaImage = data.to_rgba8();
+                let (w, h) = (rgba.width() as usize, rgba.height() as usize);
+                let raw = rgba.into_raw();
+
+                let handle = ctx.load_texture(
+                    &format!("Texture {:?}", entry.key()),
+                    egui::ColorImage::from_rgba_unmultiplied([w, h], &raw),
+                    egui::TextureOptions {
+                        magnification: if pixel_art.0 {
+                            egui::TextureFilter::Nearest
+                        } else {
+                            egui::TextureFilter::Linear
+                        },
+                        minification: if pixel_art.0 {
+                            egui::TextureFilter::Nearest
+                        } else {
+                            egui::TextureFilter::Linear
+                        },
+                        ..Default::default()
+                    },
+                );
+                egui_textures.insert(id, handle);
+            }
+        }
+    }
+}
+
+//TODO Implement proper Drop for the app
 struct App {
     state: Option<State>,
     instance: Arc<wgpu::Instance>,
@@ -287,6 +422,8 @@ impl ApplicationHandler for App {
                 &self.adapter,
                 &self.texture_bind_group_layout,
             );
+
+            setup_egui(&mut self.game, &state.egui_renderer.context().clone());
 
             self.state = Some(state);
         }
@@ -338,6 +475,10 @@ impl ApplicationHandler for App {
             WindowEvent::RedrawRequested => {
                 //println!("{}", self.now.elapsed().as_secs_f32());
                 //self.now = Instant::now();
+
+                if self.game.shared_resource::<bones::ExitBones>().unwrap().0 {
+                    event_loop.exit();
+                }
 
                 state.render(&mut self.game);
                 // Emits a new redraw requested event.
@@ -792,11 +933,14 @@ impl State {
                         continue;
                     };
 
-                    camera_transform.translation.z = 0.;
-                    let camera_mat4 = camera_transform.to_matrix().inverse();
+                    let (w, h) = (self.size.width as f32, self.size.height as f32);
+                    let translation_scale = Vec3::new(1. / w, 1. / h, 1.);
 
-                    // Get the 4×4 transform matrix.
-                    let mat4 = scale_ratio * camera_mat4 * transform.to_matrix();
+                    camera_transform.translation.z = 0.;
+                    let camera_mat4 = camera_transform.to_matrix(translation_scale).inverse();
+
+                    // Build the final matrix
+                    let mat4 = scale_ratio * camera_mat4 * transform.to_matrix(translation_scale);
 
                     // Compute transformed vertices on the CPU.
                     let transformed_vertices: Vec<Vertex> = VERTICES
@@ -839,36 +983,8 @@ impl State {
 
             self.egui_renderer.begin_frame(&self.window);
 
-            //Insert the egui ctx
-            //game.insert_shared_resource(bones::EguiCtx(self.egui_renderer.context().clone()));
             //Step bones
             game.step(Instant::now());
-
-            egui::Window::new("winit + egui + wgpu says hello!")
-                .resizable(true)
-                .vscroll(true)
-                .default_open(false)
-                .show(self.egui_renderer.context(), |ui| {
-                    ui.label("Label!");
-
-                    if ui.button("Button!").clicked() {
-                        println!("boom!")
-                    }
-
-                    ui.separator();
-                    ui.horizontal(|ui| {
-                        ui.label(format!(
-                            "Pixels per point: {}",
-                            self.egui_renderer.context().pixels_per_point()
-                        ));
-                        if ui.button("-").clicked() {
-                            self.egui_scale_factor = (self.egui_scale_factor - 0.1).max(0.3);
-                        }
-                        if ui.button("+").clicked() {
-                            self.egui_scale_factor = (self.egui_scale_factor + 0.1).min(3.0);
-                        }
-                    });
-                });
 
             self.egui_renderer.end_frame_and_draw(
                 &self.device,
