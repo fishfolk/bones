@@ -30,7 +30,9 @@ pub struct Camera {
     /// Cameras with a higher priority will be rendered on top of cameras with a lower priority.
     pub priority: i32,
     /// The color to clear the screen to before rendering.
-    pub background_color: Color,
+    /// If None and the camera is set to draw the background, we will try to use the global ClearColor,
+    /// If not available, we will use Black
+    pub background_color: Maybe<Color>,
     /// Whether or not the camera should draw the background color.
     pub draw_background_color: bool,
 }
@@ -74,13 +76,13 @@ impl Default for Camera {
             viewport: Unset,
             priority: 0,
             size: default(),
-            background_color: Color::BLACK,
+            background_color: Maybe::Unset,
             draw_background_color: true,
         }
     }
 }
 
-/// Resource for controlling the clear color.
+/// Resource for controlling the global clear color.
 #[derive(Deref, DerefMut, Clone, Copy, HasSchema, Default)]
 pub struct ClearColor(pub Color);
 
