@@ -1532,7 +1532,7 @@ dependencies = [
  "csscolorparser",
  "directories",
  "document-features",
- "egui 0.23.0",
+ "egui 0.30.0",
  "egui_plot",
  "either",
  "fluent",
@@ -1691,12 +1691,16 @@ dependencies = [
  "bones_schema",
  "bytemuck",
  "crossbeam-channel",
+ "directories",
  "egui 0.30.0",
  "egui-wgpu",
  "egui-winit",
  "env_logger",
  "image 0.24.9",
+ "log",
  "pollster",
+ "serde",
+ "serde_yaml",
  "wgpu 23.0.1",
  "winit 0.30.9",
 ]
@@ -2394,6 +2398,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "demo_features_wgpu"
+version = "0.4.0"
+dependencies = [
+ "bones_framework",
+ "bones_wgpu_renderer",
+]
+
+[[package]]
 name = "demo_hello_world"
 version = "0.4.0"
 dependencies = [
@@ -2722,11 +2734,13 @@ dependencies = [
 
 [[package]]
 name = "egui_plot"
-version = "0.23.0"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7f33a00fe8eb1ba56535b3dbacdecc7a1365a328908a97c5f3c81bb466be72b"
+checksum = "c226cae80a6ee10c4d3aaf9e33bd9e9b2f1c0116b6036bdc2a1cfc9d2d0dcc10"
 dependencies = [
- "egui 0.23.0",
+ "ahash",
+ "egui 0.30.0",
+ "emath 0.30.0",
 ]
 
 [[package]]

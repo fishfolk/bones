@@ -11,7 +11,8 @@ pub fn setup_egui(world: &mut World) {
         };
 
         // Insert the egui context as a shared resource
-        game.insert_shared_resource(bones::EguiCtx(ctx.clone()));
+        // Broke when updating bones egui to 0.30
+        //game.insert_shared_resource(bones::EguiCtx(ctx.clone()));
 
         if let Some(bones_assets) = &game.asset_server() {
             update_egui_fonts(&ctx, bones_assets);
@@ -34,7 +35,8 @@ pub fn egui_input_hook(
     if let Some(hook) = game.shared_resource_cell::<bones::EguiInputHook>() {
         let hook = hook.borrow().unwrap();
         let mut egui_input = egui_query.get_single_mut().unwrap();
-        (hook.0)(&mut game, &mut egui_input);
+        // Broke when updating bones egui to 0.30
+        //(hook.0)(&mut game, &mut egui_input);
     }
 }
 
@@ -57,6 +59,7 @@ pub fn update_egui_fonts(ctx: &bevy_egui::egui::Context, bones_assets: &bones::A
     let mut fonts = egui::FontDefinitions::default();
 
     for entry in bones_assets.store.assets.iter() {
+        /*Broke when updating bones egui to 0.30
         let asset = entry.value();
         if let Ok(font) = asset.try_cast_ref::<bones::Font>() {
             let previous = fonts
@@ -75,6 +78,7 @@ pub fn update_egui_fonts(ctx: &bevy_egui::egui::Context, bones_assets: &bones::A
                 .or_default()
                 .push(font.family_name.to_string());
         }
+        */
     }
 
     ctx.set_fonts(fonts);

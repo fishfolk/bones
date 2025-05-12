@@ -1,0 +1,10 @@
+[package]
+name              = "demo_features_wgpu"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish           = false
+
+[dependencies]
+bones_framework     = { path = "../../framework_crates/bones_framework" }
+bones_wgpu_renderer = { path = "../../framework_crates/bones_wgpu_renderer" }

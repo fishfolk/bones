@@ -74,7 +74,7 @@ impl Default for Camera {
             viewport: Unset,
             priority: 0,
             size: default(),
-            background_color: Color::GRAY,
+            background_color: Color::BLACK,
             draw_background_color: true,
         }
     }
