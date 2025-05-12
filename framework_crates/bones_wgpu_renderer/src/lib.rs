@@ -227,7 +227,7 @@ impl BonesWgpuRenderer {
         self.game.insert_shared_resource(storage);
         self.game
             .insert_shared_resource(bones::EguiTextures::default());
-                self.game.insert_shared_resource(bones::ExitBones(false));
+        self.game.insert_shared_resource(bones::ExitBones(false));
 
         // Insert empty inputs that will be updated by the `insert_bones_input` system later.
         self.game.init_shared_resource::<bones::KeyboardInputs>();
@@ -353,31 +353,29 @@ fn load_egui_textures(game: &mut bones::Game) {
         }
 
         let asset = asset_server.store.assets.get_mut(entry.value()).unwrap();
-        if let Ok(image) = asset.data.try_cast_ref::<bones::Image>() {
-            if let bones::Image::Data(data) = image {
-                let rgba: RgbaImage = data.to_rgba8();
-                let (w, h) = (rgba.width() as usize, rgba.height() as usize);
-                let raw = rgba.into_raw();
+        if let Ok(bones::Image::Data(data)) = asset.data.try_cast_ref::<bones::Image>() {
+            let rgba: RgbaImage = data.to_rgba8();
+            let (w, h) = (rgba.width() as usize, rgba.height() as usize);
+            let raw = rgba.into_raw();
 
-                let handle = ctx.load_texture(
-                    &format!("Texture {:?}", entry.key()),
-                    egui::ColorImage::from_rgba_unmultiplied([w, h], &raw),
-                    egui::TextureOptions {
-                        magnification: if pixel_art.0 {
-                            egui::TextureFilter::Nearest
-                        } else {
-                            egui::TextureFilter::Linear
-                        },
-                        minification: if pixel_art.0 {
-                            egui::TextureFilter::Nearest
-                        } else {
-                            egui::TextureFilter::Linear
-                        },
-                        ..Default::default()
+            let handle = ctx.load_texture(
+                format!("Texture {:?}", entry.key()),
+                egui::ColorImage::from_rgba_unmultiplied([w, h], &raw),
+                egui::TextureOptions {
+                    magnification: if pixel_art.0 {
+                        egui::TextureFilter::Nearest
+                    } else {
+                        egui::TextureFilter::Linear
                     },
-                );
-                egui_textures.insert(id, handle);
-            }
+                    minification: if pixel_art.0 {
+                        egui::TextureFilter::Nearest
+                    } else {
+                        egui::TextureFilter::Linear
+                    },
+                    ..Default::default()
+                },
+            );
+            egui_textures.insert(id, handle);
         }
     }
 }
