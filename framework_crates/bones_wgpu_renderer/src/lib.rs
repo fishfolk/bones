@@ -460,7 +460,9 @@ impl ApplicationHandler for App {
             if let Some(v) = state.sprites.get_mut(&session_name) {
                 v.push((bind_group, entity));
             } else {
-                state.sprites.insert(session_name.clone(), vec![(bind_group, entity)]);
+                state
+                    .sprites
+                    .insert(session_name.clone(), vec![(bind_group, entity)]);
             }
         }
         // Egui input handling
@@ -762,7 +764,9 @@ impl State {
             });
         let num_indices = INDICES.len() as u32;
 
+        let mut dont_delete = vec![];
         for (session_name, session) in game.sessions.iter() {
+            dont_delete.push(session_name.clone());
             if !session.visible {
                 continue;
             }
@@ -933,7 +937,6 @@ impl State {
 
                 // Render each sprite with its own transform.
                 for (bind_group, entity) in &self.sprites[session_name] {
-                    
                     // Get the entity transform from the ECS.
                     let Some(transform) = session
                         .world
@@ -1005,6 +1008,16 @@ impl State {
                 &texture_view,
                 screen_descriptor,
             );
+        }
+
+        let keys_to_remove: Vec<_> = self
+            .sprites
+            .keys()
+            .filter(|session_name| !dont_delete.contains(session_name))
+            .cloned()
+            .collect();
+        for session_name in keys_to_remove {
+            self.sprites.remove(&session_name);
         }
 
         // Submit the command queue.

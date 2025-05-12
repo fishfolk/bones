@@ -114,8 +114,6 @@ pub fn load_sprite(game: &mut bones::Game) {
                 unreachable!();
             };
 
-            println!("Loading sprite: {:?}", sprite);
-
             //Load and send texture
             let assets = assets.borrow().unwrap();
             let image = assets.get(sprite.image);
@@ -260,8 +258,8 @@ pub fn load_tile_sprite(game: &mut bones::Game) {
         not_loaded.bit_not();
         not_loaded.bit_and(tile_layers.bitset());
 
-        for entity in entities.iter_with_bitset(&not_loaded) {
-            let Some(tile_layer) = tile_layers.get(entity) else {
+        for layer_ent in entities.iter_with_bitset(&not_loaded) {
+            let Some(tile_layer) = tile_layers.get(layer_ent) else {
                 unreachable!();
             };
 
@@ -281,11 +279,11 @@ pub fn load_tile_sprite(game: &mut bones::Game) {
                     .unwrap(),
                 );
 
-                for tile in &tile_layer.tiles {
-                    let Some(tile) = tile else {
+                for (tile_pos_idx, tile) in tile_layer.tiles.iter().enumerate() {
+                    let Some(tile_ent) = tile else {
                         continue;
                     };
-                    let Some(tile) = tiles.get(*tile) else {
+                    let Some(tile) = tiles.get(*tile_ent) else {
                         panic!("Couldn't find tile entity!");
                     };
                     // create and send the atlas sprite uniform along with the texture and entity
@@ -302,19 +300,24 @@ pub fn load_tile_sprite(game: &mut bones::Game) {
                         ));
 
                     //Add buffer to bones so we can update it
-                    buffers.insert(entity, AtlasSpriteBuffer(atlas_sprite_buffer.clone()));
+                    buffers.insert(*tile_ent, AtlasSpriteBuffer(atlas_sprite_buffer.clone()));
 
                     texture_sender
                         .borrow()
                         .unwrap()
                         .0
-                        .send((texture.clone(), entity, atlas_sprite_buffer, *session_name))
+                        .send((
+                            texture.clone(),
+                            *tile_ent,
+                            atlas_sprite_buffer,
+                            *session_name,
+                        ))
                         .unwrap();
-                    texture_loaded.insert(entity, TextureLoaded);
                 }
             } else {
                 unreachable!()
             };
+            texture_loaded.insert(layer_ent, TextureLoaded);
         }
     }
 }
