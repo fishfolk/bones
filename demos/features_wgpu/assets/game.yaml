@@ -1,0 +1,61 @@
+menu_script: ./menu.lua
+menu_image: ./menu-image.png
+sprite_demo: ./sprite/fractal.png
+atlas_demo: ./atlas/atlas-demo.yaml
+tilemap_demo: ./tilemap/tilemap.yaml
+audio_demo: ./audio/blink.ogg
+localization: ./localization.yaml
+path2d_color: red
+title_font:
+  family: Orbitron
+  size: 20
+  color: purple
+menu_border:
+  image: ./ui/panel.png
+  image_size: [44, 44]
+  border_size:
+    left: 16
+    right: 16
+    top: 16
+    bottom: 16
+  scale: 4
+button_style:
+  font:
+    family: Orbitron
+    color: white
+    size: 10
+  padding:
+    top: 6
+    left: 6
+    right: 6
+    bottom: 9
+  borders:
+    default:
+      image: ui/button.png
+      image_size: [14, 14]
+      border_size:
+        top: 5
+        bottom: 5
+        right: 5
+        left: 5
+      scale: 2
+    focused:
+      image: ui/button-focused.png
+      image_size: [14, 14]
+      border_size:
+        top: 5
+        bottom: 5
+        right: 5
+        left: 5
+      scale: 2
+    clicked:
+      image: ui/button-down.png
+      image_size: [14, 14]
+      border_size:
+        top: 5
+        bottom: 5
+        right: 5
+        left: 5
+      scale: 2
+fonts:
+  - ./fonts/Orbitron.ttf

@@ -300,6 +300,23 @@ impl Color {
             } => [red, green, blue, alpha],
         }
     }
+
+    /// Converts a `Color` to a `[u8; 4]` from sRGB colorspace
+    pub fn as_rgba_u8(self: Color) -> [u8; 4] {
+        match self {
+            Color::Rgba {
+                red,
+                green,
+                blue,
+                alpha,
+            } => [
+                (red * 255.0) as u8,
+                (green * 255.0) as u8,
+                (blue * 255.0) as u8,
+                (alpha * 255.0) as u8,
+            ],
+        }
+    }
 }
 
 impl Default for Color {

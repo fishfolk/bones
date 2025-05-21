@@ -75,7 +75,7 @@ pub struct MarginMeta {
     pub right: f32,
 }
 
-impl From<MarginMeta> for egui::style::Margin {
+impl From<MarginMeta> for egui::Margin {
     fn from(m: MarginMeta) -> Self {
         Self {
             left: m.left,
