@@ -23,6 +23,7 @@ bevy_tasks        = "0.11.3"
 image             = "0.24.9"
 crossbeam-channel = "0.5.14"
 bytemuck          = "1.22"
+lyon              = "1.0.1"
 
 egui              = "0.30"
 egui-wgpu         = "0.30"

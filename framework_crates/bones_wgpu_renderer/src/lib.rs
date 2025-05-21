@@ -26,6 +26,7 @@ use bones_framework::{
 use egui_wgpu::ScreenDescriptor;
 
 mod convert;
+mod line;
 mod sprite;
 mod storage;
 mod texture;
@@ -936,7 +937,11 @@ impl State {
                 }
 
                 // Render each sprite with its own transform.
-                for (bind_group, entity) in &self.sprites[session_name] {
+                let Some(binds) = self.sprites.get(session_name) else {
+                    continue;
+                };
+
+                for (bind_group, entity) in binds {
                     // Get the entity transform from the ECS.
                     let Some(transform) = session
                         .world
@@ -948,20 +953,24 @@ impl State {
                     };
 
                     let (w, h) = (self.size.width as f32, self.size.height as f32);
-                    let translation_scale = Vec3::new(1. / w, 1. / h, 1.);
 
                     camera_transform.translation.z = 0.;
+                    let camera_scale =
+                        Vec3::new(1.0 / scale_ratio.x_axis.x, 1.0 / scale_ratio.y_axis.y, 1.0);
+                    let translation_scale =
+                        Vec3::new((2.0 / w) * camera_scale.x, (2.0 / h) * camera_scale.y, 1.0);
+
                     let camera_mat4 = camera_transform.to_matrix(translation_scale).inverse();
 
-                    // Build the final matrix
-                    let mat4 = scale_ratio * camera_mat4 * transform.to_matrix(translation_scale);
+                    let quad_scale = translation_scale * camera_transform.scale;
+                    let mat4 = scale_ratio * camera_mat4 * transform.to_matrix(quad_scale);
 
                     // Compute transformed vertices on the CPU.
-                    let transformed_vertices: Vec<Vertex> = VERTICES
+                    let transformed_vertices: Vec<Vertex> = VERTICES_FULL
                         .iter()
                         .map(|v: &Vertex| Vertex {
                             position: transform_vertex(
-                                v.position.into(),
+                                Vec3::from(v.position),
                                 mat4,
                                 Vec3::ZERO, // Use Vec3::ZERO as the pivot point for transformations
                             )
