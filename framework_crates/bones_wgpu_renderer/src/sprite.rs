@@ -286,6 +286,39 @@ pub fn load_tile_sprite(game: &mut bones::Game) {
                     let Some(tile) = tiles.get(*tile_ent) else {
                         panic!("Couldn't find tile entity!");
                     };
+                    let mut transforms = session.world.component_mut::<bones::Transform>();
+
+                    let transform = if let Some(t) = transforms.get_mut(*tile_ent) {
+                        t
+                    } else {
+                        transforms.insert(*tile_ent, bones::Transform::default());
+                        transforms.get_mut(*tile_ent).unwrap()
+                    };
+
+                    let tile_pos = tile_layer.pos(tile_pos_idx as u32);
+                    let tile_offset = tile_pos.as_vec2() * tile_layer.tile_size;
+
+                    /*let sprite_idx = tile.idx;
+                    let y = sprite_idx / atlas.columns;
+                    let x = sprite_idx - (y * atlas.columns);
+                    let cell = Vec2::new(x as f32, y as f32);
+                    let current_padding = atlas.padding
+                        * Vec2::new(if x > 0 { 1.0 } else { 0.0 }, if y > 0 { 1.0 } else { 0.0 });
+                    let min = (atlas.tile_size + current_padding) * cell + atlas.offset;
+                    let rect = Rect {
+                        min,
+                        max: min + atlas.tile_size,
+                    };*/
+
+                    transform.translation += tile_offset.extend(0.0);
+                    // Scale up slightly to avoid bleeding between tiles.
+                    // TODO: Improve tile rendering
+                    // Currently we do a small hack here, scaling up the tiles a little bit, to prevent
+                    // visible gaps between tiles. This solution isn't perfect and we probably need to
+                    // create a proper tile renderer. That can render multiple tiles on one quad instead
+                    // of using a separate quad for each tile.
+                    transform.scale += Vec3::new(0.01, 0.01, 0.0);
+
                     // create and send the atlas sprite uniform along with the texture and entity
                     let uniform =
                         AtlasSpriteUniform::from_tile(tile, &assets.get(tile_layer.atlas));

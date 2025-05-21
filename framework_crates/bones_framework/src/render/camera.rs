@@ -97,7 +97,14 @@ pub fn spawn_default_camera(
 ) -> Entity {
     let ent = entities.create();
     cameras.insert(ent, default());
-    transforms.insert(ent, Transform::from_translation(Vec3::new(0., 0., 1000.)));
+    transforms.insert(
+        ent,
+        Transform {
+            translation: Vec3::new(0.0, 0.0, 1000.0),
+            scale: Vec3::new(40., 40., 1.0),
+            ..default()
+        },
+    );
     ent
 }
 
