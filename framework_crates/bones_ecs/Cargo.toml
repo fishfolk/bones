@@ -40,6 +40,7 @@ atomicell   = "0.2"
 bitset-core = "0.1"
 once_map    = "0.4.12"
 thiserror   = "1.0"
+tracing     = { workspace = true }
 
 [dev-dependencies]
 glam = "0.24"
