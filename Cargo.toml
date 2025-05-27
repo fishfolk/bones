@@ -30,6 +30,7 @@ parking_lot  = "0.12"
 smallvec     = "1.11"
 ustr         = "0.10"
 iroh         = "0.29"
+tracing      = "0.1"
 
 [profile.release]
 lto = true
