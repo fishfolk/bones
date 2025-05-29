@@ -70,6 +70,27 @@ impl SessionBuilder {
         }
     }
 
+    /// Create a [`SessionBuilder`] to match existing [`Session`], consuming it. This is useful if a [`GamePlugin`] wishes to modify a session created by another plugin.
+    /// The builder is initialized with settings from session, can be further modified, and then added to session to replace existing.
+    pub fn from_existing_session<N: TryInto<Ustr>>(name: N, session: Session) -> Self
+    where
+        <N as TryInto<Ustr>>::Error: Debug,
+    {
+        let name = name
+            .try_into()
+            .expect("Session name could not be converted into Ustr.");
+
+        Self {
+            name,
+            stages: SystemStagesBuilder::from_stages(session.stages),
+            active: session.active,
+            visible: session.visible,
+            priority: session.priority,
+            runner: session.runner,
+            finish_guard: FinishGuard { finished: false },
+        }
+    }
+
     /// Get the [`SystemStagesBuilder`] (though the stage build functions are also on [`SessionBuilder`] for convenience).
     pub fn stages(&mut self) -> &mut SystemStagesBuilder {
         &mut self.stages
@@ -779,6 +800,30 @@ impl Sessions {
         let mut builder = SessionBuilder::new(name);
         build_function(&mut builder);
         builder.finish_and_add(self)
+    }
+
+    /// Replaces an existing session after converting it into a [`SessionBuilder`] with same systems, stages, etc. It then is given to `build_function` to extend or modify it.
+    ///
+    /// WARNING - this is intended to allow a [`GamePlugin`] to extend a session created by another plugin during setup. It destroys and re-creates session, and if used during gameplay,
+    /// could break assumptions around determinism and cause desyncs in network play. The sessions [`World`] is not preserved. This is a utility for constructing session, not for runtime mutation.
+    ///
+    /// `None` is returned if the session with name was not found.
+    pub fn modify_and_replace_existing_session<N: TryInto<Ustr>>(
+        &mut self,
+        name: N,
+        build_function: impl FnOnce(&mut SessionBuilder),
+    ) -> Option<&mut Session>
+    where
+        <N as TryInto<Ustr>>::Error: Debug,
+    {
+        let name = name
+            .try_into()
+            .expect("Session name could not be converted into Ustr.");
+
+        let session = self.map.remove(&name)?;
+        let mut builder = SessionBuilder::from_existing_session(name, session);
+        build_function(&mut builder);
+        Some(builder.finish_and_add(self))
     }
 
     /// Delete a session.

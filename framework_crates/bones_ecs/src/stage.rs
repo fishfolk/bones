@@ -59,6 +59,16 @@ impl SystemStagesBuilder {
         }
     }
 
+    /// Create [`SystemStagesBuilder`] by taking existing [`SystemStages`].
+    pub fn from_stages(stages: SystemStages) -> Self {
+        Self {
+            stages: stages.stages,
+            startup_systems: stages.startup_systems,
+            startup_resources: stages.startup_resources,
+            single_success_systems: stages.single_success_systems,
+        }
+    }
+
     /// Add a system that will run only once, before all of the other non-startup systems.
     /// If wish to reset session and run again, can modify [`SessionStarted`] resource in world.
     pub fn add_startup_system<Args, S>(&mut self, system: S) -> &mut Self
