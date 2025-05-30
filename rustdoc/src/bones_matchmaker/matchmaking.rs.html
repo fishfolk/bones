@@ -509,7 +509,7 @@
     })<span class="question-mark">?</span>;
 
     <span class="comment">// Send first update and check active connections
-    </span><span class="kw">for </span>(_index, conn) <span class="kw">in </span>connections.into_iter().enumerate() {
+    </span><span class="kw">for </span>conn <span class="kw">in </span>connections.into_iter() {
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>send) = conn.open_uni().<span class="kw">await </span>{
             <span class="kw">if </span>send.write_all(<span class="kw-2">&amp;</span>first_update_message).<span class="kw">await</span>.is_ok()
                 &amp;&amp; send.finish().is_ok()

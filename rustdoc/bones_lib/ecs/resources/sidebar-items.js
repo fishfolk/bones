@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["AtomicResource","CellAlreadyPresentError","Resources","UntypedResource","UntypedResources"],"type":["AtomicUntypedResource"]};
+window.SIDEBAR_ITEMS = {"struct":["AtomicResource","CellAlreadyPresentError","Resources","UntypedResource","UntypedResourceSet","UntypedResources"],"type":["AtomicUntypedResource"]};

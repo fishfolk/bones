@@ -164,7 +164,7 @@
 
 <span class="doccomment">/// If installed, allows opening egui window with [`FrameTimeWindowState`] in [`EguiCtx`] state
 /// to get frame time information.
-</span><span class="kw">pub fn </span>frame_time_diagnostics_plugin(core: <span class="kw-2">&amp;mut </span>Session) {
+</span><span class="kw">pub fn </span>frame_time_diagnostics_plugin(core: <span class="kw-2">&amp;mut </span>SessionBuilder) {
     core.stages
         .add_system_to_stage(CoreStage::Last, frame_diagnostic_window);
 }

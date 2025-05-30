@@ -59,6 +59,10 @@
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bones_bevy_renderer::BonesBevyRenderer;
 <span class="kw">use </span>bones_framework::prelude::<span class="kw-2">*</span>;
 
@@ -97,12 +101,16 @@
 
     <span class="comment">// Create a new session for the game menu. Each session is it's own bones world with it's own
     // plugins, systems, and entities.
-    </span><span class="kw">let </span>menu_session = game.sessions.create(<span class="string">"menu"</span>);
-    menu_session
-        <span class="comment">// Install the default bones_framework plugin for this session
-        </span>.install_plugin(DefaultSessionPlugin)
+    </span><span class="kw">let </span><span class="kw-2">mut </span>menu_session_builder = SessionBuilder::new(<span class="string">"menu"</span>);
+
+    <span class="comment">// Install the default bones_framework plugin for this session
+    </span>menu_session_builder
+        .install_plugin(DefaultSessionPlugin)
         <span class="comment">// Add our menu system to the update stage
         </span>.add_system_to_stage(Update, menu_system);
+
+    <span class="comment">// Finalize session and register with game sessions.
+    </span>menu_session_builder.finish_and_add(<span class="kw-2">&amp;mut </span>game.sessions);
 
     BonesBevyRenderer::new(game).app().run();
 }

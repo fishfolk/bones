@@ -568,19 +568,6 @@
 <a href="#568" id="568">568</a>
 <a href="#569" id="569">569</a>
 <a href="#570" id="570">570</a>
-<a href="#571" id="571">571</a>
-<a href="#572" id="572">572</a>
-<a href="#573" id="573">573</a>
-<a href="#574" id="574">574</a>
-<a href="#575" id="575">575</a>
-<a href="#576" id="576">576</a>
-<a href="#577" id="577">577</a>
-<a href="#578" id="578">578</a>
-<a href="#579" id="579">579</a>
-<a href="#580" id="580">580</a>
-<a href="#581" id="581">581</a>
-<a href="#582" id="582">582</a>
-<a href="#583" id="583">583</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::too_many_arguments)]
 
 </span><span class="kw">use </span>bones_bevy_renderer::{bevy::diagnostic::LogDiagnosticsPlugin, BonesBevyRenderer};
@@ -708,7 +695,7 @@
     TilemapDemoMeta::register_schema();
 
     <span class="comment">// Create our menu session
-    </span>game.sessions.create(<span class="string">"menu"</span>).install_plugin(menu_plugin);
+    </span>game.sessions.create_with(<span class="string">"menu"</span>, menu_plugin);
 
     game
 }
@@ -722,12 +709,11 @@
 }
 
 <span class="doccomment">/// Menu plugin
-</span><span class="kw">pub fn </span>menu_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+</span><span class="kw">pub fn </span>menu_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
     <span class="comment">// Register our menu system
     </span>session
         <span class="comment">// Install the bones_framework default plugins for this session
         </span>.install_plugin(DefaultSessionPlugin)
-        .world
         <span class="comment">// Initialize our menu data resource
         </span>.init_resource::&lt;MenuData&gt;();
 
@@ -781,9 +767,7 @@
                         </span>session_options.delete = <span class="bool-val">true</span>;
 
                         <span class="comment">// Create a session for the match
-                        </span>sessions
-                            .create(<span class="string">"sprite_demo"</span>)
-                            .install_plugin(sprite_demo_plugin);
+                        </span>sessions.create_with(<span class="string">"sprite_demo"</span>, sprite_demo_plugin);
                     }
 
                     <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">"atlas-demo"</span>))
@@ -794,9 +778,7 @@
                         </span>session_options.delete = <span class="bool-val">true</span>;
 
                         <span class="comment">// Create a session for the match
-                        </span>sessions
-                            .create(<span class="string">"atlas_demo"</span>)
-                            .install_plugin(atlas_demo_plugin);
+                        </span>sessions.create_with(<span class="string">"atlas_demo"</span>, atlas_demo_plugin);
                     }
 
                     <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">"tilemap-demo"</span>))
@@ -807,9 +789,7 @@
                         </span>session_options.delete = <span class="bool-val">true</span>;
 
                         <span class="comment">// Create a session for the match
-                        </span>sessions
-                            .create(<span class="string">"tilemap_demo"</span>)
-                            .install_plugin(tilemap_demo_plugin);
+                        </span>sessions.create_with(<span class="string">"tilemap_demo"</span>, tilemap_demo_plugin);
                     }
 
                     <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">"audio-demo"</span>))
@@ -820,9 +800,7 @@
                         </span>session_options.delete = <span class="bool-val">true</span>;
 
                         <span class="comment">// Create a session for the match
-                        </span>sessions
-                            .create(<span class="string">"audio_demo"</span>)
-                            .install_plugin(audio_demo_plugin);
+                        </span>sessions.create_with(<span class="string">"audio_demo"</span>, audio_demo_plugin);
                     }
 
                     <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">"storage-demo"</span>))
@@ -833,9 +811,7 @@
                         </span>session_options.delete = <span class="bool-val">true</span>;
 
                         <span class="comment">// Create a session for the match
-                        </span>sessions
-                            .create(<span class="string">"storage_demo"</span>)
-                            .install_plugin(storage_demo_plugin);
+                        </span>sessions.create_with(<span class="string">"storage_demo"</span>, storage_demo_plugin);
                     }
 
                     <span class="kw">if </span>BorderedButton::themed(<span class="kw-2">&amp;</span>meta.button_style, localization.get(<span class="string">"path2d-demo"</span>))
@@ -846,9 +822,7 @@
                         </span>session_options.delete = <span class="bool-val">true</span>;
 
                         <span class="comment">// Create a session for the match
-                        </span>sessions
-                            .create(<span class="string">"path2d_demo"</span>)
-                            .install_plugin(path2d_demo_plugin);
+                        </span>sessions.create_with(<span class="string">"path2d_demo"</span>, path2d_demo_plugin);
                     }
 
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(exit_bones) = <span class="kw-2">&amp;mut </span>exit_bones {
@@ -876,7 +850,7 @@
 }
 
 <span class="doccomment">/// Plugin for running the sprite demo.
-</span><span class="kw">fn </span>sprite_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+</span><span class="kw">fn </span>sprite_demo_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_startup_system(sprite_demo_startup)
@@ -940,7 +914,7 @@
 }
 
 <span class="doccomment">/// Plugin for running the tilemap demo.
-</span><span class="kw">fn </span>tilemap_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+</span><span class="kw">fn </span>tilemap_demo_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_startup_system(tilemap_startup_system)
@@ -986,7 +960,7 @@
 }
 
 <span class="doccomment">/// Plugin for running the atlas demo.
-</span><span class="kw">fn </span>atlas_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+</span><span class="kw">fn </span>atlas_demo_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_startup_system(atlas_demo_startup)
@@ -1034,7 +1008,7 @@
     );
 }
 
-<span class="kw">fn </span>audio_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+<span class="kw">fn </span>audio_demo_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_system_to_stage(Update, back_to_menu_ui)
@@ -1060,7 +1034,7 @@
         });
 }
 
-<span class="kw">fn </span>storage_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+<span class="kw">fn </span>storage_demo_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_system_to_stage(Update, storage_demo_ui)
@@ -1090,7 +1064,7 @@
     });
 }
 
-<span class="kw">fn </span>path2d_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+<span class="kw">fn </span>path2d_demo_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_startup_system(path2d_demo_startup)
@@ -1141,7 +1115,7 @@
                 ui.add_space(<span class="number">20.0</span>);
                 <span class="kw">if </span>ui.button(localization.get(<span class="string">"back-to-menu"</span>)).clicked() {
                     session_options.delete = <span class="bool-val">true</span>;
-                    sessions.create(<span class="string">"menu"</span>).install_plugin(menu_plugin);
+                    sessions.create_with(<span class="string">"menu"</span>, menu_plugin);
                 }
             });
         });

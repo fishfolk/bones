@@ -1069,6 +1069,9 @@
 <a href="#1069" id="1069">1069</a>
 <a href="#1070" id="1070">1070</a>
 <a href="#1071" id="1071">1071</a>
+<a href="#1072" id="1072">1072</a>
+<a href="#1073" id="1073">1073</a>
+<a href="#1074" id="1074">1074</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"./networking.md"</span>)]
 
 </span><span class="kw">use </span><span class="self">self</span>::{
@@ -1942,20 +1945,7 @@
                                     cell.save(frame, <span class="prelude-val">Some</span>(world.clone()), <span class="prelude-val">None</span>)
                                 }
                                 ggrs::GgrsRequest::LoadGameState { cell, .. } =&gt; {
-                                    <span class="comment">// Swap out sessions to preserve them after world save.
-                                    // Sessions clone makes empty copy, so saved snapshots do not include sessions.
-                                    // Sessions are borrowed from Game for execution of this session,
-                                    // they are not like other resources and should not be preserved.
-                                    </span><span class="kw">let </span><span class="kw-2">mut </span>sessions = Sessions::default();
-                                    std::mem::swap(
-                                        <span class="kw-2">&amp;mut </span>sessions,
-                                        <span class="kw-2">&amp;mut </span>world.resource_mut::&lt;Sessions&gt;(),
-                                    );
-                                    <span class="kw-2">*</span>world = cell.load().unwrap_or_default();
-                                    std::mem::swap(
-                                        <span class="kw-2">&amp;mut </span>sessions,
-                                        <span class="kw-2">&amp;mut </span>world.resource_mut::&lt;Sessions&gt;(),
-                                    );
+                                    world.load_snapshot(cell.load().unwrap_or_default());
                                 }
                                 ggrs::GgrsRequest::AdvanceFrame {
                                     inputs: network_inputs,
@@ -2033,6 +2023,22 @@
 
                                     <span class="comment">// Run game session stages, advancing simulation
                                     </span>stages.run(world);
+
+                                    <span class="comment">// Handle any triggered resets of world + preserve runner's managed resources like RngGenerator.
+                                    </span><span class="kw">if </span>world.reset_triggered() {
+                                        <span class="kw">let </span>rng = world
+                                            .get_resource::&lt;RngGenerator&gt;()
+                                            .map(|r| (<span class="kw-2">*</span>r).clone());
+                                        <span class="kw">if let </span><span class="prelude-val">Some</span>(rng) = rng {
+                                            <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>reset) =
+                                                world.get_resource_mut::&lt;ResetWorld&gt;()
+                                            {
+                                                reset.insert_reset_resource(rng);
+                                            }
+                                        }
+
+                                        world.handle_world_reset(stages);
+                                    }
                                 }
                             }
                         }

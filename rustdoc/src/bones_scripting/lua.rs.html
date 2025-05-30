@@ -421,8 +421,8 @@
 </span><span class="kw">pub struct </span>LuaPlugins(<span class="kw">pub </span>Arc&lt;Vec&lt;Handle&lt;LuaPlugin&gt;&gt;&gt;);
 
 <span class="kw">impl </span>SessionPlugin <span class="kw">for </span>LuaPluginLoaderSessionPlugin {
-    <span class="kw">fn </span>install(<span class="self">self</span>, session: <span class="kw-2">&amp;mut </span>Session) {
-        session.world.insert_resource(LuaPlugins(<span class="self">self</span>.<span class="number">0</span>));
+    <span class="kw">fn </span>install(<span class="self">self</span>, session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
+        session.insert_resource(LuaPlugins(<span class="self">self</span>.<span class="number">0</span>));
 
         <span class="kw">for </span>lua_stage <span class="kw">in </span>[
             CoreStage::First,

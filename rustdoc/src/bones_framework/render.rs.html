@@ -58,7 +58,7 @@
 </span><span class="kw">pub mod </span>ui;
 
 <span class="doccomment">/// Bones framework rendering plugin.
-</span><span class="kw">pub fn </span>render_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+</span><span class="kw">pub fn </span>render_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
     session
         .install_plugin(sprite::sprite_plugin)
         .install_plugin(camera::plugin);
