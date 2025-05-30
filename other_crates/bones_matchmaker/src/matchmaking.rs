@@ -215,7 +215,7 @@ async fn send_matchmaking_updates(
     })?;
 
     // Send first update and check active connections
-    for (_index, conn) in connections.into_iter().enumerate() {
+    for conn in connections.into_iter() {
         if let Ok(mut send) = conn.open_uni().await {
             if send.write_all(&first_update_message).await.is_ok()
                 && send.finish().is_ok()

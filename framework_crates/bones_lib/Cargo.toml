@@ -17,4 +17,5 @@ glam    = ["bones_ecs/glam"]
 [dependencies]
 bones_ecs = { version = "0.4.0", path = "../bones_ecs" }
 instant   = "0.1.12"
+tracing   = { workspace = true }
 ustr      = { workspace = true }

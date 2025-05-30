@@ -11,75 +11,29 @@ use crate::prelude::*;
 #[derive(Deref, DerefMut, Clone, Copy, HasSchema, Default)]
 pub struct CurrentSystemStage(pub Ulid);
 
-/// An ordered collection of [`SystemStage`]s.
-pub struct SystemStages {
+/// Builder for [`SystemStages`]. It is immutable once created,
+pub struct SystemStagesBuilder {
     /// The stages in the collection, in the order that they will be run.
-    pub stages: Vec<Box<dyn SystemStage>>,
-    /// Whether or not the startup systems have been run yet.
-    pub has_started: bool,
+    stages: Vec<Box<dyn SystemStage>>,
     /// The systems that should run at startup.
-    pub startup_systems: Vec<StaticSystem<(), ()>>,
+    /// They will be executed next step based on if [`SessionStarted`] resource in world says session has not started, or if resource does not exist.
+    startup_systems: Vec<StaticSystem<(), ()>>,
+
+    /// Resources installed during session plugin installs. Copied to world as first step on startup of stages' execution.
+    startup_resources: UntypedResourceSet,
+
     /// Systems that are continously run until they succeed(return Some). These run before all stages. Uses Option to allow for easy usage of `?`.
-    pub single_success_systems: Vec<StaticSystem<(), Option<()>>>,
+    single_success_systems: Vec<StaticSystem<(), Option<()>>>,
 }
 
-impl std::fmt::Debug for SystemStages {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SystemStages")
-            // TODO: Add list of stages to the debug render for `SystemStages`.
-            // We can at least list the names of each stage for `SystemStages` debug
-            // implementation.
-            .finish()
-    }
-}
-
-impl Default for SystemStages {
+impl Default for SystemStagesBuilder {
     fn default() -> Self {
         Self::with_core_stages()
     }
 }
 
-impl SystemStages {
-    /// Execute the systems on the given `world`.
-    pub fn run(&mut self, world: &mut World) {
-        // If we haven't run our startup systems yet
-        if !self.has_started {
-            // Set the current stage resource
-            world.insert_resource(CurrentSystemStage(Ulid(0)));
-
-            // For each startup system
-            for system in &mut self.startup_systems {
-                // Run the system
-                system.run(world, ());
-            }
-
-            // Don't run startup systems again
-            self.has_started = true;
-        }
-
-        // Run single success systems
-        self.single_success_systems.retain_mut(|system| {
-            let result = system.run(world, ());
-            result.is_none() // Keep the system if it didn't succeed (returned None)
-        });
-
-        // Run each stage
-        for stage in &mut self.stages {
-            // Set the current stage resource
-            world.insert_resource(CurrentSystemStage(stage.id()));
-
-            // Run the stage
-            stage.run(world);
-        }
-
-        // Cleanup killed entities
-        world.maintain();
-
-        // Remove the current system stage resource
-        world.resources.remove::<CurrentSystemStage>();
-    }
-
-    /// Create a [`SystemStages`] collection, initialized with a stage for each [`CoreStage`].
+impl SystemStagesBuilder {
+    /// Create a [`SystemStagesBuilder`] for [`SystemStages`] collection, initialized with a stage for each [`CoreStage`].
     pub fn with_core_stages() -> Self {
         Self {
             stages: vec![
@@ -89,13 +43,34 @@ impl SystemStages {
                 Box::new(SimpleSystemStage::new(CoreStage::PostUpdate)),
                 Box::new(SimpleSystemStage::new(CoreStage::Last)),
             ],
-            has_started: false,
+            startup_resources: default(),
             startup_systems: default(),
             single_success_systems: Vec::new(),
         }
     }
 
+    /// Finish building and convert to [`SystemStages`]
+    pub fn finish(self) -> SystemStages {
+        SystemStages {
+            stages: self.stages,
+            startup_systems: self.startup_systems,
+            startup_resources: self.startup_resources,
+            single_success_systems: self.single_success_systems,
+        }
+    }
+
+    /// Create [`SystemStagesBuilder`] by taking existing [`SystemStages`].
+    pub fn from_stages(stages: SystemStages) -> Self {
+        Self {
+            stages: stages.stages,
+            startup_systems: stages.startup_systems,
+            startup_resources: stages.startup_resources,
+            single_success_systems: stages.single_success_systems,
+        }
+    }
+
     /// Add a system that will run only once, before all of the other non-startup systems.
+    /// If wish to reset session and run again, can modify [`SessionStarted`] resource in world.
     pub fn add_startup_system<Args, S>(&mut self, system: S) -> &mut Self
     where
         S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
@@ -171,24 +146,216 @@ impl SystemStages {
         self
     }
 
-    /// Remove all systems from all stages, including startup and single success systems. Resets has_started as well, allowing for startup systems to run once again.
-    pub fn reset_remove_all_systems(&mut self) {
-        // Reset the has_started flag
-        self.has_started = false;
-        self.remove_all_systems();
+    /// Insert a startup resource. On stage / session startup (first step), will be inserted into [`World`].
+    ///
+    /// If already exists, will be overwritten.
+    pub fn insert_startup_resource<T: HasSchema>(&mut self, resource: T) {
+        self.startup_resources.insert_resource(resource);
     }
 
-    /// Remove all systems from all stages, including startup and single success systems. Does not reset has_started.
-    pub fn remove_all_systems(&mut self) {
-        // Clear startup systems
-        self.startup_systems.clear();
+    /// Init startup resource with default, and return mutable ref for modification.
+    /// If already exists, returns mutable ref to existing resource.
+    pub fn init_startup_resource<T: HasSchema + Default>(&mut self) -> RefMut<T> {
+        self.startup_resources.init_resource::<T>()
+    }
 
-        // Clear single success systems
-        self.single_success_systems.clear();
+    /// Get mutable reference to startup resource if found.
+    #[track_caller]
+    pub fn startup_resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
+        self.startup_resources.resource_mut()
+    }
+}
 
-        // Clear systems from each stage
+/// An ordered collection of [`SystemStage`]s.
+pub struct SystemStages {
+    /// The stages in the collection, in the order that they will be run.
+    stages: Vec<Box<dyn SystemStage>>,
+
+    /// The systems that should run at startup.
+    /// They will be executed next step based on if [`SessionStarted`] resource in world says session has not started, or if resource does not exist.
+    startup_systems: Vec<StaticSystem<(), ()>>,
+
+    /// Resources installed during session plugin installs. Copied to world as first step on startup of stages' execution.
+    startup_resources: UntypedResourceSet,
+
+    /// Systems that are continously run until they succeed(return Some). These run before all stages. Uses Option to allow for easy usage of `?`.
+    single_success_systems: Vec<StaticSystem<(), Option<()>>>,
+}
+
+impl std::fmt::Debug for SystemStages {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SystemStages")
+            // TODO: Add list of stages to the debug render for `SystemStages`.
+            // We can at least list the names of each stage for `SystemStages` debug
+            // implementation.
+            .finish()
+    }
+}
+
+impl Default for SystemStages {
+    fn default() -> Self {
+        SystemStagesBuilder::default().finish()
+    }
+}
+
+impl SystemStages {
+    /// Create builder for construction of [`SystemStages`].
+    pub fn builder() -> SystemStagesBuilder {
+        SystemStagesBuilder::default()
+    }
+
+    /// Execute the systems on the given `world`.
+    pub fn run(&mut self, world: &mut World) {
+        // If we haven't run startup systems and setup resources yet, do so
+        self.handle_startup(world);
+
+        // Run single success systems
+        for (index, system) in self.single_success_systems.iter_mut().enumerate() {
+            let should_run = !Self::has_single_success_system_succeeded(index, world);
+
+            if should_run && system.run(world, ()).is_some() {
+                Self::mark_single_success_system_succeeded(index, world);
+            }
+        }
+
+        // Run each stage
         for stage in &mut self.stages {
-            stage.remove_all_systems();
+            // Set the current stage resource
+            world.insert_resource(CurrentSystemStage(stage.id()));
+
+            // Run the stage
+            stage.run(world);
+        }
+
+        // Cleanup killed entities
+        world.maintain();
+
+        // Remove the current system stage resource
+        world.resources.remove::<CurrentSystemStage>();
+    }
+
+    /// If [`SessionStarted`] resource indicates have not yet started,
+    /// perform startup tasks (insert startup resources, run startup systems).
+    ///
+    /// For advanced use cases in which want to only insert startup resources, or run startup systems and split this
+    /// behavior, see [`SystemStages::handle_startup_systems`] and `[SystemStages::handle_startup_resources`].
+    ///
+    ///
+    /// While this is used internally by [`SystemStages::run`], this is also used
+    /// for resetting world. This allows world to immediately startup and re-initialize after reset.
+    ///
+    /// # Panics
+    ///
+    /// May panic if resources are borrowed, should not borrow resources when calling.
+    pub fn handle_startup(&mut self, world: &mut World) {
+        self.handle_startup_resources(world);
+        self.handle_startup_systems(world);
+    }
+
+    /// If [`SessionStarted`] resource indicates startup resources have not yet been inserted, will do so and update `SessionStarted`.
+    ///
+    /// This function contains only half of stage's startup behavior, see [`SystemStages::handle_startup`] if not intending to split
+    /// resource insertion from startup systems (Splitting these is more for advanced special cases).
+    ///
+    /// # Panics
+    ///
+    /// May panic if resources are borrowed, should not borrow resources when calling.
+    pub fn handle_startup_resources(&mut self, world: &mut World) {
+        let (mut resources_inserted, systems_run) = match world.get_resource_mut::<SessionStarted>()
+        {
+            Some(session_started) => (
+                session_started.startup_resources_inserted,
+                session_started.startup_systems_executed,
+            ),
+            None => (false, false),
+        };
+
+        if !resources_inserted {
+            self.insert_startup_resources(world);
+            resources_inserted = true;
+
+            world.insert_resource(SessionStarted {
+                startup_systems_executed: systems_run,
+                startup_resources_inserted: resources_inserted,
+            });
+        }
+    }
+
+    /// If [`SessionStarted`] resource indicates startup systems have not yet been executed, will do so and update `SessionStarted`.
+    ///
+    /// This function contains only half of stage's startup behavior, see [`SystemStages::handle_startup`] if not intending to split
+    /// startup system execution from startup resource insertion (Splitting these is more for advanced special cases).
+    ///
+    /// # Panics
+    ///
+    /// May panic if resources are borrowed, should not borrow resources when calling.
+    pub fn handle_startup_systems(&mut self, world: &mut World) {
+        let (resources_inserted, mut systems_run) = match world.get_resource_mut::<SessionStarted>()
+        {
+            Some(session_started) => (
+                session_started.startup_resources_inserted,
+                session_started.startup_systems_executed,
+            ),
+            None => (false, false),
+        };
+
+        if !systems_run {
+            // Set the current stage resource
+            world.insert_resource(CurrentSystemStage(Ulid(0)));
+
+            // For each startup system
+            for system in &mut self.startup_systems {
+                // Run the system
+                system.run(world, ());
+            }
+            systems_run = true;
+
+            world.resources.remove::<CurrentSystemStage>();
+            world.insert_resource(SessionStarted {
+                startup_systems_executed: systems_run,
+                startup_resources_inserted: resources_inserted,
+            });
+        }
+    }
+
+    /// Check if single success system is marked as succeeded in [`SingleSuccessSystems`] [`Resource`].
+    fn has_single_success_system_succeeded(system_index: usize, world: &World) -> bool {
+        if let Some(system_success) = world.get_resource::<SingleSuccessSystems>() {
+            return system_success.has_system_succeeded(system_index);
+        }
+
+        false
+    }
+
+    /// Mark a single success system as succeeded in [`SingleSuccessSystems`] [`Resource`].
+    fn mark_single_success_system_succeeded(system_index: usize, world: &mut World) {
+        if let Some(mut system_succes) = world.get_resource_mut::<SingleSuccessSystems>() {
+            system_succes.set_system_completed(system_index);
+            return;
+        }
+
+        // Resource does not exist - must initialize it
+        world
+            .init_resource::<SingleSuccessSystems>()
+            .set_system_completed(system_index);
+    }
+
+    /// Insert the startup resources that [`SystemStages`] and session were built with into [`World`].
+    ///
+    /// This will update [`SessionStarted`] resource to flag that startup resources are inserted.
+    fn insert_startup_resources(&self, world: &mut World) {
+        for resource in self.startup_resources.resources().iter() {
+            // Deep copy startup resource and insert into world.
+            let resource_copy = resource.clone_data().unwrap();
+            let resource_cell = world.resources.untyped().get_cell(resource.schema());
+            let prev_val = resource_cell.insert(resource_copy).unwrap();
+
+            // Warn on already existing resource
+            if prev_val.is_some() {
+                let schema_name = resource.schema().full_name;
+                tracing::warn!("SystemStages` attempted to inserted resource {schema_name} on startup that already exists in world - startup resource not inserted.
+                    When building new session, startup resources should be initialized on `SessionBuilder`.");
+            }
         }
     }
 }
@@ -356,5 +523,43 @@ impl<'a> SystemParam for Commands<'a> {
 
     fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
         Commands(state.borrow_mut().unwrap())
+    }
+}
+
+/// Resource tracking if Session has started (startup systems executed and resources inserted).
+/// If field is set to false, that operation needs to be handled on next stage run.
+/// If resource is not present, assumed to have not started (and will be initialized upon next stage execution).
+#[derive(Copy, Clone, HasSchema, Default)]
+pub struct SessionStarted {
+    /// Have startup systems executed?
+    pub startup_systems_executed: bool,
+
+    /// Have startup resources beeen inserted into [`World`]?
+    pub startup_resources_inserted: bool,
+}
+
+/// Resource tracking which of single success systems in `Session`'s [`SystemStages`] have completed.
+/// Success is tracked to
+#[derive(HasSchema, Clone, Default)]
+pub struct SingleSuccessSystems {
+    /// Set of indices of [`SystemStages`]'s single success systems that have succeeded.
+    pub systems_succeeded: HashSet<usize>,
+}
+
+impl SingleSuccessSystems {
+    /// Reset single success systems completion status. so they run again until success.
+    #[allow(dead_code)]
+    pub fn reset(&mut self) {
+        self.systems_succeeded.clear();
+    }
+
+    /// Check if system has completed
+    pub fn has_system_succeeded(&self, index: usize) -> bool {
+        self.systems_succeeded.contains(&index)
+    }
+
+    /// Mark system as completed.
+    pub fn set_system_completed(&mut self, index: usize) {
+        self.systems_succeeded.insert(index);
     }
 }

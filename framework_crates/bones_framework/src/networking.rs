@@ -871,20 +871,7 @@ where
                                     cell.save(frame, Some(world.clone()), None)
                                 }
                                 ggrs::GgrsRequest::LoadGameState { cell, .. } => {
-                                    // Swap out sessions to preserve them after world save.
-                                    // Sessions clone makes empty copy, so saved snapshots do not include sessions.
-                                    // Sessions are borrowed from Game for execution of this session,
-                                    // they are not like other resources and should not be preserved.
-                                    let mut sessions = Sessions::default();
-                                    std::mem::swap(
-                                        &mut sessions,
-                                        &mut world.resource_mut::<Sessions>(),
-                                    );
-                                    *world = cell.load().unwrap_or_default();
-                                    std::mem::swap(
-                                        &mut sessions,
-                                        &mut world.resource_mut::<Sessions>(),
-                                    );
+                                    world.load_snapshot(cell.load().unwrap_or_default());
                                 }
                                 ggrs::GgrsRequest::AdvanceFrame {
                                     inputs: network_inputs,
@@ -962,6 +949,22 @@ where
 
                                     // Run game session stages, advancing simulation
                                     stages.run(world);
+
+                                    // Handle any triggered resets of world + preserve runner's managed resources like RngGenerator.
+                                    if world.reset_triggered() {
+                                        let rng = world
+                                            .get_resource::<RngGenerator>()
+                                            .map(|r| (*r).clone());
+                                        if let Some(rng) = rng {
+                                            if let Some(mut reset) =
+                                                world.get_resource_mut::<ResetWorld>()
+                                            {
+                                                reset.insert_reset_resource(rng);
+                                            }
+                                        }
+
+                                        world.handle_world_reset(stages);
+                                    }
                                 }
                             }
                         }
