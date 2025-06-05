@@ -179,7 +179,7 @@ impl World {
     }
 
     /// Borrow a resource from the world, if it exists.
-    pub fn get_resource_mut<T: HasSchema>(&mut self) -> Option<RefMut<T>> {
+    pub fn get_resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
         self.resources.get_mut()
     }
 
