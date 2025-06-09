@@ -11,12 +11,13 @@ pub fn startup_system_reset() {
     game.init_shared_resource::<Counter>();
 
     // Session startup increments counter by 1
-    game.sessions.create_with("game", |builder| {
-        builder.add_startup_system(|mut counter: ResMut<Counter>| {
-            // Increment to 1
-            counter.0 += 1;
+    game.sessions
+        .create_with("game", |builder: &mut SessionBuilder| {
+            builder.add_startup_system(|mut counter: ResMut<Counter>| {
+                // Increment to 1
+                counter.0 += 1;
+            });
         });
-    });
 
     // Step twice, startup system should only run once
     game.step(Instant::now());
