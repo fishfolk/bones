@@ -11,12 +11,13 @@ pub fn startup_system_reset() {
     game.init_shared_resource::<Counter>();
 
     // Session startup increments counter by 1
-    game.sessions.create_with("game", |builder| {
-        builder.add_startup_system(|mut counter: ResMut<Counter>| {
-            // Increment to 1
-            counter.0 += 1;
+    game.sessions
+        .create_with("game", |builder: &mut SessionBuilder| {
+            builder.add_startup_system(|mut counter: ResMut<Counter>| {
+                // Increment to 1
+                counter.0 += 1;
+            });
         });
-    });
 
     // Step twice, startup system should only run once
     game.step(Instant::now());
@@ -52,23 +53,24 @@ pub fn single_success_system_reset() {
     let mut game = Game::new();
 
     // Session startup increments counter by 1
-    game.sessions.create_with("game", |builder| {
-        builder.init_resource::<Counter>();
-        {
-            let res = builder.resource_mut::<Counter>().unwrap();
-            assert_eq!(res.0, 0);
-        }
-        // system
-        builder.add_single_success_system(|mut counter: ResMut<Counter>| -> Option<()> {
-            // Increment until 2
-            counter.0 += 1;
-            if counter.0 >= 2 {
-                return Some(());
+    game.sessions
+        .create_with("game", |builder: &mut SessionBuilder| {
+            builder.init_resource::<Counter>();
+            {
+                let res = builder.resource_mut::<Counter>().unwrap();
+                assert_eq!(res.0, 0);
             }
+            // system
+            builder.add_single_success_system(|mut counter: ResMut<Counter>| -> Option<()> {
+                // Increment until 2
+                counter.0 += 1;
+                if counter.0 >= 2 {
+                    return Some(());
+                }
 
-            None
+                None
+            });
         });
-    });
 
     // Step three times, single success should've incremented counter to 2 and completed.
     game.step(Instant::now());
@@ -126,9 +128,10 @@ pub fn reset_world_resource_override() {
     let mut game = Game::new();
 
     // insert counter resource
-    game.sessions.create_with("game", |builder| {
-        builder.init_resource::<Counter>();
-    });
+    game.sessions
+        .create_with("game", |builder: &mut SessionBuilder| {
+            builder.init_resource::<Counter>();
+        });
 
     game.step(Instant::now());
     {
@@ -165,9 +168,10 @@ pub fn reset_world_emtpy_resource() {
     let mut game = Game::new();
 
     // insert counter resource
-    game.sessions.create_with("game", |builder| {
-        builder.init_resource::<Counter>();
-    });
+    game.sessions
+        .create_with("game", |builder: &mut SessionBuilder| {
+            builder.init_resource::<Counter>();
+        });
 
     game.step(Instant::now());
     {
