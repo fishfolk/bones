@@ -830,11 +830,13 @@ impl AssetServer {
     ///
     /// # Panics
     ///
-    /// Panics if the asset is not loaded or if the asset asset with the given handle doesn't have a
+    /// Panics if the asset is not loaded or if the asset with the given handle doesn't have a
     /// schema matching `T`.
     #[track_caller]
     pub fn get<T: HasSchema>(&self, handle: Handle<T>) -> MappedMapRef<Cid, LoadedAsset, T> {
-        self.try_get(handle).unwrap().unwrap()
+        self.try_get(handle)
+            .expect("asset not found (handle has no cid)")
+            .expect("asset does not have matching schema for given type")
     }
 
     /// Borrow a loaded asset.
