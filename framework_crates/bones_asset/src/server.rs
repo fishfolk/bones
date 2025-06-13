@@ -511,27 +511,30 @@ impl AssetServer {
                         dependencies: partial.dependencies,
                         data: partial.data,
                     };
-
                     // If there is already loaded asset data for this path
-                    if let Some((_, cid)) = server.store.asset_ids.remove(&handle) {
-                        // Remove the old asset data
-                        let (_, previous_asset) = server.store.assets.remove(&cid).unwrap();
+                    if let Some(cid) = server.store.asset_ids.insert(handle, partial.cid) {
+                        // If no other handles use this content
+                        if server.store.asset_ids.iter().all(|map| *map.value() != cid) {
+                            // Remove the old asset data
+                            tracing::debug!(?cid, "Removing asset content");
+                            let (_, previous_asset) = server.store.assets.remove(&cid).unwrap();
 
-                        // Remove the previous asset's reverse dependencies.
-                        //
-                        // aka. now that we are removing the old asset, none of the assets that the
-                        // old asset dependended on should have a reverse dependency record saying that
-                        // this asset depends on it.
-                        //
-                        // In other words, this asset is removed and doesn't depend on anything else
-                        // anymore.
-                        for dep in previous_asset.dependencies.iter() {
-                            server
-                                .store
-                                .reverse_dependencies
-                                .get_mut(dep)
-                                .unwrap()
-                                .remove(&handle);
+                            // Remove the previous asset's reverse dependencies.
+                            //
+                            // aka. now that we are removing the old asset, none of the assets that the
+                            // old asset dependended on should have a reverse dependency record saying that
+                            // this asset depends on it.
+                            //
+                            // In other words, this asset is removed and doesn't depend on anything else
+                            // anymore.
+                            for dep in previous_asset.dependencies.iter() {
+                                server
+                                    .store
+                                    .reverse_dependencies
+                                    .get_mut(dep)
+                                    .unwrap()
+                                    .remove(&handle);
+                            }
                         }
 
                         // If there are any assets that depended on this asset, they now need to be re-loaded.
@@ -555,7 +558,6 @@ impl AssetServer {
                             .insert(handle);
                     }
 
-                    server.store.asset_ids.insert(handle, partial.cid);
                     server.store.assets.insert(partial.cid, loaded_asset);
                     server.load_progress.inc_loaded();
 
