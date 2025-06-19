@@ -1494,6 +1494,10 @@
 <a href="#1494" id="1494">1494</a>
 <a href="#1495" id="1495">1495</a>
 <a href="#1496" id="1496">1496</a>
+<a href="#1497" id="1497">1497</a>
+<a href="#1498" id="1498">1498</a>
+<a href="#1499" id="1499">1499</a>
+<a href="#1500" id="1500">1500</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -2007,27 +2011,30 @@
                         dependencies: partial.dependencies,
                         data: partial.data,
                     };
-
                     <span class="comment">// If there is already loaded asset data for this path
-                    </span><span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, cid)) = server.store.asset_ids.remove(<span class="kw-2">&amp;</span>handle) {
-                        <span class="comment">// Remove the old asset data
-                        </span><span class="kw">let </span>(<span class="kw">_</span>, previous_asset) = server.store.assets.remove(<span class="kw-2">&amp;</span>cid).unwrap();
+                    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(cid) = server.store.asset_ids.insert(handle, partial.cid) {
+                        <span class="comment">// If no other handles use this content
+                        </span><span class="kw">if </span>server.store.asset_ids.iter().all(|map| <span class="kw-2">*</span>map.value() != cid) {
+                            <span class="comment">// Remove the old asset data
+                            </span><span class="macro">tracing::debug!</span>(<span class="question-mark">?</span>cid, <span class="string">"Removing asset content"</span>);
+                            <span class="kw">let </span>(<span class="kw">_</span>, previous_asset) = server.store.assets.remove(<span class="kw-2">&amp;</span>cid).unwrap();
 
-                        <span class="comment">// Remove the previous asset's reverse dependencies.
-                        //
-                        // aka. now that we are removing the old asset, none of the assets that the
-                        // old asset dependended on should have a reverse dependency record saying that
-                        // this asset depends on it.
-                        //
-                        // In other words, this asset is removed and doesn't depend on anything else
-                        // anymore.
-                        </span><span class="kw">for </span>dep <span class="kw">in </span>previous_asset.dependencies.iter() {
-                            server
-                                .store
-                                .reverse_dependencies
-                                .get_mut(dep)
-                                .unwrap()
-                                .remove(<span class="kw-2">&amp;</span>handle);
+                            <span class="comment">// Remove the previous asset's reverse dependencies.
+                            //
+                            // aka. now that we are removing the old asset, none of the assets that the
+                            // old asset dependended on should have a reverse dependency record saying that
+                            // this asset depends on it.
+                            //
+                            // In other words, this asset is removed and doesn't depend on anything else
+                            // anymore.
+                            </span><span class="kw">for </span>dep <span class="kw">in </span>previous_asset.dependencies.iter() {
+                                server
+                                    .store
+                                    .reverse_dependencies
+                                    .get_mut(dep)
+                                    .unwrap()
+                                    .remove(<span class="kw-2">&amp;</span>handle);
+                            }
                         }
 
                         <span class="comment">// If there are any assets that depended on this asset, they now need to be re-loaded.
@@ -2051,7 +2058,6 @@
                             .insert(handle);
                     }
 
-                    server.store.asset_ids.insert(handle, partial.cid);
                     server.store.assets.insert(partial.cid, loaded_asset);
                     server.load_progress.inc_loaded();
 
@@ -2326,11 +2332,13 @@
     ///
     /// # Panics
     ///
-    /// Panics if the asset is not loaded or if the asset asset with the given handle doesn't have a
+    /// Panics if the asset is not loaded or if the asset with the given handle doesn't have a
     /// schema matching `T`.
     </span><span class="attr">#[track_caller]
     </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, handle: Handle&lt;T&gt;) -&gt; MappedMapRef&lt;Cid, LoadedAsset, T&gt; {
-        <span class="self">self</span>.try_get(handle).unwrap().unwrap()
+        <span class="self">self</span>.try_get(handle)
+            .expect(<span class="string">"asset not found (handle has no cid)"</span>)
+            .expect(<span class="string">"asset does not have matching schema for given type"</span>)
     }
 
     <span class="doccomment">/// Borrow a loaded asset.
