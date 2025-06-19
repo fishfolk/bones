@@ -116,7 +116,7 @@ pub fn sync_bones_window(mut game: ResMut<BonesGame>, mut window_query: Query<&m
             game.shared_resource_cell().unwrap()
         }
     };
-    let bones_window = bones_window.borrow().unwrap();
+    let mut bones_window = bones_window.borrow_mut().unwrap();
 
     let is_fullscreen = matches!(&window.mode, WindowMode::BorderlessFullscreen);
     if is_fullscreen != bones_window.fullscreen {
@@ -126,6 +126,7 @@ pub fn sync_bones_window(mut game: ResMut<BonesGame>, mut window_query: Query<&m
             WindowMode::Windowed
         };
     }
+    bones_window.size = vec2(window.width(), window.height());
 }
 
 /// Sync bones cameras with Bevy
