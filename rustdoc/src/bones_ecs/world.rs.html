@@ -584,7 +584,7 @@
     }
 
     <span class="doccomment">/// Borrow a resource from the world, if it exists.
-    </span><span class="kw">pub fn </span>get_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>get_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
         <span class="self">self</span>.resources.get_mut()
     }
 
