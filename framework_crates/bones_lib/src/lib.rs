@@ -792,13 +792,13 @@ impl Sessions {
     pub fn create_with<N: TryInto<Ustr>>(
         &mut self,
         name: N,
-        build_function: impl FnOnce(&mut SessionBuilder),
+        plugin: impl SessionPlugin,
     ) -> &mut Session
     where
         <N as TryInto<Ustr>>::Error: Debug,
     {
         let mut builder = SessionBuilder::new(name);
-        build_function(&mut builder);
+        builder.install_plugin(plugin);
         builder.finish_and_add(self)
     }
 
