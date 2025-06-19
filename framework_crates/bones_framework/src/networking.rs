@@ -198,6 +198,7 @@ pub enum SocketTarget {
 /// Resource updated each frame exposing syncing/networking information in the current session.
 #[derive(HasSchema, Clone)]
 #[schema(no_default)]
+#[allow(clippy::large_enum_variant)] // TODO: consider boxing this to preven the enum variant size mismatch.
 pub enum SyncingInfo {
     /// Holds data for an online session
     Online {

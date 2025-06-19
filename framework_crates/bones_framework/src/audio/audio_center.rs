@@ -308,9 +308,10 @@ pub fn _process_audio_events(
                 force_restart,
             } => {
                 let should_play = force_restart
-                    || audio_center.music.as_ref().map_or(true, |current_music| {
-                        sound_source != current_music.bones_handle
-                    });
+                    || audio_center
+                        .music
+                        .as_ref()
+                        .is_none_or(|current_music| sound_source != current_music.bones_handle);
 
                 if should_play {
                     // Stop the current music

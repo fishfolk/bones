@@ -69,7 +69,7 @@ impl WorldExt for World {
     }
 
     fn reset_triggered(&self) -> bool {
-        self.get_resource::<ResetWorld>().map_or(false, |r| r.reset)
+        self.get_resource::<ResetWorld>().is_some_and(|r| r.reset)
     }
 
     fn reset_internals(&mut self, stages: &mut SystemStages) {
