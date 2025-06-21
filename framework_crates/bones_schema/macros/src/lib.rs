@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
-use proc_macro2::{Punct, Spacing, TokenStream as TokenStream2, TokenTree as TokenTree2};
-use quote::{format_ident, quote, quote_spanned, spanned::Spanned};
-use venial::{GenericBound, StructFields};
+use proc_macro2::{Ident, Punct, Spacing, TokenStream as TokenStream2, TokenTree as TokenTree2};
+use quote::{format_ident, quote, quote_spanned, spanned::Spanned, TokenStreamExt};
+use venial::StructFields;
 
 /// Helper macro to bail out of the macro with a compile error.
 macro_rules! throw {
@@ -282,19 +282,18 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
 
                     let register_schema = if input.generic_params().is_some() {
                         quote! {
-                            static S: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
                             let schema = {
-                                S.get_or_init(Default::default)
+                                #schema_mod::registry::GENERIC_SCHEMA_CACHE
                                     .read()
-                                    .get(&TypeId::of::<Self>())
+                                    .get(&(TypeId::of::<Self>(), #variant_schema_name))
                                     .copied()
                             };
                             schema.unwrap_or_else(|| {
                                 let schema = compute_schema();
 
-                                S.get_or_init(Default::default)
+                                #schema_mod::registry::GENERIC_SCHEMA_CACHE
                                     .write()
-                                    .insert(TypeId::of::<Self>(), schema);
+                                    .insert((TypeId::of::<Self>(), #variant_schema_name), schema);
 
                                 schema
                             })
@@ -350,6 +349,14 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         }
     })();
 
+    if match &input {
+        venial::Declaration::Struct(s) => s.where_clause.is_some(),
+        venial::Declaration::Enum(e) => e.where_clause.is_some(),
+        _ => false,
+    } {
+        throw!(input, "Where clauses are not supported.");
+    }
+
     let schema_register = quote! {
         #schema_mod::registry::SCHEMA_REGISTRY.register(#schema_mod::SchemaData {
             name: stringify!(#name).into(),
@@ -366,38 +373,47 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     };
 
     if let Some(generic_params) = input.generic_params() {
-        let mut sync_send_generic_params = generic_params.clone();
-        for (param, _) in sync_send_generic_params.params.iter_mut() {
-            let clone_bound = if !no_clone { quote!(+ Clone) } else { quote!() };
-            param.bound = Some(GenericBound {
-                tk_colon: Punct::new(':', Spacing::Joint),
-                tokens: quote!(HasSchema #clone_bound ).into_iter().collect(),
-            });
+        let mut impl_bounds = TokenStream2::new();
+        for (param, comma) in generic_params.params.iter() {
+            let name = &param.name;
+            impl_bounds.extend(quote!(#name : HasSchema));
+            if !no_clone {
+                impl_bounds.append(Punct::new('+', Spacing::Alone));
+                impl_bounds.append(Ident::new("Clone", input.__span()));
+            }
+            if let Some(bound) = &param.bound {
+                impl_bounds.append(Punct::new('+', Spacing::Alone));
+                impl_bounds.extend(bound.tokens.iter().cloned());
+            }
+            impl_bounds.append(comma.clone());
         }
+
+        let struct_params = generic_params
+            .params
+            .items()
+            .map(|param| &param.name)
+            .map(|name| quote!(#name,))
+            .collect::<TokenStream2>();
+
         quote! {
-            unsafe impl #sync_send_generic_params #schema_mod::HasSchema for #name #generic_params {
+            unsafe impl<#impl_bounds> #schema_mod::HasSchema for #name<#struct_params> {
                 fn schema() -> &'static #schema_mod::Schema {
-                    use ::std::sync::{OnceLock};
                     use ::std::any::TypeId;
-                    use bones_utils::HashMap;
-                    use parking_lot::RwLock;
-                    static S: OnceLock<RwLock<HashMap<TypeId, &'static Schema>>> = OnceLock::new();
                     let schema = {
-                        S.get_or_init(Default::default)
+                        #schema_mod::registry::GENERIC_SCHEMA_CACHE
                             .read()
-                            .get(&TypeId::of::<Self>())
+                            .get(&(TypeId::of::<Self>(), stringify!(#name)))
                             .copied()
                     };
                     schema.unwrap_or_else(|| {
                         let schema = #schema_register;
 
-                        S.get_or_init(Default::default)
+                        #schema_mod::registry::GENERIC_SCHEMA_CACHE
                             .write()
-                            .insert(TypeId::of::<Self>(), schema);
+                            .insert((TypeId::of::<Self>(), stringify!(name)), schema);
 
                         schema
                     })
-
                 }
             }
         }
