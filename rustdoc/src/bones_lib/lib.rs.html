@@ -1674,13 +1674,13 @@
     </span><span class="kw">pub fn </span>create_with&lt;N: TryInto&lt;Ustr&gt;&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         name: N,
-        build_function: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;mut </span>SessionBuilder),
+        plugin: <span class="kw">impl </span>SessionPlugin,
     ) -&gt; <span class="kw-2">&amp;mut </span>Session
     <span class="kw">where
         </span>&lt;N <span class="kw">as </span>TryInto&lt;Ustr&gt;&gt;::Error: Debug,
     {
         <span class="kw">let </span><span class="kw-2">mut </span>builder = SessionBuilder::new(name);
-        build_function(<span class="kw-2">&amp;mut </span>builder);
+        builder.install_plugin(plugin);
         builder.finish_and_add(<span class="self">self</span>)
     }
 

@@ -61,6 +61,7 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>bones_bevy_renderer::BonesBevyRenderer;
@@ -85,9 +86,10 @@
         .register_default_assets();
     GameMeta::register_schema();
 
-    game.sessions.create_with(<span class="string">"launch"</span>, |builder| {
-        builder.add_startup_system(launch_game_session);
-    });
+    game.sessions
+        .create_with(<span class="string">"launch"</span>, |builder: <span class="kw-2">&amp;mut </span>SessionBuilder| {
+            builder.add_startup_system(launch_game_session);
+        });
 
     <span class="kw">let </span><span class="kw-2">mut </span>renderer = BonesBevyRenderer::new(game);
     renderer.app_namespace = (
@@ -105,7 +107,7 @@
 ) {
     session_ops.delete = <span class="bool-val">true</span>;
     <span class="comment">// Build game session and add to `Sessions`
-    </span>sessions.create_with(<span class="string">"game"</span>, |builder| {
+    </span>sessions.create_with(<span class="string">"game"</span>, |builder: <span class="kw-2">&amp;mut </span>SessionBuilder| {
         builder
             .install_plugin(DefaultSessionPlugin)
             <span class="comment">// Install the plugin that will load our lua plugins and run them in the game session

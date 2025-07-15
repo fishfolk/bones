@@ -85,6 +85,7 @@
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bones_bevy_renderer::BonesBevyRenderer;
 <span class="kw">use </span>bones_framework::prelude::<span class="kw-2">*</span>;
 
@@ -133,13 +134,14 @@
 
     <span class="comment">// Create a new session for the game menu. Each session is it's own bones world with it's own
     // plugins, systems, and entities.
-    </span>game.sessions.create_with(<span class="string">"menu"</span>, |builder| {
-        <span class="comment">// Install the default bones_framework plugin for this session
-        </span>builder
-            .install_plugin(DefaultSessionPlugin)
-            <span class="comment">// Add our menu system to the update stage
-            </span>.add_system_to_stage(Update, menu_system);
-    });
+    </span>game.sessions
+        .create_with(<span class="string">"menu"</span>, |builder: <span class="kw-2">&amp;mut </span>SessionBuilder| {
+            <span class="comment">// Install the default bones_framework plugin for this session
+            </span>builder
+                .install_plugin(DefaultSessionPlugin)
+                <span class="comment">// Add our menu system to the update stage
+                </span>.add_system_to_stage(Update, menu_system);
+        });
 
     BonesBevyRenderer::new(game).app().run();
 }
