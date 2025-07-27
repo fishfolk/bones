@@ -49,6 +49,16 @@ impl Transform {
         Self { scale, ..default() }
     }
 
+    pub fn from_matrix(matrix: Mat4) -> Self {
+        let (scale, rotation, translation) = matrix.to_scale_rotation_translation();
+
+        Self {
+            translation,
+            rotation,
+            scale,
+        }
+    }
+
     /// Converts the transform to a 4x4 matrix for rendering
     pub fn to_matrix(&self, translation_scale: Vec3) -> Mat4 {
         let angle = self.rotation.z.rem_euclid(2.0 * PI);
@@ -56,6 +66,11 @@ impl Transform {
 
         let scale_rotation = rotation * Mat4::from_scale(self.scale);
         Mat4::from_translation(self.translation * translation_scale) * scale_rotation
+    }
+
+    /// Converts to a matrix without translation scale
+    pub fn to_matrix_none(&self) -> Mat4 {
+        Mat4::from_scale_rotation_translation(self.scale, self.rotation, self.translation)
     }
 
     /// Converts the transform to a 4x4 matrix for rendering,

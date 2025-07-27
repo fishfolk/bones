@@ -25,6 +25,9 @@ crossbeam-channel = "0.5.14"
 bytemuck          = "1.22"
 lyon              = "1.0.1"
 
+guillotiere       = "0.6.2"
+anyhow            = "1.0.98"
+
 egui              = "0.30"
 egui-wgpu         = "0.30"
 egui-winit        = "0.30"
