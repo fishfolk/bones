@@ -284,9 +284,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.87"
+version = "1.0.98"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10f00e1f6e58a40e807377c75c6a7f97bf9044fab57816f2414e6f5f4499d7b8"
+checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 
 [[package]]
 name = "append-only-vec"
@@ -1686,6 +1686,7 @@ dependencies = [
 name = "bones_wgpu_renderer"
 version = "0.4.0"
 dependencies = [
+ "anyhow",
  "bevy_tasks 0.11.3",
  "bones_framework",
  "bones_schema",
@@ -1696,6 +1697,7 @@ dependencies = [
  "egui-wgpu",
  "egui-winit",
  "env_logger",
+ "guillotiere",
  "image 0.24.9",
  "log",
  "lyon",

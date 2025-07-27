@@ -1,9 +1,9 @@
+use bones_framework::glam::Vec2;
 use lyon::math::Point;
 use lyon::path::Path;
 use lyon::tessellation::{
-    StrokeOptions, StrokeTessellator, BuffersBuilder, FillVertex, StrokeVertex, VertexBuffers,
+    BuffersBuilder, StrokeOptions, StrokeTessellator, StrokeVertex, VertexBuffers,
 };
-use bones_framework::glam::Vec2;
 
 use crate::bones::Path2d;
 

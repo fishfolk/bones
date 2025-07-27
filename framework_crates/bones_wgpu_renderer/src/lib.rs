@@ -1,14 +1,12 @@
 use bevy_tasks::{IoTaskPool, TaskPool};
 use convert::IntoBones;
-use crossbeam_channel::{unbounded, Receiver, Sender};
-use image::{DynamicImage, RgbaImage};
+use image::RgbaImage;
 use pollster::FutureExt;
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
     time::Instant,
 };
-use texture::Texture;
 use wgpu::util::DeviceExt;
 use winit::{
     application::ApplicationHandler,
@@ -21,18 +19,24 @@ use bones_framework::{
     glam::*,
     input::gilrs::process_gamepad_events,
     prelude::{self as bones, BitSet, ComponentIterBitset},
+    render::camera,
 };
 
 use egui_wgpu::ScreenDescriptor;
 
+mod atlas_pool;
 mod convert;
+mod dynamic_storage;
 mod line;
 mod sprite;
 mod storage;
 mod texture;
+mod texture_file;
 mod ui;
 
+use dynamic_storage::DynamicBuffer;
 use sprite::*;
+use texture::Texture;
 use ui::{default_load_progress, EguiRenderer};
 
 /// The prelude
@@ -63,21 +67,6 @@ impl WgpuQueue {
         self.0.as_ref().unwrap()
     }
 }
-
-// Texture sender to the wgpu thread
-#[derive(bones_schema::HasSchema, Clone)]
-#[repr(C)]
-#[schema(opaque)]
-#[schema(no_default)]
-struct TextureSender(Sender<(Arc<Texture>, bones::Entity, Arc<wgpu::Buffer>, bones::Ustr)>);
-
-type TextureReceiver = Receiver<(Arc<Texture>, bones::Entity, Arc<wgpu::Buffer>, bones::Ustr)>;
-
-// Indicates that we already loaded the sprite texture
-// and sent it to the wgpu thread
-#[derive(bones_schema::HasSchema, Default, Clone)]
-#[repr(C)]
-struct TextureLoaded;
 
 #[derive(bones_schema::HasSchema, Default, Clone)]
 #[repr(C)]
@@ -127,12 +116,14 @@ impl BonesWgpuRenderer {
     }
 
     pub fn run(mut self) {
-        let (instance, adapter, device, queue, texture_bind_group_layout) = async {
-            let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());
+        //Start wgpu
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());
+        let (adapter, device, queue) = async {
             let adapter = instance
                 .request_adapter(&wgpu::RequestAdapterOptions::default())
                 .await
                 .unwrap();
+
             let (device, queue) = adapter
                 .request_device(
                     &wgpu::DeviceDescriptor::default(),
@@ -140,48 +131,86 @@ impl BonesWgpuRenderer {
                 )
                 .await
                 .unwrap();
-            let texture_bind_group_layout =
-                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::FRAGMENT,
-                            ty: wgpu::BindingType::Texture {
-                                multisampled: false,
-                                view_dimension: wgpu::TextureViewDimension::D2,
-                                sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::FRAGMENT,
-                            // This should match the filterable field of the textures
-                            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                            count: None,
-                        },
-                    ],
-                    label: Some("texture_bind_group_layout"),
-                });
-            (
-                Arc::new(instance),
-                Arc::new(adapter),
-                Arc::new(device),
-                Arc::new(queue),
-                Arc::new(texture_bind_group_layout),
-            )
+            (Arc::new(adapter), Arc::new(device), Arc::new(queue))
         }
         .block_on();
+
+        // Texture bind group layout (matches @group(0) in WGSL)
+        let texture_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    // This should match the filterable field of the textures
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+            label: Some("texture_bind_group_layout"),
+        });
+
+        // Storage buffer bind group layout (matches @group(1) in WGSL)
+        let storage_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("storage_bind_group_layout"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+
+        let camera_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("camera_bind_group_layout"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(INDICES),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(VERTICES),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
+        let instance = Arc::new(instance);
+        let texture_layout = Arc::new(texture_layout);
+        let storage_layout = Arc::new(storage_layout);
+        let camera_layout = Arc::new(camera_layout);
+        let vertex_buffer = Arc::new(vertex_buffer);
+        let index_buffer = Arc::new(index_buffer);
+
+        //This is used to store dynamically some rendering data, like transform, flip, etc
+        let dynamic_storage =
+            DynamicBuffer::new(&device, storage_layout, 1024, wgpu::BufferUsages::STORAGE);
+        let camera_dynamic_uniform =
+            DynamicBuffer::new(&device, camera_layout, 1024, wgpu::BufferUsages::STORAGE);
 
         //Insert wgpu resources
         self.game
@@ -189,13 +218,11 @@ impl BonesWgpuRenderer {
         self.game
             .insert_shared_resource(WgpuQueue(Some(queue.clone())));
         self.game.insert_shared_resource(PixelArt(self.pixel_art));
-
-        let (sender, receiver) = unbounded();
-        self.game.insert_shared_resource(TextureSender(sender));
-
         self.game
             .insert_shared_resource(LoadingContext(self.custom_load_progress));
+        self.game.insert_shared_resource(Cameras(Vec::new()));
 
+        //Deal with asset server
         IoTaskPool::init(TaskPool::default);
         if let Some(mut asset_server) = self.game.shared_resource_mut::<bones::AssetServer>() {
             asset_server.set_game_version(self.game_version.clone());
@@ -226,6 +253,7 @@ impl BonesWgpuRenderer {
         )));
         storage.load();
         self.game.insert_shared_resource(storage);
+
         self.game
             .insert_shared_resource(bones::EguiTextures::default());
         self.game.insert_shared_resource(bones::ExitBones(false));
@@ -240,13 +268,6 @@ impl BonesWgpuRenderer {
             .init_shared_resource::<bones::MouseWorldPosition>();
 
         //Insert needed systems
-        self.game.systems.add_after_system(load_sprite);
-        self.game.systems.add_after_system(load_atlas_sprite);
-        self.game.systems.add_after_system(load_tile_sprite);
-        self.game.systems.add_before_system(update_atlas_uniforms);
-        self.game.systems.add_before_system(update_sprite_uniforms);
-        self.game.systems.add_before_system(update_tiles_uniforms);
-
         self.game.systems.add_startup_system(load_egui_textures);
         self.game.systems.add_startup_system(asset_load_status);
 
@@ -260,16 +281,31 @@ impl BonesWgpuRenderer {
         // process.
         event_loop.set_control_flow(ControlFlow::Poll);
 
+        let bind_group_clone = texture_layout.clone();
+        let device_clone = device.clone();
+
         let mut app = App {
             state: None,
             instance,
             adapter,
             device,
             queue,
-            texture_bind_group_layout,
-            receiver,
+            texture_layout,
+            storage_layout: dynamic_storage.layout.clone(),
+            dynamic_storage: Some(dynamic_storage),
+            camera_layout: camera_dynamic_uniform.layout.clone(),
+            camera_dynamic_uniform: Some(camera_dynamic_uniform),
             game: self.game,
+            vertex_buffer,
+            index_buffer,
             _now: Instant::now(),
+            atlas_pool: atlas_pool::AtlasPool::new(
+                &device_clone,
+                &bind_group_clone,
+                (4096, 4096),
+                8,
+                self.pixel_art,
+            ),
         };
         event_loop.run_app(&mut app).unwrap();
 
@@ -339,6 +375,7 @@ pub fn update_egui_fonts(ctx: &egui::Context, bones_assets: &bones::AssetServer)
 
     ctx.set_fonts(fonts);
 }
+
 //TODO Handle asset changes
 fn load_egui_textures(game: &mut bones::Game) {
     let asset_server = game.shared_resource::<bones::AssetServer>().unwrap();
@@ -384,12 +421,18 @@ fn load_egui_textures(game: &mut bones::Game) {
 //TODO Implement proper Drop for the app
 struct App {
     state: Option<State>,
+    atlas_pool: atlas_pool::AtlasPool,
     instance: Arc<wgpu::Instance>,
     adapter: Arc<wgpu::Adapter>,
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
-    texture_bind_group_layout: Arc<wgpu::BindGroupLayout>,
-    receiver: TextureReceiver,
+    texture_layout: Arc<wgpu::BindGroupLayout>,
+    storage_layout: Arc<wgpu::BindGroupLayout>,
+    dynamic_storage: Option<DynamicBuffer>,
+    camera_layout: Arc<wgpu::BindGroupLayout>,
+    camera_dynamic_uniform: Option<DynamicBuffer>,
+    vertex_buffer: Arc<wgpu::Buffer>,
+    index_buffer: Arc<wgpu::Buffer>,
     game: bones::Game,
     _now: Instant,
 }
@@ -419,7 +462,23 @@ impl ApplicationHandler for App {
                 self.queue.clone(),
                 &self.instance,
                 &self.adapter,
-                &self.texture_bind_group_layout,
+                self.texture_layout.clone(),
+                self.vertex_buffer.clone(),
+                self.index_buffer.clone(),
+                self.dynamic_storage.take().unwrap_or(DynamicBuffer::new(
+                    &self.device,
+                    self.storage_layout.clone(),
+                    1024,
+                    wgpu::BufferUsages::STORAGE,
+                )),
+                self.camera_dynamic_uniform
+                    .take()
+                    .unwrap_or(DynamicBuffer::new(
+                        &self.device,
+                        self.camera_layout.clone(),
+                        1024,
+                        wgpu::BufferUsages::STORAGE,
+                    )),
             );
 
             setup_egui(&mut self.game, &state.egui_renderer.context().clone());
@@ -438,34 +497,6 @@ impl ApplicationHandler for App {
         let mut wheel_events = Vec::new();
         let mut button_events = Vec::new();
 
-        for (texture, entity, atlas_sprite_buffer, session_name) in self.receiver.try_iter() {
-            let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                layout: &self.texture_bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: atlas_sprite_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::TextureView(&texture.view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: wgpu::BindingResource::Sampler(&texture.sampler),
-                    },
-                ],
-                label: Some("diffuse_bind_group"),
-            });
-
-            if let Some(v) = state.sprites.get_mut(&session_name) {
-                v.push((bind_group, entity));
-            } else {
-                state
-                    .sprites
-                    .insert(session_name.clone(), vec![(bind_group, entity)]);
-            }
-        }
         // Egui input handling
         state
             .egui_renderer
@@ -484,7 +515,7 @@ impl ApplicationHandler for App {
                     event_loop.exit();
                 }
 
-                state.render(&mut self.game);
+                state.render(&mut self.game, &mut self.atlas_pool);
                 // Emits a new redraw requested event.
                 state.get_window().request_redraw();
             }
@@ -582,8 +613,12 @@ struct State {
     size: winit::dpi::PhysicalSize<u32>,
     surface: wgpu::Surface<'static>,
     surface_format: wgpu::TextureFormat,
-    render_pipeline: wgpu::RenderPipeline,
-    sprites: bones::UstrMap<Vec<(wgpu::BindGroup, bones::Entity)>>,
+    opaque_render_pipeline: wgpu::RenderPipeline,
+    transparent_render_pipeline: wgpu::RenderPipeline,
+    vertex_buffer: Arc<wgpu::Buffer>,
+    index_buffer: Arc<wgpu::Buffer>,
+    dynamic_storage: DynamicBuffer,
+    camera_dynamic_uniform: DynamicBuffer,
     egui_renderer: EguiRenderer,
     egui_scale_factor: f32,
 }
@@ -595,7 +630,11 @@ impl State {
         queue: Arc<wgpu::Queue>,
         instance: &wgpu::Instance,
         adapter: &wgpu::Adapter,
-        texture_bind_group_layout: &wgpu::BindGroupLayout,
+        texture_layout: Arc<wgpu::BindGroupLayout>,
+        vertex_buffer: Arc<wgpu::Buffer>,
+        index_buffer: Arc<wgpu::Buffer>,
+        dynamic_storage: DynamicBuffer,
+        camera_dynamic_uniform: DynamicBuffer,
     ) -> Self {
         let size = window.inner_size();
         let surface = instance.create_surface(window.clone()).unwrap();
@@ -643,57 +682,121 @@ impl State {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[texture_bind_group_layout],
+                bind_group_layouts: &[
+                    &texture_layout,
+                    &dynamic_storage.layout,
+                    &camera_dynamic_uniform.layout,
+                ],
                 push_constant_ranges: &[],
             });
 
-        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
-            layout: Some(&render_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: Some("vs_main"),
-                buffers: &[Vertex::desc()],
-                compilation_options: Default::default(),
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: Some("fs_main"),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format: config.format,
-                    blend: Some(wgpu::BlendState {
-                        color: wgpu::BlendComponent::OVER,
-                        alpha: wgpu::BlendComponent::OVER,
-                    }),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-                compilation_options: Default::default(),
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
-                // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
-                // or Features::POLYGON_MODE_POINT
-                polygon_mode: wgpu::PolygonMode::Fill,
-                // Requires Features::DEPTH_CLIP_CONTROL
-                unclipped_depth: false,
-                // Requires Features::CONSERVATIVE_RASTERIZATION
-                conservative: false,
-            },
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState {
-                count: 1,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
-            },
-            // If the pipeline will be used with a multiview render pass, this
-            // indicates how many array layers the attachments will have.
-            multiview: None,
-            // Useful for optimizing shader compilation on Android
-            cache: None,
-        });
+        let opaque_render_pipeline =
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("Render Pipeline"),
+                layout: Some(&render_pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &shader,
+                    entry_point: Some("vs_main"),
+                    buffers: &[Vertex::desc()],
+                    compilation_options: Default::default(),
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &shader,
+                    entry_point: Some("fs_main"),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: config.format,
+                        blend: None, //For opaque
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                    compilation_options: Default::default(),
+                }),
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: Some(wgpu::Face::Back),
+                    // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
+                    // or Features::POLYGON_MODE_POINT
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    // Requires Features::DEPTH_CLIP_CONTROL
+                    unclipped_depth: false,
+                    // Requires Features::CONSERVATIVE_RASTERIZATION
+                    conservative: false,
+                },
+                depth_stencil: None,
+
+                /*Some(wgpu::DepthStencilState {
+                    format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                    depth_write_enabled: true, //For opaque
+                    depth_compare: wgpu::CompareFunction::LessEqual,
+                    stencil: Default::default(),
+                    bias: Default::default(),
+                }),*/
+                multisample: wgpu::MultisampleState {
+                    count: 1,
+                    mask: !0,
+                    alpha_to_coverage_enabled: false,
+                },
+                // If the pipeline will be used with a multiview render pass, this
+                // indicates how many array layers the attachments will have.
+                multiview: None,
+                // Useful for optimizing shader compilation on Android
+                cache: None,
+            });
+
+        let transparent_render_pipeline =
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("Render Pipeline"),
+                layout: Some(&render_pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &shader,
+                    entry_point: Some("vs_main"),
+                    buffers: &[Vertex::desc()],
+                    compilation_options: Default::default(),
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &shader,
+                    entry_point: Some("fs_main"),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: config.format,
+                        blend: Some(wgpu::BlendState::ALPHA_BLENDING), //For transparent
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                    compilation_options: Default::default(),
+                }),
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: Some(wgpu::Face::Back),
+                    // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
+                    // or Features::POLYGON_MODE_POINT
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    // Requires Features::DEPTH_CLIP_CONTROL
+                    unclipped_depth: false,
+                    // Requires Features::CONSERVATIVE_RASTERIZATION
+                    conservative: false,
+                },
+                depth_stencil: None,
+
+                /*Some(wgpu::DepthStencilState {
+                    format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                    depth_write_enabled: false, //For transparent
+                    depth_compare: wgpu::CompareFunction::LessEqual,
+                    stencil: Default::default(),
+                    bias: Default::default(),
+                }),*/
+                multisample: wgpu::MultisampleState {
+                    count: 1,
+                    mask: !0,
+                    alpha_to_coverage_enabled: false,
+                },
+                // If the pipeline will be used with a multiview render pass, this
+                // indicates how many array layers the attachments will have.
+                multiview: None,
+                // Useful for optimizing shader compilation on Android
+                cache: None,
+            });
 
         let egui_renderer = EguiRenderer::new(&device, surface_config.format, None, 1, &window);
 
@@ -704,10 +807,14 @@ impl State {
             size,
             surface,
             surface_format,
-            render_pipeline,
-            sprites: bones::UstrMap::default(),
+            opaque_render_pipeline,
+            transparent_render_pipeline,
             egui_renderer,
+            dynamic_storage,
+            camera_dynamic_uniform,
             egui_scale_factor: 1.0,
+            vertex_buffer,
+            index_buffer,
         }
     }
 
@@ -737,7 +844,27 @@ impl State {
         self.configure_surface();
     }
 
-    fn render(&mut self, game: &mut bones::Game) {
+    fn render(&mut self, game: &mut bones::Game, atlas_pool: &mut atlas_pool::AtlasPool) {
+        // Create the command encoder.
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+
+        //Run needed egui related function, needs to run before step
+        self.egui_renderer.begin_frame(&self.window);
+
+        //Step bones
+        game.step(Instant::now());
+
+        update_atlas_pool(game, atlas_pool);
+        sort_sprites(game);
+        update_uniforms(game, &mut self.dynamic_storage);
+        update_cameras_uniform(
+            game,
+            &mut self.camera_dynamic_uniform,
+            IVec2::new(self.size.width as i32, self.size.height as i32),
+        );
+
+        let cameras_sorted = game.shared_resource::<Cameras>().unwrap();
+
         // Create texture view
         let surface_texture = self
             .surface
@@ -752,56 +879,52 @@ impl State {
                 ..Default::default()
             });
 
-        // Create the command encoder.
-        let mut encoder = self.device.create_command_encoder(&Default::default());
+        let mut camera_index = 0;
+        for (session_name, camera_vec) in cameras_sorted.0.iter() {
+            let session = game.sessions.get(*session_name).unwrap();
 
-        //Index buffer is the same for all sprites
-        let index_buffer = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Index Buffer"),
-                contents: bytemuck::cast_slice(INDICES),
-                usage: wgpu::BufferUsages::INDEX,
-            });
-        let num_indices = INDICES.len() as u32;
-
-        let mut dont_delete = vec![];
-        for (session_name, session) in game.sessions.iter() {
-            dont_delete.push(session_name.clone());
-            if !session.visible {
-                continue;
-            }
-
-            //Get cameras and sort them
+            let sprite_lists = session.world.resource::<SpriteLists>();
+            let atlas_handles = session.world.component::<AtlasPoolHandle>();
             let cameras = session.world.component::<bones::Camera>();
-            let transforms = session.world.component::<bones::Transform>();
-            let entities = session.world.resource::<bones::Entities>();
 
-            let mut bitset = cameras.bitset().clone();
-            bitset.bit_and(transforms.bitset());
+            for (camera_ent, camera_size) in camera_vec {
+                // Create render passes for each camera
+                let camera = cameras.get(*camera_ent).unwrap();
 
-            let mut cameras_vec = vec![];
-            for ent in entities.iter_with_bitset(&bitset) {
-                let Some(camera) = cameras.get(ent) else {
-                    continue;
-                };
-
-                if !camera.active {
-                    continue;
+                // Set the camera for the sprites
+                let n = self.dynamic_storage.capacity / size_of::<AtlasSpriteUniform>() as u64;
+                for i in 0..n {
+                    self.queue.write_buffer(
+                        &self.dynamic_storage.buffer,
+                        4 + i * size_of::<AtlasSpriteUniform>() as u64,
+                        bytemuck::cast_slice(&[(camera_index as u32)]),
+                    );
                 }
 
-                // Get the transform from the ECS.
-                let Some(transform) = transforms.get(ent).cloned() else {
-                    continue;
+                let clear_color = session.world.get_resource::<bones::ClearColor>();
+
+                let load = if camera.draw_background_color {
+                    let color: bones_framework::render::prelude::Color =
+                        match (camera.background_color.option(), clear_color) {
+                            (Some(color), _) => color,
+                            (None, Some(color)) => color.0,
+                            (None, None) => bones::Color::BLACK,
+                        };
+                    let color = color.as_rgba_f64();
+
+                    let color = wgpu::Color {
+                        r: color[0],
+                        g: color[1],
+                        b: color[2],
+                        a: color[3],
+                    };
+
+                    wgpu::LoadOp::Clear(color)
+                } else {
+                    wgpu::LoadOp::Load
                 };
 
-                cameras_vec.push((camera, transform));
-            }
-            cameras_vec.sort_by(|a, b| a.0.priority.cmp(&b.0.priority));
-
-            for (camera, mut camera_transform) in cameras_vec {
-                // Create one render pass for each camera
-                let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: None,
                     color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                         view: &texture_view,
@@ -815,184 +938,116 @@ impl State {
                     timestamp_writes: None,
                     occlusion_query_set: None,
                 });
-                render_pass.set_pipeline(&self.render_pipeline);
 
-                let scale_ratio;
                 if let Some(viewport) = camera.viewport.option() {
-                    let size = IVec2::new(self.size.width as i32, self.size.height as i32)
-                        - viewport.position.as_ivec2();
-                    let size = IVec2::new(
-                        (viewport.size.x as i32).min(size.x),
-                        (viewport.size.y as i32).min(size.y),
-                    );
-
-                    if size.x <= 0 || size.y <= 0 {
-                        continue;
-                    }
-
-                    render_pass.set_viewport(
+                    pass.set_viewport(
                         viewport.position.x as f32,
                         viewport.position.y as f32,
-                        size.x as f32,
-                        size.y as f32,
+                        camera_size.x,
+                        camera_size.y,
                         viewport.depth_min,
                         viewport.depth_max,
                     );
-                    if viewport.size.y <= viewport.size.x {
-                        scale_ratio = Mat4::from_scale(Vec3::new(
-                            size.x as f32 / viewport.size.x as f32,
-                            viewport.size.y as f32 / viewport.size.x as f32 * size.y as f32
-                                / viewport.size.y as f32,
-                            1.,
-                        ))
-                        .inverse();
-                    } else {
-                        scale_ratio = Mat4::from_scale(Vec3::new(
-                            viewport.size.x as f32 / viewport.size.y as f32 * size.x as f32
-                                / viewport.size.x as f32,
-                            size.y as f32 / viewport.size.y as f32,
-                            1.,
-                        ))
-                        .inverse();
+                }
+
+                // set the quad vertex buffer (slot 0)
+                pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+                // Before your draw loops, once:
+                pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                pass.set_bind_group(1, &*self.dynamic_storage.get_bind_group(), &[]);
+                pass.set_bind_group(2, &*self.camera_dynamic_uniform.get_bind_group(), &[]);
+
+                // === OPAQUE PASS ===
+                pass.set_pipeline(&self.opaque_render_pipeline);
+
+                // Debug bind: use atlas 0 and instance 0 for a single test quad
+
+                //pass.set_bind_group(0, &atlas_pool.atlases[0].bind_group, &[]);
+                //pass.set_bind_group(1, self.dynamic_storage.get_bind_group(), &[]);
+                //pass.draw_indexed(0..6, 0, 0..1); // should draw the first sprite once
+
+                let opaque_list = &sprite_lists.opaque_list;
+                let transparent_list = &sprite_lists.transparent_list;
+                let index_of = &sprite_lists.index_of;
+
+                // iterate through opaque_list and batch by atlas_id
+                let mut i = 0;
+                while i < opaque_list.len() {
+                    let atlas_pool_handle =
+                        atlas_handles.get(opaque_list[i]).unwrap_or_else(|| {
+                            atlas_handles
+                                .get(sprite_lists.tile_layer.get(&opaque_list[i]).unwrap().0)
+                                .unwrap()
+                        });
+                    let current_atlas = atlas_pool_handle.atlas_id;
+
+                    // find how many consecutive entries share this atlas
+                    let start = i;
+                    while i < opaque_list.len()
+                        && atlas_handles
+                            .get(opaque_list[i])
+                            .unwrap_or_else(|| {
+                                atlas_handles
+                                    .get(sprite_lists.tile_layer.get(&opaque_list[i]).unwrap().0)
+                                    .unwrap()
+                            })
+                            .atlas_id
+                            == current_atlas
+                    {
+                        i += 1;
                     }
-                } else if self.size.height <= self.size.width {
-                    scale_ratio = Mat4::from_scale(Vec3::new(
-                        1.,
-                        self.size.height as f32 / self.size.width as f32,
-                        1.,
-                    ))
-                    .inverse();
-                } else {
-                    scale_ratio = Mat4::from_scale(Vec3::new(
-                        self.size.width as f32 / self.size.height as f32,
-                        1.,
-                        1.,
-                    ))
-                    .inverse();
+                    let count = (i - start) as u32;
+                    let first_instance = index_of[&opaque_list[start]];
+
+                    // bind this atlas’s bind group (group 0)
+                    let atlas_bg = &atlas_pool.atlases[current_atlas].bind_group;
+                    pass.set_bind_group(0, atlas_bg, &[]);
+
+                    // draw a quad instanced `count` times, indexing into your storage arrays
+                    pass.draw_indexed(0..6, 0, first_instance..first_instance + count);
                 }
 
-                if camera.draw_background_color {
-                    let clear_color = session.world.get_resource::<bones::ClearColor>();
+                // === TRANSPARENT PASS ===
+                pass.set_pipeline(&self.transparent_render_pipeline);
 
-                    let background_color = match (camera.background_color.option(), clear_color) {
-                        (Some(color), _) => color,
-                        (None, Some(color)) => color.0,
-                        (None, None) => bones::Color::BLACK,
-                    };
+                let mut j = 0;
+                while j < transparent_list.len() {
+                    let atlas_pool_handle = atlas_handles.get(transparent_list[i]).unwrap_or(
+                        atlas_handles
+                            .get(sprite_lists.tile_layer.get(&transparent_list[i]).unwrap().0)
+                            .unwrap(),
+                    );
+                    let current_atlas = atlas_pool_handle.atlas_id;
 
-                    //TODO Stop creating buffers every frame
-                    let vertex_buffer =
-                        self.device
-                            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                                label: Some("Vertex Buffer"),
-                                contents: bytemuck::cast_slice(VERTICES_FULL),
-                                usage: wgpu::BufferUsages::VERTEX,
-                            });
-
-                    let rgba =
-                        RgbaImage::from_pixel(1, 1, image::Rgba(background_color.as_rgba_u8()));
-                    let img = DynamicImage::ImageRgba8(rgba);
-                    let texture = Texture::from_image(
-                        &self.device,
-                        &self.queue,
-                        &img,
-                        Some("background_color"),
-                        false,
-                    )
-                    .unwrap();
-                    let atlas_sprite_buffer =
-                        self.device
-                            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                                label: Some("Atlas Sprite Buffer"),
-                                contents: bytemuck::cast_slice(&[AtlasSpriteUniform {
-                                    use_atlas: 0,
-                                    ..Default::default()
-                                }]),
-                                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                            });
-
-                    let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                        layout: &self.render_pipeline.get_bind_group_layout(0),
-                        entries: &[
-                            wgpu::BindGroupEntry {
-                                binding: 0,
-                                resource: atlas_sprite_buffer.as_entire_binding(),
-                            },
-                            wgpu::BindGroupEntry {
-                                binding: 1,
-                                resource: wgpu::BindingResource::TextureView(&texture.view),
-                            },
-                            wgpu::BindGroupEntry {
-                                binding: 2,
-                                resource: wgpu::BindingResource::Sampler(&texture.sampler),
-                            },
-                        ],
-                        label: Some("diffuse_bind_group"),
-                    });
-
-                    render_pass.set_bind_group(0, &bind_group, &[]);
-                    render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-                    render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-                    render_pass.draw_indexed(0..num_indices, 0, 0..1);
-                }
-
-                // Render each sprite with its own transform.
-                let Some(binds) = self.sprites.get(session_name) else {
-                    continue;
-                };
-
-                for (bind_group, entity) in binds {
-                    // Get the entity transform from the ECS.
-                    let Some(transform) = session
-                        .world
-                        .component::<bones::Transform>()
-                        .get(*entity)
-                        .cloned()
-                    else {
-                        continue;
-                    };
-
-                    let (w, h) = (self.size.width as f32, self.size.height as f32);
-
-                    camera_transform.translation.z = 0.;
-                    let camera_scale =
-                        Vec3::new(1.0 / scale_ratio.x_axis.x, 1.0 / scale_ratio.y_axis.y, 1.0);
-                    let translation_scale =
-                        Vec3::new((2.0 / w) * camera_scale.x, (2.0 / h) * camera_scale.y, 1.0);
-
-                    let camera_mat4 = camera_transform.to_matrix(translation_scale).inverse();
-
-                    let quad_scale = translation_scale * camera_transform.scale;
-                    let mat4 = scale_ratio * camera_mat4 * transform.to_matrix(quad_scale);
-
-                    // Compute transformed vertices on the CPU.
-                    let transformed_vertices: Vec<Vertex> = VERTICES_FULL
-                        .iter()
-                        .map(|v: &Vertex| Vertex {
-                            position: transform_vertex(
-                                Vec3::from(v.position),
-                                mat4,
-                                Vec3::ZERO, // Use Vec3::ZERO as the pivot point for transformations
+                    let start = j;
+                    while j < transparent_list.len()
+                        && atlas_handles
+                            .get(transparent_list[i])
+                            .unwrap_or(
+                                atlas_handles
+                                    .get(
+                                        sprite_lists
+                                            .tile_layer
+                                            .get(&transparent_list[i])
+                                            .unwrap()
+                                            .0,
+                                    )
+                                    .unwrap(),
                             )
-                            .into(),
-                            tex_coords: v.tex_coords, // Texture coordinates remain unchanged.
-                        })
-                        .collect();
+                            .atlas_id
+                            == current_atlas
+                    {
+                        j += 1;
+                    }
+                    let count = (j - start) as u32;
+                    let first_instance = index_of[&transparent_list[start]];
 
-                    // Create a dynamic vertex buffer with the transformed vertices.
-                    let vertex_buffer =
-                        self.device
-                            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                                label: Some("Transformed Vertex Buffer"),
-                                contents: bytemuck::cast_slice(&transformed_vertices),
-                                usage: wgpu::BufferUsages::VERTEX,
-                            });
+                    let atlas_bg = &atlas_pool.atlases[current_atlas].bind_group;
+                    pass.set_bind_group(0, atlas_bg, &[]);
 
-                    render_pass.set_bind_group(0, bind_group, &[]);
-                    render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-                    render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-                    render_pass.draw_indexed(0..num_indices, 0, 0..1);
+                    pass.draw_indexed(0..6, 0, first_instance..first_instance + count);
                 }
+                camera_index += 1;
             }
         }
 
@@ -1004,11 +1059,6 @@ impl State {
                     * self.egui_scale_factor,
             };
 
-            self.egui_renderer.begin_frame(&self.window);
-
-            //Step bones
-            game.step(Instant::now());
-
             self.egui_renderer.end_frame_and_draw(
                 &self.device,
                 &self.queue,
@@ -1019,20 +1069,27 @@ impl State {
             );
         }
 
-        let keys_to_remove: Vec<_> = self
-            .sprites
-            .keys()
-            .filter(|session_name| !dont_delete.contains(session_name))
-            .cloned()
-            .collect();
-        for session_name in keys_to_remove {
-            self.sprites.remove(&session_name);
-        }
-
         // Submit the command queue.
         self.queue.submit([encoder.finish()]);
         self.window.pre_present_notify();
         surface_texture.present();
+
+        /*Write atlas pool textures to png files for debugging
+        if !time_since_start().as_secs() < 10 {
+            for atlas in atlas_pool.atlases.iter() {
+                let path = String::from("atlas_") + &atlas.id.to_string() + ".png";
+
+                let result = crate::texture_file::dump_texture_to_png(
+                    &self.device,
+                    &self.queue,
+                    &atlas.texture,
+                    (atlas.texture.width(), atlas.texture.height()),
+                    std::path::Path::new(&path),
+                );
+                result.unwrap();
+            }
+            std::process::exit(1);
+        }*/
     }
 }
 
@@ -1115,24 +1172,6 @@ const INDICES: &[u16] = &[
     0, 1, 2, // first triangle
     0, 2, 3, // second triangle
 ];
-
-//TODO Add quaternion rotations, and move this calculation to
-// wgsl code
-
-fn transform_vertex(pos: Vec3, transform: Mat4, pivot: Vec3) -> Vec3 {
-    // Translate the vertex to the pivot point.
-    let to_origin = Mat4::from_translation(-pivot);
-    let from_origin = Mat4::from_translation(pivot);
-
-    // Apply the transformation: first translate to origin, then transform, then translate back.
-    let combined = from_origin * transform * to_origin;
-
-    // Apply the transformation matrix to the position
-    let pos4 = combined * pos.extend(1.0);
-
-    // Return the truncated Vec3 position (ignoring the w-component)
-    pos4.truncate()
-}
 
 /// A [`bones::AssetIo`] configured for web and local file access
 pub fn asset_io(asset_dir: &Path, packs_dir: &Path) -> impl bones::AssetIo + 'static {

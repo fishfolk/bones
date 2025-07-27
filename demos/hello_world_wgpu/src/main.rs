@@ -78,7 +78,7 @@ fn sprite_demo_startup(
             size: UVec2::new(100, 100),
             ..Default::default()
         }),
-        background_color: Set(Color::ORANGE),
+        //background_color: Set(Color::ORANGE),
         ..Default::default()
     };
     let camera_ent = entities.create();
