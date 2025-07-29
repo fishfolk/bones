@@ -23,8 +23,9 @@ fn main() {
     GameMeta::register_schema();
 
     game.sessions
-        .create("launch")
-        .add_startup_system(launch_game_session);
+        .create_with("launch", |builder: &mut SessionBuilder| {
+            builder.add_startup_system(launch_game_session);
+        });
 
     let mut renderer = BonesWgpuRenderer::new(game);
     renderer.app_namespace = (
@@ -41,15 +42,17 @@ fn launch_game_session(
     mut session_ops: ResMut<SessionOptions>,
 ) {
     session_ops.delete = true;
-    let game_session = sessions.create("game");
-    game_session
-        .install_plugin(DefaultSessionPlugin)
-        // Install the plugin that will load our lua plugins and run them in the game session
-        .install_plugin(LuaPluginLoaderSessionPlugin(
-            // Tell it to install the lua plugins specified in our game meta
-            Arc::new(meta.plugins.iter().copied().collect()),
-        ))
-        .add_startup_system(game_startup);
+    // Build game session and add to `Sessions`
+    sessions.create_with("game", |builder: &mut SessionBuilder| {
+        builder
+            .install_plugin(DefaultSessionPlugin)
+            // Install the plugin that will load our lua plugins and run them in the game session
+            .install_plugin(LuaPluginLoaderSessionPlugin(
+                // Tell it to install the lua plugins specified in our game meta
+                Arc::new(meta.plugins.iter().copied().collect()),
+            ))
+            .add_startup_system(game_startup);
+    });
 }
 
 fn game_startup(

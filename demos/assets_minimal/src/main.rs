@@ -36,9 +36,10 @@ fn main() {
 
     // Create a new session for the game menu. Each session is it's own bones world with it's own
     // plugins, systems, and entities.
-    let menu_session = game.sessions.create("menu");
-    menu_session
-        // Install the default bones_framework plugin for this session
+    let mut menu_session_builder = SessionBuilder::new("menu");
+
+    // Install the default bones_framework plugin for this session
+    menu_session_builder
         .install_plugin(DefaultSessionPlugin)
         // Add our menu system to the update stage
         .add_system_to_stage(Update, menu_system);

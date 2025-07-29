@@ -46,12 +46,14 @@ fn main() {
 
     // Create a new session for the game menu. Each session is it's own bones world with it's own
     // plugins, systems, and entities.
-    let menu_session = game.sessions.create("menu");
-    menu_session
-        // Install the default bones_framework plugin for this session
-        .install_plugin(DefaultSessionPlugin)
-        // Add our menu system to the update stage
-        .add_system_to_stage(Update, menu_system);
+    game.sessions
+        .create_with("menu", |builder: &mut SessionBuilder| {
+            // Install the default bones_framework plugin for this session
+            builder
+                .install_plugin(DefaultSessionPlugin)
+                // Add our menu system to the update stage
+                .add_system_to_stage(Update, menu_system);
+        });
 
     BonesWgpuRenderer::new(game).run();
 }

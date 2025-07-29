@@ -20,13 +20,13 @@ pub fn game_plugin(game: &mut Game) {
     game.insert_shared_resource(AudioManager::default());
     game.init_shared_resource::<AssetServer>();
 
-    let session = game.sessions.create(DEFAULT_BONES_AUDIO_SESSION);
+    let mut session = SessionBuilder::new(DEFAULT_BONES_AUDIO_SESSION);
     // Audio doesn't do any rendering
     session.visible = false;
     session
-        .stages
         .add_system_to_stage(First, _process_audio_events)
         .add_system_to_stage(Last, _kill_finished_audios);
+    session.finish_and_add(&mut game.sessions);
 }
 
 /// Holds the handles and the volume to be played for a piece of Audio.

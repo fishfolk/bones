@@ -47,8 +47,8 @@ pub struct LuaPluginLoaderSessionPlugin(pub Arc<Vec<Handle<LuaPlugin>>>);
 pub struct LuaPlugins(pub Arc<Vec<Handle<LuaPlugin>>>);
 
 impl SessionPlugin for LuaPluginLoaderSessionPlugin {
-    fn install(self, session: &mut Session) {
-        session.world.insert_resource(LuaPlugins(self.0));
+    fn install(self, session: &mut SessionBuilder) {
+        session.insert_resource(LuaPlugins(self.0));
 
         for lua_stage in [
             CoreStage::First,

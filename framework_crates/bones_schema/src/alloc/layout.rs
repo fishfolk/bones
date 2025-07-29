@@ -41,8 +41,6 @@ const LAYOUT_ERR: LayoutError = if let Err(e) = Layout::from_size_align(0, 0) {
 };
 
 impl LayoutExt for Layout {
-    #[must_use = "this returns the padding needed, \
-                  without modifying the `Layout`"]
     #[inline]
     fn padding_needed_for(&self, align: usize) -> usize {
         let len = self.size();
