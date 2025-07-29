@@ -1,6 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 
-use bones_bevy_renderer::{bevy::diagnostic::LogDiagnosticsPlugin, BonesBevyRenderer};
+use bones_wgpu_renderer::BonesWgpuRenderer;
 use bones_framework::prelude::*;
 
 /// Create our root asset type.
@@ -91,7 +91,7 @@ fn main() {
     PersistedTextData::register_schema();
 
     // Create a bones bevy renderer from our bones game
-    let mut renderer = BonesBevyRenderer::new(create_game());
+    let mut renderer = BonesWgpuRenderer::new(create_game());
     // Set the app namespace which will be used by the renderer to decide where to put
     // persistent storage files.
     renderer.app_namespace = (
@@ -101,9 +101,9 @@ fn main() {
     );
     // Get a bevy app for running our game
     renderer
-        .app()
+        //.app()
         // We can add our own bevy plugins now
-        .add_plugins(LogDiagnosticsPlugin::default())
+        //.add_plugins(LogDiagnosticsPlugin::default())
         // And run the bevy app
         .run()
 }
