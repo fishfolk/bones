@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bones_bevy_renderer::BonesBevyRenderer;
+use bones_wgpu_renderer::BonesWgpuRenderer;
 use bones_framework::prelude::*;
 
 #[derive(HasSchema, Default, Clone)]
@@ -26,13 +26,13 @@ fn main() {
         .create("launch")
         .add_startup_system(launch_game_session);
 
-    let mut renderer = BonesBevyRenderer::new(game);
+    let mut renderer = BonesWgpuRenderer::new(game);
     renderer.app_namespace = (
         "org".into(),
         "fishfolk".into(),
         "bones.demo_scripting".into(),
     );
-    renderer.app().run();
+    renderer.run();
 }
 
 fn launch_game_session(

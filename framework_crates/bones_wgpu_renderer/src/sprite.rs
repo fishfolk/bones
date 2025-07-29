@@ -104,7 +104,7 @@ impl AtlasSpriteUniform {
             columns: atlas.columns,
             padding: atlas.padding.into(),
             offset: atlas.offset.into(),
-            index: 0,
+            index: tile.idx,
             image_size,
             entity_type: 1,
             flip_x: tile.flip_x as u32,

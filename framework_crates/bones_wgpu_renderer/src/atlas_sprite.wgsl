@@ -62,37 +62,49 @@ fn vs_main(
     let inst = sprite_data[idx];
     var out: VertexOutput;
 
-    // 1) compute quad size in *pixels* from your atlas‐tile:
-    //    inst.tile_size is already [width_px, height_px]
-    let quad_px = vec3<f32>(
-        vert.position.x * inst.tile_size.x,
-        vert.position.y * inst.tile_size.y,
+    var uv_size: vec2<f32>;
+    if inst.entity_type == 1u {
+        // For atlas/tiles: use tile_size directly
+        uv_size = inst.tile_size;
+    } else {
+        // For sprites: use calculated UV size multiplied by 4096 (atlas pool size)
+        uv_size = (inst.uv_max - inst.uv_min) * 4096.0;
+    }
+    
+    // Convert UV size to world size: use a fixed scale factor instead of screen size
+    // This prevents distortion when window is resized
+    let pixel_scale = 0.001; // Adjust this value to control sprite size (smaller = smaller sprites)
+    uv_size = uv_size * pixel_scale;
+    
+    let aspect_ratio = uv_size.x / uv_size.y;
+
+    // Scale position by UV size (not just aspect ratio)
+    let scaled_position = vec3<f32>(
+        vert.position.x * uv_size.x,
+        vert.position.y * uv_size.y,
         vert.position.z
     );
 
-    // 2) convert pixel‐coordinates → NDC ([-1,1]) per axis
-    let cam = cameras[inst.camera_index];
-    let px_to_ndc = vec2<f32>(
-        2.0 / cam.screen_size.x,
-        2.0 / cam.screen_size.y
-    );
+    // load the camera uniform
+    let camera = cameras[inst.camera_index];
 
-    // 3) build your instance matrix so that
-    //    translation is in *pixels* → NDC,
-    //    but rotation & scale from inst.transform stay in world‐units
-    let inst_mat = scale_translation(
-        inst.transform,
-        vec3<f32>(px_to_ndc.x, px_to_ndc.y, 1.0)
-    );
+    // 1) Transform should use the same pixel_scale so 1 unit = 1 pixel
+    // Scale transform by pixel_scale to match sprite scaling
+    let transform_scale = vec3<f32>(pixel_scale, pixel_scale, 1.0);
+    let inst_mat = scale_translation(inst.transform, transform_scale);
 
-    // 4) finally, emit clip‐space position:
-    out.clipPos = cam.transform * inst_mat * vec4<f32>(quad_px, 1.0);
+    // 2) apply camera→clip transform
+    out.clipPos = camera.transform * inst_mat * vec4(scaled_position, 1.0);
 
-    // …then do your UV flip/remap, color_tint etc…
+    // 2) Apply per‑instance flip
     var base_uv = vert.uv;
     if inst.flip_x == 1u { base_uv.x = 1.0 - base_uv.x; }
     if inst.flip_y == 1u { base_uv.y = 1.0 - base_uv.y; }
+
+    // 3) Remap [0,1] → [uv_min,uv_max] of the atlas
     out.atlas_uv = mix(inst.uv_min, inst.uv_max, base_uv);
+
+    // 4) Pass instance index along
     out.inst_index = idx;
     return out;
 }
@@ -124,10 +136,9 @@ fn fs_main(
         // Calculate top-left corner of tile
         let tile_min = os + vec2<f32>(f32(col), f32(row)) * step;
         
-        // Calculate bottom-right corner of tile
-        let tile_max = tile_min + step;
-        
-        // Map UV from [0,1] to [tile_min, tile_max]
+        // Calculate bottom-right corner of tile (exclude padding)
+        let tile_max = tile_min + ts;
+        // Map UV from [0,1] to [tile_min, tile_max] (only tile area, not padding)
         uv = mix(tile_min, tile_max, uv);
     }
 
