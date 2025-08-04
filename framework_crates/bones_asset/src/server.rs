@@ -876,10 +876,7 @@ impl AssetServer {
             SchemaMismatchError,
         >,
     > {
-        let cid = match self.store.asset_ids.get(&handle.untyped()) {
-            Some(cid) => cid,
-            None => return None,
-        };
+        let cid = self.store.asset_ids.get(&handle.untyped())?;
         Some(
             MapRef::try_map(self.store.assets.get(&cid).unwrap(), |x| {
                 let asset = &x.data;
