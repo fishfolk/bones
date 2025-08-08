@@ -16,8 +16,8 @@ pub struct BorderedButton<'a> {
     default_border: Option<&'a BorderImageMeta>,
     on_focus_border: Option<&'a BorderImageMeta>,
     on_click_border: Option<&'a BorderImageMeta>,
-    margin: egui::Margin,
-    padding: egui::Margin,
+    margin: egui::epaint::Marginf,
+    padding: egui::epaint::Marginf,
 }
 
 impl<'a> BorderedButton<'a> {
@@ -78,7 +78,7 @@ impl<'a> BorderedButton<'a> {
 
     /// Set the margin. This will be applied on the outside of the border.
     #[must_use = "You must call .show() to render the button"]
-    pub fn margin(mut self, margin: impl Into<egui::Margin>) -> Self {
+    pub fn margin(mut self, margin: impl Into<egui::epaint::Marginf>) -> Self {
         self.margin = margin.into();
 
         self
@@ -86,7 +86,7 @@ impl<'a> BorderedButton<'a> {
 
     /// Set the padding. This will be applied on the inside of the border.
     #[must_use = "You must call .show() to render the button"]
-    pub fn padding(mut self, padding: impl Into<egui::Margin>) -> Self {
+    pub fn padding(mut self, padding: impl Into<egui::epaint::Marginf>) -> Self {
         self.padding = padding.into();
 
         self

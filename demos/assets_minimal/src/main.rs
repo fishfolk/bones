@@ -54,7 +54,7 @@ fn menu_system(
     meta: Root<GameMeta>,
 ) {
     egui::CentralPanel::default()
-        .frame(egui::Frame::none())
+        .frame(egui::Frame::new())
         .show(&egui_ctx, |ui| {
             // Use the title that has been loaded from the asset
             ui.heading(&meta.title);

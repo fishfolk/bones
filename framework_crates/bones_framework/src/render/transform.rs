@@ -49,6 +49,7 @@ impl Transform {
         Self { scale, ..default() }
     }
 
+    /// Create a transform from a transformation matrix.
     pub fn from_matrix(matrix: Mat4) -> Self {
         let (scale, rotation, translation) = matrix.to_scale_rotation_translation();
 

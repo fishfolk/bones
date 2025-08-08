@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use image::buffer;
-
 pub struct DynamicBuffer {
     pub layout: Arc<wgpu::BindGroupLayout>,
     pub buffer: wgpu::Buffer,

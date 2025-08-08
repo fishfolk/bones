@@ -18,8 +18,7 @@ use winit::{
 use bones_framework::{
     glam::*,
     input::gilrs::process_gamepad_events,
-    prelude::{self as bones, BitSet, ComponentIterBitset},
-    render::camera,
+    prelude::{self as bones},
 };
 
 use egui_wgpu::ScreenDescriptor;
@@ -36,7 +35,6 @@ mod ui;
 
 use dynamic_storage::DynamicBuffer;
 use sprite::*;
-use texture::Texture;
 use ui::{default_load_progress, EguiRenderer};
 
 /// The prelude
@@ -117,7 +115,7 @@ impl BonesWgpuRenderer {
 
     pub fn run(mut self) {
         //Start wgpu
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::default());
         let (adapter, device, queue) = async {
             let adapter = instance
                 .request_adapter(&wgpu::RequestAdapterOptions::default())

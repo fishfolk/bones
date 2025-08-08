@@ -1,4 +1,0 @@
-image: ./tileset.png
-tile_size: [32, 32]
-columns: 7
-rows: 9

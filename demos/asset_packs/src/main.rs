@@ -65,7 +65,7 @@ fn menu_system(
     all_packs: AllPacksData<GameMeta, PackMeta>,
 ) {
     egui::CentralPanel::default()
-        .frame(egui::Frame::none().outer_margin(egui::Margin::same(32.0)))
+        .frame(egui::Frame::new().outer_margin(egui::epaint::Marginf::same(32.0)))
         .show(&egui_ctx, |ui| {
             // Use the title that has been loaded from the asset
             ui.heading(&core_meta.title);
