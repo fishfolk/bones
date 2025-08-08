@@ -3,8 +3,6 @@ use crossbeam_channel::bounded;
 use guillotiere::{size2, AllocId, Allocation, AtlasAllocator};
 use std::sync::Arc;
 
-use crate::sprite::AtlasPoolHandle;
-
 /// Code for the AtlasPool and the TextureAtlas.
 /// A pool of texture atlases, each capable of holding multiple sprites.
 

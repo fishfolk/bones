@@ -1,7 +1,6 @@
 use crate::{atlas_pool::AtlasPool, *};
 use bones_framework::{
-    prelude::{self as bones, BitSet, ComponentIterBitset, Transform, Ustr},
-    render::transform,
+    prelude::{self as bones, BitSet, ComponentIterBitset, Ustr},
 };
 use guillotiere::Allocation;
 use std::collections::HashMap;
@@ -271,14 +270,14 @@ pub fn update_atlas_pool(game: &mut bones::Game, atlas_pool: &mut AtlasPool) {
 
                 println!("Texture {:?}", atlas_pool.atlases[atlas_id].texture);
 
-                let data_layout = wgpu::ImageDataLayout {
+                let data_layout = wgpu::TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(padded_stride as u32),
                     rows_per_image: Some(h),
                 };
                 let queue = queue.borrow().unwrap();
                 queue.get().write_texture(
-                    wgpu::ImageCopyTexture {
+                    wgpu::TexelCopyTextureInfo {
                         texture: &atlas_pool.atlases[atlas_id].texture,
                         mip_level: 0,
                         origin,

@@ -39,22 +39,19 @@ fn main() {
 
     // Create a new session for the game world. Each session is it's own bones world with it's own
     // plugins, systems, and entities.
-    let world_session = game
+    game
         .sessions
-        .create("world")
-        .install_plugin(sprite_demo_plugin);
-    world_session
-        // Install the default bones_framework plugin for this session
-        .install_plugin(DefaultSessionPlugin)
-        // Add our menu system to the update stage
-        //.add_system_to_stage(Update, menu_system)
-        .add_system_to_stage(Update, test);
+        .create_with("world", |session: &mut SessionBuilder| {
+            session.install_plugin(sprite_demo_plugin);
+            session.add_system_to_stage(Update, test);
+            //session.add_system_to_stage(Update, menu_system);
+        });
 
     BonesWgpuRenderer::new(game).run();
 }
 
 /// Plugin for running the sprite demo.
-fn sprite_demo_plugin(session: &mut Session) {
+fn sprite_demo_plugin(session: &mut SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_startup_system(sprite_demo_startup)
@@ -255,7 +252,7 @@ fn move_sprite(
 }
 
 /// System to render the home menu.
-fn menu_system(ctx: Res<EguiCtx>) {
+fn _menu_system(ctx: Res<EguiCtx>) {
     egui::CentralPanel::default().show(&ctx, |ui| {
         ui.label("Hello World");
     });
