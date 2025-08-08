@@ -52,6 +52,10 @@ pub enum MouseButton {
     Right,
     /// The middle mouse button.
     Middle,
+    /// The first extra mouse button.
+    Back,
+    /// The second extra mouse button.
+    Forward,
     /// Another mouse button with the associated number.
     Other(u16),
 }

@@ -1,4 +1,4 @@
-use bones_bevy_renderer::BonesBevyRenderer;
+use bones_wgpu_renderer::BonesWgpuRenderer;
 use bones_framework::prelude::*;
 
 //
@@ -44,10 +44,7 @@ fn main() {
         // Add our menu system to the update stage
         .add_system_to_stage(Update, menu_system);
 
-    // Finalize session and register with game sessions.
-    menu_session_builder.finish_and_add(&mut game.sessions);
-
-    BonesBevyRenderer::new(game).app().run();
+    BonesWgpuRenderer::new(game).run();
 }
 
 /// System to render the home menu.
@@ -57,7 +54,7 @@ fn menu_system(
     meta: Root<GameMeta>,
 ) {
     egui::CentralPanel::default()
-        .frame(egui::Frame::none())
+        .frame(egui::Frame::new())
         .show(&egui_ctx, |ui| {
             // Use the title that has been loaded from the asset
             ui.heading(&meta.title);

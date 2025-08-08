@@ -11,6 +11,8 @@ use crate::prelude::*;
 // TODO: make repr(C) when `Option`s are supported.
 // We don't have `Option` support in `bones_schema` right now.
 // Once we do, we can make this type `#[repr(C)]` instead of `#[schema(opaque)]`.
+// TODO: Support different Render Targets, for example, multiple windows,
+// for now the camera will always render to the main window.
 #[repr(C)]
 pub struct Camera {
     /// The height of the camera in in-game pixels.
@@ -27,6 +29,12 @@ pub struct Camera {
     pub viewport: Maybe<Viewport>,
     /// Cameras with a higher priority will be rendered on top of cameras with a lower priority.
     pub priority: i32,
+    /// The color to clear the screen to before rendering.
+    /// If None and the camera is set to draw the background, we will try to use the global ClearColor,
+    /// If not available, we will use Black
+    pub background_color: Maybe<Color>,
+    /// Whether or not the camera should draw the background color.
+    pub draw_background_color: bool,
 }
 
 /// A size setting for a camera.
@@ -68,11 +76,13 @@ impl Default for Camera {
             viewport: Unset,
             priority: 0,
             size: default(),
+            background_color: Maybe::Unset,
+            draw_background_color: true,
         }
     }
 }
 
-/// Resource for controlling the clear color.
+/// Resource for controlling the global clear color.
 #[derive(Deref, DerefMut, Clone, Copy, HasSchema, Default)]
 pub struct ClearColor(pub Color);
 
@@ -87,7 +97,14 @@ pub fn spawn_default_camera(
 ) -> Entity {
     let ent = entities.create();
     cameras.insert(ent, default());
-    transforms.insert(ent, Transform::from_translation(Vec3::new(0., 0., 1000.)));
+    transforms.insert(
+        ent,
+        Transform {
+            translation: Vec3::new(0.0, 0.0, 1000.0),
+            scale: Vec3::new(40., 40., 1.0),
+            ..default()
+        },
+    );
     ent
 }
 
