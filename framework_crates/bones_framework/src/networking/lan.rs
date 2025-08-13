@@ -86,6 +86,9 @@ pub fn stop_server(server: &ServerInfo) {
     if let Err(err) = stop_server_by_name(server.service.get_fullname()) {
         warn!("Lan: failed to stop server: {err:?}");
     }
+    LAN_MATCHMAKER
+        .try_send(LanMatchmakerRequest::StopServer)
+        .unwrap();
 }
 
 /// Stop hosting a server specified by name. (Use [`ServiceInfo::get_fullname()`].)
