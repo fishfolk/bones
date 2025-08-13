@@ -69,7 +69,7 @@ pub trait InputCollector<'a, ControlMapping: HasSchema, ControlSource, Control>:
     fn update_just_pressed(&mut self);
 
     /// Get control for player based on provided `ControlSource`.
-    fn get_control(&self, player_idx: usize, control_source: ControlSource) -> &Control;
+    fn get_control(&self, control_source: ControlSource) -> &Control;
 }
 
 /// Trait that tracks player control state. Provides associated types for other input trait implementations.
