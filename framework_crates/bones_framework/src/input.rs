@@ -83,9 +83,6 @@ pub trait PlayerControls<'a, Control> {
     /// Type used to map source of input to control.
     type ControlSource;
 
-    /// Update control state from input collector.
-    fn update_controls(&mut self, collector: &mut Self::InputCollector);
-
     /// Get `ControlSource` for player (only present for local player).
     fn get_control_source(&self, local_player_idx: usize) -> Option<Self::ControlSource>;
 
