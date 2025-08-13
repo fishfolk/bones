@@ -54,8 +54,6 @@ static LAN_MATCHMAKER: Lazy<LanMatchmaker> = Lazy::new(|| {
 static MDNS: Lazy<ServiceDaemon> =
     Lazy::new(|| ServiceDaemon::new().expect("Couldn't start MDNS service discovery thread."));
 
-const MDNS_SERVICE_TYPE: &str = "_jumpy._udp.local.";
-
 #[derive(DerefMut, Deref)]
 struct Pinger(BiChannelClient<PingerRequest, PingerResponse>);
 
@@ -171,6 +169,7 @@ pub fn wait_game_start() -> Option<NetworkMatchSocket> {
 
 /// Update server pings and turn on service discovery.
 pub fn prepare_to_join(
+    service_type: &str,
     servers: &mut Vec<ServerInfo>,
     service_discovery_recv: &mut Option<ServiceDiscoveryReceiver>,
     ping_update_timer: &Timer,
@@ -198,7 +197,7 @@ pub fn prepare_to_join(
 
     let events = service_discovery_recv.get_or_insert_with(|| {
         ServiceDiscoveryReceiver(
-            MDNS.browse(MDNS_SERVICE_TYPE)
+            MDNS.browse(service_type)
                 .expect("Couldn't start service discovery"),
         )
     });
@@ -225,6 +224,7 @@ pub fn prepare_to_join(
 /// only then the returned `bool` is `true`.
 pub async fn prepare_to_host<'a>(
     host_info: &'a mut Option<ServerInfo>,
+    service_type: &str,
     service_name: &str,
 ) -> (bool, &'a mut ServerInfo) {
     let create_service_info = || async {
@@ -240,7 +240,7 @@ pub async fn prepare_to_host<'a>(
         let addr_encoded = hex::encode(postcard::to_stdvec(&my_addr).unwrap());
         props.insert("node-addr".to_string(), addr_encoded);
         let service = mdns_sd::ServiceInfo::new(
-            MDNS_SERVICE_TYPE,
+            service_type,
             service_name,
             service_name,
             "",
