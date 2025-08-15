@@ -22,6 +22,8 @@ use {
 
 use crate::input::PlayerControls as PlayerControlsTrait;
 
+pub use iroh;
+
 pub mod input;
 pub mod lan;
 pub mod online;
