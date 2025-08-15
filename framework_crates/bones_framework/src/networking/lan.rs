@@ -239,16 +239,10 @@ pub async fn prepare_to_host<'a>(
         let mut props = std::collections::HashMap::default();
         let addr_encoded = hex::encode(postcard::to_stdvec(&my_addr).unwrap());
         props.insert("node-addr".to_string(), addr_encoded);
-        let service = mdns_sd::ServiceInfo::new(
-            service_type,
-            service_name,
-            service_name,
-            "",
-            port,
-            props,
-        )
-        .unwrap()
-        .enable_addr_auto();
+        let service =
+            mdns_sd::ServiceInfo::new(service_type, service_name, service_name, "", port, props)
+                .unwrap()
+                .enable_addr_auto();
         ServerInfo {
             service,
             ping: None,
