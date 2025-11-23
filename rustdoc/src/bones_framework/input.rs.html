@@ -95,11 +95,12 @@
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Input resources.
 
 </span><span class="kw">use </span>bones_schema::HasSchema;
 
-<span class="kw">use </span><span class="self">self</span>::prelude::{GamepadInputs, KeyboardInputs};
+<span class="kw">use </span><span class="self">self</span>::prelude::{GamepadInputs, KeyboardInputs, MouseInputs};
 
 <span class="kw">pub mod </span>gamepad;
 <span class="kw">pub mod </span>gilrs;
@@ -149,6 +150,7 @@
     </span><span class="kw">fn </span>apply_inputs(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         mapping: <span class="kw-2">&amp;</span>ControlMapping,
+        mouse: <span class="kw-2">&amp;</span>MouseInputs,
         keyboard: <span class="kw-2">&amp;</span>KeyboardInputs,
         gamepad: <span class="kw-2">&amp;</span>GamepadInputs,
     );

@@ -1074,6 +1074,8 @@
 <a href="#1074" id="1074">1074</a>
 <a href="#1075" id="1075">1075</a>
 <a href="#1076" id="1076">1076</a>
+<a href="#1077" id="1077">1077</a>
+<a href="#1078" id="1078">1078</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"./networking.md"</span>)]
 
 </span><span class="kw">use </span><span class="self">self</span>::{
@@ -1800,6 +1802,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>skip_frames: u32 = <span class="number">0</span>;
 
         {
+            <span class="kw">let </span>mouse = world.resource::&lt;MouseInputs&gt;();
             <span class="kw">let </span>keyboard = world.resource::&lt;KeyboardInputs&gt;();
             <span class="kw">let </span>gamepad = world.resource::&lt;GamepadInputs&gt;();
 
@@ -1808,6 +1811,7 @@
             <span class="comment">// Collect inputs and update controls
             </span><span class="self">self</span>.input_collector.apply_inputs(
                 <span class="kw-2">&amp;</span>world.resource::&lt;ControlMapping&lt;InputTypes&gt;&gt;(),
+                <span class="kw-2">&amp;</span>mouse,
                 <span class="kw-2">&amp;</span>keyboard,
                 <span class="kw-2">&amp;</span>gamepad,
             );
