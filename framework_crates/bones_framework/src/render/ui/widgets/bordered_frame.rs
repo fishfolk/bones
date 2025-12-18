@@ -5,9 +5,9 @@ pub struct BorderedFrame {
     bg_handle: Handle<Image>,
     border_scale: f32,
     texture_size: egui::Vec2,
-    texture_border_size: egui::style::Margin,
-    padding: egui::style::Margin,
-    margin: egui::style::Margin,
+    texture_border_size: egui::epaint::Marginf,
+    padding: egui::epaint::Marginf,
+    margin: egui::epaint::Marginf,
     border_only: bool,
 }
 
@@ -29,7 +29,7 @@ impl BorderedFrame {
 
     /// Set the padding. This will be applied on the inside of the border.
     #[must_use = "You must call .show() to render the frame"]
-    pub fn padding(mut self, margin: impl Into<egui::style::Margin>) -> Self {
+    pub fn padding(mut self, margin: impl Into<egui::epaint::Marginf>) -> Self {
         self.padding = margin.into();
 
         self
@@ -37,7 +37,7 @@ impl BorderedFrame {
 
     /// Set the margin. This will be applied on the outside of the border.
     #[must_use = "You must call .show() to render the frame"]
-    pub fn margin(mut self, margin: egui::style::Margin) -> Self {
+    pub fn margin(mut self, margin: egui::epaint::Marginf) -> Self {
         self.margin = margin;
 
         self
@@ -97,7 +97,11 @@ impl BorderedFrame {
         content_rect.max.x = content_rect.max.x.max(content_rect.min.x);
         content_rect.max.y = content_rect.max.y.max(content_rect.min.y);
 
-        let content_ui = ui.child_ui(content_rect, *ui.layout());
+        let content_ui = ui.new_child(egui::UiBuilder {
+            layout: Some(*ui.layout()),
+            max_rect: Some(content_rect),
+            ..Default::default()
+        });
 
         BorderedFramePrepared {
             frame: self,
@@ -120,13 +124,13 @@ impl BorderedFrame {
         let b = self.texture_border_size;
         let pr = paint_rect;
         // UV border
-        let buv = egui::style::Margin {
+        let buv = egui::epaint::Marginf {
             left: b.left / s.x,
             right: b.right / s.x,
             top: b.top / s.y,
             bottom: b.bottom / s.y,
         };
-        let b = egui::style::Margin {
+        let b = egui::epaint::Marginf {
             left: b.left * self.border_scale,
             right: b.right * self.border_scale,
             top: b.top * self.border_scale,
@@ -243,7 +247,7 @@ impl BorderedFrame {
             white,
         );
 
-        egui::Shape::Mesh(mesh)
+        egui::Shape::Mesh(mesh.into())
     }
 }
 
@@ -266,7 +270,7 @@ impl BorderedFramePrepared {
         };
         if ui.is_rect_visible(paint_rect) {
             let texture = ui.data(|map| {
-                map.get_temp::<AtomicResource<EguiTextures>>(egui::Id::null())
+                map.get_temp::<AtomicResource<EguiTextures>>(egui::Id::NULL)
                     .unwrap()
                     .borrow()
                     .unwrap()

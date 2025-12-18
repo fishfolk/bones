@@ -25,6 +25,8 @@ pub struct Tile {
     pub flip_x: bool,
     /// Whether or not to flip tile vertically.
     pub flip_y: bool,
+    /// The tile's color tint
+    pub color: Color,
 }
 
 impl TileLayer {
