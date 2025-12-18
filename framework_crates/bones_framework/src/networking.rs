@@ -22,6 +22,8 @@ use {
 
 use crate::input::PlayerControls as PlayerControlsTrait;
 
+pub use iroh;
+
 pub mod input;
 pub mod lan;
 pub mod online;
@@ -722,6 +724,7 @@ where
         let mut skip_frames: u32 = 0;
 
         {
+            let mouse = world.resource::<MouseInputs>();
             let keyboard = world.resource::<KeyboardInputs>();
             let gamepad = world.resource::<GamepadInputs>();
 
@@ -730,6 +733,7 @@ where
             // Collect inputs and update controls
             self.input_collector.apply_inputs(
                 &world.resource::<ControlMapping<InputTypes>>(),
+                &mouse,
                 &keyboard,
                 &gamepad,
             );

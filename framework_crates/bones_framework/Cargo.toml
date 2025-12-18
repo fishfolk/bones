@@ -95,7 +95,7 @@ bevy_tasks    = "0.11"
 bytemuck      = "1.12"
 either        = "1.8"
 futures-lite  = { workspace = true }
-glam          = "0.24"
+glam          = { version = "0.24", features = ["libm"] }
 hex           = "0.4"
 instant       = { version = "0.1", features = ["wasm-bindgen"] }
 noise         = "0.9"

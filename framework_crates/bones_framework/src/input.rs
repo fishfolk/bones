@@ -2,7 +2,7 @@
 
 use bones_schema::HasSchema;
 
-use self::prelude::{GamepadInputs, KeyboardInputs};
+use self::prelude::{GamepadInputs, KeyboardInputs, MouseInputs};
 
 pub mod gamepad;
 pub mod gilrs;
@@ -52,6 +52,7 @@ pub trait InputCollector<'a, ControlMapping: HasSchema, ControlSource, Control>:
     fn apply_inputs(
         &mut self,
         mapping: &ControlMapping,
+        mouse: &MouseInputs,
         keyboard: &KeyboardInputs,
         gamepad: &GamepadInputs,
     );
