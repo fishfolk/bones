@@ -511,8 +511,36 @@ impl AssetServer {
                         dependencies: partial.dependencies,
                         data: partial.data,
                     };
+                    // Loaded assets are gotten through a line of key/value maps starting with a handle.
+                    // The handle gets a cid, which gets the loaded asset. Since we are doing this in async,
+                    // when we update the server data, we need to update the key/value pairs in the reverse
+                    // of the 'get' order so that any handle at any time has an ultimate link to a loaded asset.
+
+                    server.store.assets.insert(partial.cid, loaded_asset);
+
+                    // Update reverse dependencies
+                    for dep in server
+                        .store
+                        .assets
+                        .get(&partial.cid)
+                        .unwrap()
+                        .dependencies
+                        .iter()
+                    {
+                        server
+                            .store
+                            .reverse_dependencies
+                            .entry(*dep)
+                            .or_default()
+                            .insert(handle);
+                    }
+
+                    // Assets are gotten with handles so after this, the asset will be noticeably updated.
+                    let previous_cid = server.store.asset_ids.insert(handle, partial.cid);
+
+                    // We can then remove any old data that we're not using anymore.
                     // If there is already loaded asset data for this path
-                    if let Some(cid) = server.store.asset_ids.insert(handle, partial.cid) {
+                    if let Some(cid) = previous_cid {
                         // If no other handles use this content
                         if server.store.asset_ids.iter().all(|map| *map.value() != cid) {
                             // Remove the old asset data
@@ -548,17 +576,6 @@ impl AssetServer {
                         }
                     }
 
-                    // Update reverse dependencies
-                    for dep in loaded_asset.dependencies.iter() {
-                        server
-                            .store
-                            .reverse_dependencies
-                            .entry(*dep)
-                            .or_default()
-                            .insert(handle);
-                    }
-
-                    server.store.assets.insert(partial.cid, loaded_asset);
                     server.load_progress.inc_loaded();
 
                     Ok::<_, anyhow::Error>(())
