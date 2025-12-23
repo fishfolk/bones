@@ -55,6 +55,28 @@ pub fn process_gamepad_events() -> GamepadInputs {
                     },
                 ));
             }
+            EventType::ButtonPressed(gilrs_button, _) => {
+                if let Some(button) = convert_button(gilrs_button) {
+                    gamepad_inputs
+                        .gamepad_events
+                        .push(GamepadEvent::Button(GamepadButtonEvent {
+                            gamepad,
+                            button,
+                            value: 1.0,
+                        }));
+                }
+            }
+            EventType::ButtonReleased(gilrs_button, _) => {
+                if let Some(button) = convert_button(gilrs_button) {
+                    gamepad_inputs
+                        .gamepad_events
+                        .push(GamepadEvent::Button(GamepadButtonEvent {
+                            gamepad,
+                            button,
+                            value: 0.0,
+                        }));
+                }
+            }
             EventType::ButtonChanged(gilrs_button, value, _) => {
                 if let Some(button) = convert_button(gilrs_button) {
                     gamepad_inputs
