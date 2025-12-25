@@ -1498,6 +1498,23 @@
 <a href="#1498" id="1498">1498</a>
 <a href="#1499" id="1499">1499</a>
 <a href="#1500" id="1500">1500</a>
+<a href="#1501" id="1501">1501</a>
+<a href="#1502" id="1502">1502</a>
+<a href="#1503" id="1503">1503</a>
+<a href="#1504" id="1504">1504</a>
+<a href="#1505" id="1505">1505</a>
+<a href="#1506" id="1506">1506</a>
+<a href="#1507" id="1507">1507</a>
+<a href="#1508" id="1508">1508</a>
+<a href="#1509" id="1509">1509</a>
+<a href="#1510" id="1510">1510</a>
+<a href="#1511" id="1511">1511</a>
+<a href="#1512" id="1512">1512</a>
+<a href="#1513" id="1513">1513</a>
+<a href="#1514" id="1514">1514</a>
+<a href="#1515" id="1515">1515</a>
+<a href="#1516" id="1516">1516</a>
+<a href="#1517" id="1517">1517</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -2011,8 +2028,36 @@
                         dependencies: partial.dependencies,
                         data: partial.data,
                     };
-                    <span class="comment">// If there is already loaded asset data for this path
-                    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(cid) = server.store.asset_ids.insert(handle, partial.cid) {
+                    <span class="comment">// Loaded assets are gotten through a line of key/value maps starting with a handle.
+                    // The handle gets a cid, which gets the loaded asset. Since we are doing this in async,
+                    // when we update the server data, we need to update the key/value pairs in the reverse
+                    // of the 'get' order so that any handle at any time has an ultimate link to a loaded asset.
+
+                    </span>server.store.assets.insert(partial.cid, loaded_asset);
+
+                    <span class="comment">// Update reverse dependencies
+                    </span><span class="kw">for </span>dep <span class="kw">in </span>server
+                        .store
+                        .assets
+                        .get(<span class="kw-2">&amp;</span>partial.cid)
+                        .unwrap()
+                        .dependencies
+                        .iter()
+                    {
+                        server
+                            .store
+                            .reverse_dependencies
+                            .entry(<span class="kw-2">*</span>dep)
+                            .or_default()
+                            .insert(handle);
+                    }
+
+                    <span class="comment">// Assets are gotten with handles so after this, the asset will be noticeably updated.
+                    </span><span class="kw">let </span>previous_cid = server.store.asset_ids.insert(handle, partial.cid);
+
+                    <span class="comment">// We can then remove any old data that we're not using anymore.
+                    // If there is already loaded asset data for this path
+                    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(cid) = previous_cid {
                         <span class="comment">// If no other handles use this content
                         </span><span class="kw">if </span>server.store.asset_ids.iter().all(|map| <span class="kw-2">*</span>map.value() != cid) {
                             <span class="comment">// Remove the old asset data
@@ -2048,17 +2093,6 @@
                         }
                     }
 
-                    <span class="comment">// Update reverse dependencies
-                    </span><span class="kw">for </span>dep <span class="kw">in </span>loaded_asset.dependencies.iter() {
-                        server
-                            .store
-                            .reverse_dependencies
-                            .entry(<span class="kw-2">*</span>dep)
-                            .or_default()
-                            .insert(handle);
-                    }
-
-                    server.store.assets.insert(partial.cid, loaded_asset);
                     server.load_progress.inc_loaded();
 
                     <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, anyhow::Error&gt;(())
