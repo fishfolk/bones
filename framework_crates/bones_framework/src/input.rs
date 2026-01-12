@@ -1,8 +1,7 @@
 //! Input resources.
 
+use bones_lib::ecs::World;
 use bones_schema::HasSchema;
-
-use self::prelude::{GamepadInputs, KeyboardInputs, MouseInputs};
 
 pub mod gamepad;
 pub mod gilrs;
@@ -49,13 +48,7 @@ pub trait InputCollector<'a, ControlMapping: HasSchema, ControlSource, Control>:
     /// Update the internal state with new inputs. This must be called every render frame with the
     /// input events. This updates which buttons are pressed, but does not compute what buttons were "just_pressed".
     /// use [`InputCollector::update_just_pressed`] to do this.
-    fn apply_inputs(
-        &mut self,
-        mapping: &ControlMapping,
-        mouse: &MouseInputs,
-        keyboard: &KeyboardInputs,
-        gamepad: &GamepadInputs,
-    );
+    fn apply_inputs(&mut self, world: &World);
 
     /// Indicate input for this frame has been consumed. An implementation of [`InputCollector`] that is
     /// used with a fixed simulation step may track what keys are currently pressed, and what keys were "just pressed",

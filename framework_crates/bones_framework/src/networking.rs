@@ -705,11 +705,6 @@ where
     }
 }
 
-/// Helper for accessing nested associated types on [`NetworkInputConfig`].
-#[allow(type_alias_bounds)]
-type ControlMapping<'a, C: NetworkInputConfig<'a>> =
-    <C::PlayerControls as PlayerControls<'a, C::Control>>::ControlMapping;
-
 impl<InputTypes> SessionRunner for GgrsSessionRunner<'static, InputTypes>
 where
     InputTypes: NetworkInputConfig<'static> + 'static,
@@ -724,19 +719,10 @@ where
         let mut skip_frames: u32 = 0;
 
         {
-            let mouse = world.resource::<MouseInputs>();
-            let keyboard = world.resource::<KeyboardInputs>();
-            let gamepad = world.resource::<GamepadInputs>();
-
             let player_inputs = world.resource::<InputTypes::PlayerControls>();
 
             // Collect inputs and update controls
-            self.input_collector.apply_inputs(
-                &world.resource::<ControlMapping<InputTypes>>(),
-                &mouse,
-                &keyboard,
-                &gamepad,
-            );
+            self.input_collector.apply_inputs(world);
             self.input_collector.update_just_pressed();
 
             // save local players dense input for use with ggrs
