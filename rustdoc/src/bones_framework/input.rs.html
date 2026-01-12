@@ -89,18 +89,10 @@
 <a href="#89" id="89">89</a>
 <a href="#90" id="90">90</a>
 <a href="#91" id="91">91</a>
-<a href="#92" id="92">92</a>
-<a href="#93" id="93">93</a>
-<a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Input resources.
 
-</span><span class="kw">use </span>bones_schema::HasSchema;
-
-<span class="kw">use </span><span class="self">self</span>::prelude::{GamepadInputs, KeyboardInputs, MouseInputs};
+</span><span class="kw">use </span>bones_lib::ecs::World;
+<span class="kw">use </span>bones_schema::HasSchema;
 
 <span class="kw">pub mod </span>gamepad;
 <span class="kw">pub mod </span>gilrs;
@@ -147,13 +139,7 @@
     <span class="doccomment">/// Update the internal state with new inputs. This must be called every render frame with the
     /// input events. This updates which buttons are pressed, but does not compute what buttons were "just_pressed".
     /// use [`InputCollector::update_just_pressed`] to do this.
-    </span><span class="kw">fn </span>apply_inputs(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        mapping: <span class="kw-2">&amp;</span>ControlMapping,
-        mouse: <span class="kw-2">&amp;</span>MouseInputs,
-        keyboard: <span class="kw-2">&amp;</span>KeyboardInputs,
-        gamepad: <span class="kw-2">&amp;</span>GamepadInputs,
-    );
+    </span><span class="kw">fn </span>apply_inputs(<span class="kw-2">&amp;mut </span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World);
 
     <span class="doccomment">/// Indicate input for this frame has been consumed. An implementation of [`InputCollector`] that is
     /// used with a fixed simulation step may track what keys are currently pressed, and what keys were "just pressed",
