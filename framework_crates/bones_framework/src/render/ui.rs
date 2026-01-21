@@ -35,14 +35,14 @@ impl EguiInputHook {
 }
 
 /// Resource that maps image handles to their associated egui textures.
-#[derive(HasSchema, Clone, Debug, Default, Deref, DerefMut)]
-pub struct EguiTextures(pub HashMap<Handle<Image>, egui::TextureId>);
+#[derive(HasSchema, Clone, Default, Deref, DerefMut)]
+pub struct EguiTextures(pub HashMap<Handle<Image>, egui::TextureHandle>);
 
 impl EguiTextures {
     /// Get the [`egui::TextureId`] for the given bones [`Handle<Image>`].
     #[track_caller]
     pub fn get(&self, handle: Handle<Image>) -> egui::TextureId {
-        *self.0.get(&handle).unwrap()
+        self.0.get(&handle).unwrap().id()
     }
 }
 
@@ -180,13 +180,13 @@ pub trait EguiContextExt {
 
 impl EguiContextExt for &egui::Context {
     fn clear_focus(self) {
-        self.memory_mut(|r| r.request_focus(egui::Id::null()));
+        self.memory_mut(|r| r.request_focus(egui::Id::NULL));
     }
     fn get_state<T: Clone + Default + Sync + Send + 'static>(self) -> T {
-        self.data_mut(|data| data.get_temp_mut_or_default::<T>(egui::Id::null()).clone())
+        self.data_mut(|data| data.get_temp_mut_or_default::<T>(egui::Id::NULL).clone())
     }
     fn set_state<T: Clone + Default + Sync + Send + 'static>(self, value: T) {
-        self.data_mut(|data| *data.get_temp_mut_or_default::<T>(egui::Id::null()) = value);
+        self.data_mut(|data| *data.get_temp_mut_or_default::<T>(egui::Id::NULL) = value);
     }
 }
 
@@ -198,7 +198,7 @@ pub trait EguiResponseExt {
 
 impl EguiResponseExt for egui::Response {
     fn focus_by_default(self, ui: &mut egui::Ui) -> egui::Response {
-        if ui.ctx().memory(|r| r.focus().is_none()) {
+        if ui.ctx().memory(|r| r.focused().is_none()) {
             ui.ctx().memory_mut(|r| r.request_focus(self.id));
 
             self

@@ -1,6 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 
-use bones_bevy_renderer::{bevy::diagnostic::LogDiagnosticsPlugin, BonesBevyRenderer};
+use bones_wgpu_renderer::BonesWgpuRenderer;
 use bones_framework::prelude::*;
 
 /// Create our root asset type.
@@ -91,7 +91,7 @@ fn main() {
     PersistedTextData::register_schema();
 
     // Create a bones bevy renderer from our bones game
-    let mut renderer = BonesBevyRenderer::new(create_game());
+    let mut renderer = BonesWgpuRenderer::new(create_game());
     // Set the app namespace which will be used by the renderer to decide where to put
     // persistent storage files.
     renderer.app_namespace = (
@@ -101,9 +101,9 @@ fn main() {
     );
     // Get a bevy app for running our game
     renderer
-        .app()
+        //.app()
         // We can add our own bevy plugins now
-        .add_plugins(LogDiagnosticsPlugin::default())
+        //.add_plugins(LogDiagnosticsPlugin::default())
         // And run the bevy app
         .run()
 }
@@ -181,7 +181,7 @@ fn menu_system(
 
     // Render the menu.
     egui::CentralPanel::default()
-        .frame(egui::Frame::none())
+        .frame(egui::Frame::new())
         .show(&ctx, |ui| {
             BorderedFrame::new(&meta.menu_border).show(ui, |ui| {
                 ui.vertical_centered(|ui| {
@@ -317,7 +317,7 @@ fn move_sprite(
     ctx: Res<EguiCtx>,
 ) {
     egui::CentralPanel::default()
-        .frame(egui::Frame::none())
+        .frame(egui::Frame::new())
         .show(&ctx, |ui| {
             ui.label("Press left and right arrow keys to move sprite");
         });
@@ -453,7 +453,7 @@ fn audio_demo_ui(
     assets: Res<AssetServer>,
 ) {
     egui::CentralPanel::default()
-        .frame(egui::Frame::none())
+        .frame(egui::Frame::new())
         .show(&ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(50.0);
@@ -538,7 +538,7 @@ fn back_to_menu_ui(
     localization: Localization<GameMeta>,
 ) {
     egui::TopBottomPanel::bottom("back-to-menu")
-        .frame(egui::Frame::none())
+        .frame(egui::Frame::new())
         .show_separator_line(false)
         .show(&ctx, |ui| {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {

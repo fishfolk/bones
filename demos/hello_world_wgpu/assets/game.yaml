@@ -1,0 +1,6 @@
+# This is our root asset file, which corresponds to our `GameMeta` struct.
+
+title: Assets Minimal
+sprite: ./sprite/fractal.png
+sprite2: ./sprite/example.png
+atlas: ./atlas/fishy-body.atlas.yaml

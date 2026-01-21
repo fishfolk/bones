@@ -60,7 +60,7 @@ pub fn get_bones_input(
             key_events: keyboard_events
                 .iter()
                 .map(|event| bones::KeyboardEvent {
-                    scan_code: event.scan_code,
+                    scan_code: bones::Set(event.scan_code),
                     key_code: event.key_code.map(|x| x.into_bones()).into(),
                     button_state: event.state.into_bones(),
                 })

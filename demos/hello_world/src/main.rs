@@ -1,4 +1,4 @@
-use bones_bevy_renderer::BonesBevyRenderer;
+use bones_wgpu_renderer::BonesWgpuRenderer;
 use bones_framework::prelude::*;
 
 fn main() {
@@ -19,7 +19,7 @@ fn main() {
                 .add_system_to_stage(Update, menu_system);
         });
 
-    BonesBevyRenderer::new(game).app().run();
+    BonesWgpuRenderer::new(game).run();
 }
 
 /// System to render the home menu.
