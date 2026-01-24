@@ -173,14 +173,17 @@ impl SchemaMap {
     /// Panics if the schema of the key doesn't match.
     #[inline]
     #[track_caller]
-    pub fn get_ref(&self, key: SchemaRef) -> Option<SchemaRef> {
+    pub fn get_ref(&self, key: SchemaRef) -> Option<SchemaRef<'_>> {
         self.try_get_ref(key).unwrap()
     }
 
     /// Get an untyped reference to an item in the map.
     /// # Errors
     /// Errors if the schema of the key doesn't match.
-    pub fn try_get_ref(&self, key: SchemaRef) -> Result<Option<SchemaRef>, SchemaMismatchError> {
+    pub fn try_get_ref(
+        &self,
+        key: SchemaRef,
+    ) -> Result<Option<SchemaRef<'_>>, SchemaMismatchError> {
         if key.schema() != self.key_schema {
             Err(SchemaMismatchError)
         } else {
@@ -191,7 +194,7 @@ impl SchemaMap {
 
     /// # Safety
     /// The key's schema must match this map's key schema.
-    pub unsafe fn get_ref_unchecked(&self, key: SchemaRef) -> Option<SchemaRef> {
+    pub unsafe fn get_ref_unchecked(&self, key: SchemaRef) -> Option<SchemaRef<'_>> {
         let Some(hash_fn) = &self.key_schema.hash_fn else {
             panic!("Key schema doesn't implement hash");
         };
@@ -221,7 +224,7 @@ impl SchemaMap {
     /// Panics if the schema of the key doesn't match.
     #[inline]
     #[track_caller]
-    pub fn get_ref_mut(&mut self, key: SchemaRef) -> Option<SchemaRefMut> {
+    pub fn get_ref_mut(&mut self, key: SchemaRef) -> Option<SchemaRefMut<'_>> {
         self.try_get_ref_mut(key).unwrap()
     }
 
@@ -231,7 +234,7 @@ impl SchemaMap {
     pub fn try_get_ref_mut(
         &mut self,
         key: SchemaRef,
-    ) -> Result<Option<SchemaRefMut>, SchemaMismatchError> {
+    ) -> Result<Option<SchemaRefMut<'_>>, SchemaMismatchError> {
         if key.schema() != self.key_schema {
             Err(SchemaMismatchError)
         } else {
@@ -242,7 +245,7 @@ impl SchemaMap {
 
     /// # Safety
     /// The key's schema must match this map's key schema.
-    pub unsafe fn get_ref_unchecked_mut(&mut self, key: SchemaRef) -> Option<SchemaRefMut> {
+    pub unsafe fn get_ref_unchecked_mut(&mut self, key: SchemaRef) -> Option<SchemaRefMut<'_>> {
         let Some(hash_fn) = &self.key_schema.hash_fn else {
             panic!("Key schema doesn't implement hash");
         };
@@ -435,7 +438,7 @@ type SchemaMapIterMut<'iter> = std::iter::Map<
 impl SchemaMap {
     /// Iterate over entries in the map.
     #[allow(clippy::type_complexity)]
-    pub fn iter(&self) -> SchemaMapIter {
+    pub fn iter(&self) -> SchemaMapIter<'_> {
         fn map_fn<'a>(
             (key, value): (&'a SchemaBox, &'a SchemaBox),
         ) -> (SchemaRef<'a>, SchemaRef<'a>) {
@@ -446,7 +449,7 @@ impl SchemaMap {
 
     /// Iterate over entries in the map.
     #[allow(clippy::type_complexity)]
-    pub fn iter_mut(&mut self) -> SchemaMapIterMut {
+    pub fn iter_mut(&mut self) -> SchemaMapIterMut<'_> {
         fn map_fn<'a>(
             (key, value): (&'a SchemaBox, &'a mut SchemaBox),
         ) -> (SchemaRef<'a>, SchemaRefMut<'a>) {
@@ -460,10 +463,10 @@ impl SchemaMap {
     pub fn keys(
         &self,
     ) -> std::iter::Map<
-        hash_map::Keys<SchemaBox, SchemaBox>,
+        hash_map::Keys<'_, SchemaBox, SchemaBox>,
         for<'a> fn(&'a SchemaBox) -> SchemaRef<'a>,
     > {
-        fn map_fn(key: &SchemaBox) -> SchemaRef {
+        fn map_fn(key: &SchemaBox) -> SchemaRef<'_> {
             key.as_ref()
         }
         self.map.keys().map(map_fn)
@@ -474,10 +477,10 @@ impl SchemaMap {
     pub fn values(
         &self,
     ) -> std::iter::Map<
-        hash_map::Values<SchemaBox, SchemaBox>,
+        hash_map::Values<'_, SchemaBox, SchemaBox>,
         for<'a> fn(&'a SchemaBox) -> SchemaRef<'a>,
     > {
-        fn map_fn(key: &SchemaBox) -> SchemaRef {
+        fn map_fn(key: &SchemaBox) -> SchemaRef<'_> {
             key.as_ref()
         }
         self.map.values().map(map_fn)
@@ -488,10 +491,10 @@ impl SchemaMap {
     pub fn values_mut(
         &mut self,
     ) -> std::iter::Map<
-        hash_map::ValuesMut<SchemaBox, SchemaBox>,
+        hash_map::ValuesMut<'_, SchemaBox, SchemaBox>,
         for<'a> fn(&'a mut SchemaBox) -> SchemaRefMut<'a>,
     > {
-        fn map_fn(key: &mut SchemaBox) -> SchemaRefMut {
+        fn map_fn(key: &mut SchemaBox) -> SchemaRefMut<'_> {
             key.as_mut()
         }
         self.map.values_mut().map(map_fn)
@@ -664,7 +667,7 @@ type SMapIterMut<'iter, K, V> = std::iter::Map<
 impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     /// Iterate over entries in the map.
     #[allow(clippy::type_complexity)]
-    pub fn iter(&self) -> SMapIter<K, V> {
+    pub fn iter(&self) -> SMapIter<'_, K, V> {
         fn map_fn<'a, K: HasSchema, V: HasSchema>(
             (key, value): (&'a SchemaBox, &'a SchemaBox),
         ) -> (&'a K, &'a V) {
@@ -681,7 +684,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
 
     /// Iterate over entries in the map.
     #[allow(clippy::type_complexity)]
-    pub fn iter_mut(&mut self) -> SMapIterMut<K, V> {
+    pub fn iter_mut(&mut self) -> SMapIterMut<'_, K, V> {
         fn map_fn<'a, K: HasSchema, V: HasSchema>(
             (key, value): (&'a SchemaBox, &'a mut SchemaBox),
         ) -> (&'a K, &'a mut V) {
@@ -700,7 +703,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     #[allow(clippy::type_complexity)]
     pub fn keys(
         &self,
-    ) -> std::iter::Map<hash_map::Keys<SchemaBox, SchemaBox>, for<'a> fn(&'a SchemaBox) -> &'a K>
+    ) -> std::iter::Map<hash_map::Keys<'_, SchemaBox, SchemaBox>, for<'a> fn(&'a SchemaBox) -> &'a K>
     {
         fn map_fn<K: HasSchema>(key: &SchemaBox) -> &K {
             // SOUND: SMap ensures key schema always match
@@ -713,8 +716,10 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     #[allow(clippy::type_complexity)]
     pub fn values(
         &self,
-    ) -> std::iter::Map<hash_map::Values<SchemaBox, SchemaBox>, for<'a> fn(&'a SchemaBox) -> &'a V>
-    {
+    ) -> std::iter::Map<
+        hash_map::Values<'_, SchemaBox, SchemaBox>,
+        for<'a> fn(&'a SchemaBox) -> &'a V,
+    > {
         fn map_fn<V: HasSchema>(value: &SchemaBox) -> &V {
             // SOUND: SMap ensures value schema always matches.
             unsafe { value.as_ref().cast_into_unchecked() }
@@ -727,7 +732,7 @@ impl<K: HasSchema, V: HasSchema> SMap<K, V> {
     pub fn values_mut(
         &mut self,
     ) -> std::iter::Map<
-        hash_map::ValuesMut<SchemaBox, SchemaBox>,
+        hash_map::ValuesMut<'_, SchemaBox, SchemaBox>,
         for<'a> fn(&'a mut SchemaBox) -> &'a mut V,
     > {
         fn map_fn<V>(value: &mut SchemaBox) -> &mut V {

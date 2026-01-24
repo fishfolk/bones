@@ -250,12 +250,12 @@ impl UntypedComponentStore {
     /// Get a [`SchemaRef`] to the component for the given [`Entity`] if the entity has this
     /// component.
     #[inline]
-    pub fn get_ref(&self, entity: Entity) -> Option<SchemaRef> {
+    pub fn get_ref(&self, entity: Entity) -> Option<SchemaRef<'_>> {
         let idx = entity.index() as usize;
         self.get_idx(idx)
     }
 
-    fn get_idx(&self, idx: usize) -> Option<SchemaRef> {
+    fn get_idx(&self, idx: usize) -> Option<SchemaRef<'_>> {
         if self.bitset.bit_test(idx) {
             // SOUND: we ensure that there is allocated storge for entities that have their bit set.
             let ptr = unsafe { self.storage.unchecked_idx(idx) };
@@ -377,7 +377,7 @@ impl UntypedComponentStore {
     pub fn get_many_ref_mut<const N: usize>(
         &mut self,
         entities: [Entity; N],
-    ) -> [Option<SchemaRefMut>; N] {
+    ) -> [Option<SchemaRefMut<'_>>; N] {
         // Sort a copy of the passed in entities list.
         let mut sorted = entities;
         sorted.sort_unstable();
@@ -494,7 +494,7 @@ impl UntypedComponentStore {
     pub fn get_single_with_bitset(
         &self,
         bitset: Rc<BitSetVec>,
-    ) -> Result<SchemaRef, QuerySingleError> {
+    ) -> Result<SchemaRef<'_>, QuerySingleError> {
         if self.bitset().bit_count() == 0 || bitset.bit_count() == 0 {
             // Both bitsets are empty so there are no matches
             return Err(QuerySingleError::NoEntities);
@@ -520,7 +520,7 @@ impl UntypedComponentStore {
     pub fn get_single_with_bitset_mut(
         &mut self,
         bitset: Rc<BitSetVec>,
-    ) -> Result<SchemaRefMut, QuerySingleError> {
+    ) -> Result<SchemaRefMut<'_>, QuerySingleError> {
         if self.bitset().bit_count() == 0 || bitset.bit_count() == 0 {
             // Both bitsets are empty so there are no matches
             return Err(QuerySingleError::NoEntities);
@@ -565,7 +565,7 @@ impl UntypedComponentStore {
     /// entities.
     ///
     /// Slower than `iter()` but allows joining between multiple component types.
-    pub fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> UntypedComponentBitsetIterator {
+    pub fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> UntypedComponentBitsetIterator<'_> {
         UntypedComponentBitsetIterator {
             current_id: 0,
             components: self,
@@ -580,7 +580,7 @@ impl UntypedComponentStore {
     pub fn iter_mut_with_bitset(
         &mut self,
         bitset: Rc<BitSetVec>,
-    ) -> UntypedComponentBitsetIteratorMut {
+    ) -> UntypedComponentBitsetIteratorMut<'_> {
         UntypedComponentBitsetIteratorMut {
             current_id: 0,
             components: self,
@@ -593,7 +593,7 @@ impl UntypedComponentStore {
     pub fn iter_with_bitset_optional(
         &self,
         bitset: Rc<BitSetVec>,
-    ) -> UntypedComponentOptionalBitsetIterator {
+    ) -> UntypedComponentOptionalBitsetIterator<'_> {
         let components_count = self.bitset.bit_count();
         let query_count = bitset.bit_count();
         UntypedComponentOptionalBitsetIterator {
@@ -613,7 +613,7 @@ impl UntypedComponentStore {
     pub fn iter_mut_with_bitset_optional(
         &mut self,
         bitset: Rc<BitSetVec>,
-    ) -> UntypedComponentOptionalBitsetIteratorMut {
+    ) -> UntypedComponentOptionalBitsetIteratorMut<'_> {
         let components_count = self.bitset.bit_count();
         let query_count = bitset.bit_count();
         UntypedComponentOptionalBitsetIteratorMut {

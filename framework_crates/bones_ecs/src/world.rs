@@ -130,7 +130,7 @@ impl World {
     }
 
     /// Initialize a resource of type `T` by inserting it's default value.
-    pub fn init_resource<R: HasSchema + FromWorld>(&mut self) -> RefMut<R> {
+    pub fn init_resource<R: HasSchema + FromWorld>(&mut self) -> RefMut<'_, R> {
         if unlikely(!self.resources.contains::<R>()) {
             let value = R::from_world(self);
             self.resources.insert(value);
@@ -147,7 +147,7 @@ impl World {
     /// # Panics
     /// Panics if the resource does not exist in the store.
     #[track_caller]
-    pub fn resource<T: HasSchema>(&self) -> Ref<T> {
+    pub fn resource<T: HasSchema>(&self) -> Ref<'_, T> {
         match self.resources.get::<T>() {
             Some(r) => r,
             None => panic!(
@@ -162,7 +162,7 @@ impl World {
     /// # Panics
     /// Panics if the resource does not exist in the store.
     #[track_caller]
-    pub fn resource_mut<T: HasSchema>(&self) -> RefMut<T> {
+    pub fn resource_mut<T: HasSchema>(&self) -> RefMut<'_, T> {
         match self.resources.get_mut::<T>() {
             Some(r) => r,
             None => panic!(
@@ -174,12 +174,12 @@ impl World {
     }
 
     /// Borrow a resource from the world, if it exists.
-    pub fn get_resource<T: HasSchema>(&self) -> Option<Ref<T>> {
+    pub fn get_resource<T: HasSchema>(&self) -> Option<Ref<'_, T>> {
         self.resources.get()
     }
 
     /// Borrow a resource from the world, if it exists.
-    pub fn get_resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
+    pub fn get_resource_mut<T: HasSchema>(&self) -> Option<RefMut<'_, T>> {
         self.resources.get_mut()
     }
 
@@ -187,7 +187,7 @@ impl World {
     /// # Panics
     /// Panics if the component store does not exist in the world.
     #[track_caller]
-    pub fn component<T: HasSchema>(&self) -> Ref<ComponentStore<T>> {
+    pub fn component<T: HasSchema>(&self) -> Ref<'_, ComponentStore<T>> {
         self.components.get::<T>().borrow()
     }
 
@@ -195,7 +195,7 @@ impl World {
     /// # Panics
     /// Panics if the component store does not exist in the world.
     #[track_caller]
-    pub fn component_mut<T: HasSchema>(&self) -> RefMut<ComponentStore<T>> {
+    pub fn component_mut<T: HasSchema>(&self) -> RefMut<'_, ComponentStore<T>> {
         self.components.get::<T>().borrow_mut()
     }
 

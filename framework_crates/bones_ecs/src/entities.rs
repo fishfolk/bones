@@ -610,7 +610,10 @@ impl Entities {
     ///     }
     /// }
     /// ```
-    pub fn iter_with<Q: QueryItem>(&self, query: Q) -> EntitiesIterWith<<Q as QueryItem>::Iter> {
+    pub fn iter_with<Q: QueryItem>(
+        &self,
+        query: Q,
+    ) -> EntitiesIterWith<'_, <Q as QueryItem>::Iter> {
         let mut bitset = self.bitset().clone();
         query.apply_bitset(&mut bitset);
         let bitset = Rc::new(bitset);
@@ -722,7 +725,7 @@ impl Entities {
     }
 
     /// Iterates over all alive entities.
-    pub fn iter(&self) -> EntityIterator {
+    pub fn iter(&self) -> EntityIterator<'_> {
         EntityIterator {
             current_id: 0,
             next_id: self.next_id,

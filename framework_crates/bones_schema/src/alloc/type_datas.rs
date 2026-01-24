@@ -58,7 +58,7 @@ impl TypeDatas {
     }
 
     /// Borrow data from the store, if it exists.
-    pub fn get_ref(&self, id: SchemaId) -> Option<SchemaRef> {
+    pub fn get_ref(&self, id: SchemaId) -> Option<SchemaRef<'_>> {
         for data in self.0.iter() {
             if data.schema().id() == id {
                 return Some(data.as_ref());

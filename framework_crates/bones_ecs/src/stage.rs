@@ -155,13 +155,13 @@ impl SystemStagesBuilder {
 
     /// Init startup resource with default, and return mutable ref for modification.
     /// If already exists, returns mutable ref to existing resource.
-    pub fn init_startup_resource<T: HasSchema + Default>(&mut self) -> RefMut<T> {
+    pub fn init_startup_resource<T: HasSchema + Default>(&mut self) -> RefMut<'_, T> {
         self.startup_resources.init_resource::<T>()
     }
 
     /// Get mutable reference to startup resource if found.
     #[track_caller]
-    pub fn startup_resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
+    pub fn startup_resource_mut<T: HasSchema>(&self) -> Option<RefMut<'_, T>> {
         self.startup_resources.resource_mut()
     }
 }

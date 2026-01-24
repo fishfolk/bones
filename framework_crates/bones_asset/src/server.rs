@@ -806,7 +806,7 @@ impl AssetServer {
     }
 
     /// Borrow a [`LoadedAsset`] associated to the given handle.
-    pub fn get_asset_untyped(&self, handle: UntypedHandle) -> Option<MapRef<Cid, LoadedAsset>> {
+    pub fn get_asset_untyped(&self, handle: UntypedHandle) -> Option<MapRef<'_, Cid, LoadedAsset>> {
         let cid = self.store.asset_ids.get(&handle)?;
         self.store.assets.get(&cid)
     }
@@ -815,7 +815,7 @@ impl AssetServer {
     pub fn get_asset_untyped_mut(
         &self,
         handle: UntypedHandle,
-    ) -> Option<MapRefMut<Cid, LoadedAsset>> {
+    ) -> Option<MapRefMut<'_, Cid, LoadedAsset>> {
         let cid = self.store.asset_ids.get(&handle)?;
         self.store.assets.get_mut(&cid)
     }
@@ -826,17 +826,17 @@ impl AssetServer {
     ///
     /// Panics if the assets have not be loaded yet with [`AssetServer::load_assets`].
     #[track_caller]
-    pub fn core(&self) -> MappedMutexGuard<AssetPack> {
+    pub fn core(&self) -> MappedMutexGuard<'_, AssetPack> {
         MutexGuard::map(self.store.core_pack.lock(), |x| x.as_mut().unwrap())
     }
 
     /// Get the core asset pack's root asset.
-    pub fn root<T: HasSchema>(&self) -> MappedMapRef<Cid, LoadedAsset, T> {
+    pub fn root<T: HasSchema>(&self) -> MappedMapRef<'_, Cid, LoadedAsset, T> {
         self.get(self.core().root.typed())
     }
 
     /// Get the core asset pack's root asset as a type-erased [`SchemaBox`].
-    pub fn untyped_root(&self) -> MappedMapRef<Cid, LoadedAsset, SchemaBox> {
+    pub fn untyped_root(&self) -> MappedMapRef<'_, Cid, LoadedAsset, SchemaBox> {
         self.get_untyped(self.core().root)
     }
 
@@ -852,7 +852,7 @@ impl AssetServer {
     /// Panics if the asset is not loaded or if the asset with the given handle doesn't have a
     /// schema matching `T`.
     #[track_caller]
-    pub fn get<T: HasSchema>(&self, handle: Handle<T>) -> MappedMapRef<Cid, LoadedAsset, T> {
+    pub fn get<T: HasSchema>(&self, handle: Handle<T>) -> MappedMapRef<'_, Cid, LoadedAsset, T> {
         self.try_get(handle)
             .expect("asset not found (handle has no cid)")
             .expect("asset does not have matching schema for given type")
@@ -864,7 +864,10 @@ impl AssetServer {
     ///
     /// Panics if the asset is not loaded.
     #[track_caller]
-    pub fn get_untyped(&self, handle: UntypedHandle) -> MappedMapRef<Cid, LoadedAsset, SchemaBox> {
+    pub fn get_untyped(
+        &self,
+        handle: UntypedHandle,
+    ) -> MappedMapRef<'_, Cid, LoadedAsset, SchemaBox> {
         self.try_get_untyped(handle).unwrap()
     }
 
@@ -877,7 +880,7 @@ impl AssetServer {
     pub fn get_untyped_mut(
         &self,
         handle: UntypedHandle,
-    ) -> MappedMapRefMut<Cid, LoadedAsset, SchemaBox> {
+    ) -> MappedMapRefMut<'_, Cid, LoadedAsset, SchemaBox> {
         self.try_get_untyped_mut(handle).unwrap()
     }
 
@@ -918,7 +921,7 @@ impl AssetServer {
     pub fn try_get_untyped(
         &self,
         handle: UntypedHandle,
-    ) -> Option<MappedMapRef<Cid, LoadedAsset, SchemaBox>> {
+    ) -> Option<MappedMapRef<'_, Cid, LoadedAsset, SchemaBox>> {
         let cid = self.store.asset_ids.get(&handle)?;
         Some(MapRef::map(self.store.assets.get(&cid).unwrap(), |x| {
             &x.data
@@ -929,7 +932,7 @@ impl AssetServer {
     pub fn try_get_untyped_mut(
         &self,
         handle: UntypedHandle,
-    ) -> Option<MappedMapRefMut<Cid, LoadedAsset, SchemaBox>> {
+    ) -> Option<MappedMapRefMut<'_, Cid, LoadedAsset, SchemaBox>> {
         let cid = self.store.asset_ids.get_mut(&handle)?;
         Some(MapRefMut::map(
             self.store.assets.get_mut(&cid).unwrap(),
@@ -968,7 +971,7 @@ impl AssetServer {
     pub fn get_mut<T: HasSchema>(
         &mut self,
         handle: &Handle<T>,
-    ) -> MappedMapRefMut<Cid, LoadedAsset, T> {
+    ) -> MappedMapRefMut<'_, Cid, LoadedAsset, T> {
         let cid = self
             .store
             .asset_ids

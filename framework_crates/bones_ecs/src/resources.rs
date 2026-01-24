@@ -75,13 +75,13 @@ impl UntypedResource {
 
     /// Borrow the resource.
     #[track_caller]
-    pub fn borrow(&self) -> Ref<Option<SchemaBox>> {
+    pub fn borrow(&self) -> Ref<'_, Option<SchemaBox>> {
         self.cell.borrow()
     }
 
     /// Mutably borrow the resource.
     #[track_caller]
-    pub fn borrow_mut(&self) -> RefMut<Option<SchemaBox>> {
+    pub fn borrow_mut(&self) -> RefMut<'_, Option<SchemaBox>> {
         self.cell.borrow_mut()
     }
 
@@ -253,7 +253,7 @@ impl Resources {
 
     /// Borrow a resource.
     #[track_caller]
-    pub fn get<T: HasSchema>(&self) -> Option<Ref<T>> {
+    pub fn get<T: HasSchema>(&self) -> Option<Ref<'_, T>> {
         let b = self.untyped.get(T::schema()).borrow();
         if b.is_some() {
             Some(Ref::map(b, |b| unsafe {
@@ -266,7 +266,7 @@ impl Resources {
 
     /// Borrow a resource.
     #[track_caller]
-    pub fn get_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
+    pub fn get_mut<T: HasSchema>(&self) -> Option<RefMut<'_, T>> {
         let b = self.untyped.get(T::schema()).borrow_mut();
         if b.is_some() {
             Some(RefMut::map(b, |b| unsafe {
@@ -373,7 +373,7 @@ impl<T: HasSchema> AtomicResource<T> {
     /// Lock the resource for reading.
     ///
     /// This returns a read guard, very similar to an [`RwLock`][std::sync::RwLock].
-    pub fn borrow(&self) -> Option<Ref<T>> {
+    pub fn borrow(&self) -> Option<Ref<'_, T>> {
         let borrow = self.untyped.borrow();
         if borrow.is_some() {
             Some(Ref::map(borrow, |r| unsafe {
@@ -387,7 +387,7 @@ impl<T: HasSchema> AtomicResource<T> {
     /// Lock the resource for read-writing.
     ///
     /// This returns a write guard, very similar to an [`RwLock`][std::sync::RwLock].
-    pub fn borrow_mut(&self) -> Option<RefMut<T>> {
+    pub fn borrow_mut(&self) -> Option<RefMut<'_, T>> {
         let borrow = self.untyped.borrow_mut();
         if borrow.is_some() {
             Some(RefMut::map(borrow, |r| unsafe {
@@ -415,7 +415,7 @@ impl<T: HasSchema + FromWorld> AtomicResource<T> {
 
     /// Borrow the resource, initializing it if it doesn't exist.
     #[track_caller]
-    pub fn init_borrow(&self, world: &World) -> Ref<T> {
+    pub fn init_borrow(&self, world: &World) -> Ref<'_, T> {
         let map_borrow = |borrow| {
             // SOUND: we know the schema matches.
             Ref::map(borrow, |b: &Option<SchemaBox>| unsafe {
@@ -438,7 +438,7 @@ impl<T: HasSchema + FromWorld> AtomicResource<T> {
 
     /// Borrow the resource, initializing it if it doesn't exist.
     #[track_caller]
-    pub fn init_borrow_mut(&self, world: &World) -> RefMut<T> {
+    pub fn init_borrow_mut(&self, world: &World) -> RefMut<'_, T> {
         let mut borrow = self.untyped.borrow_mut();
         if unlikely(borrow.is_none()) {
             *borrow = Some(SchemaBox::new(T::from_world(world)));
@@ -500,7 +500,7 @@ impl UntypedResourceSet {
 
     /// Init resource with default, and return mutable ref for modification.
     /// If already exists, returns mutable ref to existing resource.
-    pub fn init_resource<T: HasSchema + Default>(&mut self) -> RefMut<T> {
+    pub fn init_resource<T: HasSchema + Default>(&mut self) -> RefMut<'_, T> {
         if !self.resources.iter().any(|x| x.schema() == T::schema()) {
             self.insert_resource(T::default());
         }
@@ -509,7 +509,7 @@ impl UntypedResourceSet {
 
     /// Get mutable reference to startup resource if found.
     #[track_caller]
-    pub fn resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
+    pub fn resource_mut<T: HasSchema>(&self) -> Option<RefMut<'_, T>> {
         let res = self.resources.iter().find(|x| x.schema() == T::schema())?;
         let borrow = res.borrow_mut();
 

@@ -67,7 +67,7 @@ pub struct BonesBevyRenderer {
 pub struct BonesGame(pub bones::Game);
 impl BonesGame {
     /// Shorthand for [`bones::AssetServer`] typed access to the shared resource
-    pub fn asset_server(&self) -> Option<bones::Ref<bones::AssetServer>> {
+    pub fn asset_server(&self) -> Option<bones::Ref<'_, bones::AssetServer>> {
         self.0.shared_resource()
     }
 }

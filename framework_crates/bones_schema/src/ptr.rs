@@ -148,7 +148,7 @@ impl<'pointer> SchemaRef<'pointer> {
     }
 
     /// Get a helper to access the inner without consuming this reference.
-    fn access_borrowed(&self) -> SchemaRefAccess {
+    fn access_borrowed(&self) -> SchemaRefAccess<'_> {
         SchemaRefAccess::new_borrowed(self)
     }
 
@@ -413,7 +413,7 @@ impl<'a> StructRefAccess<'a> {
     }
 
     /// Interate over the fields on the struct.
-    pub fn fields(&self) -> StructRefFieldIter {
+    pub fn fields(&self) -> StructRefFieldIter<'_> {
         StructRefFieldIter {
             ptr: self.0,
             field_idx: 0,
@@ -829,7 +829,7 @@ impl<'pointer> SchemaRefMut<'pointer> {
     }
 
     /// Get the reference to a field.
-    pub fn field<'a, I: Into<FieldIdx<'a>>>(&mut self, field_idx: I) -> Option<SchemaRefMut> {
+    pub fn field<'a, I: Into<FieldIdx<'a>>>(&mut self, field_idx: I) -> Option<SchemaRefMut<'_>> {
         Some(
             self.access_mut()
                 .field(field_idx)
@@ -842,7 +842,7 @@ impl<'pointer> SchemaRefMut<'pointer> {
     pub fn field_path<'a, I: IntoIterator<Item = FieldIdx<'a>>>(
         &mut self,
         path: I,
-    ) -> Option<SchemaRefMut> {
+    ) -> Option<SchemaRefMut<'_>> {
         self.access_mut()
             .field_path(path)
             .map(|x| x.into_schema_ref_mut())
@@ -1041,7 +1041,7 @@ impl<'pointer> SchemaRefMutAccess<'pointer> {
     }
 
     /// Borrow this [`SchemaRefMutAccess`] as a [`SchemaRefAccess`].
-    pub fn as_ref(&self) -> SchemaRefAccess {
+    pub fn as_ref(&self) -> SchemaRefAccess<'_> {
         match self {
             SchemaRefMutAccess::Struct(s) => SchemaRefAccess::Struct(StructRefAccess(s.0.as_ref())),
             SchemaRefMutAccess::Vec(v) => SchemaRefAccess::Vec(SchemaVecAccess {
@@ -1281,7 +1281,7 @@ pub enum PrimitiveRefMut<'a> {
 
 impl<'ptr> PrimitiveRefMut<'ptr> {
     /// Convert to an immutable [`PrimitiveRef`].
-    pub fn as_ref(&self) -> PrimitiveRef {
+    pub fn as_ref(&self) -> PrimitiveRef<'_> {
         match self {
             PrimitiveRefMut::Bool(b) => PrimitiveRef::Bool(b),
             PrimitiveRefMut::U8(n) => PrimitiveRef::U8(n),
@@ -1874,7 +1874,7 @@ impl<'a> IntoIterator for FieldPath<&'a str> {
         fn flt(x: &&str) -> bool {
             !x.is_empty()
         }
-        fn mp(x: &str) -> FieldIdx {
+        fn mp(x: &str) -> FieldIdx<'_> {
             x.parse::<usize>()
                 .map(FieldIdx::Idx)
                 .unwrap_or(FieldIdx::Name(x))
@@ -1890,7 +1890,7 @@ impl IntoIterator for FieldPath<Ustr> {
         fn flt(x: &&str) -> bool {
             !x.is_empty()
         }
-        fn mp(x: &str) -> FieldIdx {
+        fn mp(x: &str) -> FieldIdx<'_> {
             x.parse::<usize>()
                 .map(FieldIdx::Idx)
                 .unwrap_or(FieldIdx::Name(x))
