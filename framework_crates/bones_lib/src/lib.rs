@@ -430,7 +430,7 @@ impl Game {
     }
     #[track_caller]
     /// Get the shared resource of a given type out of this [`Game`]s shared resources.
-    pub fn shared_resource<T: HasSchema>(&self) -> Option<Ref<'_, T>> {
+    pub fn get_shared_resource<T: HasSchema>(&self) -> Option<Ref<'_, T>> {
         let res = self
             .shared_resources
             .iter()
@@ -466,6 +466,20 @@ impl Game {
         }
     }
 
+    #[track_caller]
+    /// Get the shared resource of a given type out of this [`Game`]s shared resources.
+    pub fn shared_resource<T: HasSchema>(&self) -> Ref<'_, T> {
+        self.get_shared_resource()
+            .expect("shared resource not found")
+    }
+
+    #[track_caller]
+    /// Get the shared resource of a given type out of this [`Game`]s shared resources.
+    pub fn shared_resource_mut<T: HasSchema>(&self) -> RefMut<'_, T> {
+        self.get_shared_resource_mut()
+            .expect("shared resource not found")
+    }
+
     /// Get the shared resource cell of a given type out of this [`Game`]s shared resources.
     pub fn shared_resource_cell<T: HasSchema>(&self) -> Option<AtomicResource<T>> {
         let res = self
@@ -485,7 +499,7 @@ impl Game {
         {
             self.insert_shared_resource(T::default());
         }
-        self.shared_resource_mut::<T>().unwrap()
+        self.shared_resource_mut::<T>()
     }
 
     /// Insert a resource that will be shared across all game sessions.
