@@ -32,7 +32,7 @@ impl<'gc> FromValue<'gc> for &'gc EcsRef {
 
 impl EcsRef {
     /// Borrow the value pointed to by the [`EcsRef`]
-    pub fn borrow(&self) -> EcsRefBorrow {
+    pub fn borrow(&self) -> EcsRefBorrow<'_> {
         EcsRefBorrow {
             borrow: self.data.borrow(),
             path: self.path,
@@ -40,7 +40,7 @@ impl EcsRef {
     }
 
     /// Mutably borrow the value pointed to by the [`EcsRef`]
-    pub fn borrow_mut(&self) -> EcsRefBorrowMut {
+    pub fn borrow_mut(&self) -> EcsRefBorrowMut<'_> {
         EcsRefBorrowMut {
             borrow: self.data.borrow_mut(),
             path: self.path,
@@ -64,7 +64,7 @@ pub struct EcsRefBorrow<'a> {
 
 impl EcsRefBorrow<'_> {
     /// Get the [`SchemaRef`].
-    pub fn schema_ref(&self) -> Result<SchemaRef, EcsRefBorrowError> {
+    pub fn schema_ref(&self) -> Result<SchemaRef<'_>, EcsRefBorrowError> {
         let b = self.borrow.schema_ref()?;
         let b = b
             .field_path(FieldPath(self.path))
@@ -81,7 +81,7 @@ pub struct EcsRefBorrowMut<'a> {
 
 impl EcsRefBorrowMut<'_> {
     /// Get the [`SchemaRef`].
-    pub fn schema_ref_mut(&mut self) -> Result<SchemaRefMut, EcsRefBorrowError> {
+    pub fn schema_ref_mut(&mut self) -> Result<SchemaRefMut<'_>, EcsRefBorrowError> {
         let b = self.borrow.schema_ref_mut()?;
         let b = b
             .into_field_path(FieldPath(self.path))
@@ -151,7 +151,7 @@ impl EcsRefBorrowKind<'_> {
     ///
     /// Will return none if the value does not exist, such as an unloaded asset or a component
     /// that is not set for a given entity.
-    pub fn schema_ref(&self) -> Result<SchemaRef, EcsRefBorrowError> {
+    pub fn schema_ref(&self) -> Result<SchemaRef<'_>, EcsRefBorrowError> {
         match self {
             EcsRefBorrowKind::Resource(r) => Ok(r
                 .as_ref()
@@ -199,7 +199,7 @@ impl EcsRefBorrowMutKind<'_> {
     ///
     /// Will return none if the value does not exist, such as an unloaded asset or a component
     /// that is not set for a given entity.
-    pub fn schema_ref_mut(&mut self) -> Result<SchemaRefMut, EcsRefBorrowError> {
+    pub fn schema_ref_mut(&mut self) -> Result<SchemaRefMut<'_>, EcsRefBorrowError> {
         match self {
             EcsRefBorrowMutKind::Resource(r) => Ok(r
                 .as_mut()
@@ -224,7 +224,7 @@ impl EcsRefBorrowMutKind<'_> {
 
 impl EcsRefData {
     /// Immutably borrow the data.
-    pub fn borrow(&self) -> EcsRefBorrowKind {
+    pub fn borrow(&self) -> EcsRefBorrowKind<'_> {
         match self {
             EcsRefData::Resource(resource) => {
                 let b = resource.as_ref().borrow();
@@ -249,7 +249,7 @@ impl EcsRefData {
     }
 
     /// Mutably borrow the data.
-    pub fn borrow_mut(&self) -> EcsRefBorrowMutKind {
+    pub fn borrow_mut(&self) -> EcsRefBorrowMutKind<'_> {
         match self {
             EcsRefData::Resource(resource) => {
                 let b = resource.borrow_mut();

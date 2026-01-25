@@ -85,7 +85,7 @@ impl<'a, T: HasSchema> SystemParam for Packs<'a, T> {
 
 impl<T> Packs<'_, T> {
     /// Get the typed asset pack roots iterator.
-    pub fn iter(&self) -> PacksIter<T> {
+    pub fn iter(&self) -> PacksIter<'_, T> {
         PacksIter {
             asset_server: &self.asset_server,
             asset_packs_iter: self.asset_server.packs().iter(),

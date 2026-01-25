@@ -170,7 +170,7 @@ pub trait ComponentIterBitset<'a, T: HasSchema> {
     /// Iterates immutably over the components of this type where `bitset`
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
-    fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> ComponentBitsetIterator<T>;
+    fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> ComponentBitsetIterator<'_, T>;
 
     /// Iterates immutably over the components of this type where `bitset`
     /// indicates the indices of entities.
@@ -178,12 +178,12 @@ pub trait ComponentIterBitset<'a, T: HasSchema> {
     fn iter_with_bitset_optional(
         &self,
         bitset: Rc<BitSetVec>,
-    ) -> ComponentBitsetOptionalIterator<T>;
+    ) -> ComponentBitsetOptionalIterator<'_, T>;
 
     /// Iterates mutable over the components of this type where `bitset`
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
-    fn iter_mut_with_bitset(&mut self, bitset: Rc<BitSetVec>) -> ComponentBitsetIteratorMut<T>;
+    fn iter_mut_with_bitset(&mut self, bitset: Rc<BitSetVec>) -> ComponentBitsetIteratorMut<'_, T>;
 
     /// Iterates mutably over the components of this type where `bitset`
     /// indicates the indices of entities.
@@ -191,7 +191,7 @@ pub trait ComponentIterBitset<'a, T: HasSchema> {
     fn iter_mut_with_bitset_optional(
         &mut self,
         bitset: Rc<BitSetVec>,
-    ) -> ComponentBitsetOptionalIteratorMut<T>;
+    ) -> ComponentBitsetOptionalIteratorMut<'_, T>;
 
     /// Get bitset of [`ComponentStore`] / implementor.
     fn bitset(&self) -> &BitSetVec;
@@ -207,7 +207,7 @@ impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
     /// Gets an immutable reference to the component if there is exactly one instance of it.
     fn get_single_with_bitset(&self, bitset: Rc<BitSetVec>) -> Result<&T, QuerySingleError> {
         // SOUND: we know the schema matches.
-        fn map<T>(r: SchemaRef) -> &T {
+        fn map<T>(r: SchemaRef<'_>) -> &T {
             unsafe { r.cast_into_unchecked() }
         }
         self.untyped.get_single_with_bitset(bitset).map(map)
@@ -219,7 +219,7 @@ impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
         bitset: Rc<BitSetVec>,
     ) -> Result<&mut T, QuerySingleError> {
         // SOUND: we know the schema matches.
-        fn map<T>(r: SchemaRefMut) -> &mut T {
+        fn map<T>(r: SchemaRefMut<'_>) -> &mut T {
             unsafe { r.cast_into_mut_unchecked() }
         }
         self.untyped.get_single_with_bitset_mut(bitset).map(map)
@@ -229,9 +229,9 @@ impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
     #[inline]
-    fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> ComponentBitsetIterator<T> {
+    fn iter_with_bitset(&self, bitset: Rc<BitSetVec>) -> ComponentBitsetIterator<'_, T> {
         // SOUND: we know the schema matches.
-        fn map<T>(r: SchemaRef) -> &T {
+        fn map<T>(r: SchemaRef<'_>) -> &T {
             unsafe { r.cast_into_unchecked() }
         }
         self.untyped.iter_with_bitset(bitset).map(map)
@@ -244,9 +244,9 @@ impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
     fn iter_with_bitset_optional(
         &self,
         bitset: Rc<BitSetVec>,
-    ) -> ComponentBitsetOptionalIterator<T> {
+    ) -> ComponentBitsetOptionalIterator<'_, T> {
         // SOUND: we know the schema matches.
-        fn map<T>(r: Option<SchemaRef>) -> Option<&T> {
+        fn map<T>(r: Option<SchemaRef<'_>>) -> Option<&T> {
             r.map(|r| unsafe { r.cast_into_unchecked() })
         }
         self.untyped.iter_with_bitset_optional(bitset).map(map)
@@ -256,9 +256,9 @@ impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
     #[inline]
-    fn iter_mut_with_bitset(&mut self, bitset: Rc<BitSetVec>) -> ComponentBitsetIteratorMut<T> {
+    fn iter_mut_with_bitset(&mut self, bitset: Rc<BitSetVec>) -> ComponentBitsetIteratorMut<'_, T> {
         // SOUND: we know the schema matches.
-        fn map<T>(r: SchemaRefMut) -> &mut T {
+        fn map<T>(r: SchemaRefMut<'_>) -> &mut T {
             unsafe { r.cast_into_mut_unchecked() }
         }
 
@@ -272,9 +272,9 @@ impl<'a, T: HasSchema> ComponentIterBitset<'a, T> for ComponentStore<T> {
     fn iter_mut_with_bitset_optional(
         &mut self,
         bitset: Rc<BitSetVec>,
-    ) -> ComponentBitsetOptionalIteratorMut<T> {
+    ) -> ComponentBitsetOptionalIteratorMut<'_, T> {
         // SOUND: we know the schema matches.
-        fn map<T>(r: Option<SchemaRefMut>) -> Option<&mut T> {
+        fn map<T>(r: Option<SchemaRefMut<'_>>) -> Option<&mut T> {
             r.map(|r| unsafe { r.cast_into_mut_unchecked() })
         }
         self.untyped.iter_mut_with_bitset_optional(bitset).map(map)

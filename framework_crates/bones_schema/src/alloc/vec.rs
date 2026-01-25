@@ -275,12 +275,12 @@ impl SchemaVec {
     }
 
     /// Iterate over values in the vec
-    pub fn iter(&self) -> SchemaVecIter {
+    pub fn iter(&self) -> SchemaVecIter<'_> {
         SchemaVecIter { vec: self, idx: 0 }
     }
 
     /// Iterate mutably over values in the vec
-    pub fn iter_mut(&mut self) -> SchemaVecIterMut {
+    pub fn iter_mut(&mut self) -> SchemaVecIterMut<'_> {
         SchemaVecIterMut { vec: self, idx: 0 }
     }
 
@@ -568,7 +568,7 @@ impl<T: HasSchema> SVec<T> {
     }
 
     /// Iterate over references to the items in the vec.
-    pub fn iter(&self) -> SVecIter<T> {
+    pub fn iter(&self) -> SVecIter<'_, T> {
         SVecIter {
             vec: self,
             idx: 0,
@@ -577,7 +577,7 @@ impl<T: HasSchema> SVec<T> {
     }
 
     /// Iterate over mutable references to the items in the vec.
-    pub fn iter_mut(&mut self) -> SVecIterMut<T> {
+    pub fn iter_mut(&mut self) -> SVecIterMut<'_, T> {
         SVecIterMut {
             idx: 0,
             end: self.len() as isize - 1,

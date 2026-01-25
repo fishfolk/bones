@@ -127,12 +127,12 @@ impl SessionBuilder {
     ///
     /// Note: The resource is not actually initialized in World until first step of [`SystemStages`].
     /// To mutate or inspect a resource inserted by another [`SessionPlugin`] during session build, use [`SessionBuilder::resource_mut`].
-    pub fn init_resource<T: HasSchema + Default>(&mut self) -> RefMut<T> {
+    pub fn init_resource<T: HasSchema + Default>(&mut self) -> RefMut<'_, T> {
         self.stages.init_startup_resource::<T>()
     }
 
     /// Get mutable reference to a resource if it exists.
-    pub fn resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
+    pub fn resource_mut<T: HasSchema>(&self) -> Option<RefMut<'_, T>> {
         self.stages.startup_resource_mut::<T>()
     }
 
@@ -430,7 +430,7 @@ impl Game {
     }
     #[track_caller]
     /// Get the shared resource of a given type out of this [`Game`]s shared resources.
-    pub fn shared_resource<T: HasSchema>(&self) -> Option<Ref<T>> {
+    pub fn shared_resource<T: HasSchema>(&self) -> Option<Ref<'_, T>> {
         let res = self
             .shared_resources
             .iter()
@@ -449,7 +449,7 @@ impl Game {
 
     #[track_caller]
     /// Get the shared resource of a given type out of this [`Game`]s shared resources.
-    pub fn shared_resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
+    pub fn shared_resource_mut<T: HasSchema>(&self) -> Option<RefMut<'_, T>> {
         let res = self
             .shared_resources
             .iter()
@@ -477,7 +477,7 @@ impl Game {
 
     /// Initialize a resource that will be shared across game sessions using it's [`Default`] value
     /// if it is not already initialized, and borrow it for modification.
-    pub fn init_shared_resource<T: HasSchema + Default>(&mut self) -> RefMut<T> {
+    pub fn init_shared_resource<T: HasSchema + Default>(&mut self) -> RefMut<'_, T> {
         if !self
             .shared_resources
             .iter()
@@ -854,12 +854,12 @@ impl Sessions {
     }
 
     /// Mutably iterate over sessions.
-    pub fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<Ustr, Session> {
+    pub fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<'_, Ustr, Session> {
         self.map.iter_mut()
     }
 
     /// Iterate over sessions.
-    pub fn iter(&self) -> std::collections::hash_map::Iter<Ustr, Session> {
+    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, Ustr, Session> {
         self.map.iter()
     }
 

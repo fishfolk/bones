@@ -86,7 +86,7 @@ pub unsafe trait HasSchema: Sync + Send + 'static {
     }
 
     /// Converts a reference of `T` to a [`SchemaRef`]
-    fn as_schema_ref(&self) -> SchemaRef
+    fn as_schema_ref(&self) -> SchemaRef<'_>
     where
         Self: Sized,
     {
@@ -94,7 +94,7 @@ pub unsafe trait HasSchema: Sync + Send + 'static {
     }
 
     /// Converts a reference of `T` to a [`SchemaRefMut`]
-    fn as_schema_mut(&mut self) -> SchemaRefMut
+    fn as_schema_mut(&mut self) -> SchemaRefMut<'_>
     where
         Self: Sized,
     {

@@ -25,7 +25,7 @@ impl ResetWorld {
     }
 
     /// Get a mutable reference to a reset resource if found.
-    pub fn reset_resource_mut<T: HasSchema>(&self) -> Option<RefMut<T>> {
+    pub fn reset_resource_mut<T: HasSchema>(&self) -> Option<RefMut<'_, T>> {
         self.reset_resources.resource_mut::<T>()
     }
 

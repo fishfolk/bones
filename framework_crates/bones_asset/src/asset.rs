@@ -217,7 +217,7 @@ pub struct AssetLoc {
 
 impl AssetLoc {
     /// Borrow as an [`AssetLocRef`].
-    pub fn as_ref(&self) -> AssetLocRef {
+    pub fn as_ref(&self) -> AssetLocRef<'_> {
         AssetLocRef {
             pack: self.pack.as_deref(),
             path: &self.path,
