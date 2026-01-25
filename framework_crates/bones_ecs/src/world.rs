@@ -139,7 +139,7 @@ impl World {
     }
 
     /// Insert a resource.
-    pub fn insert_resource<R: HasSchema>(&mut self, resource: R) -> Option<R> {
+    pub fn insert_resource<R: HasSchema>(&self, resource: R) -> Option<R> {
         self.resources.insert(resource)
     }
 
