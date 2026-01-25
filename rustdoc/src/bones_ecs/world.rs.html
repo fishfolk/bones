@@ -544,7 +544,7 @@
     }
 
     <span class="doccomment">/// Insert a resource.
-    </span><span class="kw">pub fn </span>insert_resource&lt;R: HasSchema&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: R) -&gt; <span class="prelude-ty">Option</span>&lt;R&gt; {
+    </span><span class="kw">pub fn </span>insert_resource&lt;R: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, resource: R) -&gt; <span class="prelude-ty">Option</span>&lt;R&gt; {
         <span class="self">self</span>.resources.insert(resource)
     }
 
