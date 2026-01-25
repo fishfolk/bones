@@ -157,6 +157,26 @@ pub fn sync_cameras(
             },
             OrthographicProjection {
                 scaling_mode: match bones_camera.size {
+                    bones::CameraSize::Fixed { width, height } => {
+                        ScalingMode::Fixed { width, height }
+                    }
+                    bones::CameraSize::Max {
+                        max_width,
+                        max_height,
+                    } => ScalingMode::AutoMax {
+                        max_width,
+                        max_height,
+                    },
+                    bones::CameraSize::Min {
+                        min_width,
+                        min_height,
+                    } => ScalingMode::AutoMin {
+                        min_width,
+                        min_height,
+                    },
+                    bones::CameraSize::Window { pixels_per_unit } => {
+                        ScalingMode::WindowSize(pixels_per_unit)
+                    }
                     bones::CameraSize::FixedHeight(h) => ScalingMode::FixedVertical(h),
                     bones::CameraSize::FixedWidth(w) => ScalingMode::FixedHorizontal(w),
                 },

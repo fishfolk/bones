@@ -33,10 +33,43 @@ pub struct Camera {
 #[derive(HasSchema, Debug, Clone, Copy)]
 #[repr(C, u8)]
 pub enum CameraSize {
-    /// The camera will be a fixed height with a width dependent on the aspect ratio.
+    /// The camera will capture exactly the `width` and `height` in world units,
+    /// stretching with the viewport.
+    Fixed {
+        /// The camera will capture exactly this width in world units.
+        width: f32,
+        /// The camera will capture exactly this height in world units.
+        height: f32,
+    },
+    /// The camera will be a fixed height with a width dependent on the aspect
+    /// ratio.
     FixedHeight(f32),
-    /// The camera will be a fixed width with a height dependent on the aspect ratio.
+    /// The camera will be a fixed width with a height dependent on the aspect
+    /// ratio.
     FixedWidth(f32),
+    /// The viewport will determine the camera size with the camera capturing
+    /// one world unit per the specified amount of viewport pixels.
+    Window {
+        /// The amount of viewport pixels that will cover one world unit. The
+        /// camera will capture one world unit per this amount of pixels.
+        pixels_per_unit: f32,
+    },
+    /// The camera will capture at least the specified height and width in world
+    /// units.
+    Min {
+        /// The camera will capture at least this many world units wide.
+        min_width: f32,
+        /// The camera will capture at least this many world units high.
+        min_height: f32,
+    },
+    /// The camera will capture at most the specified height and width in world
+    /// units.
+    Max {
+        /// The camera will capture at most this many world units wide.
+        max_width: f32,
+        /// The camera will capture at most this many world units high.
+        max_height: f32,
+    },
 }
 
 impl Default for CameraSize {
