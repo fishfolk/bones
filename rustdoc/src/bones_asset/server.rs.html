@@ -1515,6 +1515,9 @@
 <a href="#1515" id="1515">1515</a>
 <a href="#1516" id="1516">1516</a>
 <a href="#1517" id="1517">1517</a>
+<a href="#1518" id="1518">1518</a>
+<a href="#1519" id="1519">1519</a>
+<a href="#1520" id="1520">1520</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -2323,7 +2326,7 @@
     }
 
     <span class="doccomment">/// Borrow a [`LoadedAsset`] associated to the given handle.
-    </span><span class="kw">pub fn </span>get_asset_untyped(<span class="kw-2">&amp;</span><span class="self">self</span>, handle: UntypedHandle) -&gt; <span class="prelude-ty">Option</span>&lt;MapRef&lt;Cid, LoadedAsset&gt;&gt; {
+    </span><span class="kw">pub fn </span>get_asset_untyped(<span class="kw-2">&amp;</span><span class="self">self</span>, handle: UntypedHandle) -&gt; <span class="prelude-ty">Option</span>&lt;MapRef&lt;<span class="lifetime">'_</span>, Cid, LoadedAsset&gt;&gt; {
         <span class="kw">let </span>cid = <span class="self">self</span>.store.asset_ids.get(<span class="kw-2">&amp;</span>handle)<span class="question-mark">?</span>;
         <span class="self">self</span>.store.assets.get(<span class="kw-2">&amp;</span>cid)
     }
@@ -2332,7 +2335,7 @@
     </span><span class="kw">pub fn </span>get_asset_untyped_mut(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         handle: UntypedHandle,
-    ) -&gt; <span class="prelude-ty">Option</span>&lt;MapRefMut&lt;Cid, LoadedAsset&gt;&gt; {
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;MapRefMut&lt;<span class="lifetime">'_</span>, Cid, LoadedAsset&gt;&gt; {
         <span class="kw">let </span>cid = <span class="self">self</span>.store.asset_ids.get(<span class="kw-2">&amp;</span>handle)<span class="question-mark">?</span>;
         <span class="self">self</span>.store.assets.get_mut(<span class="kw-2">&amp;</span>cid)
     }
@@ -2343,17 +2346,17 @@
     ///
     /// Panics if the assets have not be loaded yet with [`AssetServer::load_assets`].
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>core(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MappedMutexGuard&lt;AssetPack&gt; {
+    </span><span class="kw">pub fn </span>core(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MappedMutexGuard&lt;<span class="lifetime">'_</span>, AssetPack&gt; {
         MutexGuard::map(<span class="self">self</span>.store.core_pack.lock(), |x| x.as_mut().unwrap())
     }
 
     <span class="doccomment">/// Get the core asset pack's root asset.
-    </span><span class="kw">pub fn </span>root&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MappedMapRef&lt;Cid, LoadedAsset, T&gt; {
+    </span><span class="kw">pub fn </span>root&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MappedMapRef&lt;<span class="lifetime">'_</span>, Cid, LoadedAsset, T&gt; {
         <span class="self">self</span>.get(<span class="self">self</span>.core().root.typed())
     }
 
     <span class="doccomment">/// Get the core asset pack's root asset as a type-erased [`SchemaBox`].
-    </span><span class="kw">pub fn </span>untyped_root(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MappedMapRef&lt;Cid, LoadedAsset, SchemaBox&gt; {
+    </span><span class="kw">pub fn </span>untyped_root(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MappedMapRef&lt;<span class="lifetime">'_</span>, Cid, LoadedAsset, SchemaBox&gt; {
         <span class="self">self</span>.get_untyped(<span class="self">self</span>.core().root)
     }
 
@@ -2369,7 +2372,7 @@
     /// Panics if the asset is not loaded or if the asset with the given handle doesn't have a
     /// schema matching `T`.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, handle: Handle&lt;T&gt;) -&gt; MappedMapRef&lt;Cid, LoadedAsset, T&gt; {
+    </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, handle: Handle&lt;T&gt;) -&gt; MappedMapRef&lt;<span class="lifetime">'_</span>, Cid, LoadedAsset, T&gt; {
         <span class="self">self</span>.try_get(handle)
             .expect(<span class="string">"asset not found (handle has no cid)"</span>)
             .expect(<span class="string">"asset does not have matching schema for given type"</span>)
@@ -2381,7 +2384,10 @@
     ///
     /// Panics if the asset is not loaded.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>get_untyped(<span class="kw-2">&amp;</span><span class="self">self</span>, handle: UntypedHandle) -&gt; MappedMapRef&lt;Cid, LoadedAsset, SchemaBox&gt; {
+    </span><span class="kw">pub fn </span>get_untyped(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        handle: UntypedHandle,
+    ) -&gt; MappedMapRef&lt;<span class="lifetime">'_</span>, Cid, LoadedAsset, SchemaBox&gt; {
         <span class="self">self</span>.try_get_untyped(handle).unwrap()
     }
 
@@ -2394,7 +2400,7 @@
     </span><span class="kw">pub fn </span>get_untyped_mut(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         handle: UntypedHandle,
-    ) -&gt; MappedMapRefMut&lt;Cid, LoadedAsset, SchemaBox&gt; {
+    ) -&gt; MappedMapRefMut&lt;<span class="lifetime">'_</span>, Cid, LoadedAsset, SchemaBox&gt; {
         <span class="self">self</span>.try_get_untyped_mut(handle).unwrap()
     }
 
@@ -2435,7 +2441,7 @@
     </span><span class="kw">pub fn </span>try_get_untyped(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         handle: UntypedHandle,
-    ) -&gt; <span class="prelude-ty">Option</span>&lt;MappedMapRef&lt;Cid, LoadedAsset, SchemaBox&gt;&gt; {
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;MappedMapRef&lt;<span class="lifetime">'_</span>, Cid, LoadedAsset, SchemaBox&gt;&gt; {
         <span class="kw">let </span>cid = <span class="self">self</span>.store.asset_ids.get(<span class="kw-2">&amp;</span>handle)<span class="question-mark">?</span>;
         <span class="prelude-val">Some</span>(MapRef::map(<span class="self">self</span>.store.assets.get(<span class="kw-2">&amp;</span>cid).unwrap(), |x| {
             <span class="kw-2">&amp;</span>x.data
@@ -2446,7 +2452,7 @@
     </span><span class="kw">pub fn </span>try_get_untyped_mut(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         handle: UntypedHandle,
-    ) -&gt; <span class="prelude-ty">Option</span>&lt;MappedMapRefMut&lt;Cid, LoadedAsset, SchemaBox&gt;&gt; {
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;MappedMapRefMut&lt;<span class="lifetime">'_</span>, Cid, LoadedAsset, SchemaBox&gt;&gt; {
         <span class="kw">let </span>cid = <span class="self">self</span>.store.asset_ids.get_mut(<span class="kw-2">&amp;</span>handle)<span class="question-mark">?</span>;
         <span class="prelude-val">Some</span>(MapRefMut::map(
             <span class="self">self</span>.store.assets.get_mut(<span class="kw-2">&amp;</span>cid).unwrap(),
@@ -2485,7 +2491,7 @@
     </span><span class="kw">pub fn </span>get_mut&lt;T: HasSchema&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         handle: <span class="kw-2">&amp;</span>Handle&lt;T&gt;,
-    ) -&gt; MappedMapRefMut&lt;Cid, LoadedAsset, T&gt; {
+    ) -&gt; MappedMapRefMut&lt;<span class="lifetime">'_</span>, Cid, LoadedAsset, T&gt; {
         <span class="kw">let </span>cid = <span class="self">self
             </span>.store
             .asset_ids

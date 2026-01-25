@@ -467,7 +467,7 @@
 </span><span class="kw">pub struct </span>BonesGame(<span class="kw">pub </span>bones::Game);
 <span class="kw">impl </span>BonesGame {
     <span class="doccomment">/// Shorthand for [`bones::AssetServer`] typed access to the shared resource
-    </span><span class="kw">pub fn </span>asset_server(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;bones::Ref&lt;bones::AssetServer&gt;&gt; {
+    </span><span class="kw">pub fn </span>asset_server(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;bones::Ref&lt;<span class="lifetime">'_</span>, bones::AssetServer&gt;&gt; {
         <span class="self">self</span>.<span class="number">0</span>.shared_resource()
     }
 }

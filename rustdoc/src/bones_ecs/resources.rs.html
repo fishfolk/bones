@@ -703,13 +703,13 @@
 
     <span class="doccomment">/// Borrow the resource.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ref&lt;<span class="prelude-ty">Option</span>&lt;SchemaBox&gt;&gt; {
+    </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ref&lt;<span class="lifetime">'_</span>, <span class="prelude-ty">Option</span>&lt;SchemaBox&gt;&gt; {
         <span class="self">self</span>.cell.borrow()
     }
 
     <span class="doccomment">/// Mutably borrow the resource.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;<span class="prelude-ty">Option</span>&lt;SchemaBox&gt;&gt; {
+    </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">'_</span>, <span class="prelude-ty">Option</span>&lt;SchemaBox&gt;&gt; {
         <span class="self">self</span>.cell.borrow_mut()
     }
 
@@ -881,7 +881,7 @@
 
     <span class="doccomment">/// Borrow a resource.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>get&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;<span class="lifetime">'_</span>, T&gt;&gt; {
         <span class="kw">let </span>b = <span class="self">self</span>.untyped.get(T::schema()).borrow();
         <span class="kw">if </span>b.is_some() {
             <span class="prelude-val">Some</span>(Ref::map(b, |b| <span class="kw">unsafe </span>{
@@ -894,7 +894,7 @@
 
     <span class="doccomment">/// Borrow a resource.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>get_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>get_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;<span class="lifetime">'_</span>, T&gt;&gt; {
         <span class="kw">let </span>b = <span class="self">self</span>.untyped.get(T::schema()).borrow_mut();
         <span class="kw">if </span>b.is_some() {
             <span class="prelude-val">Some</span>(RefMut::map(b, |b| <span class="kw">unsafe </span>{
@@ -1001,7 +1001,7 @@
     <span class="doccomment">/// Lock the resource for reading.
     ///
     /// This returns a read guard, very similar to an [`RwLock`][std::sync::RwLock].
-    </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;<span class="lifetime">'_</span>, T&gt;&gt; {
         <span class="kw">let </span>borrow = <span class="self">self</span>.untyped.borrow();
         <span class="kw">if </span>borrow.is_some() {
             <span class="prelude-val">Some</span>(Ref::map(borrow, |r| <span class="kw">unsafe </span>{
@@ -1015,7 +1015,7 @@
     <span class="doccomment">/// Lock the resource for read-writing.
     ///
     /// This returns a write guard, very similar to an [`RwLock`][std::sync::RwLock].
-    </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;<span class="lifetime">'_</span>, T&gt;&gt; {
         <span class="kw">let </span>borrow = <span class="self">self</span>.untyped.borrow_mut();
         <span class="kw">if </span>borrow.is_some() {
             <span class="prelude-val">Some</span>(RefMut::map(borrow, |r| <span class="kw">unsafe </span>{
@@ -1043,7 +1043,7 @@
 
     <span class="doccomment">/// Borrow the resource, initializing it if it doesn't exist.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>init_borrow(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World) -&gt; Ref&lt;T&gt; {
+    </span><span class="kw">pub fn </span>init_borrow(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World) -&gt; Ref&lt;<span class="lifetime">'_</span>, T&gt; {
         <span class="kw">let </span>map_borrow = |borrow| {
             <span class="comment">// SOUND: we know the schema matches.
             </span>Ref::map(borrow, |b: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;SchemaBox&gt;| <span class="kw">unsafe </span>{
@@ -1066,7 +1066,7 @@
 
     <span class="doccomment">/// Borrow the resource, initializing it if it doesn't exist.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>init_borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World) -&gt; RefMut&lt;T&gt; {
+    </span><span class="kw">pub fn </span>init_borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>, world: <span class="kw-2">&amp;</span>World) -&gt; RefMut&lt;<span class="lifetime">'_</span>, T&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>borrow = <span class="self">self</span>.untyped.borrow_mut();
         <span class="kw">if </span>unlikely(borrow.is_none()) {
             <span class="kw-2">*</span>borrow = <span class="prelude-val">Some</span>(SchemaBox::new(T::from_world(world)));
@@ -1128,7 +1128,7 @@
 
     <span class="doccomment">/// Init resource with default, and return mutable ref for modification.
     /// If already exists, returns mutable ref to existing resource.
-    </span><span class="kw">pub fn </span>init_resource&lt;T: HasSchema + Default&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;T&gt; {
+    </span><span class="kw">pub fn </span>init_resource&lt;T: HasSchema + Default&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">'_</span>, T&gt; {
         <span class="kw">if </span>!<span class="self">self</span>.resources.iter().any(|x| x.schema() == T::schema()) {
             <span class="self">self</span>.insert_resource(T::default());
         }
@@ -1137,7 +1137,7 @@
 
     <span class="doccomment">/// Get mutable reference to startup resource if found.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;<span class="lifetime">'_</span>, T&gt;&gt; {
         <span class="kw">let </span>res = <span class="self">self</span>.resources.iter().find(|x| x.schema() == T::schema())<span class="question-mark">?</span>;
         <span class="kw">let </span>borrow = res.borrow_mut();
 

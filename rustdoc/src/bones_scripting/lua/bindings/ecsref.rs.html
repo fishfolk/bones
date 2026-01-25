@@ -510,7 +510,7 @@
 
 <span class="kw">impl </span>EcsRef {
     <span class="doccomment">/// Borrow the value pointed to by the [`EcsRef`]
-    </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EcsRefBorrow {
+    </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EcsRefBorrow&lt;<span class="lifetime">'_</span>&gt; {
         EcsRefBorrow {
             borrow: <span class="self">self</span>.data.borrow(),
             path: <span class="self">self</span>.path,
@@ -518,7 +518,7 @@
     }
 
     <span class="doccomment">/// Mutably borrow the value pointed to by the [`EcsRef`]
-    </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EcsRefBorrowMut {
+    </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EcsRefBorrowMut&lt;<span class="lifetime">'_</span>&gt; {
         EcsRefBorrowMut {
             borrow: <span class="self">self</span>.data.borrow_mut(),
             path: <span class="self">self</span>.path,
@@ -542,7 +542,7 @@
 
 <span class="kw">impl </span>EcsRefBorrow&lt;<span class="lifetime">'_</span>&gt; {
     <span class="doccomment">/// Get the [`SchemaRef`].
-    </span><span class="kw">pub fn </span>schema_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRef, EcsRefBorrowError&gt; {
+    </span><span class="kw">pub fn </span>schema_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRef&lt;<span class="lifetime">'_</span>&gt;, EcsRefBorrowError&gt; {
         <span class="kw">let </span>b = <span class="self">self</span>.borrow.schema_ref()<span class="question-mark">?</span>;
         <span class="kw">let </span>b = b
             .field_path(FieldPath(<span class="self">self</span>.path))
@@ -559,7 +559,7 @@
 
 <span class="kw">impl </span>EcsRefBorrowMut&lt;<span class="lifetime">'_</span>&gt; {
     <span class="doccomment">/// Get the [`SchemaRef`].
-    </span><span class="kw">pub fn </span>schema_ref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMut, EcsRefBorrowError&gt; {
+    </span><span class="kw">pub fn </span>schema_ref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;, EcsRefBorrowError&gt; {
         <span class="kw">let </span>b = <span class="self">self</span>.borrow.schema_ref_mut()<span class="question-mark">?</span>;
         <span class="kw">let </span>b = b
             .into_field_path(FieldPath(<span class="self">self</span>.path))
@@ -629,7 +629,7 @@
     ///
     /// Will return none if the value does not exist, such as an unloaded asset or a component
     /// that is not set for a given entity.
-    </span><span class="kw">pub fn </span>schema_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRef, EcsRefBorrowError&gt; {
+    </span><span class="kw">pub fn </span>schema_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRef&lt;<span class="lifetime">'_</span>&gt;, EcsRefBorrowError&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             EcsRefBorrowKind::Resource(r) =&gt; <span class="prelude-val">Ok</span>(r
                 .as_ref()
@@ -677,7 +677,7 @@
     ///
     /// Will return none if the value does not exist, such as an unloaded asset or a component
     /// that is not set for a given entity.
-    </span><span class="kw">pub fn </span>schema_ref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMut, EcsRefBorrowError&gt; {
+    </span><span class="kw">pub fn </span>schema_ref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;, EcsRefBorrowError&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             EcsRefBorrowMutKind::Resource(r) =&gt; <span class="prelude-val">Ok</span>(r
                 .as_mut()
@@ -702,7 +702,7 @@
 
 <span class="kw">impl </span>EcsRefData {
     <span class="doccomment">/// Immutably borrow the data.
-    </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EcsRefBorrowKind {
+    </span><span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EcsRefBorrowKind&lt;<span class="lifetime">'_</span>&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             EcsRefData::Resource(resource) =&gt; {
                 <span class="kw">let </span>b = resource.as_ref().borrow();
@@ -727,7 +727,7 @@
     }
 
     <span class="doccomment">/// Mutably borrow the data.
-    </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EcsRefBorrowMutKind {
+    </span><span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EcsRefBorrowMutKind&lt;<span class="lifetime">'_</span>&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             EcsRefData::Resource(resource) =&gt; {
                 <span class="kw">let </span>b = resource.borrow_mut();

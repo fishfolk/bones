@@ -1054,6 +1054,9 @@
 <a href="#1054" id="1054">1054</a>
 <a href="#1055" id="1055">1055</a>
 <a href="#1056" id="1056">1056</a>
+<a href="#1057" id="1057">1057</a>
+<a href="#1058" id="1058">1058</a>
+<a href="#1059" id="1059">1059</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! [`Entity`] implementation, storage, and interation.
 
 </span><span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
@@ -1666,7 +1669,10 @@
     ///     }
     /// }
     /// ```
-    </span><span class="kw">pub fn </span>iter_with&lt;Q: QueryItem&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, query: Q) -&gt; EntitiesIterWith&lt;&lt;Q <span class="kw">as </span>QueryItem&gt;::Iter&gt; {
+    </span><span class="kw">pub fn </span>iter_with&lt;Q: QueryItem&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        query: Q,
+    ) -&gt; EntitiesIterWith&lt;<span class="lifetime">'_</span>, &lt;Q <span class="kw">as </span>QueryItem&gt;::Iter&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>bitset = <span class="self">self</span>.bitset().clone();
         query.apply_bitset(<span class="kw-2">&amp;mut </span>bitset);
         <span class="kw">let </span>bitset = Rc::new(bitset);
@@ -1778,7 +1784,7 @@
     }
 
     <span class="doccomment">/// Iterates over all alive entities.
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EntityIterator {
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EntityIterator&lt;<span class="lifetime">'_</span>&gt; {
         EntityIterator {
             current_id: <span class="number">0</span>,
             next_id: <span class="self">self</span>.next_id,

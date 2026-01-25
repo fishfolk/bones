@@ -754,7 +754,7 @@
     <span class="doccomment">/// Iterates immutably over the components of this type where `bitset`
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
-    </span><span class="kw">fn </span>iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; ComponentBitsetIterator&lt;T&gt;;
+    </span><span class="kw">fn </span>iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; ComponentBitsetIterator&lt;<span class="lifetime">'_</span>, T&gt;;
 
     <span class="doccomment">/// Iterates immutably over the components of this type where `bitset`
     /// indicates the indices of entities.
@@ -762,12 +762,12 @@
     </span><span class="kw">fn </span>iter_with_bitset_optional(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         bitset: Rc&lt;BitSetVec&gt;,
-    ) -&gt; ComponentBitsetOptionalIterator&lt;T&gt;;
+    ) -&gt; ComponentBitsetOptionalIterator&lt;<span class="lifetime">'_</span>, T&gt;;
 
     <span class="doccomment">/// Iterates mutable over the components of this type where `bitset`
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
-    </span><span class="kw">fn </span>iter_mut_with_bitset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; ComponentBitsetIteratorMut&lt;T&gt;;
+    </span><span class="kw">fn </span>iter_mut_with_bitset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; ComponentBitsetIteratorMut&lt;<span class="lifetime">'_</span>, T&gt;;
 
     <span class="doccomment">/// Iterates mutably over the components of this type where `bitset`
     /// indicates the indices of entities.
@@ -775,7 +775,7 @@
     </span><span class="kw">fn </span>iter_mut_with_bitset_optional(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         bitset: Rc&lt;BitSetVec&gt;,
-    ) -&gt; ComponentBitsetOptionalIteratorMut&lt;T&gt;;
+    ) -&gt; ComponentBitsetOptionalIteratorMut&lt;<span class="lifetime">'_</span>, T&gt;;
 
     <span class="doccomment">/// Get bitset of [`ComponentStore`] / implementor.
     </span><span class="kw">fn </span>bitset(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>BitSetVec;
@@ -791,7 +791,7 @@
     <span class="doccomment">/// Gets an immutable reference to the component if there is exactly one instance of it.
     </span><span class="kw">fn </span>get_single_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>T, QuerySingleError&gt; {
         <span class="comment">// SOUND: we know the schema matches.
-        </span><span class="kw">fn </span>map&lt;T&gt;(r: SchemaRef) -&gt; <span class="kw-2">&amp;</span>T {
+        </span><span class="kw">fn </span>map&lt;T&gt;(r: SchemaRef&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="kw-2">&amp;</span>T {
             <span class="kw">unsafe </span>{ r.cast_into_unchecked() }
         }
         <span class="self">self</span>.untyped.get_single_with_bitset(bitset).map(map)
@@ -803,7 +803,7 @@
         bitset: Rc&lt;BitSetVec&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;mut </span>T, QuerySingleError&gt; {
         <span class="comment">// SOUND: we know the schema matches.
-        </span><span class="kw">fn </span>map&lt;T&gt;(r: SchemaRefMut) -&gt; <span class="kw-2">&amp;mut </span>T {
+        </span><span class="kw">fn </span>map&lt;T&gt;(r: SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="kw-2">&amp;mut </span>T {
             <span class="kw">unsafe </span>{ r.cast_into_mut_unchecked() }
         }
         <span class="self">self</span>.untyped.get_single_with_bitset_mut(bitset).map(map)
@@ -813,9 +813,9 @@
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
     </span><span class="attr">#[inline]
-    </span><span class="kw">fn </span>iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; ComponentBitsetIterator&lt;T&gt; {
+    </span><span class="kw">fn </span>iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; ComponentBitsetIterator&lt;<span class="lifetime">'_</span>, T&gt; {
         <span class="comment">// SOUND: we know the schema matches.
-        </span><span class="kw">fn </span>map&lt;T&gt;(r: SchemaRef) -&gt; <span class="kw-2">&amp;</span>T {
+        </span><span class="kw">fn </span>map&lt;T&gt;(r: SchemaRef&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="kw-2">&amp;</span>T {
             <span class="kw">unsafe </span>{ r.cast_into_unchecked() }
         }
         <span class="self">self</span>.untyped.iter_with_bitset(bitset).map(map)
@@ -828,9 +828,9 @@
     </span><span class="kw">fn </span>iter_with_bitset_optional(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         bitset: Rc&lt;BitSetVec&gt;,
-    ) -&gt; ComponentBitsetOptionalIterator&lt;T&gt; {
+    ) -&gt; ComponentBitsetOptionalIterator&lt;<span class="lifetime">'_</span>, T&gt; {
         <span class="comment">// SOUND: we know the schema matches.
-        </span><span class="kw">fn </span>map&lt;T&gt;(r: <span class="prelude-ty">Option</span>&lt;SchemaRef&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; {
+        </span><span class="kw">fn </span>map&lt;T&gt;(r: <span class="prelude-ty">Option</span>&lt;SchemaRef&lt;<span class="lifetime">'_</span>&gt;&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; {
             r.map(|r| <span class="kw">unsafe </span>{ r.cast_into_unchecked() })
         }
         <span class="self">self</span>.untyped.iter_with_bitset_optional(bitset).map(map)
@@ -840,9 +840,9 @@
     /// indicates the indices of entities.
     /// Slower than `iter()` but allows joining between multiple component types.
     </span><span class="attr">#[inline]
-    </span><span class="kw">fn </span>iter_mut_with_bitset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; ComponentBitsetIteratorMut&lt;T&gt; {
+    </span><span class="kw">fn </span>iter_mut_with_bitset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; ComponentBitsetIteratorMut&lt;<span class="lifetime">'_</span>, T&gt; {
         <span class="comment">// SOUND: we know the schema matches.
-        </span><span class="kw">fn </span>map&lt;T&gt;(r: SchemaRefMut) -&gt; <span class="kw-2">&amp;mut </span>T {
+        </span><span class="kw">fn </span>map&lt;T&gt;(r: SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="kw-2">&amp;mut </span>T {
             <span class="kw">unsafe </span>{ r.cast_into_mut_unchecked() }
         }
 
@@ -856,9 +856,9 @@
     </span><span class="kw">fn </span>iter_mut_with_bitset_optional(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         bitset: Rc&lt;BitSetVec&gt;,
-    ) -&gt; ComponentBitsetOptionalIteratorMut&lt;T&gt; {
+    ) -&gt; ComponentBitsetOptionalIteratorMut&lt;<span class="lifetime">'_</span>, T&gt; {
         <span class="comment">// SOUND: we know the schema matches.
-        </span><span class="kw">fn </span>map&lt;T&gt;(r: <span class="prelude-ty">Option</span>&lt;SchemaRefMut&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt; {
+        </span><span class="kw">fn </span>map&lt;T&gt;(r: <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt; {
             r.map(|r| <span class="kw">unsafe </span>{ r.cast_into_mut_unchecked() })
         }
         <span class="self">self</span>.untyped.iter_mut_with_bitset_optional(bitset).map(map)

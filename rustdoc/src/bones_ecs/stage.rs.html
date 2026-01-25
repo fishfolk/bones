@@ -720,13 +720,13 @@
 
     <span class="doccomment">/// Init startup resource with default, and return mutable ref for modification.
     /// If already exists, returns mutable ref to existing resource.
-    </span><span class="kw">pub fn </span>init_startup_resource&lt;T: HasSchema + Default&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;T&gt; {
+    </span><span class="kw">pub fn </span>init_startup_resource&lt;T: HasSchema + Default&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">'_</span>, T&gt; {
         <span class="self">self</span>.startup_resources.init_resource::&lt;T&gt;()
     }
 
     <span class="doccomment">/// Get mutable reference to startup resource if found.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>startup_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>startup_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;<span class="lifetime">'_</span>, T&gt;&gt; {
         <span class="self">self</span>.startup_resources.resource_mut()
     }
 }

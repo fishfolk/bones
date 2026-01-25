@@ -1454,12 +1454,12 @@
     }
 
     <span class="doccomment">/// Iterate over values in the vec
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaVecIter {
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaVecIter&lt;<span class="lifetime">'_</span>&gt; {
         SchemaVecIter { vec: <span class="self">self</span>, idx: <span class="number">0 </span>}
     }
 
     <span class="doccomment">/// Iterate mutably over values in the vec
-    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaVecIterMut {
+    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaVecIterMut&lt;<span class="lifetime">'_</span>&gt; {
         SchemaVecIterMut { vec: <span class="self">self</span>, idx: <span class="number">0 </span>}
     }
 
@@ -1747,7 +1747,7 @@
     }
 
     <span class="doccomment">/// Iterate over references to the items in the vec.
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SVecIter&lt;T&gt; {
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SVecIter&lt;<span class="lifetime">'_</span>, T&gt; {
         SVecIter {
             vec: <span class="self">self</span>,
             idx: <span class="number">0</span>,
@@ -1756,7 +1756,7 @@
     }
 
     <span class="doccomment">/// Iterate over mutable references to the items in the vec.
-    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SVecIterMut&lt;T&gt; {
+    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SVecIterMut&lt;<span class="lifetime">'_</span>, T&gt; {
         SVecIterMut {
             idx: <span class="number">0</span>,
             end: <span class="self">self</span>.len() <span class="kw">as </span>isize - <span class="number">1</span>,

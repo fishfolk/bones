@@ -535,7 +535,7 @@
     }
 
     <span class="doccomment">/// Initialize a resource of type `T` by inserting it's default value.
-    </span><span class="kw">pub fn </span>init_resource&lt;R: HasSchema + FromWorld&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;R&gt; {
+    </span><span class="kw">pub fn </span>init_resource&lt;R: HasSchema + FromWorld&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">'_</span>, R&gt; {
         <span class="kw">if </span>unlikely(!<span class="self">self</span>.resources.contains::&lt;R&gt;()) {
             <span class="kw">let </span>value = R::from_world(<span class="self">self</span>);
             <span class="self">self</span>.resources.insert(value);
@@ -552,7 +552,7 @@
     /// # Panics
     /// Panics if the resource does not exist in the store.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ref&lt;T&gt; {
+    </span><span class="kw">pub fn </span>resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ref&lt;<span class="lifetime">'_</span>, T&gt; {
         <span class="kw">match </span><span class="self">self</span>.resources.get::&lt;T&gt;() {
             <span class="prelude-val">Some</span>(r) =&gt; r,
             <span class="prelude-val">None </span>=&gt; <span class="macro">panic!</span>(
@@ -567,7 +567,7 @@
     /// # Panics
     /// Panics if the resource does not exist in the store.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;T&gt; {
+    </span><span class="kw">pub fn </span>resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">'_</span>, T&gt; {
         <span class="kw">match </span><span class="self">self</span>.resources.get_mut::&lt;T&gt;() {
             <span class="prelude-val">Some</span>(r) =&gt; r,
             <span class="prelude-val">None </span>=&gt; <span class="macro">panic!</span>(
@@ -579,12 +579,12 @@
     }
 
     <span class="doccomment">/// Borrow a resource from the world, if it exists.
-    </span><span class="kw">pub fn </span>get_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>get_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;<span class="lifetime">'_</span>, T&gt;&gt; {
         <span class="self">self</span>.resources.get()
     }
 
     <span class="doccomment">/// Borrow a resource from the world, if it exists.
-    </span><span class="kw">pub fn </span>get_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>get_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;<span class="lifetime">'_</span>, T&gt;&gt; {
         <span class="self">self</span>.resources.get_mut()
     }
 
@@ -592,7 +592,7 @@
     /// # Panics
     /// Panics if the component store does not exist in the world.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>component&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ref&lt;ComponentStore&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>component&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ref&lt;<span class="lifetime">'_</span>, ComponentStore&lt;T&gt;&gt; {
         <span class="self">self</span>.components.get::&lt;T&gt;().borrow()
     }
 
@@ -600,7 +600,7 @@
     /// # Panics
     /// Panics if the component store does not exist in the world.
     </span><span class="attr">#[track_caller]
-    </span><span class="kw">pub fn </span>component_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;ComponentStore&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>component_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">'_</span>, ComponentStore&lt;T&gt;&gt; {
         <span class="self">self</span>.components.get::&lt;T&gt;().borrow_mut()
     }
 

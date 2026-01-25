@@ -2075,7 +2075,7 @@
     }
 
     <span class="doccomment">/// Get a helper to access the inner without consuming this reference.
-    </span><span class="kw">fn </span>access_borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRefAccess {
+    </span><span class="kw">fn </span>access_borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRefAccess&lt;<span class="lifetime">'_</span>&gt; {
         SchemaRefAccess::new_borrowed(<span class="self">self</span>)
     }
 
@@ -2340,7 +2340,7 @@
     }
 
     <span class="doccomment">/// Interate over the fields on the struct.
-    </span><span class="kw">pub fn </span>fields(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; StructRefFieldIter {
+    </span><span class="kw">pub fn </span>fields(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; StructRefFieldIter&lt;<span class="lifetime">'_</span>&gt; {
         StructRefFieldIter {
             ptr: <span class="self">self</span>.<span class="number">0</span>,
             field_idx: <span class="number">0</span>,
@@ -2756,7 +2756,7 @@
     }
 
     <span class="doccomment">/// Get the reference to a field.
-    </span><span class="kw">pub fn </span>field&lt;<span class="lifetime">'a</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">'a</span>&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, field_idx: I) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&gt; {
+    </span><span class="kw">pub fn </span>field&lt;<span class="lifetime">'a</span>, I: Into&lt;FieldIdx&lt;<span class="lifetime">'a</span>&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, field_idx: I) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;&gt; {
         <span class="prelude-val">Some</span>(
             <span class="self">self</span>.access_mut()
                 .field(field_idx)
@@ -2769,7 +2769,7 @@
     </span><span class="kw">pub fn </span>field_path&lt;<span class="lifetime">'a</span>, I: IntoIterator&lt;Item = FieldIdx&lt;<span class="lifetime">'a</span>&gt;&gt;&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         path: I,
-    ) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&gt; {
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;&gt; {
         <span class="self">self</span>.access_mut()
             .field_path(path)
             .map(|x| x.into_schema_ref_mut())
@@ -2968,7 +2968,7 @@
     }
 
     <span class="doccomment">/// Borrow this [`SchemaRefMutAccess`] as a [`SchemaRefAccess`].
-    </span><span class="kw">pub fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRefAccess {
+    </span><span class="kw">pub fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRefAccess&lt;<span class="lifetime">'_</span>&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             SchemaRefMutAccess::Struct(s) =&gt; SchemaRefAccess::Struct(StructRefAccess(s.<span class="number">0</span>.as_ref())),
             SchemaRefMutAccess::Vec(v) =&gt; SchemaRefAccess::Vec(SchemaVecAccess {
@@ -3208,7 +3208,7 @@
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'ptr</span>&gt; PrimitiveRefMut&lt;<span class="lifetime">'ptr</span>&gt; {
     <span class="doccomment">/// Convert to an immutable [`PrimitiveRef`].
-    </span><span class="kw">pub fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PrimitiveRef {
+    </span><span class="kw">pub fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PrimitiveRef&lt;<span class="lifetime">'_</span>&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             PrimitiveRefMut::Bool(b) =&gt; PrimitiveRef::Bool(b),
             PrimitiveRefMut::U8(n) =&gt; PrimitiveRef::U8(n),
@@ -3801,7 +3801,7 @@
         <span class="kw">fn </span>flt(x: &amp;&amp;str) -&gt; bool {
             !x.is_empty()
         }
-        <span class="kw">fn </span>mp(x: <span class="kw-2">&amp;</span>str) -&gt; FieldIdx {
+        <span class="kw">fn </span>mp(x: <span class="kw-2">&amp;</span>str) -&gt; FieldIdx&lt;<span class="lifetime">'_</span>&gt; {
             x.parse::&lt;usize&gt;()
                 .map(FieldIdx::Idx)
                 .unwrap_or(FieldIdx::Name(x))
@@ -3817,7 +3817,7 @@
         <span class="kw">fn </span>flt(x: &amp;&amp;str) -&gt; bool {
             !x.is_empty()
         }
-        <span class="kw">fn </span>mp(x: <span class="kw-2">&amp;</span>str) -&gt; FieldIdx {
+        <span class="kw">fn </span>mp(x: <span class="kw-2">&amp;</span>str) -&gt; FieldIdx&lt;<span class="lifetime">'_</span>&gt; {
             x.parse::&lt;usize&gt;()
                 .map(FieldIdx::Idx)
                 .unwrap_or(FieldIdx::Name(x))

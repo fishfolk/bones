@@ -949,12 +949,12 @@
     <span class="doccomment">/// Get a [`SchemaRef`] to the component for the given [`Entity`] if the entity has this
     /// component.
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>get_ref(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: Entity) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&gt; {
+    </span><span class="kw">pub fn </span>get_ref(<span class="kw-2">&amp;</span><span class="self">self</span>, entity: Entity) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&lt;<span class="lifetime">'_</span>&gt;&gt; {
         <span class="kw">let </span>idx = entity.index() <span class="kw">as </span>usize;
         <span class="self">self</span>.get_idx(idx)
     }
 
-    <span class="kw">fn </span>get_idx(<span class="kw-2">&amp;</span><span class="self">self</span>, idx: usize) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&gt; {
+    <span class="kw">fn </span>get_idx(<span class="kw-2">&amp;</span><span class="self">self</span>, idx: usize) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&lt;<span class="lifetime">'_</span>&gt;&gt; {
         <span class="kw">if </span><span class="self">self</span>.bitset.bit_test(idx) {
             <span class="comment">// SOUND: we ensure that there is allocated storge for entities that have their bit set.
             </span><span class="kw">let </span>ptr = <span class="kw">unsafe </span>{ <span class="self">self</span>.storage.unchecked_idx(idx) };
@@ -1076,7 +1076,7 @@
     </span><span class="kw">pub fn </span>get_many_ref_mut&lt;<span class="kw">const </span>N: usize&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         entities: [Entity; N],
-    ) -&gt; [<span class="prelude-ty">Option</span>&lt;SchemaRefMut&gt;; N] {
+    ) -&gt; [<span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;&gt;; N] {
         <span class="comment">// Sort a copy of the passed in entities list.
         </span><span class="kw">let </span><span class="kw-2">mut </span>sorted = entities;
         sorted.sort_unstable();
@@ -1193,7 +1193,7 @@
     </span><span class="kw">pub fn </span>get_single_with_bitset(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         bitset: Rc&lt;BitSetVec&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRef, QuerySingleError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRef&lt;<span class="lifetime">'_</span>&gt;, QuerySingleError&gt; {
         <span class="kw">if </span><span class="self">self</span>.bitset().bit_count() == <span class="number">0 </span>|| bitset.bit_count() == <span class="number">0 </span>{
             <span class="comment">// Both bitsets are empty so there are no matches
             </span><span class="kw">return </span><span class="prelude-val">Err</span>(QuerySingleError::NoEntities);
@@ -1219,7 +1219,7 @@
     </span><span class="kw">pub fn </span>get_single_with_bitset_mut(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         bitset: Rc&lt;BitSetVec&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMut, QuerySingleError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;, QuerySingleError&gt; {
         <span class="kw">if </span><span class="self">self</span>.bitset().bit_count() == <span class="number">0 </span>|| bitset.bit_count() == <span class="number">0 </span>{
             <span class="comment">// Both bitsets are empty so there are no matches
             </span><span class="kw">return </span><span class="prelude-val">Err</span>(QuerySingleError::NoEntities);
@@ -1264,7 +1264,7 @@
     /// entities.
     ///
     /// Slower than `iter()` but allows joining between multiple component types.
-    </span><span class="kw">pub fn </span>iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; UntypedComponentBitsetIterator {
+    </span><span class="kw">pub fn </span>iter_with_bitset(<span class="kw-2">&amp;</span><span class="self">self</span>, bitset: Rc&lt;BitSetVec&gt;) -&gt; UntypedComponentBitsetIterator&lt;<span class="lifetime">'_</span>&gt; {
         UntypedComponentBitsetIterator {
             current_id: <span class="number">0</span>,
             components: <span class="self">self</span>,
@@ -1279,7 +1279,7 @@
     </span><span class="kw">pub fn </span>iter_mut_with_bitset(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         bitset: Rc&lt;BitSetVec&gt;,
-    ) -&gt; UntypedComponentBitsetIteratorMut {
+    ) -&gt; UntypedComponentBitsetIteratorMut&lt;<span class="lifetime">'_</span>&gt; {
         UntypedComponentBitsetIteratorMut {
             current_id: <span class="number">0</span>,
             components: <span class="self">self</span>,
@@ -1292,7 +1292,7 @@
     </span><span class="kw">pub fn </span>iter_with_bitset_optional(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         bitset: Rc&lt;BitSetVec&gt;,
-    ) -&gt; UntypedComponentOptionalBitsetIterator {
+    ) -&gt; UntypedComponentOptionalBitsetIterator&lt;<span class="lifetime">'_</span>&gt; {
         <span class="kw">let </span>components_count = <span class="self">self</span>.bitset.bit_count();
         <span class="kw">let </span>query_count = bitset.bit_count();
         UntypedComponentOptionalBitsetIterator {
@@ -1312,7 +1312,7 @@
     </span><span class="kw">pub fn </span>iter_mut_with_bitset_optional(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         bitset: Rc&lt;BitSetVec&gt;,
-    ) -&gt; UntypedComponentOptionalBitsetIteratorMut {
+    ) -&gt; UntypedComponentOptionalBitsetIteratorMut&lt;<span class="lifetime">'_</span>&gt; {
         <span class="kw">let </span>components_count = <span class="self">self</span>.bitset.bit_count();
         <span class="kw">let </span>query_count = bitset.bit_count();
         UntypedComponentOptionalBitsetIteratorMut {

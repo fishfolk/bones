@@ -142,7 +142,7 @@
     }
 
     <span class="doccomment">/// Get a mutable reference to a reset resource if found.
-    </span><span class="kw">pub fn </span>reset_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>reset_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;<span class="lifetime">'_</span>, T&gt;&gt; {
         <span class="self">self</span>.reset_resources.resource_mut::&lt;T&gt;()
     }
 

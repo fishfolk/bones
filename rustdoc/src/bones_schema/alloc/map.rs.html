@@ -751,6 +751,11 @@
 <a href="#751" id="751">751</a>
 <a href="#752" id="752">752</a>
 <a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     any::{type_name, TypeId},
     fmt::Debug,
@@ -926,14 +931,17 @@
     /// Panics if the schema of the key doesn't match.
     </span><span class="attr">#[inline]
     #[track_caller]
-    </span><span class="kw">pub fn </span>get_ref(<span class="kw-2">&amp;</span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&gt; {
+    </span><span class="kw">pub fn </span>get_ref(<span class="kw-2">&amp;</span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&lt;<span class="lifetime">'_</span>&gt;&gt; {
         <span class="self">self</span>.try_get_ref(key).unwrap()
     }
 
     <span class="doccomment">/// Get an untyped reference to an item in the map.
     /// # Errors
     /// Errors if the schema of the key doesn't match.
-    </span><span class="kw">pub fn </span>try_get_ref(<span class="kw-2">&amp;</span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SchemaRef&gt;, SchemaMismatchError&gt; {
+    </span><span class="kw">pub fn </span>try_get_ref(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        key: SchemaRef,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SchemaRef&lt;<span class="lifetime">'_</span>&gt;&gt;, SchemaMismatchError&gt; {
         <span class="kw">if </span>key.schema() != <span class="self">self</span>.key_schema {
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         } <span class="kw">else </span>{
@@ -944,7 +952,7 @@
 
     <span class="doccomment">/// # Safety
     /// The key's schema must match this map's key schema.
-    </span><span class="kw">pub unsafe fn </span>get_ref_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&gt; {
+    </span><span class="kw">pub unsafe fn </span>get_ref_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRef&lt;<span class="lifetime">'_</span>&gt;&gt; {
         <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.hash_fn <span class="kw">else </span>{
             <span class="macro">panic!</span>(<span class="string">"Key schema doesn't implement hash"</span>);
         };
@@ -974,7 +982,7 @@
     /// Panics if the schema of the key doesn't match.
     </span><span class="attr">#[inline]
     #[track_caller]
-    </span><span class="kw">pub fn </span>get_ref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&gt; {
+    </span><span class="kw">pub fn </span>get_ref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;&gt; {
         <span class="self">self</span>.try_get_ref_mut(key).unwrap()
     }
 
@@ -984,7 +992,7 @@
     </span><span class="kw">pub fn </span>try_get_ref_mut(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         key: SchemaRef,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SchemaRefMut&gt;, SchemaMismatchError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;&gt;, SchemaMismatchError&gt; {
         <span class="kw">if </span>key.schema() != <span class="self">self</span>.key_schema {
             <span class="prelude-val">Err</span>(SchemaMismatchError)
         } <span class="kw">else </span>{
@@ -995,7 +1003,7 @@
 
     <span class="doccomment">/// # Safety
     /// The key's schema must match this map's key schema.
-    </span><span class="kw">pub unsafe fn </span>get_ref_unchecked_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&gt; {
+    </span><span class="kw">pub unsafe fn </span>get_ref_unchecked_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: SchemaRef) -&gt; <span class="prelude-ty">Option</span>&lt;SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;&gt; {
         <span class="kw">let </span><span class="prelude-val">Some</span>(hash_fn) = <span class="kw-2">&amp;</span><span class="self">self</span>.key_schema.hash_fn <span class="kw">else </span>{
             <span class="macro">panic!</span>(<span class="string">"Key schema doesn't implement hash"</span>);
         };
@@ -1188,7 +1196,7 @@
 <span class="kw">impl </span>SchemaMap {
     <span class="doccomment">/// Iterate over entries in the map.
     </span><span class="attr">#[allow(clippy::type_complexity)]
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaMapIter {
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaMapIter&lt;<span class="lifetime">'_</span>&gt; {
         <span class="kw">fn </span>map_fn&lt;<span class="lifetime">'a</span>&gt;(
             (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox),
         ) -&gt; (SchemaRef&lt;<span class="lifetime">'a</span>&gt;, SchemaRef&lt;<span class="lifetime">'a</span>&gt;) {
@@ -1199,7 +1207,7 @@
 
     <span class="doccomment">/// Iterate over entries in the map.
     </span><span class="attr">#[allow(clippy::type_complexity)]
-    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaMapIterMut {
+    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaMapIterMut&lt;<span class="lifetime">'_</span>&gt; {
         <span class="kw">fn </span>map_fn&lt;<span class="lifetime">'a</span>&gt;(
             (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaBox),
         ) -&gt; (SchemaRef&lt;<span class="lifetime">'a</span>&gt;, SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;) {
@@ -1213,10 +1221,10 @@
     </span><span class="kw">pub fn </span>keys(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
     ) -&gt; std::iter::Map&lt;
-        hash_map::Keys&lt;SchemaBox, SchemaBox&gt;,
+        hash_map::Keys&lt;<span class="lifetime">'_</span>, SchemaBox, SchemaBox&gt;,
         <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox) -&gt; SchemaRef&lt;<span class="lifetime">'a</span>&gt;,
     &gt; {
-        <span class="kw">fn </span>map_fn(key: <span class="kw-2">&amp;</span>SchemaBox) -&gt; SchemaRef {
+        <span class="kw">fn </span>map_fn(key: <span class="kw-2">&amp;</span>SchemaBox) -&gt; SchemaRef&lt;<span class="lifetime">'_</span>&gt; {
             key.as_ref()
         }
         <span class="self">self</span>.map.keys().map(map_fn)
@@ -1227,10 +1235,10 @@
     </span><span class="kw">pub fn </span>values(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
     ) -&gt; std::iter::Map&lt;
-        hash_map::Values&lt;SchemaBox, SchemaBox&gt;,
+        hash_map::Values&lt;<span class="lifetime">'_</span>, SchemaBox, SchemaBox&gt;,
         <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox) -&gt; SchemaRef&lt;<span class="lifetime">'a</span>&gt;,
     &gt; {
-        <span class="kw">fn </span>map_fn(key: <span class="kw-2">&amp;</span>SchemaBox) -&gt; SchemaRef {
+        <span class="kw">fn </span>map_fn(key: <span class="kw-2">&amp;</span>SchemaBox) -&gt; SchemaRef&lt;<span class="lifetime">'_</span>&gt; {
             key.as_ref()
         }
         <span class="self">self</span>.map.values().map(map_fn)
@@ -1241,10 +1249,10 @@
     </span><span class="kw">pub fn </span>values_mut(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     ) -&gt; std::iter::Map&lt;
-        hash_map::ValuesMut&lt;SchemaBox, SchemaBox&gt;,
+        hash_map::ValuesMut&lt;<span class="lifetime">'_</span>, SchemaBox, SchemaBox&gt;,
         <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaBox) -&gt; SchemaRefMut&lt;<span class="lifetime">'a</span>&gt;,
     &gt; {
-        <span class="kw">fn </span>map_fn(key: <span class="kw-2">&amp;mut </span>SchemaBox) -&gt; SchemaRefMut {
+        <span class="kw">fn </span>map_fn(key: <span class="kw-2">&amp;mut </span>SchemaBox) -&gt; SchemaRefMut&lt;<span class="lifetime">'_</span>&gt; {
             key.as_mut()
         }
         <span class="self">self</span>.map.values_mut().map(map_fn)
@@ -1417,7 +1425,7 @@
 <span class="kw">impl</span>&lt;K: HasSchema, V: HasSchema&gt; SMap&lt;K, V&gt; {
     <span class="doccomment">/// Iterate over entries in the map.
     </span><span class="attr">#[allow(clippy::type_complexity)]
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SMapIter&lt;K, V&gt; {
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SMapIter&lt;<span class="lifetime">'_</span>, K, V&gt; {
         <span class="kw">fn </span>map_fn&lt;<span class="lifetime">'a</span>, K: HasSchema, V: HasSchema&gt;(
             (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox),
         ) -&gt; (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V) {
@@ -1434,7 +1442,7 @@
 
     <span class="doccomment">/// Iterate over entries in the map.
     </span><span class="attr">#[allow(clippy::type_complexity)]
-    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SMapIterMut&lt;K, V&gt; {
+    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SMapIterMut&lt;<span class="lifetime">'_</span>, K, V&gt; {
         <span class="kw">fn </span>map_fn&lt;<span class="lifetime">'a</span>, K: HasSchema, V: HasSchema&gt;(
             (key, value): (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaBox),
         ) -&gt; (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>K, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V) {
@@ -1453,7 +1461,7 @@
     </span><span class="attr">#[allow(clippy::type_complexity)]
     </span><span class="kw">pub fn </span>keys(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-    ) -&gt; std::iter::Map&lt;hash_map::Keys&lt;SchemaBox, SchemaBox&gt;, <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>K&gt;
+    ) -&gt; std::iter::Map&lt;hash_map::Keys&lt;<span class="lifetime">'_</span>, SchemaBox, SchemaBox&gt;, <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>K&gt;
     {
         <span class="kw">fn </span>map_fn&lt;K: HasSchema&gt;(key: <span class="kw-2">&amp;</span>SchemaBox) -&gt; <span class="kw-2">&amp;</span>K {
             <span class="comment">// SOUND: SMap ensures key schema always match
@@ -1466,8 +1474,10 @@
     </span><span class="attr">#[allow(clippy::type_complexity)]
     </span><span class="kw">pub fn </span>values(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-    ) -&gt; std::iter::Map&lt;hash_map::Values&lt;SchemaBox, SchemaBox&gt;, <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V&gt;
-    {
+    ) -&gt; std::iter::Map&lt;
+        hash_map::Values&lt;<span class="lifetime">'_</span>, SchemaBox, SchemaBox&gt;,
+        <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>SchemaBox) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>V,
+    &gt; {
         <span class="kw">fn </span>map_fn&lt;V: HasSchema&gt;(value: <span class="kw-2">&amp;</span>SchemaBox) -&gt; <span class="kw-2">&amp;</span>V {
             <span class="comment">// SOUND: SMap ensures value schema always matches.
             </span><span class="kw">unsafe </span>{ value.as_ref().cast_into_unchecked() }
@@ -1480,7 +1490,7 @@
     </span><span class="kw">pub fn </span>values_mut(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     ) -&gt; std::iter::Map&lt;
-        hash_map::ValuesMut&lt;SchemaBox, SchemaBox&gt;,
+        hash_map::ValuesMut&lt;<span class="lifetime">'_</span>, SchemaBox, SchemaBox&gt;,
         <span class="kw">for</span>&lt;<span class="lifetime">'a</span>&gt; <span class="kw">fn</span>(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>SchemaBox) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V,
     &gt; {
         <span class="kw">fn </span>map_fn&lt;V&gt;(value: <span class="kw-2">&amp;mut </span>SchemaBox) -&gt; <span class="kw-2">&amp;mut </span>V {

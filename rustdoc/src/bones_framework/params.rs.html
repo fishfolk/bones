@@ -388,7 +388,7 @@
 
 <span class="kw">impl</span>&lt;T&gt; Packs&lt;<span class="lifetime">'_</span>, T&gt; {
     <span class="doccomment">/// Get the typed asset pack roots iterator.
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PacksIter&lt;T&gt; {
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PacksIter&lt;<span class="lifetime">'_</span>, T&gt; {
         PacksIter {
             asset_server: <span class="kw-2">&amp;</span><span class="self">self</span>.asset_server,
             asset_packs_iter: <span class="self">self</span>.asset_server.packs().iter(),

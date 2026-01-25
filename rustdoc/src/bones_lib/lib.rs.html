@@ -1009,12 +1009,12 @@
     ///
     /// Note: The resource is not actually initialized in World until first step of [`SystemStages`].
     /// To mutate or inspect a resource inserted by another [`SessionPlugin`] during session build, use [`SessionBuilder::resource_mut`].
-    </span><span class="kw">pub fn </span>init_resource&lt;T: HasSchema + Default&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;T&gt; {
+    </span><span class="kw">pub fn </span>init_resource&lt;T: HasSchema + Default&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">'_</span>, T&gt; {
         <span class="self">self</span>.stages.init_startup_resource::&lt;T&gt;()
     }
 
     <span class="doccomment">/// Get mutable reference to a resource if it exists.
-    </span><span class="kw">pub fn </span>resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;<span class="lifetime">'_</span>, T&gt;&gt; {
         <span class="self">self</span>.stages.startup_resource_mut::&lt;T&gt;()
     }
 
@@ -1312,7 +1312,7 @@
     </span>}
     <span class="attr">#[track_caller]
     </span><span class="doccomment">/// Get the shared resource of a given type out of this [`Game`]s shared resources.
-    </span><span class="kw">pub fn </span>shared_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>shared_resource&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;<span class="lifetime">'_</span>, T&gt;&gt; {
         <span class="kw">let </span>res = <span class="self">self
             </span>.shared_resources
             .iter()
@@ -1331,7 +1331,7 @@
 
     <span class="attr">#[track_caller]
     </span><span class="doccomment">/// Get the shared resource of a given type out of this [`Game`]s shared resources.
-    </span><span class="kw">pub fn </span>shared_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>shared_resource_mut&lt;T: HasSchema&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RefMut&lt;<span class="lifetime">'_</span>, T&gt;&gt; {
         <span class="kw">let </span>res = <span class="self">self
             </span>.shared_resources
             .iter()
@@ -1359,7 +1359,7 @@
 
     <span class="doccomment">/// Initialize a resource that will be shared across game sessions using it's [`Default`] value
     /// if it is not already initialized, and borrow it for modification.
-    </span><span class="kw">pub fn </span>init_shared_resource&lt;T: HasSchema + Default&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;T&gt; {
+    </span><span class="kw">pub fn </span>init_shared_resource&lt;T: HasSchema + Default&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RefMut&lt;<span class="lifetime">'_</span>, T&gt; {
         <span class="kw">if </span>!<span class="self">self
             </span>.shared_resources
             .iter()
@@ -1736,12 +1736,12 @@
     }
 
     <span class="doccomment">/// Mutably iterate over sessions.
-    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; std::collections::hash_map::IterMut&lt;Ustr, Session&gt; {
+    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; std::collections::hash_map::IterMut&lt;<span class="lifetime">'_</span>, Ustr, Session&gt; {
         <span class="self">self</span>.map.iter_mut()
     }
 
     <span class="doccomment">/// Iterate over sessions.
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::collections::hash_map::Iter&lt;Ustr, Session&gt; {
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::collections::hash_map::Iter&lt;<span class="lifetime">'_</span>, Ustr, Session&gt; {
         <span class="self">self</span>.map.iter()
     }
 

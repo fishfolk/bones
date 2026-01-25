@@ -615,7 +615,7 @@
     }
 
     <span class="doccomment">/// Converts a reference of `T` to a [`SchemaRef`]
-    </span><span class="kw">fn </span>as_schema_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRef
+    </span><span class="kw">fn </span>as_schema_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SchemaRef&lt;<span class="lifetime">'_</span>&gt;
     <span class="kw">where
         </span><span class="self">Self</span>: Sized,
     {
@@ -623,7 +623,7 @@
     }
 
     <span class="doccomment">/// Converts a reference of `T` to a [`SchemaRefMut`]
-    </span><span class="kw">fn </span>as_schema_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaRefMut
+    </span><span class="kw">fn </span>as_schema_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SchemaRefMut&lt;<span class="lifetime">'_</span>&gt;
     <span class="kw">where
         </span><span class="self">Self</span>: Sized,
     {

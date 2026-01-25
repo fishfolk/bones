@@ -656,7 +656,7 @@
 
 <span class="kw">impl </span>AssetLoc {
     <span class="doccomment">/// Borrow as an [`AssetLocRef`].
-    </span><span class="kw">pub fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AssetLocRef {
+    </span><span class="kw">pub fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AssetLocRef&lt;<span class="lifetime">'_</span>&gt; {
         AssetLocRef {
             pack: <span class="self">self</span>.pack.as_deref(),
             path: <span class="kw-2">&amp;</span><span class="self">self</span>.path,
