@@ -7,6 +7,7 @@ pub mod gamepad;
 pub mod gilrs;
 pub mod keyboard;
 pub mod mouse;
+pub mod proto;
 pub mod window;
 
 /// The state of a button, ether pressed or released.
@@ -29,7 +30,7 @@ impl ButtonState {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{gamepad::*, keyboard::*, mouse::*, window::*, ButtonState};
+    pub use super::{gamepad::*, keyboard::*, mouse::*, proto, window::*, ButtonState};
     pub use crate::input::{
         DenseInput, DenseInputCollector, DenseInputConfig, DensePlayerControl, InputCollector,
         PlayerControls,

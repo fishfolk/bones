@@ -25,7 +25,6 @@ pub mod lan;
 pub mod online;
 pub mod online_lobby;
 pub mod online_matchmaking;
-pub mod proto;
 pub mod random;
 pub mod socket;
 
@@ -60,7 +59,7 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 /// Module prelude.
 pub mod prelude {
     pub use super::{
-        input, lan, online, proto, random, DisconnectedPlayers, RngGenerator, SyncingInfo, RUNTIME,
+        input, lan, online, random, DisconnectedPlayers, RngGenerator, SyncingInfo, RUNTIME,
     };
 
     #[cfg(feature = "net-debug")]
