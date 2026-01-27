@@ -1,7 +1,7 @@
 #![doc = include_str!("./networking.md")]
 
 use self::{input::NetworkPlayerControls, socket::Socket};
-use crate::input::{DenseInput, NetworkInputConfig, NetworkPlayerControl};
+use crate::input::{DenseInput, DenseInputConfig, DensePlayerControl};
 use crate::networking::online::OnlineMatchmakerResponse;
 pub use crate::networking::random::RngGenerator;
 use crate::prelude::*;
@@ -445,7 +445,7 @@ pub struct DisconnectedPlayers {
 /// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
 ///
 /// This is where the whole `ggrs` integration is implemented.
-pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
+pub struct GgrsSessionRunner<'a, InputTypes: DenseInputConfig<'a>> {
     /// The last player input we detected.
     pub last_player_input: InputTypes::Dense,
 
@@ -536,7 +536,7 @@ impl GgrsSessionRunnerInfo {
 
 impl<'a, InputTypes> GgrsSessionRunner<'a, InputTypes>
 where
-    InputTypes: NetworkInputConfig<'a>,
+    InputTypes: DenseInputConfig<'a>,
 {
     /// Creates a new session runner from a `OnlineMatchmakerResponse::GameStarting`
     /// Any input values set as `None` will be set to default.
@@ -643,7 +643,7 @@ where
 
 impl<InputTypes> SessionRunner for GgrsSessionRunner<'static, InputTypes>
 where
-    InputTypes: NetworkInputConfig<'static> + 'static,
+    InputTypes: DenseInputConfig<'static> + 'static,
 {
     fn step(&mut self, frame_start: Instant, world: &mut World, stages: &mut SystemStages) {
         let step: f64 = 1.0 / self.network_fps;

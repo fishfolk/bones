@@ -31,8 +31,8 @@ impl ButtonState {
 pub mod prelude {
     pub use super::{gamepad::*, keyboard::*, mouse::*, window::*, ButtonState};
     pub use crate::input::{
-        DenseInput, InputCollector, NetworkInputCollector, NetworkInputConfig,
-        NetworkPlayerControl, PlayerControls,
+        DenseInput, DenseInputCollector, DenseInputConfig, DensePlayerControl, InputCollector,
+        PlayerControls,
     };
 }
 
@@ -98,9 +98,9 @@ impl<T> DenseInput for T where
 /// As long as types `PlayerControls` and `InputCollector` implement traits [`PlayerControls`] and [`InputCollector`],
 /// trait bounds [`NetworkPlayerControl`] and [`NetworkInputCollector`] are automatically implemented.
 #[allow(missing_docs)]
-pub trait NetworkInputConfig<'a> {
+pub trait DenseInputConfig<'a> {
     type Dense: DenseInput + Debug + Default;
-    type Control: NetworkPlayerControl<Self::Dense>;
+    type Control: DensePlayerControl<Self::Dense>;
 
     // Must be HasSchema because expected to be retrieved from `World` as `Resource`.
     type PlayerControls: PlayerControls<'a, Self::Control> + HasSchema;
@@ -110,7 +110,7 @@ pub trait NetworkInputConfig<'a> {
 }
 
 ///  Trait allowing for creating and applying [`DenseInput`] from control.
-pub trait NetworkPlayerControl<Dense: DenseInput>: Send + Sync + Default {
+pub trait DensePlayerControl<Dense: DenseInput>: Send + Sync + Default {
     /// Get [`DenseInput`] for control.
     fn get_dense_input(&self) -> Dense;
 
@@ -122,12 +122,12 @@ pub trait NetworkPlayerControl<Dense: DenseInput>: Send + Sync + Default {
 ///
 /// This trait is automatically implemented for [`InputCollector`]'s such that `Control`
 /// implements [`NetworkPlayerControl`] (i.e. implements dense input)
-pub trait NetworkInputCollector<'a, Dense, ControlMapping, ControlSource, Control>:
+pub trait DenseInputCollector<'a, Dense, ControlMapping, ControlSource, Control>:
     InputCollector<'a, Control>
 where
     Dense: DenseInput,
     ControlMapping: HasSchema,
-    Control: NetworkPlayerControl<Dense>,
+    Control: DensePlayerControl<Dense>,
 {
     /// Get dense control
     fn get_dense_control(&self) -> Dense;
@@ -136,10 +136,10 @@ where
 /// Provide automatic [`NetworkInputCollector`] for [`InputCollector`] when type parameters
 /// meet required bounds for networking.
 impl<'a, T, Dense, ControlMapping, ControlSource, Control>
-    NetworkInputCollector<'a, Dense, ControlMapping, ControlSource, Control> for T
+    DenseInputCollector<'a, Dense, ControlMapping, ControlSource, Control> for T
 where
     Dense: DenseInput,
-    Control: NetworkPlayerControl<Dense>,
+    Control: DensePlayerControl<Dense>,
     ControlMapping: HasSchema,
     T: InputCollector<'a, Control>,
 {
