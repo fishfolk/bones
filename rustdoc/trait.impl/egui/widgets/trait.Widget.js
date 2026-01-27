@@ -1,3 +1,9 @@
-(function() {var implementors = {
-"bones_framework":[["impl&lt;'a&gt; Widget for <a class=\"struct\" href=\"bones_framework/render/ui/widgets/struct.BorderedButton.html\" title=\"struct bones_framework::render::ui::widgets::BorderedButton\">BorderedButton</a>&lt;'a&gt;"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
+(function() {
+    var implementors = Object.fromEntries([["bones_framework",[["impl&lt;'a&gt; Widget for <a class=\"struct\" href=\"bones_framework/render/ui/widgets/struct.BorderedButton.html\" title=\"struct bones_framework::render::ui::widgets::BorderedButton\">BorderedButton</a>&lt;'a&gt;"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[240]}

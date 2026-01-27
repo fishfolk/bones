@@ -1,3 +1,9 @@
-(function() {var implementors = {
-"bones_framework":[["impl <a class=\"trait\" href=\"bones_framework/asset/trait.AssetLoader.html\" title=\"trait bones_framework::asset::AssetLoader\">AssetLoader</a> for <a class=\"struct\" href=\"bones_framework/audio/audio_manager/struct.AudioLoader.html\" title=\"struct bones_framework::audio::audio_manager::AudioLoader\">AudioLoader</a>"],["impl <a class=\"trait\" href=\"bones_framework/asset/trait.AssetLoader.html\" title=\"trait bones_framework::asset::AssetLoader\">AssetLoader</a> for <a class=\"struct\" href=\"bones_framework/render/ui/struct.FontLoader.html\" title=\"struct bones_framework::render::ui::FontLoader\">FontLoader</a>"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
+(function() {
+    var implementors = Object.fromEntries([["bones_framework",[["impl <a class=\"trait\" href=\"bones_framework/prelude/trait.AssetLoader.html\" title=\"trait bones_framework::prelude::AssetLoader\">AssetLoader</a> for <a class=\"struct\" href=\"bones_framework/audio/audio_manager/struct.AudioLoader.html\" title=\"struct bones_framework::audio::audio_manager::AudioLoader\">AudioLoader</a>"],["impl <a class=\"trait\" href=\"bones_framework/prelude/trait.AssetLoader.html\" title=\"trait bones_framework::prelude::AssetLoader\">AssetLoader</a> for <a class=\"struct\" href=\"bones_framework/render/ui/struct.FontLoader.html\" title=\"struct bones_framework::render::ui::FontLoader\">FontLoader</a>"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[660]}

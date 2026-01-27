@@ -1,1 +1,0 @@
-searchState.loadedDescShard("bones_schema_macros", 0, "Derive macro for the HasSchema trait.")

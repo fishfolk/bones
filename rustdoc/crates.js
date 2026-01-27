@@ -1,1 +1,2 @@
 window.ALL_CRATES = ["bones_asset","bones_bevy_renderer","bones_ecs","bones_ecs_macros","bones_ecs_macros_core","bones_framework","bones_lib","bones_matchmaker","bones_matchmaker_proto","bones_schema","bones_schema_macros","bones_scripting","bones_utils","bones_utils_macros","demo_asset_packs","demo_assets_minimal","demo_features","demo_hello_world","demo_scripting","type_ulid","type_ulid_macros"];
+//{"start":21,"fragment_lengths":[13,22,12,19,24,18,12,19,25,15,22,18,14,21,19,22,16,19,17,12,19]}
