@@ -34,7 +34,7 @@ mod serializer_deserializer {
                 return serializer.serialize_str(u);
             }
 
-            return match self.0.access() {
+            match self.0.access() {
                 SchemaRefAccess::Struct(s) => {
                     if s.fields().count() == 1 && s.fields().nth(0).unwrap().name.is_none() {
                         SchemaSerializer(s.fields().nth(0).unwrap().value).serialize(serializer)
@@ -131,7 +131,7 @@ mod serializer_deserializer {
                         Err(S::Error::custom("Cannot serialize opaque types"))
                     }
                 },
-            };
+            }
         }
     }
 

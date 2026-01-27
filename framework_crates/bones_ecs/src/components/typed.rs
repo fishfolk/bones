@@ -311,10 +311,6 @@ mod tests {
     #[repr(C)]
     struct A(u32);
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, HasSchema, Default)]
-    #[repr(C)]
-    struct B(u32);
-
     fn entity(index: u32) -> Entity {
         Entity::new(index, 0)
     }

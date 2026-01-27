@@ -256,7 +256,7 @@ impl AssetLoader for LocalizationLoader {
                 .unwrap_or(en_us.clone());
 
             let selected_locale = fluent_langneg::negotiate_languages(
-                &[user_locale.clone()],
+                std::slice::from_ref(&user_locale),
                 &available_locales,
                 Some(&en_us),
                 fluent_langneg::NegotiationStrategy::Filtering,
