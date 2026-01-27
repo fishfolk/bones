@@ -68,8 +68,7 @@ pub trait InputCollector<'a, Control>: Send + Sync {
 pub trait PlayerControls<'a, Control> {
     /// InputCollector used to update controls.
     type InputCollector: InputCollector<'a, Control>;
-    /// Update control state from input collector.
-    fn update_controls(&mut self, collector: &mut Self::InputCollector);
+
     /// Get control for player.
     fn get_control(&self, player_idx: usize) -> &Control;
 
