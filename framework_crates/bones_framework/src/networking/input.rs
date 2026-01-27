@@ -22,12 +22,7 @@ pub trait NetworkInputConfig<'a> {
     type PlayerControls: PlayerControls<'a, Self::Control> + HasSchema;
 
     // InputCollector type params must match that of PlayerControls, so using associated types.
-    type InputCollector: InputCollector<
-            'a,
-            <Self::PlayerControls as PlayerControls<'a, Self::Control>>::ControlMapping,
-            <Self::PlayerControls as PlayerControls<'a, Self::Control>>::ControlSource,
-            Self::Control,
-        > + Default;
+    type InputCollector: InputCollector<'a, Self::Control> + Default;
 }
 
 /// Required for use of [`PlayerControls`] in networking.
@@ -96,14 +91,14 @@ pub trait NetworkPlayerControl<Dense: DenseInput>: Send + Sync + Default {
 /// This trait is automatically implemented for [`InputCollector`]'s such that `Control`
 /// implements [`NetworkPlayerControl`] (i.e. implements dense input)
 pub trait NetworkInputCollector<'a, Dense, ControlMapping, ControlSource, Control>:
-    InputCollector<'a, ControlMapping, ControlSource, Control>
+    InputCollector<'a, Control>
 where
     Dense: DenseInput,
     ControlMapping: HasSchema,
     Control: NetworkPlayerControl<Dense>,
 {
     /// Get dense control
-    fn get_dense_control(&self, player_idx: usize, control_soure: ControlSource) -> Dense;
+    fn get_dense_control(&self) -> Dense;
 }
 
 /// Provide automatic [`NetworkInputCollector`] for [`InputCollector`] when type parameters
@@ -114,10 +109,9 @@ where
     Dense: DenseInput,
     Control: NetworkPlayerControl<Dense>,
     ControlMapping: HasSchema,
-    T: InputCollector<'a, ControlMapping, ControlSource, Control>,
+    T: InputCollector<'a, Control>,
 {
-    fn get_dense_control(&self, player_idx: usize, control_source: ControlSource) -> Dense {
-        self.get_control(player_idx, control_source)
-            .get_dense_input()
+    fn get_dense_control(&self) -> Dense {
+        self.get_control().get_dense_input()
     }
 }

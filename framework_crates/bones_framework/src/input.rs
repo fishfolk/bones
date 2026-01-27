@@ -42,9 +42,7 @@ pub mod prelude {
 /// [`InputCollector::advance_frame`] is  used to mark that the input has been consumed, and update the prev frame inputs to current, to compute changes next frame.
 ///
 /// Generic type param ControlMapping is HasSchema because it is expected to be a Resource retrievable on world.
-pub trait InputCollector<'a, ControlMapping: HasSchema, ControlSource, Control>:
-    Send + Sync
-{
+pub trait InputCollector<'a, Control>: Send + Sync {
     /// Update the internal state with new inputs. This must be called every render frame with the
     /// input events. This updates which buttons are pressed, but does not compute what buttons were "just_pressed".
     /// use [`InputCollector::update_just_pressed`] to do this.
@@ -63,26 +61,15 @@ pub trait InputCollector<'a, ControlMapping: HasSchema, ControlSource, Control>:
     fn update_just_pressed(&mut self);
 
     /// Get control for player based on provided `ControlSource`.
-    fn get_control(&self, player_idx: usize, control_source: ControlSource) -> &Control;
+    fn get_control(&self) -> &Control;
 }
 
 /// Trait that tracks player control state. Provides associated types for other input trait implementations.
 pub trait PlayerControls<'a, Control> {
     /// InputCollector used to update controls.
-    type InputCollector: InputCollector<'a, Self::ControlMapping, Self::ControlSource, Control>;
-
-    /// Control mapping from raw input, expected to be able to be retrieved as `Resource` from world.
-    type ControlMapping: HasSchema;
-
-    /// Type used to map source of input to control.
-    type ControlSource;
-
+    type InputCollector: InputCollector<'a, Control>;
     /// Update control state from input collector.
     fn update_controls(&mut self, collector: &mut Self::InputCollector);
-
-    /// Get `ControlSource` for player (only present for local player).
-    fn get_control_source(&self, local_player_idx: usize) -> Option<Self::ControlSource>;
-
     /// Get control for player.
     fn get_control(&self, player_idx: usize) -> &Control;
 

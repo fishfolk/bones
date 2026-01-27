@@ -20,8 +20,6 @@ use {
     ggrs::{NetworkStats, PlayerHandle},
 };
 
-use crate::input::PlayerControls as PlayerControlsTrait;
-
 pub use iroh;
 
 pub mod input;
@@ -658,26 +656,12 @@ where
 
         let mut skip_frames: u32 = 0;
 
-        {
-            let player_inputs = world.resource::<InputTypes::PlayerControls>();
+        // Collect inputs and update controls
+        self.input_collector.apply_inputs(world);
+        self.input_collector.update_just_pressed();
 
-            // Collect inputs and update controls
-            self.input_collector.apply_inputs(world);
-            self.input_collector.update_just_pressed();
-
-            // save local players dense input for use with ggrs
-            match player_inputs.get_control_source(self.local_player_idx as usize) {
-                Some(control_source) => {
-                    let control = self
-                        .input_collector
-                        .get_control(self.local_player_idx as usize, control_source);
-
-                    self.last_player_input = control.get_dense_input();
-                },
-                None => warn!("GgrsSessionRunner local_player_idx {} has no control source, no local input provided.",
-                    self.local_player_idx)
-            };
-        }
+        // save local players dense input for use with ggrs
+        self.last_player_input = self.input_collector.get_control().get_dense_input();
 
         #[cfg(feature = "net-debug")]
         // Current frame before we start network update loop
