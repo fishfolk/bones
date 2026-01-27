@@ -96,7 +96,7 @@ impl<T> DenseInput for T where
 /// Define input types used by game for use in networking.
 ///
 /// As long as types `PlayerControls` and `InputCollector` implement traits [`PlayerControls`] and [`InputCollector`],
-/// trait bounds [`NetworkPlayerControl`] and [`NetworkInputCollector`] are automatically implemented.
+/// trait bounds [`DensePlayerControl`] and [`DenseInputCollector`] are automatically implemented.
 #[allow(missing_docs)]
 pub trait DenseInputConfig<'a> {
     type Dense: DenseInput + Debug + Default;
@@ -121,7 +121,7 @@ pub trait DensePlayerControl<Dense: DenseInput>: Send + Sync + Default {
 /// Extension of [`InputCollector`] exposing dense control for networking.
 ///
 /// This trait is automatically implemented for [`InputCollector`]'s such that `Control`
-/// implements [`NetworkPlayerControl`] (i.e. implements dense input)
+/// implements [`DensePlayerControl`] (i.e. implements dense input)
 pub trait DenseInputCollector<'a, Dense, ControlMapping, ControlSource, Control>:
     InputCollector<'a, Control>
 where
@@ -133,7 +133,7 @@ where
     fn get_dense_control(&self) -> Dense;
 }
 
-/// Provide automatic [`NetworkInputCollector`] for [`InputCollector`] when type parameters
+/// Provide automatic [`DenseInputCollector`] for [`InputCollector`] when type parameters
 /// meet required bounds for networking.
 impl<'a, T, Dense, ControlMapping, ControlSource, Control>
     DenseInputCollector<'a, Dense, ControlMapping, ControlSource, Control> for T
