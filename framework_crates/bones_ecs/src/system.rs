@@ -464,7 +464,7 @@ mod tests {
             assert!(d.as_deref() == Some(&2));
         }
 
-        let mut world = World::new();
+        let world = World::new();
         world.insert_resource(1u16);
         world.insert_resource(2u64);
         world.run_system(access_resource, ());
@@ -480,7 +480,7 @@ mod tests {
             **n *= 3;
         }
 
-        let mut world = World::new();
+        let world = World::new();
         world.insert_resource(2usize);
 
         let result = world.run_system(mul_by_res, 3);
