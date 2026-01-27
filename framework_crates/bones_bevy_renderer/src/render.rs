@@ -112,6 +112,7 @@ pub fn sync_bones_window(mut game: ResMut<BonesGame>, mut window_query: Query<&m
             game.insert_shared_resource(bones::Window {
                 size: vec2(window.width(), window.height()),
                 fullscreen: matches!(&window.mode, WindowMode::BorderlessFullscreen),
+                focused: window.focused,
             });
             game.shared_resource_cell().unwrap()
         }
@@ -126,6 +127,7 @@ pub fn sync_bones_window(mut game: ResMut<BonesGame>, mut window_query: Query<&m
             WindowMode::Windowed
         };
     }
+    bones_window.focused = window.focused;
     bones_window.size = vec2(window.width(), window.height());
 }
 

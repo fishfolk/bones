@@ -13,4 +13,9 @@ pub struct Window {
     pub size: glam::Vec2,
     /// May be set to change whether or not the game is displayed full-screen.
     pub fullscreen: bool,
+    /// Whether or not the window is focused.
+    ///
+    /// This is considered read-only and is updated from the window focus by the
+    /// rendering integration.
+    pub focused: bool,
 }
