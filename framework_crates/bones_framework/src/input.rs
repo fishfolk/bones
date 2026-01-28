@@ -43,8 +43,6 @@ pub mod prelude {
 /// [`InputCollector::update_just_pressed`] computes any changes in pressed buttons that may be stored on control.
 ///
 /// [`InputCollector::advance_frame`] is  used to mark that the input has been consumed, and update the prev frame inputs to current, to compute changes next frame.
-///
-/// Generic type param ControlMapping is HasSchema because it is expected to be a Resource retrievable on world.
 pub trait InputCollector<'a, Control>: Send + Sync {
     /// Update the internal state with new inputs. This must be called every render frame with the
     /// input events. This updates which buttons are pressed, but does not compute what buttons were "just_pressed".
@@ -63,7 +61,7 @@ pub trait InputCollector<'a, Control>: Send + Sync {
     /// This does not modify previous frame's input, to do this use [`InputCollector::advance_frame`].
     fn update_just_pressed(&mut self);
 
-    /// Get control for player based on provided `ControlSource`.
+    /// Get control for player.
     fn get_control(&self) -> &Control;
 }
 
