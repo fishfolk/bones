@@ -1,7 +1,7 @@
 //! Input traits required by networking. These traits are networking specific, either only used in networking,
 //! or extending other traits from [`crate::input`] for networking.
 
-use crate::input::{DenseInput, DensePlayerControl, PlayerControls};
+use crate::input::{DenseControl, DenseInput, PlayerControls};
 
 use super::NetworkInputStatus;
 
@@ -26,7 +26,7 @@ pub trait NetworkPlayerControls<'a, Dense: DenseInput, Control>:
 impl<'a, T, Dense, Control> NetworkPlayerControls<'a, Dense, Control> for T
 where
     Dense: DenseInput,
-    Control: DensePlayerControl<Dense>,
+    Control: DenseControl<Dense>,
     T: PlayerControls<'a, Control>,
 {
     // type NetworkControl = PlayerControl;

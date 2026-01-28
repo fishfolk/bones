@@ -32,7 +32,7 @@ impl ButtonState {
 pub mod prelude {
     pub use super::{gamepad::*, keyboard::*, mouse::*, proto, window::*, ButtonState};
     pub use crate::input::{
-        DenseInput, DenseInputCollector, DenseInputConfig, DensePlayerControl, InputCollector,
+        DenseControl, DenseInput, DenseInputCollector, DenseInputConfig, InputCollector,
         PlayerControls,
     };
 }
@@ -101,7 +101,7 @@ impl<T> DenseInput for T where
 #[allow(missing_docs)]
 pub trait DenseInputConfig<'a> {
     type Dense: DenseInput + Debug + Default;
-    type Control: DensePlayerControl<Self::Dense>;
+    type Control: DenseControl<Self::Dense>;
 
     // Must be HasSchema because expected to be retrieved from `World` as `Resource`.
     type PlayerControls: PlayerControls<'a, Self::Control> + HasSchema;
@@ -111,7 +111,7 @@ pub trait DenseInputConfig<'a> {
 }
 
 ///  Trait allowing for creating and applying [`DenseInput`] from control.
-pub trait DensePlayerControl<Dense: DenseInput>: Send + Sync + Default {
+pub trait DenseControl<Dense: DenseInput>: Send + Sync + Default {
     /// Get [`DenseInput`] for control.
     fn get_dense_input(&self) -> Dense;
 
@@ -128,7 +128,7 @@ pub trait DenseInputCollector<'a, Dense, ControlMapping, ControlSource, Control>
 where
     Dense: DenseInput,
     ControlMapping: HasSchema,
-    Control: DensePlayerControl<Dense>,
+    Control: DenseControl<Dense>,
 {
     /// Get dense control
     fn get_dense_control(&self) -> Dense;
@@ -140,7 +140,7 @@ impl<'a, T, Dense, ControlMapping, ControlSource, Control>
     DenseInputCollector<'a, Dense, ControlMapping, ControlSource, Control> for T
 where
     Dense: DenseInput,
-    Control: DensePlayerControl<Dense>,
+    Control: DenseControl<Dense>,
     ControlMapping: HasSchema,
     T: InputCollector<'a, Control>,
 {

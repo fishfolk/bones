@@ -1,7 +1,7 @@
 #![doc = include_str!("./networking.md")]
 
 use self::{input::NetworkPlayerControls, socket::Socket};
-use crate::input::{DenseInput, DenseInputConfig, DensePlayerControl};
+use crate::input::{DenseControl, DenseInput, DenseInputConfig};
 use crate::networking::online::OnlineMatchmakerResponse;
 pub use crate::networking::random::RngGenerator;
 use crate::prelude::*;
