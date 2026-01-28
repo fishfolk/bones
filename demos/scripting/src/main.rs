@@ -18,7 +18,6 @@ fn main() {
     let mut game = Game::new();
     game.install_plugin(DefaultGamePlugin);
     game.shared_resource_mut::<AssetServer>()
-        .unwrap()
         .register_default_assets();
     GameMeta::register_schema();
 

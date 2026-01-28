@@ -12,7 +12,8 @@ pub fn handle_bones_rumble(
     game: ResMut<BonesGame>,
     mut rumble_requests: EventWriter<BevyGamepadRumbleRequest>,
 ) {
-    if let Some(mut bones_rumble_requests) = game.shared_resource_mut::<bones::GamepadsRumble>() {
+    if let Some(mut bones_rumble_requests) = game.get_shared_resource_mut::<bones::GamepadsRumble>()
+    {
         while let Some(request) = bones_rumble_requests.requests.pop_front() {
             match request {
                 bones::GamepadRumbleRequest::AddRumble {

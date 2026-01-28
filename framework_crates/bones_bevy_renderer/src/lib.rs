@@ -68,7 +68,7 @@ pub struct BonesGame(pub bones::Game);
 impl BonesGame {
     /// Shorthand for [`bones::AssetServer`] typed access to the shared resource
     pub fn asset_server(&self) -> Option<bones::Ref<'_, bones::AssetServer>> {
-        self.0.shared_resource()
+        self.0.get_shared_resource()
     }
 }
 
@@ -166,7 +166,7 @@ impl BonesBevyRenderer {
         }
         app.init_resource::<BonesImageIds>();
 
-        if let Some(mut asset_server) = self.game.shared_resource_mut::<bones::AssetServer>() {
+        if let Some(mut asset_server) = self.game.get_shared_resource_mut::<bones::AssetServer>() {
             asset_server.set_game_version(self.game_version);
             asset_server.set_io(asset_io(&self.asset_dir, &self.packs_dir));
 
@@ -273,7 +273,7 @@ impl BonesBevyRenderer {
 }
 
 fn egui_ctx_initialized(game: Res<BonesGame>) -> bool {
-    game.shared_resource::<bones::EguiCtx>().is_some()
+    game.get_shared_resource::<bones::EguiCtx>().is_some()
 }
 
 fn assets_are_loaded(game: Res<BonesGame>) -> bool {
@@ -368,10 +368,9 @@ pub fn handle_asset_changes(
     mut bevy_egui_textures: ResMut<bevy_egui::EguiUserTextures>,
     mut bones_image_ids: ResMut<BonesImageIds>,
 ) {
-    if let Some(mut asset_server) = game.shared_resource_mut::<bones::AssetServer>() {
+    if let Some(mut asset_server) = game.get_shared_resource_mut::<bones::AssetServer>() {
         asset_server.handle_asset_changes(|asset_server, handle| {
-            let mut bones_egui_textures =
-                game.shared_resource_mut::<bones::EguiTextures>().unwrap();
+            let mut bones_egui_textures = game.shared_resource_mut::<bones::EguiTextures>();
             let Some(mut asset) = asset_server.get_asset_untyped_mut(handle) else {
                 // There was an issue loading the asset. The error will have been logged.
                 return;
@@ -394,7 +393,7 @@ pub fn handle_asset_changes(
 
 #[cfg(not(target_arch = "wasm32"))]
 fn handle_exits(game: Res<BonesGame>, mut exits: EventWriter<bevy::app::AppExit>) {
-    if **game.shared_resource::<bones::ExitBones>().unwrap() {
+    if **game.shared_resource::<bones::ExitBones>() {
         exits.send(bevy::app::AppExit);
     }
 }

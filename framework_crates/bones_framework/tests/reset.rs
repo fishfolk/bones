@@ -24,7 +24,7 @@ pub fn startup_system_reset() {
     game.step(Instant::now());
 
     // Verify startup system ran and incremented only once
-    assert_eq!(game.shared_resource::<Counter>().unwrap().0, 1);
+    assert_eq!(game.shared_resource::<Counter>().0, 1);
 
     // Add command that will trigger reset on next step
     {
@@ -43,7 +43,7 @@ pub fn startup_system_reset() {
     game.step(Instant::now());
 
     // Shared resource is not included in reset, should be incremented 2nd time
-    assert_eq!(game.shared_resource::<Counter>().unwrap().0, 2);
+    assert_eq!(game.shared_resource::<Counter>().0, 2);
 }
 
 /// Verify that single success systems run again (until success condition)
