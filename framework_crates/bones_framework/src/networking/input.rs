@@ -5,7 +5,7 @@ use crate::input::{Controls, DenseControl, DenseInput};
 
 use super::NetworkInputStatus;
 
-/// Required for use of [`PlayerControls`] in networking.
+/// Required for use of [`Controls`] in networking.
 pub trait NetworkPlayerControls<'a, Dense: DenseInput, Control>: Controls<'a, Control> {
     /// Update control of player from dense input.
     ///
@@ -27,7 +27,7 @@ where
     Control: DenseControl<Dense>,
     T: Controls<'a, Control>,
 {
-    // type NetworkControl = PlayerControl;
+    // type NetworkControl = Control;
     fn network_update(
         &mut self,
         player_idx: usize,
