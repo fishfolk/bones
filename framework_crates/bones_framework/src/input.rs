@@ -67,9 +67,6 @@ pub trait InputCollector<'a, Control>: Send + Sync {
 
 /// Trait that tracks player control state. Provides associated types for other input trait implementations.
 pub trait Controls<'a, Control> {
-    /// InputCollector used to update controls.
-    type InputCollector: InputCollector<'a, Control>;
-
     /// Get control for player.
     fn get_control(&self, player_idx: usize) -> &Control;
 
