@@ -122,11 +122,9 @@ pub trait DenseControl<Dense: DenseInput>: Send + Sync + Default {
 ///
 /// This trait is automatically implemented for [`InputCollector`]'s such that `Control`
 /// implements [`DenseControl`] (i.e. implements dense input)
-pub trait DenseInputCollector<'a, Dense, ControlMapping, ControlSource, Control>:
-    InputCollector<'a, Control>
+pub trait DenseInputCollector<'a, Dense, Control>: InputCollector<'a, Control>
 where
     Dense: DenseInput,
-    ControlMapping: HasSchema,
     Control: DenseControl<Dense>,
 {
     /// Get dense control
@@ -135,12 +133,10 @@ where
 
 /// Provide automatic [`DenseInputCollector`] for [`InputCollector`] when type parameters
 /// meet required bounds for networking.
-impl<'a, T, Dense, ControlMapping, ControlSource, Control>
-    DenseInputCollector<'a, Dense, ControlMapping, ControlSource, Control> for T
+impl<'a, T, Dense, Control> DenseInputCollector<'a, Dense, Control> for T
 where
     Dense: DenseInput,
     Control: DenseControl<Dense>,
-    ControlMapping: HasSchema,
     T: InputCollector<'a, Control>,
 {
     fn get_dense_control(&self) -> Dense {
