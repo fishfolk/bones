@@ -843,7 +843,7 @@ where
 
                                         // update game controls from ggrs inputs
                                         let mut player_inputs =
-                                            world.resource_mut::<InputTypes::PlayerControls>();
+                                            world.resource_mut::<InputTypes::Controls>();
                                         for (player_idx, (input, status)) in
                                             network_inputs.into_iter().enumerate()
                                         {

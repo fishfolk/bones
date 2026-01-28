@@ -32,8 +32,7 @@ impl ButtonState {
 pub mod prelude {
     pub use super::{gamepad::*, keyboard::*, mouse::*, proto, window::*, ButtonState};
     pub use crate::input::{
-        DenseControl, DenseInput, DenseInputCollector, DenseInputConfig, InputCollector,
-        PlayerControls,
+        Controls, DenseControl, DenseInput, DenseInputCollector, DenseInputConfig, InputCollector,
     };
 }
 
@@ -69,7 +68,7 @@ pub trait InputCollector<'a, Control>: Send + Sync {
 }
 
 /// Trait that tracks player control state. Provides associated types for other input trait implementations.
-pub trait PlayerControls<'a, Control> {
+pub trait Controls<'a, Control> {
     /// InputCollector used to update controls.
     type InputCollector: InputCollector<'a, Control>;
 
@@ -104,7 +103,7 @@ pub trait DenseInputConfig<'a> {
     type Control: DenseControl<Self::Dense>;
 
     // Must be HasSchema because expected to be retrieved from `World` as `Resource`.
-    type PlayerControls: PlayerControls<'a, Self::Control> + HasSchema;
+    type Controls: Controls<'a, Self::Control> + HasSchema;
 
     // InputCollector type params must match that of PlayerControls, so using associated types.
     type InputCollector: InputCollector<'a, Self::Control> + Default;
