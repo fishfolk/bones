@@ -68,7 +68,7 @@
 <a href=#68 id=68 data-nosnippet>68</a><span class="kw">impl </span>BonesGame {
 <a href=#69 id=69 data-nosnippet>69</a>    <span class="doccomment">/// Shorthand for [`bones::AssetServer`] typed access to the shared resource
 <a href=#70 id=70 data-nosnippet>70</a>    </span><span class="kw">pub fn </span>asset_server(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;bones::Ref&lt;<span class="lifetime">'_</span>, bones::AssetServer&gt;&gt; {
-<a href=#71 id=71 data-nosnippet>71</a>        <span class="self">self</span>.<span class="number">0</span>.shared_resource()
+<a href=#71 id=71 data-nosnippet>71</a>        <span class="self">self</span>.<span class="number">0</span>.get_shared_resource()
 <a href=#72 id=72 data-nosnippet>72</a>    }
 <a href=#73 id=73 data-nosnippet>73</a>}
 <a href=#74 id=74 data-nosnippet>74</a>
@@ -166,7 +166,7 @@
 <a href=#166 id=166 data-nosnippet>166</a>        }
 <a href=#167 id=167 data-nosnippet>167</a>        app.init_resource::&lt;BonesImageIds&gt;();
 <a href=#168 id=168 data-nosnippet>168</a>
-<a href=#169 id=169 data-nosnippet>169</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = <span class="self">self</span>.game.shared_resource_mut::&lt;bones::AssetServer&gt;() {
+<a href=#169 id=169 data-nosnippet>169</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = <span class="self">self</span>.game.get_shared_resource_mut::&lt;bones::AssetServer&gt;() {
 <a href=#170 id=170 data-nosnippet>170</a>            asset_server.set_game_version(<span class="self">self</span>.game_version);
 <a href=#171 id=171 data-nosnippet>171</a>            asset_server.set_io(asset_io(<span class="kw-2">&amp;</span><span class="self">self</span>.asset_dir, <span class="kw-2">&amp;</span><span class="self">self</span>.packs_dir));
 <a href=#172 id=172 data-nosnippet>172</a>
@@ -273,7 +273,7 @@
 <a href=#273 id=273 data-nosnippet>273</a>}
 <a href=#274 id=274 data-nosnippet>274</a>
 <a href=#275 id=275 data-nosnippet>275</a><span class="kw">fn </span>egui_ctx_initialized(game: Res&lt;BonesGame&gt;) -&gt; bool {
-<a href=#276 id=276 data-nosnippet>276</a>    game.shared_resource::&lt;bones::EguiCtx&gt;().is_some()
+<a href=#276 id=276 data-nosnippet>276</a>    game.get_shared_resource::&lt;bones::EguiCtx&gt;().is_some()
 <a href=#277 id=277 data-nosnippet>277</a>}
 <a href=#278 id=278 data-nosnippet>278</a>
 <a href=#279 id=279 data-nosnippet>279</a><span class="kw">fn </span>assets_are_loaded(game: Res&lt;BonesGame&gt;) -&gt; bool {
@@ -368,34 +368,33 @@
 <a href=#368 id=368 data-nosnippet>368</a>    <span class="kw-2">mut </span>bevy_egui_textures: ResMut&lt;bevy_egui::EguiUserTextures&gt;,
 <a href=#369 id=369 data-nosnippet>369</a>    <span class="kw-2">mut </span>bones_image_ids: ResMut&lt;BonesImageIds&gt;,
 <a href=#370 id=370 data-nosnippet>370</a>) {
-<a href=#371 id=371 data-nosnippet>371</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = game.shared_resource_mut::&lt;bones::AssetServer&gt;() {
+<a href=#371 id=371 data-nosnippet>371</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset_server) = game.get_shared_resource_mut::&lt;bones::AssetServer&gt;() {
 <a href=#372 id=372 data-nosnippet>372</a>        asset_server.handle_asset_changes(|asset_server, handle| {
-<a href=#373 id=373 data-nosnippet>373</a>            <span class="kw">let </span><span class="kw-2">mut </span>bones_egui_textures =
-<a href=#374 id=374 data-nosnippet>374</a>                game.shared_resource_mut::&lt;bones::EguiTextures&gt;().unwrap();
-<a href=#375 id=375 data-nosnippet>375</a>            <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset) = asset_server.get_asset_untyped_mut(handle) <span class="kw">else </span>{
-<a href=#376 id=376 data-nosnippet>376</a>                <span class="comment">// There was an issue loading the asset. The error will have been logged.
-<a href=#377 id=377 data-nosnippet>377</a>                </span><span class="kw">return</span>;
-<a href=#378 id=378 data-nosnippet>378</a>            };
-<a href=#379 id=379 data-nosnippet>379</a>
-<a href=#380 id=380 data-nosnippet>380</a>            <span class="comment">// TODO: hot reload changed fonts.
-<a href=#381 id=381 data-nosnippet>381</a>
-<a href=#382 id=382 data-nosnippet>382</a>            </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(image) = asset.data.try_cast_mut::&lt;bones::Image&gt;() {
-<a href=#383 id=383 data-nosnippet>383</a>                bones_image_ids.load_bones_image(
-<a href=#384 id=384 data-nosnippet>384</a>                    handle.typed(),
-<a href=#385 id=385 data-nosnippet>385</a>                    image,
-<a href=#386 id=386 data-nosnippet>386</a>                    <span class="kw-2">&amp;mut </span>bones_egui_textures,
-<a href=#387 id=387 data-nosnippet>387</a>                    <span class="kw-2">&amp;mut </span>bevy_images,
-<a href=#388 id=388 data-nosnippet>388</a>                    <span class="kw-2">&amp;mut </span>bevy_egui_textures,
-<a href=#389 id=389 data-nosnippet>389</a>                );
-<a href=#390 id=390 data-nosnippet>390</a>            }
-<a href=#391 id=391 data-nosnippet>391</a>        })
-<a href=#392 id=392 data-nosnippet>392</a>    }
-<a href=#393 id=393 data-nosnippet>393</a>}
-<a href=#394 id=394 data-nosnippet>394</a>
-<a href=#395 id=395 data-nosnippet>395</a><span class="attr">#[cfg(not(target_arch = <span class="string">"wasm32"</span>))]
-<a href=#396 id=396 data-nosnippet>396</a></span><span class="kw">fn </span>handle_exits(game: Res&lt;BonesGame&gt;, <span class="kw-2">mut </span>exits: EventWriter&lt;bevy::app::AppExit&gt;) {
-<a href=#397 id=397 data-nosnippet>397</a>    <span class="kw">if </span><span class="kw-2">**</span>game.shared_resource::&lt;bones::ExitBones&gt;().unwrap() {
-<a href=#398 id=398 data-nosnippet>398</a>        exits.send(bevy::app::AppExit);
-<a href=#399 id=399 data-nosnippet>399</a>    }
-<a href=#400 id=400 data-nosnippet>400</a>}
+<a href=#373 id=373 data-nosnippet>373</a>            <span class="kw">let </span><span class="kw-2">mut </span>bones_egui_textures = game.shared_resource_mut::&lt;bones::EguiTextures&gt;();
+<a href=#374 id=374 data-nosnippet>374</a>            <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>asset) = asset_server.get_asset_untyped_mut(handle) <span class="kw">else </span>{
+<a href=#375 id=375 data-nosnippet>375</a>                <span class="comment">// There was an issue loading the asset. The error will have been logged.
+<a href=#376 id=376 data-nosnippet>376</a>                </span><span class="kw">return</span>;
+<a href=#377 id=377 data-nosnippet>377</a>            };
+<a href=#378 id=378 data-nosnippet>378</a>
+<a href=#379 id=379 data-nosnippet>379</a>            <span class="comment">// TODO: hot reload changed fonts.
+<a href=#380 id=380 data-nosnippet>380</a>
+<a href=#381 id=381 data-nosnippet>381</a>            </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(image) = asset.data.try_cast_mut::&lt;bones::Image&gt;() {
+<a href=#382 id=382 data-nosnippet>382</a>                bones_image_ids.load_bones_image(
+<a href=#383 id=383 data-nosnippet>383</a>                    handle.typed(),
+<a href=#384 id=384 data-nosnippet>384</a>                    image,
+<a href=#385 id=385 data-nosnippet>385</a>                    <span class="kw-2">&amp;mut </span>bones_egui_textures,
+<a href=#386 id=386 data-nosnippet>386</a>                    <span class="kw-2">&amp;mut </span>bevy_images,
+<a href=#387 id=387 data-nosnippet>387</a>                    <span class="kw-2">&amp;mut </span>bevy_egui_textures,
+<a href=#388 id=388 data-nosnippet>388</a>                );
+<a href=#389 id=389 data-nosnippet>389</a>            }
+<a href=#390 id=390 data-nosnippet>390</a>        })
+<a href=#391 id=391 data-nosnippet>391</a>    }
+<a href=#392 id=392 data-nosnippet>392</a>}
+<a href=#393 id=393 data-nosnippet>393</a>
+<a href=#394 id=394 data-nosnippet>394</a><span class="attr">#[cfg(not(target_arch = <span class="string">"wasm32"</span>))]
+<a href=#395 id=395 data-nosnippet>395</a></span><span class="kw">fn </span>handle_exits(game: Res&lt;BonesGame&gt;, <span class="kw-2">mut </span>exits: EventWriter&lt;bevy::app::AppExit&gt;) {
+<a href=#396 id=396 data-nosnippet>396</a>    <span class="kw">if </span><span class="kw-2">**</span>game.shared_resource::&lt;bones::ExitBones&gt;() {
+<a href=#397 id=397 data-nosnippet>397</a>        exits.send(bevy::app::AppExit);
+<a href=#398 id=398 data-nosnippet>398</a>    }
+<a href=#399 id=399 data-nosnippet>399</a>}
 </code></pre></div></section></main></body></html>
