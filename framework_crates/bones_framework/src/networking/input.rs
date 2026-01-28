@@ -6,7 +6,7 @@ use crate::input::{Controls, DenseControl, DenseInput};
 use super::NetworkInputStatus;
 
 /// Required for use of [`Controls`] in networking.
-pub trait NetworkPlayerControls<'a, Dense: DenseInput, Control>: Controls<'a, Control> {
+pub trait NetworkControls<'a, Dense: DenseInput, Control>: Controls<'a, Control> {
     /// Update control of player from dense input.
     ///
     /// [`NetworkInputStatus`] communicates if input is confirmed, predicted, or from disconnected player.
@@ -21,7 +21,7 @@ pub trait NetworkPlayerControls<'a, Dense: DenseInput, Control>: Controls<'a, Co
     fn get_dense_control(&self, player_idx: usize) -> Dense;
 }
 
-impl<'a, T, Dense, Control> NetworkPlayerControls<'a, Dense, Control> for T
+impl<'a, T, Dense, Control> NetworkControls<'a, Dense, Control> for T
 where
     Dense: DenseInput,
     Control: DenseControl<Dense>,
