@@ -1,9 +1,9 @@
 (function() {
-    var implementors = Object.fromEntries([["bones_framework",[["impl&lt;T: <a class=\"trait\" href=\"bones_framework/networking/input/trait.DenseInput.html\" title=\"trait bones_framework::networking::input::DenseInput\">DenseInput</a> + <a class=\"trait\" href=\"https://doc.rust-lang.org/1.93.0/core/fmt/trait.Debug.html\" title=\"trait core::fmt::Debug\">Debug</a>&gt; <a class=\"trait\" href=\"bones_framework/external/ggrs/trait.Config.html\" title=\"trait bones_framework::external::ggrs::Config\">Config</a> for <a class=\"struct\" href=\"bones_framework/networking/struct.GgrsConfig.html\" title=\"struct bones_framework::networking::GgrsConfig\">GgrsConfig</a>&lt;T&gt;"]]]]);
+    var implementors = Object.fromEntries([["bones_framework",[["impl&lt;T: <a class=\"trait\" href=\"bones_framework/input/trait.DenseInput.html\" title=\"trait bones_framework::input::DenseInput\">DenseInput</a> + <a class=\"trait\" href=\"https://doc.rust-lang.org/1.93.0/core/fmt/trait.Debug.html\" title=\"trait core::fmt::Debug\">Debug</a>&gt; <a class=\"trait\" href=\"bones_framework/external/ggrs/trait.Config.html\" title=\"trait bones_framework::external::ggrs::Config\">Config</a> for <a class=\"struct\" href=\"bones_framework/networking/struct.GgrsConfig.html\" title=\"struct bones_framework::networking::GgrsConfig\">GgrsConfig</a>&lt;T&gt;"]]]]);
     if (window.register_implementors) {
         window.register_implementors(implementors);
     } else {
         window.pending_implementors = implementors;
     }
 })()
-//{"start":57,"fragment_lengths":[640]}
+//{"start":57,"fragment_lengths":[617]}
