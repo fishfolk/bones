@@ -1,9 +1,7 @@
 #![doc = include_str!("./networking.md")]
 
-use self::{
-    input::{DenseInput, NetworkInputConfig, NetworkPlayerControl, NetworkPlayerControls},
-    socket::Socket,
-};
+use self::{input::NetworkControls, socket::Socket};
+use crate::input::{DenseControl, DenseInput, DenseInputConfig};
 use crate::networking::online::OnlineMatchmakerResponse;
 pub use crate::networking::random::RngGenerator;
 use crate::prelude::*;
@@ -20,8 +18,6 @@ use {
     ggrs::{NetworkStats, PlayerHandle},
 };
 
-use crate::input::PlayerControls as PlayerControlsTrait;
-
 pub use iroh;
 
 pub mod input;
@@ -29,7 +25,6 @@ pub mod lan;
 pub mod online;
 pub mod online_lobby;
 pub mod online_matchmaking;
-pub mod proto;
 pub mod random;
 pub mod socket;
 
@@ -64,7 +59,7 @@ impl From<ggrs::InputStatus> for NetworkInputStatus {
 /// Module prelude.
 pub mod prelude {
     pub use super::{
-        input, lan, online, proto, random, DisconnectedPlayers, RngGenerator, SyncingInfo, RUNTIME,
+        input, lan, online, random, DisconnectedPlayers, RngGenerator, SyncingInfo, RUNTIME,
     };
 
     #[cfg(feature = "net-debug")]
@@ -449,7 +444,7 @@ pub struct DisconnectedPlayers {
 /// [`SessionRunner`] implementation that uses [`ggrs`] for network play.
 ///
 /// This is where the whole `ggrs` integration is implemented.
-pub struct GgrsSessionRunner<'a, InputTypes: NetworkInputConfig<'a>> {
+pub struct GgrsSessionRunner<'a, InputTypes: DenseInputConfig<'a>> {
     /// The last player input we detected.
     pub last_player_input: InputTypes::Dense,
 
@@ -540,7 +535,7 @@ impl GgrsSessionRunnerInfo {
 
 impl<'a, InputTypes> GgrsSessionRunner<'a, InputTypes>
 where
-    InputTypes: NetworkInputConfig<'a>,
+    InputTypes: DenseInputConfig<'a>,
 {
     /// Creates a new session runner from a `OnlineMatchmakerResponse::GameStarting`
     /// Any input values set as `None` will be set to default.
@@ -647,7 +642,7 @@ where
 
 impl<InputTypes> SessionRunner for GgrsSessionRunner<'static, InputTypes>
 where
-    InputTypes: NetworkInputConfig<'static> + 'static,
+    InputTypes: DenseInputConfig<'static> + 'static,
 {
     fn step(&mut self, frame_start: Instant, world: &mut World, stages: &mut SystemStages) {
         let step: f64 = 1.0 / self.network_fps;
@@ -658,26 +653,12 @@ where
 
         let mut skip_frames: u32 = 0;
 
-        {
-            let player_inputs = world.resource::<InputTypes::PlayerControls>();
+        // Collect inputs and update controls
+        self.input_collector.apply_inputs(world);
+        self.input_collector.update_just_pressed();
 
-            // Collect inputs and update controls
-            self.input_collector.apply_inputs(world);
-            self.input_collector.update_just_pressed();
-
-            // save local players dense input for use with ggrs
-            match player_inputs.get_control_source(self.local_player_idx as usize) {
-                Some(control_source) => {
-                    let control = self
-                        .input_collector
-                        .get_control(self.local_player_idx as usize, control_source);
-
-                    self.last_player_input = control.get_dense_input();
-                },
-                None => warn!("GgrsSessionRunner local_player_idx {} has no control source, no local input provided.",
-                    self.local_player_idx)
-            };
-        }
+        // save local players dense input for use with ggrs
+        self.last_player_input = self.input_collector.get_control().get_dense_input();
 
         #[cfg(feature = "net-debug")]
         // Current frame before we start network update loop
@@ -862,7 +843,7 @@ where
 
                                         // update game controls from ggrs inputs
                                         let mut player_inputs =
-                                            world.resource_mut::<InputTypes::PlayerControls>();
+                                            world.resource_mut::<InputTypes::Controls>();
                                         for (player_idx, (input, status)) in
                                             network_inputs.into_iter().enumerate()
                                         {

@@ -7,6 +7,7 @@ pub mod gamepad;
 pub mod gilrs;
 pub mod keyboard;
 pub mod mouse;
+pub mod proto;
 pub mod window;
 
 /// The state of a button, ether pressed or released.
@@ -29,8 +30,10 @@ impl ButtonState {
 
 /// Module prelude.
 pub mod prelude {
-    pub use super::{gamepad::*, keyboard::*, mouse::*, window::*, ButtonState};
-    pub use crate::input::{InputCollector, PlayerControls};
+    pub use super::{gamepad::*, keyboard::*, mouse::*, proto, window::*, ButtonState};
+    pub use crate::input::{
+        Controls, DenseControl, DenseInput, DenseInputCollector, DenseInputConfig, InputCollector,
+    };
 }
 
 /// Maps raw inputs to game controls and exposes controls for respective player and their control source.
@@ -40,11 +43,7 @@ pub mod prelude {
 /// [`InputCollector::update_just_pressed`] computes any changes in pressed buttons that may be stored on control.
 ///
 /// [`InputCollector::advance_frame`] is  used to mark that the input has been consumed, and update the prev frame inputs to current, to compute changes next frame.
-///
-/// Generic type param ControlMapping is HasSchema because it is expected to be a Resource retrievable on world.
-pub trait InputCollector<'a, ControlMapping: HasSchema, ControlSource, Control>:
-    Send + Sync
-{
+pub trait InputCollector<'a, Control>: Send + Sync {
     /// Update the internal state with new inputs. This must be called every render frame with the
     /// input events. This updates which buttons are pressed, but does not compute what buttons were "just_pressed".
     /// use [`InputCollector::update_just_pressed`] to do this.
@@ -62,30 +61,80 @@ pub trait InputCollector<'a, ControlMapping: HasSchema, ControlSource, Control>:
     /// This does not modify previous frame's input, to do this use [`InputCollector::advance_frame`].
     fn update_just_pressed(&mut self);
 
-    /// Get control for player based on provided `ControlSource`.
-    fn get_control(&self, player_idx: usize, control_source: ControlSource) -> &Control;
+    /// Get control for player.
+    fn get_control(&self) -> &Control;
 }
 
 /// Trait that tracks player control state. Provides associated types for other input trait implementations.
-pub trait PlayerControls<'a, Control> {
-    /// InputCollector used to update controls.
-    type InputCollector: InputCollector<'a, Self::ControlMapping, Self::ControlSource, Control>;
-
-    /// Control mapping from raw input, expected to be able to be retrieved as `Resource` from world.
-    type ControlMapping: HasSchema;
-
-    /// Type used to map source of input to control.
-    type ControlSource;
-
-    /// Update control state from input collector.
-    fn update_controls(&mut self, collector: &mut Self::InputCollector);
-
-    /// Get `ControlSource` for player (only present for local player).
-    fn get_control_source(&self, local_player_idx: usize) -> Option<Self::ControlSource>;
-
+pub trait Controls<'a, Control> {
     /// Get control for player.
     fn get_control(&self, player_idx: usize) -> &Control;
 
     /// Get mutable control for player.
     fn get_control_mut(&mut self, player_idx: usize) -> &mut Control;
+}
+
+use std::fmt::Debug;
+
+/// Dense input for network replication.
+pub trait DenseInput:
+    bytemuck::Pod + bytemuck::Zeroable + Copy + Clone + PartialEq + Eq + Send + Sync
+{
+}
+
+/// Automatic implementation for `DenseInput`.
+impl<T> DenseInput for T where
+    T: bytemuck::Pod + bytemuck::Zeroable + Copy + Clone + PartialEq + Eq + Send + Sync
+{
+}
+
+/// Define input types used by game for use in networking.
+///
+/// As long as types `Controls` and `InputCollector` implement traits [`Controls`] and [`InputCollector`],
+/// trait bounds [`DenseControl`] and [`DenseInputCollector`] are automatically implemented.
+#[allow(missing_docs)]
+pub trait DenseInputConfig<'a> {
+    type Dense: DenseInput + Debug + Default;
+    type Control: DenseControl<Self::Dense>;
+
+    // Must be HasSchema because expected to be retrieved from `World` as `Resource`.
+    type Controls: Controls<'a, Self::Control> + HasSchema;
+
+    // InputCollector type params must match that of Controls, so using associated types.
+    type InputCollector: InputCollector<'a, Self::Control> + Default;
+}
+
+///  Trait allowing for creating and applying [`DenseInput`] from control.
+pub trait DenseControl<Dense: DenseInput>: Send + Sync + Default {
+    /// Get [`DenseInput`] for control.
+    fn get_dense_input(&self) -> Dense;
+
+    /// Update control from [`DenseInput`].
+    fn update_from_dense(&mut self, new_control: &Dense);
+}
+
+/// Extension of [`InputCollector`] exposing dense control for networking.
+///
+/// This trait is automatically implemented for [`InputCollector`]'s such that `Control`
+/// implements [`DenseControl`] (i.e. implements dense input)
+pub trait DenseInputCollector<'a, Dense, Control>: InputCollector<'a, Control>
+where
+    Dense: DenseInput,
+    Control: DenseControl<Dense>,
+{
+    /// Get dense control
+    fn get_dense_control(&self) -> Dense;
+}
+
+/// Provide automatic [`DenseInputCollector`] for [`InputCollector`] when type parameters
+/// meet required bounds for networking.
+impl<'a, T, Dense, Control> DenseInputCollector<'a, Dense, Control> for T
+where
+    Dense: DenseInput,
+    Control: DenseControl<Dense>,
+    T: InputCollector<'a, Control>,
+{
+    fn get_dense_control(&self) -> Dense {
+        self.get_control().get_dense_input()
+    }
 }
