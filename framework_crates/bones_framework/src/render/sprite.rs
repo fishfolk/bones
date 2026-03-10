@@ -19,7 +19,9 @@ pub enum Image {
     External(u32),
 }
 
-struct ImageAssetLoader;
+/// Implements [`AssetLoader`] which attempts to return a [`SchemaBox`]
+/// containing [`Image::Data`] schema data.
+pub struct ImageAssetLoader;
 impl AssetLoader for ImageAssetLoader {
     fn load(&self, _ctx: AssetLoadCtx, bytes: &[u8]) -> BoxedFuture<anyhow::Result<SchemaBox>> {
         let bytes = bytes.to_vec();
