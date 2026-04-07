@@ -179,19 +179,6 @@ impl<'a, T: HasSchema> SystemParam for Res<'a, T> {
     }
 }
 
-impl<'a, T: HasSchema> SystemParam for Option<Res<'a, T>> {
-    type State = AtomicResource<T>;
-    type Param<'p> = Option<Res<'p, T>>;
-
-    fn get_state(world: &World) -> Self::State {
-        world.resources.get_cell::<T>()
-    }
-
-    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
-        state.borrow().map(|x| Res(x))
-    }
-}
-
 impl<'a, T: HasSchema + FromWorld> SystemParam for ResInit<'a, T> {
     type State = AtomicResource<T>;
     type Param<'p> = ResInit<'p, T>;
@@ -225,19 +212,6 @@ impl<'a, T: HasSchema> SystemParam for ResMut<'a, T> {
                 std::any::type_name::<T>()
             )
         }))
-    }
-}
-
-impl<'a, T: HasSchema> SystemParam for Option<ResMut<'a, T>> {
-    type State = AtomicResource<T>;
-    type Param<'p> = Option<ResMut<'p, T>>;
-
-    fn get_state(world: &World) -> Self::State {
-        world.resources.get_cell::<T>()
-    }
-
-    fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
-        state.borrow_mut().map(|state| ResMut(state))
     }
 }
 
@@ -284,6 +258,59 @@ impl<'a, T: HasSchema> SystemParam for CompMut<'a, T> {
 
     fn borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
         state.borrow_mut()
+    }
+}
+
+/// Implementing this trait on a [`SystemParam`] will allow it to be wrapped in
+/// an [`Option`] when used in a system function.
+///
+/// In other words, [`SystemParam`] is automatically implemented for `Option<T>`
+/// where `T` implements [`SystemParam`] *and* [`OptionalSystemParam`].
+///
+/// You cannot implement [`OptionalSystemParam`] on a type that doesn't
+/// implement [`SystemParam`]. Using `Option<T>` for a [`SystemParam`] is
+/// considered as a failsafe for a parameter that can still be gotten short and
+/// fallible. If your type returns an optional value but does not have an
+/// unwrapped version of the parameter value then your option should be stored
+/// inside your type and implemented accordingly in [`SystemParam`].
+pub trait OptionalSystemParam: SystemParam {
+    /// This is called to produce the intermediate state of the system parameter.
+    ///
+    /// This state will be created immediately before the system is run, and will kept alive until
+    /// the system is done running.
+    fn try_get_state(world: &World) -> Option<Self::State>;
+    /// This is used create an instance of the system parame, possibly borrowed from the
+    /// intermediate parameter state.
+    #[allow(clippy::needless_lifetimes)] // Explicit lifetimes help clarity in this case
+    fn try_borrow<'s>(world: &'s World, state: &'s mut Self::State) -> Option<Self::Param<'s>>;
+}
+impl<T: OptionalSystemParam> SystemParam for Option<T> {
+    type State = Option<T::State>;
+    type Param<'s> = Option<T::Param<'s>>;
+
+    fn get_state(world: &World) -> Self::State {
+        T::try_get_state(world)
+    }
+    fn borrow<'s>(world: &'s World, state: &'s mut Self::State) -> Self::Param<'s> {
+        state.as_mut().and_then(|state| T::try_borrow(world, state))
+    }
+}
+
+impl<'a, T: HasSchema> OptionalSystemParam for Res<'a, T> {
+    fn try_get_state(world: &World) -> Option<Self::State> {
+        Some(world.resources.get_cell::<T>())
+    }
+    fn try_borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Option<Self::Param<'s>> {
+        state.borrow().map(|x| Res(x))
+    }
+}
+
+impl<'a, T: HasSchema> OptionalSystemParam for ResMut<'a, T> {
+    fn try_get_state(world: &World) -> Option<Self::State> {
+        Some(world.resources.get_cell::<T>())
+    }
+    fn try_borrow<'s>(_world: &'s World, state: &'s mut Self::State) -> Option<Self::Param<'s>> {
+        state.borrow_mut().map(|x| ResMut(x))
     }
 }
 
