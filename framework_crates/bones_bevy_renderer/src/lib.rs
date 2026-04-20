@@ -12,18 +12,18 @@ pub mod prelude {
     pub use crate::*;
 }
 
-mod debug;
-mod storage;
+pub mod debug;
+pub mod storage;
 
-mod convert;
+pub mod convert;
 use convert::*;
-mod input;
+pub mod input;
 use input::*;
-mod render;
+pub mod render;
 use render::*;
-mod ui;
+pub mod ui;
 use ui::*;
-mod rumble;
+pub mod rumble;
 use bevy::{log::LogPlugin, prelude::*};
 use bones::GamepadsRumble;
 use bones_framework::prelude as bones;
