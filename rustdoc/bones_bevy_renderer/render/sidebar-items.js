@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["extract_bones_sprites","extract_bones_tilemaps","sync_bones_path2ds","sync_bones_window","sync_cameras","sync_clear_color"],"struct":["BevyBonesEntity","BonesGameEntity","BonesImageIds"]};

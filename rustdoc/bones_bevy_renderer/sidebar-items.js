@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["asset_io","handle_asset_changes"],"mod":["prelude"],"struct":["BonesBevyRenderer","BonesGame"]};
+window.SIDEBAR_ITEMS = {"fn":["asset_io","handle_asset_changes"],"mod":["convert","debug","input","prelude","render","rumble","storage","ui"],"struct":["BonesBevyRenderer","BonesGame"]};

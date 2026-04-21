@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_bones_input","get_mouse_position","insert_bones_input","insert_mouse_position"]};
