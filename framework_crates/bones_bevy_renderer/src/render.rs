@@ -91,6 +91,7 @@ impl BonesImageIds {
     }
 }
 
+/// Updates the [`BonesGame`]'s [`bones::ClearColor`] with the [`ClearColor`] from bevy.
 pub fn sync_clear_color(mut clear_color: ResMut<ClearColor>, game: Res<BonesGame>) {
     for name in &game.sorted_session_keys {
         let session = game.sessions.get(*name).unwrap();
@@ -231,6 +232,7 @@ pub fn sync_cameras(
     }
 }
 
+/// Extracts the [`bones::Sprite`]s to be used in bevy's rendering.
 pub fn extract_bones_sprites(
     mut extracted_sprites: ResMut<ExtractedSprites>,
     game: Extract<Res<BonesGame>>,
@@ -363,6 +365,7 @@ pub fn extract_bones_sprites(
     }
 }
 
+/// Extracts the [`bones::TileLayer`]s & [`bones::Tile`]s to be used in bevy's rendering.
 pub fn extract_bones_tilemaps(
     mut extracted_sprites: ResMut<ExtractedSprites>,
     game: Extract<Res<BonesGame>>,
@@ -465,6 +468,7 @@ pub fn extract_bones_tilemaps(
     }
 }
 
+/// Syncs the [`bones::Path2d`]s with bevy's [`lyon::Path`]s.
 pub fn sync_bones_path2ds(
     game: Res<BonesGame>,
     mut commands: Commands,

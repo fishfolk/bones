@@ -7,11 +7,14 @@ pub use wasm::StorageBackend;
 #[cfg(target_arch = "wasm32")]
 mod wasm {
     use super::*;
+
+    /// Contains a namespace that is used for saving data in the filesystem.
     pub struct StorageBackend {
         storage_key: String,
     }
 
     impl StorageBackend {
+        /// Create a new [`StorageBackend`].
         pub fn new(qualifier: &str, organization: &str, application: &str) -> Self {
             Self {
                 storage_key: format!("{qualifier}.{organization}.{application}.storage"),
@@ -53,11 +56,13 @@ pub use native::StorageBackend;
 mod native {
     use super::*;
 
+    /// Contains a namespace that is used for saving data in the filesystem.
     pub struct StorageBackend {
         storage_path: std::path::PathBuf,
     }
 
     impl StorageBackend {
+        /// Create a new [`StorageBackend`].
         pub fn new(qualifier: &str, organization: &str, application: &str) -> Self {
             let project_dirs = directories::ProjectDirs::from(qualifier, organization, application)
                 .expect("Identify system data dir path");

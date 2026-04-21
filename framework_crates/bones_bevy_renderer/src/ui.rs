@@ -27,6 +27,7 @@ pub fn setup_egui(world: &mut World) {
     });
 }
 
+/// Applies the modifications setup in the [`bones::EguiInputHook`] resource.
 pub fn egui_input_hook(
     mut egui_query: Query<&mut bevy_egui::EguiInput, With<Window>>,
     mut game: ResMut<BonesGame>,
@@ -38,6 +39,7 @@ pub fn egui_input_hook(
     }
 }
 
+/// Syncs the [`bones::EguiSettings`] with the [`bevy_egui::EguiSettings`].
 pub fn sync_egui_settings(
     game: Res<BonesGame>,
     mut bevy_egui_settings: ResMut<bevy_egui::EguiSettings>,
@@ -52,6 +54,7 @@ pub fn sync_egui_settings(
     }
 }
 
+/// Updates the egui fonts based on [`bones::Font`]s in the [`bones::AssetServer`].
 pub fn update_egui_fonts(ctx: &bevy_egui::egui::Context, bones_assets: &bones::AssetServer) {
     use bevy_egui::egui;
     let mut fonts = egui::FontDefinitions::default();
@@ -80,6 +83,7 @@ pub fn update_egui_fonts(ctx: &bevy_egui::egui::Context, bones_assets: &bones::A
     ctx.set_fonts(fonts);
 }
 
+/// The system for displaying the default egui loading screen.
 pub fn default_load_progress(asset_server: &bones::AssetServer, ctx: &bevy_egui::egui::Context) {
     use bevy_egui::egui;
     let errored = asset_server.load_progress.errored();

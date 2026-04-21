@@ -5,10 +5,16 @@ use bevy::{
 };
 use bones_framework::prelude as bones;
 
+/// Trait for converting types similar to bevy into their bevy compatible
+/// versions.
 pub trait IntoBevy<T> {
+    /// Converts this type into its bevy compatible equivalent.
     fn into_bevy(self) -> T;
 }
+/// Trait for converting types similar to bones into their bones compatible
+/// versions.
 pub trait IntoBones<T> {
+    /// Converts this type into its bones compatible equivalent.
     fn into_bones(self) -> T;
 }
 
