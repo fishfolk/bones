@@ -13,16 +13,26 @@ pub mod prelude {
 }
 
 pub mod debug;
+/// Contains the filesystem storage backend types.
 pub mod storage;
 
+/// Traits and implementations for converting between bevy and bones.
 pub mod convert;
 use convert::*;
+
+/// Input syncing and getting.
 pub mod input;
 use input::*;
+
+/// Contains the systems for extracting, syncing, and loading bones renderables.
 pub mod render;
 use render::*;
+
+/// Systems for syncing and modifying egui. Contains the default game loading ui system.
 pub mod ui;
 use ui::*;
+
+/// Systems for syncing bones rumble controls.
 pub mod rumble;
 use bevy::{log::LogPlugin, prelude::*};
 use bones::GamepadsRumble;

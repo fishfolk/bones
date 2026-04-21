@@ -9,6 +9,8 @@ use bevy::{
 use bones::{MouseScreenPosition, MouseWorldPosition};
 use bones_framework::input::gilrs::process_gamepad_events;
 
+/// Bevy system that takes the bones input resources as input and inserts them
+/// into the [`BonesGame`].
 pub fn insert_bones_input(
     In((mouse_inputs, keyboard_inputs, gamepad_inputs)): In<(
         bones::MouseInputs,
@@ -23,6 +25,7 @@ pub fn insert_bones_input(
     game.insert_shared_resource(gamepad_inputs);
 }
 
+/// Bevy system that gets the input events and returns the bones versions.
 pub fn get_bones_input(
     mut mouse_button_input_events: EventReader<MouseButtonInput>,
     mut mouse_motion_events: EventReader<MouseMotion>,
@@ -70,6 +73,8 @@ pub fn get_bones_input(
     )
 }
 
+/// Bevy system that takes the mouse positions for the world and screen as input
+/// and inserts them into the [`BonesGame`].
 pub fn insert_mouse_position(
     In((screen_pos, world_pos)): In<(Option<Vec2>, Option<Vec2>)>,
     mut game: ResMut<BonesGame>,
@@ -79,6 +84,7 @@ pub fn insert_mouse_position(
 }
 
 // Source: https://bevy-cheatbook.github.io/cookbook/cursor2world.html
+/// Bevy system that returns the mouse positions for the screen and world.
 pub fn get_mouse_position(
     mut q_primary_windows: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform)>,
