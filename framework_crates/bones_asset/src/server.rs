@@ -1044,7 +1044,6 @@ pub use metadata::*;
 mod metadata {
     use bones_utils::LabeledId;
     use serde::de::{DeserializeSeed, Error, Unexpected, VariantAccess, Visitor};
-    use ustr::{ustr, Ustr};
 
     use super::*;
 
