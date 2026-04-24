@@ -1321,14 +1321,13 @@ mod metadata {
         {
             // SOUND: schema asserts this is a SchemaVec.
             let v = unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaVec) };
+            let item_schema = v.schema();
             loop {
-                let item_schema = v.schema();
                 let mut item = SchemaBox::default(item_schema);
-                let item_ref = item.as_mut();
                 if seq
                     .next_element_seed(SchemaPtrLoadCtx {
                         ctx: self.ctx,
-                        ptr: item_ref,
+                        ptr: item.as_mut(),
                     })?
                     .is_none()
                 {
@@ -1365,26 +1364,23 @@ mod metadata {
             // SOUND: schema asserts this is a SchemaMap.
             let v = unsafe { &mut *(self.ptr.as_ptr() as *mut SchemaMap) };
 
+            let key_schema = v.key_schema();
+            let value_schema = v.value_schema();
             loop {
-                let key_schema = v.key_schema();
                 let mut key = SchemaBox::default(key_schema);
-                let key_ref = key.as_mut();
                 if map
                     .next_key_seed(SchemaPtrLoadCtx {
                         ctx: self.ctx,
-                        ptr: key_ref,
+                        ptr: key.as_mut(),
                     })?
                     .is_none()
                 {
                     break;
                 }
-                let value_schema = v.value_schema();
                 let mut value = SchemaBox::default(value_schema);
-                let value_ref = value.as_mut();
-
                 map.next_value_seed(SchemaPtrLoadCtx {
                     ctx: self.ctx,
-                    ptr: value_ref,
+                    ptr: value.as_mut(),
                 })?;
 
                 v.insert_box(key, value);
