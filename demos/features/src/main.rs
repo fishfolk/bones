@@ -150,7 +150,7 @@ pub fn menu_plugin(session: &mut SessionBuilder) {
     // And add our systems.
     session
         .add_system_to_stage(Update, menu_system)
-        .add_startup_system(menu_startup);
+        .add_system_to_stage(CoreStage::Startup, menu_startup);
 }
 
 /// Setup the main menu.
@@ -283,7 +283,7 @@ fn menu_system(
 fn sprite_demo_plugin(session: &mut SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
-        .add_startup_system(sprite_demo_startup)
+        .add_system_to_stage(CoreStage::Startup, sprite_demo_startup)
         .add_system_to_stage(Update, back_to_menu_ui)
         .add_system_to_stage(Update, move_sprite);
 }
@@ -347,7 +347,7 @@ fn move_sprite(
 fn tilemap_demo_plugin(session: &mut SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
-        .add_startup_system(tilemap_startup_system)
+        .add_system_to_stage(CoreStage::Startup, tilemap_startup_system)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
 
@@ -393,7 +393,7 @@ fn tilemap_startup_system(
 fn atlas_demo_plugin(session: &mut SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
-        .add_startup_system(atlas_demo_startup)
+        .add_system_to_stage(CoreStage::Startup, atlas_demo_startup)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
 
@@ -497,7 +497,7 @@ fn storage_demo_ui(
 fn path2d_demo_plugin(session: &mut SessionBuilder) {
     session
         .install_plugin(DefaultSessionPlugin)
-        .add_startup_system(path2d_demo_startup)
+        .add_system_to_stage(CoreStage::Startup, path2d_demo_startup)
         .add_system_to_stage(Update, back_to_menu_ui);
 }
 

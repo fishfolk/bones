@@ -49,6 +49,7 @@ pub fn env(ctx: Context) -> Table {
     // Set the `CoreStage` enum global
     let core_stage_table = Table::new(&ctx);
     for (name, stage) in [
+        ("Startup", CoreStage::Startup),
         ("First", CoreStage::First),
         ("PreUpdate", CoreStage::PreUpdate),
         ("Update", CoreStage::Update),

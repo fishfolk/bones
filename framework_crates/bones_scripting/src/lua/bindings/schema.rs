@@ -28,7 +28,14 @@ pub fn schema_fn(ctx: Context) -> Callback {
             schema.set_metatable(&ctx, Some(schema_metatable));
             stack.push_front(schema.into());
         } else {
+            #[cfg(not(debug_assertions))] // script info only, not a developer
             return Err(anyhow::format_err!("Schema not found: {schema_name}").into());
+
+            #[cfg(debug_assertions)] // add note about registry, probably a developer
+            return Err(anyhow::format_err!(
+                "Schema not found: {schema_name}, you may need to register the schema"
+            )
+            .into());
         }
 
         Ok(CallbackReturn::Return)

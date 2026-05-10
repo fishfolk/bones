@@ -51,6 +51,7 @@ impl SessionPlugin for LuaPluginLoaderSessionPlugin {
         session.insert_resource(LuaPlugins(self.0));
 
         for lua_stage in [
+            CoreStage::Startup,
             CoreStage::First,
             CoreStage::PreUpdate,
             CoreStage::Update,
@@ -86,21 +87,6 @@ impl SessionPlugin for LuaPluginLoaderSessionPlugin {
 
                                 let mut systems = plugin.systems.borrow_mut();
                                 let systems = systems.as_loaded_mut();
-
-                                for (has_run, closure) in &mut systems.startup {
-                                    if !*has_run {
-                                        let executor = lua.enter(|ctx| {
-                                            let closure = ctx.registry().fetch(closure);
-                                            let ex = Executor::start(ctx, closure.into(), ());
-                                            ctx.registry().stash(&ctx, ex)
-                                        });
-                                        if let Err(e) = lua.execute::<()>(&executor) {
-                                            tracing::error!("Error running lua plugin system: {e}");
-                                        }
-
-                                        *has_run = true;
-                                    }
-                                }
 
                                 for (stage, closure) in &systems.core_stages {
                                     if stage == &lua_stage {
