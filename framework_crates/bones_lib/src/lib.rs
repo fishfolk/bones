@@ -136,13 +136,16 @@ impl SessionBuilder {
         self.stages.startup_resource_mut::<T>()
     }
 
-    /// Add a system that will run only once, before all of the other non-startup systems.
-    /// If wish to reset startup systems during gameplay and run again, can modify [`SessionStarted`] resource in world.
+    /// Add a system to the [`CoreStage::Startup`] stage which specially runs
+    /// only once, before all other core stages. Inserting [`StartupSystemsRan`]
+    /// into the world prevents systems in the startup stage from running.
+    #[deprecated = "use `add_system_to_stage(CoreStage::Startup, your_system)` instead"]
     pub fn add_startup_system<Args, S>(&mut self, system: S) -> &mut Self
     where
         S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
     {
-        self.stages.add_startup_system(system.system());
+        self.stages
+            .add_system_to_stage(CoreStage::Startup, system.system());
         self
     }
 

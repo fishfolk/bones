@@ -110,8 +110,5 @@ impl WorldExt for World {
             let remove_empty = true;
             resources.insert_on_world(self, remove_empty);
         }
-
-        // Now run the startup systems after updating resources.
-        stages.handle_startup_systems(self);
     }
 }

@@ -19,11 +19,12 @@ fn main() {
     game.install_plugin(DefaultGamePlugin);
     game.shared_resource_mut::<AssetServer>()
         .register_default_assets();
+    Transform::register_schema();
     GameMeta::register_schema();
 
     game.sessions
         .create_with("launch", |builder: &mut SessionBuilder| {
-            builder.add_startup_system(launch_game_session);
+            builder.add_system_to_stage(CoreStage::Startup, launch_game_session);
         });
 
     let mut renderer = BonesBevyRenderer::new(game);
@@ -50,7 +51,7 @@ fn launch_game_session(
                 // Tell it to install the lua plugins specified in our game meta
                 Arc::new(meta.plugins.iter().copied().collect()),
             ))
-            .add_startup_system(game_startup);
+            .add_system_to_stage(CoreStage::Startup, game_startup);
     });
 }
 

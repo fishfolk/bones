@@ -27,7 +27,7 @@ fn main() {
 
     // Add our systems to the system stages
     stages_builder
-        .add_startup_system(startup_system)
+        .add_system_to_stage(CoreStage::Startup, startup_system)
         .add_system_to_stage(CoreStage::Update, pos_vel_system)
         .add_system_to_stage(CoreStage::PostUpdate, print_system);
 

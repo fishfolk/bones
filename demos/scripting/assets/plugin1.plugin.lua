@@ -30,5 +30,5 @@ local function update()
   end
 end
 
-session:add_startup_system(startup)
+session:add_system_to_stage(CoreStage.Startup, startup)
 session:add_system_to_stage(CoreStage.Update, update)

@@ -15,9 +15,6 @@ pub struct CurrentSystemStage(pub Ulid);
 pub struct SystemStagesBuilder {
     /// The stages in the collection, in the order that they will be run.
     stages: Vec<Box<dyn SystemStage>>,
-    /// The systems that should run at startup.
-    /// They will be executed next step based on if [`SessionStarted`] resource in world says session has not started, or if resource does not exist.
-    startup_systems: Vec<StaticSystem<(), ()>>,
 
     /// Resources installed during session plugin installs. Copied to world as first step on startup of stages' execution.
     startup_resources: UntypedResourceSet,
@@ -37,6 +34,7 @@ impl SystemStagesBuilder {
     pub fn with_core_stages() -> Self {
         Self {
             stages: vec![
+                Box::new(StartupSystemStage::new(CoreStage::Startup)),
                 Box::new(SimpleSystemStage::new(CoreStage::First)),
                 Box::new(SimpleSystemStage::new(CoreStage::PreUpdate)),
                 Box::new(SimpleSystemStage::new(CoreStage::Update)),
@@ -44,7 +42,6 @@ impl SystemStagesBuilder {
                 Box::new(SimpleSystemStage::new(CoreStage::Last)),
             ],
             startup_resources: default(),
-            startup_systems: default(),
             single_success_systems: Vec::new(),
         }
     }
@@ -53,7 +50,6 @@ impl SystemStagesBuilder {
     pub fn finish(self) -> SystemStages {
         SystemStages {
             stages: self.stages,
-            startup_systems: self.startup_systems,
             startup_resources: self.startup_resources,
             single_success_systems: self.single_success_systems,
         }
@@ -63,19 +59,20 @@ impl SystemStagesBuilder {
     pub fn from_stages(stages: SystemStages) -> Self {
         Self {
             stages: stages.stages,
-            startup_systems: stages.startup_systems,
             startup_resources: stages.startup_resources,
             single_success_systems: stages.single_success_systems,
         }
     }
 
-    /// Add a system that will run only once, before all of the other non-startup systems.
-    /// If wish to reset session and run again, can modify [`SessionStarted`] resource in world.
+    /// Add a system to the [`CoreStage::Startup`] stage which specially runs
+    /// only once, before all other core stages. Inserting [`StartupSystemsRan`]
+    /// into the world prevents systems in the startup stage from running.
+    #[deprecated = "use `.add_system_to_stage(CoreStage::Startup, your_system)` instead"]
     pub fn add_startup_system<Args, S>(&mut self, system: S) -> &mut Self
     where
         S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
     {
-        self.startup_systems.push(system.system());
+        self.add_system_to_stage(CoreStage::Startup, system.system());
         self
     }
 
@@ -171,10 +168,6 @@ pub struct SystemStages {
     /// The stages in the collection, in the order that they will be run.
     stages: Vec<Box<dyn SystemStage>>,
 
-    /// The systems that should run at startup.
-    /// They will be executed next step based on if [`SessionStarted`] resource in world says session has not started, or if resource does not exist.
-    startup_systems: Vec<StaticSystem<(), ()>>,
-
     /// Resources installed during session plugin installs. Copied to world as first step on startup of stages' execution.
     startup_resources: UntypedResourceSet,
 
@@ -206,8 +199,8 @@ impl SystemStages {
 
     /// Execute the systems on the given `world`.
     pub fn run(&mut self, world: &mut World) {
-        // If we haven't run startup systems and setup resources yet, do so
-        self.handle_startup(world);
+        // If we haven't setup resources yet, do so
+        self.handle_startup_resources(world);
 
         // Run single success systems
         for (index, system) in self.single_success_systems.iter_mut().enumerate() {
@@ -234,87 +227,18 @@ impl SystemStages {
         world.resources.remove::<CurrentSystemStage>();
     }
 
-    /// If [`SessionStarted`] resource indicates have not yet started,
-    /// perform startup tasks (insert startup resources, run startup systems).
-    ///
-    /// For advanced use cases in which want to only insert startup resources, or run startup systems and split this
-    /// behavior, see [`SystemStages::handle_startup_systems`] and `[SystemStages::handle_startup_resources`].
-    ///
-    ///
-    /// While this is used internally by [`SystemStages::run`], this is also used
-    /// for resetting world. This allows world to immediately startup and re-initialize after reset.
-    ///
-    /// # Panics
-    ///
-    /// May panic if resources are borrowed, should not borrow resources when calling.
-    pub fn handle_startup(&mut self, world: &mut World) {
-        self.handle_startup_resources(world);
-        self.handle_startup_systems(world);
-    }
-
-    /// If [`SessionStarted`] resource indicates startup resources have not yet been inserted, will do so and update `SessionStarted`.
-    ///
-    /// This function contains only half of stage's startup behavior, see [`SystemStages::handle_startup`] if not intending to split
-    /// resource insertion from startup systems (Splitting these is more for advanced special cases).
+    /// If [`StartupResourcesInserted`] resource has not yet been inserted, will do so.
     ///
     /// # Panics
     ///
     /// May panic if resources are borrowed, should not borrow resources when calling.
     pub fn handle_startup_resources(&mut self, world: &mut World) {
-        let (mut resources_inserted, systems_run) = match world.get_resource_mut::<SessionStarted>()
-        {
-            Some(session_started) => (
-                session_started.startup_resources_inserted,
-                session_started.startup_systems_executed,
-            ),
-            None => (false, false),
-        };
+        let inserted = world.get_resource::<StartupResourcesInserted>().is_some();
 
-        if !resources_inserted {
+        if !inserted {
             self.insert_startup_resources(world);
-            resources_inserted = true;
 
-            world.insert_resource(SessionStarted {
-                startup_systems_executed: systems_run,
-                startup_resources_inserted: resources_inserted,
-            });
-        }
-    }
-
-    /// If [`SessionStarted`] resource indicates startup systems have not yet been executed, will do so and update `SessionStarted`.
-    ///
-    /// This function contains only half of stage's startup behavior, see [`SystemStages::handle_startup`] if not intending to split
-    /// startup system execution from startup resource insertion (Splitting these is more for advanced special cases).
-    ///
-    /// # Panics
-    ///
-    /// May panic if resources are borrowed, should not borrow resources when calling.
-    pub fn handle_startup_systems(&mut self, world: &mut World) {
-        let (resources_inserted, mut systems_run) = match world.get_resource_mut::<SessionStarted>()
-        {
-            Some(session_started) => (
-                session_started.startup_resources_inserted,
-                session_started.startup_systems_executed,
-            ),
-            None => (false, false),
-        };
-
-        if !systems_run {
-            // Set the current stage resource
-            world.insert_resource(CurrentSystemStage(Ulid(0)));
-
-            // For each startup system
-            for system in &mut self.startup_systems {
-                // Run the system
-                system.run(world, ());
-            }
-            systems_run = true;
-
-            world.resources.remove::<CurrentSystemStage>();
-            world.insert_resource(SessionStarted {
-                startup_systems_executed: systems_run,
-                startup_resources_inserted: resources_inserted,
-            });
+            world.insert_resource(StartupResourcesInserted);
         }
     }
 
@@ -431,6 +355,68 @@ impl SystemStage for SimpleSystemStage {
     }
 }
 
+/// Resource for tracking whether or not the game has run the startup systems in
+/// the [`StartupSystemStage`].
+#[derive(HasSchema, Clone, Default, Debug)]
+pub struct StartupSystemsRan;
+
+/// [`SystemStage`] for running systems once on startup.
+pub struct StartupSystemStage {
+    /// The unique identifier for the stage.
+    pub id: Ulid,
+    /// The human-readable name for the stage, used for error messages when something goes wrong.
+    pub name: String,
+    /// The list of systems in the stage.
+    ///
+    /// Each system will be run in the order that they are in in this list.
+    pub systems: Vec<StaticSystem<(), ()>>,
+}
+impl StartupSystemStage {
+    /// Create a new, empty stage, for the given label.
+    pub fn new<L: StageLabel>(label: L) -> Self {
+        Self {
+            id: label.id(),
+            name: label.name(),
+            systems: Default::default(),
+        }
+    }
+}
+impl SystemStage for StartupSystemStage {
+    fn id(&self) -> Ulid {
+        self.id
+    }
+
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    fn run(&mut self, world: &World) {
+        if world.get_resource_mut::<StartupSystemsRan>().is_none() {
+            // Run the systems
+            for system in &mut self.systems {
+                system.run(world, ());
+            }
+            world.insert_resource(StartupSystemsRan);
+        }
+
+        // Drain the command queue
+        let queue = world.resources.get_mut::<CommandQueue>();
+        if let Some(mut command_queue) = queue {
+            for mut system in command_queue.queue.drain(..) {
+                system.run(world, ());
+            }
+        }
+    }
+
+    fn add_system(&mut self, system: StaticSystem<(), ()>) {
+        self.systems.push(system);
+    }
+
+    fn remove_all_systems(&mut self) {
+        self.systems.clear();
+    }
+}
+
 /// Trait for things that may be used to identify a system stage.
 pub trait StageLabel {
     /// Returns the human-readable name of the label, used in error messages.
@@ -442,6 +428,8 @@ pub trait StageLabel {
 /// A [`StageLabel`] for the 5 core stages.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum CoreStage {
+    /// The startup stage
+    Startup,
     /// The first stage
     First,
     /// The second stage
@@ -461,6 +449,7 @@ impl StageLabel for CoreStage {
 
     fn id(&self) -> Ulid {
         match self {
+            CoreStage::Startup => Ulid(2149923225027836290977818907354065512),
             CoreStage::First => Ulid(2021715391084198804812356024998495966),
             CoreStage::PreUpdate => Ulid(2021715401330719559452824437611089988),
             CoreStage::Update => Ulid(2021715410160177201728645950400543948),
@@ -526,17 +515,12 @@ impl<'a> SystemParam for Commands<'a> {
     }
 }
 
-/// Resource tracking if Session has started (startup systems executed and resources inserted).
+/// Have startup resources beeen inserted into [`World`]?
+///
 /// If field is set to false, that operation needs to be handled on next stage run.
 /// If resource is not present, assumed to have not started (and will be initialized upon next stage execution).
 #[derive(Copy, Clone, HasSchema, Default)]
-pub struct SessionStarted {
-    /// Have startup systems executed?
-    pub startup_systems_executed: bool,
-
-    /// Have startup resources beeen inserted into [`World`]?
-    pub startup_resources_inserted: bool,
-}
+pub struct StartupResourcesInserted;
 
 /// Resource tracking which of single success systems in `Session`'s [`SystemStages`] have completed.
 /// Success is tracked to

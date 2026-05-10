@@ -131,21 +131,6 @@ fn session_metatable(ctx: Context) -> Table {
         )
         .unwrap();
 
-    let add_startup_system_callback = ctx.registry().stash(
-        &ctx,
-        Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
-            let (this, closure): (UserData, Closure) = stack.consume(ctx)?;
-            let this = this.downcast_static::<LuaPluginSystemsCell>()?;
-
-            let mut systems = this.borrow_mut();
-            systems
-                .as_loaded_mut()
-                .startup
-                .push((false, ctx.registry().stash(&ctx, closure)));
-
-            Ok(CallbackReturn::Return)
-        }),
-    );
     let add_system_to_stage_callback = ctx.registry().stash(
         &ctx,
         Callback::from_fn(&ctx, move |ctx, _fuel, mut stack| {
@@ -175,9 +160,6 @@ fn session_metatable(ctx: Context) -> Table {
                     b"add_system_to_stage" => {
                         stack
                             .push_front(ctx.registry().fetch(&add_system_to_stage_callback).into());
-                    }
-                    b"add_startup_system" => {
-                        stack.push_front(ctx.registry().fetch(&add_startup_system_callback).into());
                     }
                     _ => (),
                 }
@@ -234,8 +216,6 @@ pub type SystemStageId = Ulid;
 /// The systems that have been registered by a lua plugin.
 #[derive(Default)]
 pub struct LuaPluginSystems {
-    /// Startup systems. The bool indicates whether the system has been run yet.
-    pub startup: Vec<(bool, StashedClosure)>,
     /// Systems that run in the core stages.
     pub core_stages: Vec<(CoreStage, StashedClosure)>,
 }
