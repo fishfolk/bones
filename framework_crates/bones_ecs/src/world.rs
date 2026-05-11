@@ -130,7 +130,7 @@ impl World {
     }
 
     /// Initialize a resource of type `T` by inserting it's default value.
-    pub fn init_resource<R: HasSchema + FromWorld>(&mut self) -> RefMut<'_, R> {
+    pub fn init_resource<R: HasSchema + FromWorld>(&self) -> RefMut<'_, R> {
         if unlikely(!self.resources.contains::<R>()) {
             let value = R::from_world(self);
             self.resources.insert(value);
@@ -394,7 +394,7 @@ mod tests {
 
     #[test]
     fn init_resource_does_not_overwrite() {
-        let mut w = World::default();
+        let w = World::default();
         w.insert_resource(TestResource(0));
         w.init_resource::<TestFromWorld>();
         w.insert_resource(TestResource(1));

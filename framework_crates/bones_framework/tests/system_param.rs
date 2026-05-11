@@ -9,7 +9,7 @@ use futures_lite::{
 };
 
 fn create_world() -> World {
-    let mut world = World::default();
+    let world = World::default();
 
     let core_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
