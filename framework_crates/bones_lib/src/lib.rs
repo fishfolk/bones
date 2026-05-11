@@ -154,7 +154,9 @@ impl SessionBuilder {
     where
         S: IntoSystem<Args, (), Option<()>, Sys = StaticSystem<(), Option<()>>>,
     {
-        self.stages.add_single_success_system(system.system());
+        let id = self.init_resource::<SingleSuccessSystems>().next_id();
+        self.stages
+            .add_system_to_stage(First, single_success_system(id, system));
         self
     }
 
@@ -238,6 +240,59 @@ impl Drop for FinishGuard {
             warn!("`SessionBuilder` went out of scope. This may have been an acccident in building Session.
                         `finish` the session builder, or directly add to Game's `Sessions` to ensure is created and saved.")
         }
+    }
+}
+
+/// Wrapper system for single success systems. Takes a system, and an `usize` id
+/// that is used to index whether or not the system has succeeded from the
+/// [`SingleSuccessSystems`] resource.
+fn single_success_system<Args, S>(id: usize, system: S) -> StaticSystem<(), ()>
+where
+    S: IntoSystem<Args, (), Option<()>, Sys = StaticSystem<(), Option<()>>>,
+{
+    let mut system = system.system();
+    (move |world: &World| {
+        let succeeded = world
+            .init_resource::<SingleSuccessSystems>()
+            .has_system_succeeded(id);
+        if !succeeded && system.run(world, ()).is_some() {
+            world
+                .init_resource::<SingleSuccessSystems>()
+                .set_system_completed(id);
+        }
+    })
+    .system()
+}
+
+/// Resource tracking which of single success systems have completed.
+#[derive(HasSchema, Clone, Default)]
+pub struct SingleSuccessSystems {
+    /// Used for id creation as single success systems are added to the session.
+    last_id: usize,
+    /// Set of indices of single success systems that have succeeded.
+    pub systems_succeeded: HashSet<usize>,
+}
+
+impl SingleSuccessSystems {
+    /// Returns the next `usize` for the next single success system to use.
+    pub fn next_id(&mut self) -> usize {
+        self.last_id += 1;
+        self.last_id
+    }
+    /// Reset single success systems completion status. so they run again until success.
+    #[allow(dead_code)]
+    pub fn reset(&mut self) {
+        self.systems_succeeded.clear();
+    }
+
+    /// Check if system has completed
+    pub fn has_system_succeeded(&self, index: usize) -> bool {
+        self.systems_succeeded.contains(&index)
+    }
+
+    /// Mark system as completed.
+    pub fn set_system_completed(&mut self, index: usize) {
+        self.systems_succeeded.insert(index);
     }
 }
 

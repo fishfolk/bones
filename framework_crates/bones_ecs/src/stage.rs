@@ -18,9 +18,6 @@ pub struct SystemStagesBuilder {
 
     /// Resources installed during session plugin installs. Copied to world as first step on startup of stages' execution.
     startup_resources: UntypedResourceSet,
-
-    /// Systems that are continously run until they succeed(return Some). These run before all stages. Uses Option to allow for easy usage of `?`.
-    single_success_systems: Vec<StaticSystem<(), Option<()>>>,
 }
 
 impl Default for SystemStagesBuilder {
@@ -42,7 +39,6 @@ impl SystemStagesBuilder {
                 Box::new(SimpleSystemStage::new(CoreStage::Last)),
             ],
             startup_resources: default(),
-            single_success_systems: Vec::new(),
         }
     }
 
@@ -51,7 +47,6 @@ impl SystemStagesBuilder {
         SystemStages {
             stages: self.stages,
             startup_resources: self.startup_resources,
-            single_success_systems: self.single_success_systems,
         }
     }
 
@@ -60,7 +55,6 @@ impl SystemStagesBuilder {
         Self {
             stages: stages.stages,
             startup_resources: stages.startup_resources,
-            single_success_systems: stages.single_success_systems,
         }
     }
 
@@ -73,15 +67,6 @@ impl SystemStagesBuilder {
         S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
     {
         self.add_system_to_stage(CoreStage::Startup, system.system());
-        self
-    }
-
-    /// Add a system that will run each frame until it succeeds (returns Some). Runs before all stages. Uses Option to allow for easy usage of `?`.
-    pub fn add_single_success_system<Args, S>(&mut self, system: S) -> &mut Self
-    where
-        S: IntoSystem<Args, (), Option<()>, Sys = StaticSystem<(), Option<()>>>,
-    {
-        self.single_success_systems.push(system.system());
         self
     }
 
@@ -170,9 +155,6 @@ pub struct SystemStages {
 
     /// Resources installed during session plugin installs. Copied to world as first step on startup of stages' execution.
     startup_resources: UntypedResourceSet,
-
-    /// Systems that are continously run until they succeed(return Some). These run before all stages. Uses Option to allow for easy usage of `?`.
-    single_success_systems: Vec<StaticSystem<(), Option<()>>>,
 }
 
 impl std::fmt::Debug for SystemStages {
@@ -201,15 +183,6 @@ impl SystemStages {
     pub fn run(&mut self, world: &mut World) {
         // If we haven't setup resources yet, do so
         self.handle_startup_resources(world);
-
-        // Run single success systems
-        for (index, system) in self.single_success_systems.iter_mut().enumerate() {
-            let should_run = !Self::has_single_success_system_succeeded(index, world);
-
-            if should_run && system.run(world, ()).is_some() {
-                Self::mark_single_success_system_succeeded(index, world);
-            }
-        }
 
         // Run each stage
         for stage in &mut self.stages {
@@ -240,28 +213,6 @@ impl SystemStages {
 
             world.insert_resource(StartupResourcesInserted);
         }
-    }
-
-    /// Check if single success system is marked as succeeded in [`SingleSuccessSystems`] [`Resource`].
-    fn has_single_success_system_succeeded(system_index: usize, world: &World) -> bool {
-        if let Some(system_success) = world.get_resource::<SingleSuccessSystems>() {
-            return system_success.has_system_succeeded(system_index);
-        }
-
-        false
-    }
-
-    /// Mark a single success system as succeeded in [`SingleSuccessSystems`] [`Resource`].
-    fn mark_single_success_system_succeeded(system_index: usize, world: &mut World) {
-        if let Some(mut system_succes) = world.get_resource_mut::<SingleSuccessSystems>() {
-            system_succes.set_system_completed(system_index);
-            return;
-        }
-
-        // Resource does not exist - must initialize it
-        world
-            .init_resource::<SingleSuccessSystems>()
-            .set_system_completed(system_index);
     }
 
     /// Insert the startup resources that [`SystemStages`] and session were built with into [`World`].
@@ -521,29 +472,3 @@ impl<'a> SystemParam for Commands<'a> {
 /// If resource is not present, assumed to have not started (and will be initialized upon next stage execution).
 #[derive(Copy, Clone, HasSchema, Default)]
 pub struct StartupResourcesInserted;
-
-/// Resource tracking which of single success systems in `Session`'s [`SystemStages`] have completed.
-/// Success is tracked to
-#[derive(HasSchema, Clone, Default)]
-pub struct SingleSuccessSystems {
-    /// Set of indices of [`SystemStages`]'s single success systems that have succeeded.
-    pub systems_succeeded: HashSet<usize>,
-}
-
-impl SingleSuccessSystems {
-    /// Reset single success systems completion status. so they run again until success.
-    #[allow(dead_code)]
-    pub fn reset(&mut self) {
-        self.systems_succeeded.clear();
-    }
-
-    /// Check if system has completed
-    pub fn has_system_succeeded(&self, index: usize) -> bool {
-        self.systems_succeeded.contains(&index)
-    }
-
-    /// Mark system as completed.
-    pub fn set_system_completed(&mut self, index: usize) {
-        self.systems_succeeded.insert(index);
-    }
-}
