@@ -205,7 +205,7 @@ impl SessionBuilder {
     pub fn finish_and_add(mut self, sessions: &mut Sessions) -> &mut Session {
         let mut session = Session {
             world: {
-                let mut w = World::default();
+                let w = World::default();
                 w.init_resource::<Time>();
                 w
             },
