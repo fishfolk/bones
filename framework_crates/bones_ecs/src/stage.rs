@@ -6,8 +6,6 @@ use crate::prelude::*;
 
 /// Resource that is automatically added to the world while a system stage is being run
 /// that specifies the unique ID of the stage that being run.
-///
-/// If the stage is `Ulid(0)`, the default ID, then that means the startup stage is being run.
 // TODO: remove this resource if unused.
 #[derive(Deref, DerefMut, Clone, Copy, HasSchema, Default)]
 pub struct CurrentSystemStage(pub Ulid);
