@@ -876,7 +876,7 @@ where
                                             }
                                         }
 
-                                        world.handle_world_reset(stages);
+                                        world.reset_internals();
                                     }
                                 }
                             }

@@ -44,7 +44,7 @@ pub trait WorldExt {
     ///
     /// `stages` is required, so that after reset, will immediatelly run startup tasks, instead of waiting until next step of [`SystemStages`].
     /// This avoids edge cases where other sessions may read expected resources from this session before its next step.
-    fn handle_world_reset(&mut self, stages: &mut SystemStages);
+    fn handle_world_reset(&mut self);
 
     /// Check if reset has been triggered by [`ResetWorld`] resource. If [`SessionRunner`] needs to do anything special
     /// for a world reset (preserve managed resources, etc) - can check this before calling `handle_world_reset` to see
@@ -58,13 +58,13 @@ pub trait WorldExt {
     ///
     /// Waring: Calling this function on World in a [`Session`] using network session runner is likely to introduce non-determinism.
     /// It is strongly recommended to use the [`ResetWorld`] Resource to trigger this in manner compatible with net rollback.
-    fn reset_internals(&mut self, stages: &mut SystemStages);
+    fn reset_internals(&mut self);
 }
 
 impl WorldExt for World {
-    fn handle_world_reset(&mut self, stages: &mut SystemStages) {
+    fn handle_world_reset(&mut self) {
         if self.reset_triggered() {
-            self.reset_internals(stages);
+            self.reset_internals();
         }
     }
 
@@ -72,7 +72,7 @@ impl WorldExt for World {
         self.get_resource::<ResetWorld>().is_some_and(|r| r.reset)
     }
 
-    fn reset_internals(&mut self, stages: &mut SystemStages) {
+    fn reset_internals(&mut self) {
         // Copy resources to be inserted after the reset.
         let post_reset_resources = self
             .get_resource::<ResetWorld>()
@@ -84,6 +84,7 @@ impl WorldExt for World {
         // save copy of special resources that should always remain in session / managed by bones
         let time = self.get_resource::<Time>().map(|t| *t);
         let session_opts = self.get_resource::<SessionOptions>().map(|x| *x);
+        let startup_resources = self.get_resource::<StartupResources>().map(|r| r.0.clone());
 
         // Remove any owned resources (preserves shared resources)
         // This allows world resources to be reset inside session run safely, as shared resources are only injected
@@ -103,7 +104,10 @@ impl WorldExt for World {
 
         // Insert startup resources, but do not yet run startup systems. (We do this after applying additional preserved "reset resources", as
         // startup systems may want to access these).
-        stages.handle_startup_resources(self);
+        if let Some(resources) = startup_resources {
+            let remove_empty = true;
+            resources.insert_on_world(self, remove_empty);
+        }
 
         // Apply any reset resources to world, overwriting startup resources.
         if let Some(resources) = post_reset_resources {

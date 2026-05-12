@@ -8,6 +8,7 @@ use crate::prelude::*;
 /// that specifies the unique ID of the stage that being run.
 ///
 /// If the stage is `Ulid(0)`, the default ID, then that means the startup stage is being run.
+// TODO: remove this resource if unused.
 #[derive(Deref, DerefMut, Clone, Copy, HasSchema, Default)]
 pub struct CurrentSystemStage(pub Ulid);
 
@@ -15,9 +16,6 @@ pub struct CurrentSystemStage(pub Ulid);
 pub struct SystemStagesBuilder {
     /// The stages in the collection, in the order that they will be run.
     stages: Vec<Box<dyn SystemStage>>,
-
-    /// Resources installed during session plugin installs. Copied to world as first step on startup of stages' execution.
-    startup_resources: UntypedResourceSet,
 }
 
 impl Default for SystemStagesBuilder {
@@ -38,7 +36,6 @@ impl SystemStagesBuilder {
                 Box::new(SimpleSystemStage::new(CoreStage::PostUpdate)),
                 Box::new(SimpleSystemStage::new(CoreStage::Last)),
             ],
-            startup_resources: default(),
         }
     }
 
@@ -46,7 +43,6 @@ impl SystemStagesBuilder {
     pub fn finish(self) -> SystemStages {
         SystemStages {
             stages: self.stages,
-            startup_resources: self.startup_resources,
         }
     }
 
@@ -54,7 +50,6 @@ impl SystemStagesBuilder {
     pub fn from_stages(stages: SystemStages) -> Self {
         Self {
             stages: stages.stages,
-            startup_resources: stages.startup_resources,
         }
     }
 
@@ -127,34 +122,12 @@ impl SystemStagesBuilder {
 
         self
     }
-
-    /// Insert a startup resource. On stage / session startup (first step), will be inserted into [`World`].
-    ///
-    /// If already exists, will be overwritten.
-    pub fn insert_startup_resource<T: HasSchema>(&mut self, resource: T) {
-        self.startup_resources.insert_resource(resource);
-    }
-
-    /// Init startup resource with default, and return mutable ref for modification.
-    /// If already exists, returns mutable ref to existing resource.
-    pub fn init_startup_resource<T: HasSchema + Default>(&mut self) -> RefMut<'_, T> {
-        self.startup_resources.init_resource::<T>()
-    }
-
-    /// Get mutable reference to startup resource if found.
-    #[track_caller]
-    pub fn startup_resource_mut<T: HasSchema>(&self) -> Option<RefMut<'_, T>> {
-        self.startup_resources.resource_mut()
-    }
 }
 
 /// An ordered collection of [`SystemStage`]s.
 pub struct SystemStages {
     /// The stages in the collection, in the order that they will be run.
     stages: Vec<Box<dyn SystemStage>>,
-
-    /// Resources installed during session plugin installs. Copied to world as first step on startup of stages' execution.
-    startup_resources: UntypedResourceSet,
 }
 
 impl std::fmt::Debug for SystemStages {
@@ -181,9 +154,6 @@ impl SystemStages {
 
     /// Execute the systems on the given `world`.
     pub fn run(&mut self, world: &mut World) {
-        // If we haven't setup resources yet, do so
-        self.handle_startup_resources(world);
-
         // Run each stage
         for stage in &mut self.stages {
             // Set the current stage resource
@@ -198,40 +168,6 @@ impl SystemStages {
 
         // Remove the current system stage resource
         world.resources.remove::<CurrentSystemStage>();
-    }
-
-    /// If [`StartupResourcesInserted`] resource has not yet been inserted, will do so.
-    ///
-    /// # Panics
-    ///
-    /// May panic if resources are borrowed, should not borrow resources when calling.
-    pub fn handle_startup_resources(&mut self, world: &mut World) {
-        let inserted = world.get_resource::<StartupResourcesInserted>().is_some();
-
-        if !inserted {
-            self.insert_startup_resources(world);
-
-            world.insert_resource(StartupResourcesInserted);
-        }
-    }
-
-    /// Insert the startup resources that [`SystemStages`] and session were built with into [`World`].
-    ///
-    /// This will update [`SessionStarted`] resource to flag that startup resources are inserted.
-    fn insert_startup_resources(&self, world: &mut World) {
-        for resource in self.startup_resources.resources().iter() {
-            // Deep copy startup resource and insert into world.
-            let resource_copy = resource.clone_data().unwrap();
-            let resource_cell = world.resources.untyped().get_cell(resource.schema());
-            let prev_val = resource_cell.insert(resource_copy).unwrap();
-
-            // Warn on already existing resource
-            if prev_val.is_some() {
-                let schema_name = resource.schema().full_name;
-                tracing::warn!("SystemStages` attempted to inserted resource {schema_name} on startup that already exists in world - startup resource not inserted.
-                    When building new session, startup resources should be initialized on `SessionBuilder`.");
-            }
-        }
     }
 }
 
@@ -465,10 +401,3 @@ impl<'a> SystemParam for Commands<'a> {
         Commands(state.borrow_mut().unwrap())
     }
 }
-
-/// Have startup resources beeen inserted into [`World`]?
-///
-/// If field is set to false, that operation needs to be handled on next stage run.
-/// If resource is not present, assumed to have not started (and will be initialized upon next stage execution).
-#[derive(Copy, Clone, HasSchema, Default)]
-pub struct StartupResourcesInserted;
