@@ -13,6 +13,7 @@ pub mod prelude {
     pub use crate::{
         ecs::prelude::*, instant::Instant, reset::*, time::*, Game, GamePlugin, Session,
         SessionBuilder, SessionCommand, SessionOptions, SessionPlugin, SessionRunner, Sessions,
+        StartupResources,
     };
     pub use ustr::{ustr, Ustr, UstrMap, UstrSet};
 }
@@ -33,6 +34,10 @@ pub struct SessionBuilder {
     pub name: Ustr,
     /// System stage builder
     pub stages: SystemStagesBuilder,
+    /// Resources to be inserted into the world when finished building. Inserted
+    /// collectively into the world as the [`StartupResources`] resource to be
+    /// used by [`ResetWorld`] functionality.
+    pub startup_resources: UntypedResourceSet,
     /// Whether or not this session should have it's systems run.
     pub active: bool,
     /// Whether or not this session should be rendered.
@@ -62,6 +67,7 @@ impl SessionBuilder {
         Self {
             name,
             stages: default(),
+            startup_resources: default(),
             active: true,
             visible: true,
             priority: 0,
@@ -83,6 +89,12 @@ impl SessionBuilder {
         Self {
             name,
             stages: SystemStagesBuilder::from_stages(session.stages),
+            startup_resources: session
+                .world
+                .resources
+                .remove::<StartupResources>()
+                .unwrap_or_default()
+                .0,
             active: session.active,
             visible: session.visible,
             priority: session.priority,
@@ -119,7 +131,7 @@ impl SessionBuilder {
     /// Note: The resource is not actually initialized in World until first step of [`SystemStages`].
     /// To mutate or inspect a resource inserted by another [`SessionPlugin`] during session build, use [`SessionBuilder::resource_mut`].
     pub fn insert_resource<T: HasSchema>(&mut self, resource: T) -> &mut Self {
-        self.stages.insert_startup_resource(resource);
+        self.startup_resources.insert_resource(resource);
         self
     }
 
@@ -128,12 +140,12 @@ impl SessionBuilder {
     /// Note: The resource is not actually initialized in World until first step of [`SystemStages`].
     /// To mutate or inspect a resource inserted by another [`SessionPlugin`] during session build, use [`SessionBuilder::resource_mut`].
     pub fn init_resource<T: HasSchema + Default>(&mut self) -> RefMut<'_, T> {
-        self.stages.init_startup_resource::<T>()
+        self.startup_resources.init_resource::<T>()
     }
 
     /// Get mutable reference to a resource if it exists.
     pub fn resource_mut<T: HasSchema>(&self) -> Option<RefMut<'_, T>> {
-        self.stages.startup_resource_mut::<T>()
+        self.startup_resources.resource_mut::<T>()
     }
 
     /// Add a system to the [`CoreStage::Startup`] stage which specially runs
@@ -222,12 +234,19 @@ impl SessionBuilder {
         self.finish_guard.finished = true;
 
         // Insert startup resources so if other sessions look for them, they are present.
-        // Startup systems are deferred until first step of stages.
-        session.stages.handle_startup_resources(&mut session.world);
+        self.startup_resources
+            .insert_on_world(&mut session.world, true);
+        session
+            .world
+            .insert_resource(StartupResources(self.startup_resources));
 
         sessions.add(self.name, session)
     }
 }
+
+/// Resource used for initializing resources on reset with [`ResetWorld`].
+#[derive(HasSchema, Clone, Default, Deref, DerefMut)]
+pub struct StartupResources(pub UntypedResourceSet);
 
 /// Guard for [`SessionBuilder` ensuring we warn if it goes out of scope without being finished and added to [`Sessions`].
 struct FinishGuard {
@@ -396,7 +415,7 @@ pub trait SessionRunner: Sync + Send + 'static {
     ///
     ///     // Not required for runner - but calling this allows [`ResetWorld`] resource to
     ///     // reset world state from gameplay.
-    ///     world.handle_world_reset(stages);
+    ///     world.handle_world_reset();
     ///
     /// }
     /// fn restart_session(&mut self) {}
@@ -424,7 +443,7 @@ impl SessionRunner for DefaultSessionRunner {
         stages.run(world);
 
         // Checks if reset of world has been triggered by [`ResetWorld`] and handles a reset.
-        world.handle_world_reset(stages);
+        world.handle_world_reset();
     }
 
     // This is a no-op as no state, but implemented this way in case that changes later.
