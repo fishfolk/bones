@@ -73,18 +73,18 @@ impl WorldExt for World {
     }
 
     fn reset_internals(&mut self) {
-        // Copy resources to be inserted after the reset.
-        let post_reset_resources = self
-            .get_resource::<ResetWorld>()
-            .map(|x| x.reset_resources.clone());
-
         // Clear all component stores
         self.components = ComponentStores::default();
 
-        // save copy of special resources that should always remain in session / managed by bones
-        let time = self.get_resource::<Time>().map(|t| *t);
-        let session_opts = self.get_resource::<SessionOptions>().map(|x| *x);
-        let startup_resources = self.get_resource::<StartupResources>().map(|r| r.0.clone());
+        // move out special resources that should always remain in session / managed by bones
+        let time = self.resources.remove::<Time>();
+        let session_opts = self.resources.remove::<SessionOptions>();
+        let startup_resources = self.resources.remove::<StartupResources>();
+
+        let post_reset_resources = self
+            .resources
+            .remove::<ResetWorld>()
+            .map(|r| r.reset_resources);
 
         // Remove any owned resources (preserves shared resources)
         // This allows world resources to be reset inside session run safely, as shared resources are only injected
@@ -102,8 +102,7 @@ impl WorldExt for World {
             self.insert_resource(session_opts);
         }
 
-        // Insert startup resources, but do not yet run startup systems. (We do this after applying additional preserved "reset resources", as
-        // startup systems may want to access these).
+        // Insert startup resources.
         if let Some(resources) = startup_resources {
             let remove_empty = true;
             resources.insert_on_world(self, remove_empty);
