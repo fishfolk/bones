@@ -202,8 +202,8 @@ impl UntypedResources {
     }
 
     /// Removes all resourcse that are not shared resources.
-    pub fn clear_owned_resources(&mut self) {
-        for (schema_id, resource_cell) in self.resources.iter_mut() {
+    pub fn clear_owned_resources(&self) {
+        for (schema_id, resource_cell) in self.resources.read_only_view().iter() {
             let is_shared = self.shared_resources.contains_key(schema_id);
             if !is_shared {
                 resource_cell.remove();
@@ -297,8 +297,8 @@ impl Resources {
     }
 
     /// Removes all resources that are not shared. Shared resources are preserved.
-    pub fn clear_owned_resources(&mut self) {
-        self.untyped.clear_owned_resources();
+    pub fn clear_owned_resources(&self) {
+        self.untyped().clear_owned_resources();
     }
 }
 
@@ -604,7 +604,7 @@ mod test {
 
     #[test]
     fn resources_clear_owned_values() {
-        let mut r = Resources::new();
+        let r = Resources::new();
 
         // insert A as non-shared resource
         r.insert(A(String::from("foo")));
