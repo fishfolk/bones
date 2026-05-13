@@ -183,6 +183,11 @@ impl World {
         self.resources.get_mut()
     }
 
+    /// Removes all resources that are not shared. Shared resources are preserved.
+    pub fn clear_owned_resources(&self) {
+        self.resources.clear_owned_resources();
+    }
+
     /// Borrow a component store from the world.
     /// # Panics
     /// Panics if the component store does not exist in the world.
