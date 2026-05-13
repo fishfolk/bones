@@ -578,7 +578,7 @@ impl UntypedResourceSet {
     ///
     /// If `remove_empty` is set, if resource cell is empty, it will remove the
     /// resource from cell on world.
-    pub fn insert_on_world(&self, world: &mut World, remove_empty: bool) {
+    pub fn insert_on_world(&self, world: &World, remove_empty: bool) {
         for resource in self.resources.iter() {
             let resource_cell = world.resources.untyped().get_cell(resource.schema());
 
