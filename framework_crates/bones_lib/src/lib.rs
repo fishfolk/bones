@@ -35,8 +35,7 @@ pub struct SessionBuilder {
     /// System stage builder
     pub stages: SystemStagesBuilder,
     /// Resources to be inserted into the world when finished building. Inserted
-    /// collectively into the world as the [`StartupResources`] resource to be
-    /// used by [`ResetWorld`] functionality.
+    /// collectively into the world as the [`StartupResources`] resource.
     pub startup_resources: UntypedResourceSet,
     /// Whether or not this session should have it's systems run.
     pub active: bool,
@@ -225,6 +224,12 @@ impl SessionBuilder {
             world: {
                 let w = World::default();
                 w.init_resource::<Time>();
+                {
+                    let mut reset = w.init_resource::<ResetWorld>();
+                    for untyped in self.startup_resources.resources() {
+                        reset.reset_resources.insert(untyped.schema().id());
+                    }
+                }
                 w
             },
             stages: self.stages.finish(),
@@ -248,7 +253,8 @@ impl SessionBuilder {
     }
 }
 
-/// Resource used for initializing resources on reset with [`ResetWorld`].
+/// This is currently just used for letting you create a [`SessionBuilder`] from
+/// a session.
 #[derive(HasSchema, Clone, Default, Deref, DerefMut)]
 pub struct StartupResources(pub UntypedResourceSet);
 
@@ -442,9 +448,6 @@ impl SessionRunner for DefaultSessionRunner {
     fn step(&mut self, now: instant::Instant, world: &mut World, stages: &mut SystemStages) {
         world.resource_mut::<Time>().update_with_instant(now);
         stages.run(world);
-
-        // Checks if reset of world has been triggered by [`ResetWorld`] and handles a reset.
-        world.handle_world_reset();
     }
 
     // This is a no-op as no state, but implemented this way in case that changes later.

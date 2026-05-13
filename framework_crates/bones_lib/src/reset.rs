@@ -1,117 +1,54 @@
-//! Extensions of bones_ecs for utility functions in resetting a World
+//! Conveniences for resetting a World to its' startup state.
 use crate::prelude::*;
 
-/// Resource that allows user to trigger a reset of world, clearing entities, components, and resources.
-/// This is supported in bone's default session runners - but if implementing custom runner, must call `world.handle_world_reset` inside step.
+/// Convenience resource for reseting the [`World`] while retaining a selection of resources if desired.
 ///
-/// `reset_world: ResMutInit<ResetWorld>` and setting `reset_world.reset = true;` may be used to trigger a reset from system execution.
+/// See [`Self::reset_world`]
 #[derive(HasSchema, Clone, Default)]
 pub struct ResetWorld {
-    /// Set to true to trigger reset of [`World`].
-    pub reset: bool,
-
-    /// List of resources that will be inserted into [`World`] after the resources are reset,
-    /// before startup systems are executed.
-    /// These override any `startup resources` captured during session build.
-    /// If want to preserve a resource instead of having it reset, insert it here.
-    pub reset_resources: UntypedResourceSet,
+    /// Set of [`SchemaId`]s for the resources that will not be removed from the
+    /// world when calling [`Self::reset_world`].
+    pub reset_resources: HashSet<SchemaId>,
 }
 
 impl ResetWorld {
-    /// Insert a resource that will be applied after reset. If resource was created
-    /// on session iniialization, this will overwrite it using reset resource instead.
-    pub fn insert_reset_resource<T: HasSchema>(&mut self, resource: T) {
-        self.reset_resources.insert_resource(resource);
+    /// Adds the [`SchemaId`] of the type given to the set of resources to
+    /// retain on reset.
+    pub fn retain_resource<T: HasSchema>(&mut self) {
+        self.reset_resources.insert(T::schema().id());
     }
 
-    /// Get a mutable reference to a reset resource if found.
-    pub fn reset_resource_mut<T: HasSchema>(&self) -> Option<RefMut<'_, T>> {
-        self.reset_resources.resource_mut::<T>()
+    /// Removes the [`SchemaId`] of the type given from the set of resources to
+    /// retain on reset.
+    pub fn drop_resource<T: HasSchema>(&mut self) {
+        self.reset_resources.remove(&T::schema().id());
     }
 
-    /// Insert resource in "empty" state - If resource was created
-    /// on session iniialization, instead of being reset to that state,
-    /// after reset this resource will not be on [`World`].
-    pub fn insert_empty_reset_resource<T: HasSchema>(&mut self) {
-        self.reset_resources.insert_empty::<T>();
-    }
-}
-
-/// Extension of [`World`]
-pub trait WorldExt {
-    /// May be called by [`SessionRunner`] before or after [`SystemStages::run`] to allow triggering reset
-    /// of world with the [`ResetWorld`] resource.
+    /// Convenience method for reseting the [`World`]. Clears components,
+    /// entities, and resources out of the world.
     ///
-    /// `stages` is required, so that after reset, will immediatelly run startup tasks, instead of waiting until next step of [`SystemStages`].
-    /// This avoids edge cases where other sessions may read expected resources from this session before its next step.
-    fn handle_world_reset(&mut self);
-
-    /// Check if reset has been triggered by [`ResetWorld`] resource. If [`SessionRunner`] needs to do anything special
-    /// for a world reset (preserve managed resources, etc) - can check this before calling `handle_world_reset` to see
-    /// if a rese will occur.
-    fn reset_triggered(&self) -> bool;
-
-    /// Provides a low-level interface for resetting entities, components, and resources.
+    /// Resources in [`self.reset_resources`](Self::reset_resources) field are
+    /// not removed from the world and can be easily added via
+    /// [`Self::retain_resource`] or removed via [`Self::drop_resource`].
     ///
-    /// `stages` is required, so that after reset, will immediatelly run startup tasks, instead of waiting until next step of [`SystemStages`].
-    /// This avoids edge cases where other sessions may read expected resources from this session before its next step.
+    /// [`Entities`], [`Time`], [`SessionOptions`], and [`ResetWorld`] are
+    /// always retained when calling.
     ///
-    /// Waring: Calling this function on World in a [`Session`] using network session runner is likely to introduce non-determinism.
-    /// It is strongly recommended to use the [`ResetWorld`] Resource to trigger this in manner compatible with net rollback.
-    fn reset_internals(&mut self);
-}
+    /// This should likely be the first call in your systems so that components
+    /// are rendered continuously without dropping out for one frame before
+    /// respawning world startup components.
+    ///
+    /// Safe to call while borrowing `Self` as a resource from the world without
+    /// panicking.
+    pub fn reset_world(&mut self, world: &World) {
+        self.retain_resource::<ResetWorld>(); // This prevents a mutable borrow in `retain_owned_resources`.
+        self.retain_resource::<Entities>();
+        self.retain_resource::<Time>(); // TODO: make sure we need the `Time` resource retained.
+        self.retain_resource::<SessionOptions>();
 
-impl WorldExt for World {
-    fn handle_world_reset(&mut self) {
-        if self.reset_triggered() {
-            self.reset_internals();
-        }
-    }
-
-    fn reset_triggered(&self) -> bool {
-        self.get_resource::<ResetWorld>().is_some_and(|r| r.reset)
-    }
-
-    fn reset_internals(&mut self) {
-        // Clear all component stores
-        self.components = ComponentStores::default();
-
-        // move out special resources that should always remain in session / managed by bones
-        let time = self.resources.remove::<Time>();
-        let session_opts = self.resources.remove::<SessionOptions>();
-        let startup_resources = self.resources.remove::<StartupResources>();
-
-        let post_reset_resources = self
-            .resources
-            .remove::<ResetWorld>()
-            .map(|r| r.reset_resources);
-
-        // Remove any owned resources (preserves shared resources)
-        // This allows world resources to be reset inside session run safely, as shared resources are only injected
-        // outside of session run, and a runner may take another step after the reset.
-        self.resources.clear_owned_resources();
-
-        // Entities were cleared with resources - ensure is present.
-        self.init_resource::<Entities>();
-
-        // Re-insert preserved resources
-        if let Some(time) = time {
-            self.insert_resource(time);
-        }
-        if let Some(session_opts) = session_opts {
-            self.insert_resource(session_opts);
-        }
-
-        // Insert startup resources.
-        if let Some(resources) = startup_resources {
-            let remove_empty = true;
-            resources.insert_on_world(self, remove_empty);
-        }
-
-        // Apply any reset resources to world, overwriting startup resources.
-        if let Some(resources) = post_reset_resources {
-            let remove_empty = true;
-            resources.insert_on_world(self, remove_empty);
-        }
+        world.resource_mut::<Entities>().kill_all(); // `kill_all` for component clearing
+        world.maintain(); // clear components
+        *world.resource_mut::<Entities>() = Entities::default(); // fully reset entities
+        world.retain_owned_resources(|schema_id| self.reset_resources.contains(&schema_id));
     }
 }
