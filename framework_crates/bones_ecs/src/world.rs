@@ -188,6 +188,26 @@ impl World {
         self.resources.clear_owned_resources();
     }
 
+    /// Iterates through owned and shared resource cells removing them if the predicate returns `false`.
+    ///
+    /// See also: [`Self::retain_owned_resources`].
+    pub fn retain_resources<F>(&self, predicate: F)
+    where
+        F: FnMut(SchemaId) -> bool,
+    {
+        self.resources.untyped().retain_resources(predicate);
+    }
+
+    /// Iterates through resource cells removing them if the predicate returns `false`.
+    ///
+    /// Doesn't include shared resources. See also: [`Self::retain_resources`].
+    pub fn retain_owned_resources<F>(&self, predicate: F)
+    where
+        F: FnMut(SchemaId) -> bool,
+    {
+        self.resources.untyped().retain_owned_resources(predicate);
+    }
+
     /// Borrow a component store from the world.
     /// # Panics
     /// Panics if the component store does not exist in the world.
