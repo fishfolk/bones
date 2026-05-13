@@ -201,6 +201,37 @@ impl UntypedResources {
         )
     }
 
+    /// Iterates through owned and shared resource cells removing them if the predicate returns `false`.
+    ///
+    /// See also: [`Self::retain_owned_resources`].
+    pub fn retain_resources<F>(&self, mut predicate: F)
+    where
+        F: FnMut(SchemaId) -> bool,
+    {
+        for (schema_id, resource_cell) in self.resources.read_only_view().iter() {
+            let is_retained = predicate(*schema_id);
+            if !is_retained {
+                resource_cell.remove();
+            }
+        }
+    }
+
+    /// Iterates through resource cells removing them if the predicate returns `false`.
+    ///
+    /// Doesn't include shared resources. See also: [`Self::retain_resources`].
+    pub fn retain_owned_resources<F>(&self, mut predicate: F)
+    where
+        F: FnMut(SchemaId) -> bool,
+    {
+        for (schema_id, resource_cell) in self.resources.read_only_view().iter() {
+            let is_shared = self.shared_resources.contains_key(schema_id);
+            let is_retained = predicate(*schema_id);
+            if !is_shared && !is_retained {
+                resource_cell.remove();
+            }
+        }
+    }
+
     /// Removes all resourcse that are not shared resources.
     pub fn clear_owned_resources(&self) {
         for (schema_id, resource_cell) in self.resources.read_only_view().iter() {
