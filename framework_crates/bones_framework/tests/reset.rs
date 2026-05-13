@@ -26,18 +26,13 @@ pub fn startup_system_reset() {
     // Verify startup system ran and incremented only once
     assert_eq!(game.shared_resource::<Counter>().0, 1);
 
-    // Add command that will trigger reset on next step
+    // Reset the world; Equivalent to reseting at the start or end of the frame.
+    // `StartupSystemsRan` is inserted into the world to indicate completion,
+    // but is not retained so startup systems should run again.
     {
-        let game_session = game.sessions.get_mut("game").unwrap();
-        game_session.world.init_resource::<CommandQueue>().add(
-            |mut reset: ResMutInit<ResetWorld>| {
-                reset.reset = true;
-            },
-        );
+        let world = &game.sessions.get_mut("game").unwrap().world;
+        world.resource_mut::<ResetWorld>().reset_world(world);
     }
-
-    // step again, world should be reset. Startup doesn't run until next step though.
-    game.step(Instant::now());
 
     // step again to trigger startup
     game.step(Instant::now());
@@ -52,24 +47,25 @@ pub fn startup_system_reset() {
 pub fn single_success_system_reset() {
     let mut game = Game::new();
 
-    // Session startup increments counter by 1
     game.sessions
         .create_with("game", |builder: &mut SessionBuilder| {
-            builder.init_resource::<Counter>();
-            {
-                let res = builder.resource_mut::<Counter>().unwrap();
-                assert_eq!(res.0, 0);
-            }
-            // system
-            builder.add_single_success_system(|mut counter: ResMut<Counter>| -> Option<()> {
-                // Increment until 2
-                counter.0 += 1;
-                if counter.0 >= 2 {
-                    return Some(());
-                }
-
-                None
+            // Counter should not be retained on reset.
+            builder.add_system_to_stage(Startup, |world: &World| {
+                world.insert_resource(Counter(0));
             });
+            // Single success system increments counter by 1 until 2.
+            builder.add_system_to_stage(
+                First,
+                single_success_system(Ulid::new(), |mut counter: ResMut<Counter>| -> Option<()> {
+                    // Increment until 2
+                    counter.0 += 1;
+                    if counter.0 >= 2 {
+                        return Some(());
+                    }
+
+                    None
+                }),
+            );
         });
 
     // Step three times, single success should've incremented counter to 2 and completed.
@@ -77,39 +73,43 @@ pub fn single_success_system_reset() {
     game.step(Instant::now());
     game.step(Instant::now());
 
-    // Verify startup system ran and incremented only once
+    // Verify startup system ran and incremented only twice
     {
         let session = game.sessions.get("game").unwrap();
         let counter = session.world.get_resource::<Counter>().unwrap();
         assert_eq!(counter.0, 2);
     }
 
-    // Add command that will trigger reset on next step
+    // Reset the world; Equivalent to reseting at the start or end of the frame.
     {
-        let game_session = game.sessions.get_mut("game").unwrap();
-        game_session.world.init_resource::<CommandQueue>().add(
-            |mut reset: ResMutInit<ResetWorld>| {
-                reset.reset = true;
-            },
-        );
+        let world = &game.sessions.get_mut("game").unwrap().world;
+        world.resource_mut::<ResetWorld>().reset_world(world);
     }
 
-    // step again, world should be reset after this step. Counter should be back at default state of 0,
-    // single successs system not yet run until beginning of next step.
-    game.step(Instant::now());
+    // Counter & SingleSuccessSystems should not exist now.
     {
         let session = game.sessions.get("game").unwrap();
-        let counter = session.world.get_resource::<Counter>().unwrap();
-        assert_eq!(counter.0, 0);
+        let counter = session.world.get_resource::<Counter>();
+        assert!(counter.is_none());
+
+        let sss = session.world.get_resource::<SingleSuccessSystems>();
+        assert!(sss.is_none());
     }
 
-    // Startup resource should be re-initialized, and completion status of single single success system reset.
-    // It will run incrementing to 1.
+    // Counter resource should be re-initialized on CoreStage::Startup.
+    // SingleSuccessSystems should have no completions. The one "SSS" will run
+    // incrementing to 1 without completing.
     game.step(Instant::now());
     {
         let session = game.sessions.get("game").unwrap();
         let counter = session.world.get_resource::<Counter>().unwrap();
         assert_eq!(counter.0, 1);
+
+        let sss = session
+            .world
+            .get_resource::<SingleSuccessSystems>()
+            .unwrap();
+        assert!(sss.is_empty());
     }
 
     // Run a few more times, single success system should stop at 2:
@@ -120,86 +120,90 @@ pub fn single_success_system_reset() {
         let session = game.sessions.get("game").unwrap();
         let counter = session.world.get_resource::<Counter>().unwrap();
         assert_eq!(counter.0, 2);
+
+        let sss = session
+            .world
+            .get_resource::<SingleSuccessSystems>()
+            .unwrap();
+        assert!(!sss.is_empty());
     }
 }
 
 #[test]
-pub fn reset_world_resource_override() {
+pub fn reset_world_resource_retain() {
     let mut game = Game::new();
 
     // insert counter resource
     game.sessions
         .create_with("game", |builder: &mut SessionBuilder| {
-            builder.init_resource::<Counter>();
+            // This will put the resource into `ResetWorld`'s retained resources
+            // when built.
+            builder.insert_resource(Counter(2));
+            // Insert unit type on startup that won't be retained on reset.
+            builder.add_system_to_stage(Startup, |world: &World| {
+                world.insert_resource(());
+            });
         });
 
     game.step(Instant::now());
+
+    // assert Counter is still 2 & unit resource exists
     {
-        let session = game.sessions.get("game").unwrap();
-        let counter = session.world.get_resource::<Counter>().unwrap();
-        // asert in default state of 0
-        assert_eq!(counter.0, 0);
+        let world = &game.sessions.get("game").unwrap().world;
+        let counter = world.get_resource::<Counter>().unwrap();
+        assert_eq!(counter.0, 2);
+        let unit = world.get_resource::<()>();
+        assert!(unit.is_some());
     }
 
-    // Add command that will trigger reset on next step,
-    // and add reset resource of Counter with value 1
+    // Reset the world; Equivalent to reseting at the start or end of the frame.
+    // Counter should be retained since `SessionBuilder` inserts "startup
+    // resources" into `ResetWorld` when the session is built.
+    // Unit type was inserted in the Startup stage so should not be retained.
     {
-        let game_session = game.sessions.get_mut("game").unwrap();
-        game_session.world.init_resource::<CommandQueue>().add(
-            |mut reset: ResMutInit<ResetWorld>| {
-                reset.reset = true;
-                reset.insert_reset_resource(Counter(1));
-            },
-        );
+        let world = &game.sessions.get_mut("game").unwrap().world;
+        world.resource_mut::<ResetWorld>().reset_world(world);
     }
 
-    // Step to reset
-    game.step(Instant::now());
+    // Verify that Counter is still 2, instead of being removed.
+    // Verify counter is removed.
     {
-        let session = game.sessions.get("game").unwrap();
-        let counter = session.world.get_resource::<Counter>().unwrap();
-        // Verify the reset resource of value 1 was applied, instead of resetting to default state
-        assert_eq!(counter.0, 1);
+        let world = &game.sessions.get("game").unwrap().world;
+        let counter = world.get_resource::<Counter>().unwrap();
+        assert_eq!(counter.0, 2);
+        let unit = world.get_resource::<()>();
+        assert!(unit.is_none());
     }
 }
 
 #[test]
-pub fn reset_world_emtpy_resource() {
+pub fn reset_world_resource_drop() {
     let mut game = Game::new();
 
     // insert counter resource
     game.sessions
         .create_with("game", |builder: &mut SessionBuilder| {
-            builder.init_resource::<Counter>();
+            // This will put the resource into `ResetWorld`'s retained resources
+            // when built.
+            builder.insert_resource(Counter(2));
         });
 
     game.step(Instant::now());
+
+    // there are no systems but assert Counter is still 2
     {
         let session = game.sessions.get("game").unwrap();
         let counter = session.world.get_resource::<Counter>().unwrap();
-        // asert in default state of 0
-        assert_eq!(counter.0, 0);
+        assert_eq!(counter.0, 2);
     }
-
-    // Add command that will trigger reset on next step,
-    // and add reset resource of Counter with value 1
+    // Reset the world; Equivalent to reseting at the start or end of the frame.
+    // Remove Counter from `ResetWorld`; It should not exist after the call.
     {
-        let game_session = game.sessions.get_mut("game").unwrap();
-        game_session.world.init_resource::<CommandQueue>().add(
-            |mut reset: ResMutInit<ResetWorld>| {
-                reset.reset = true;
-                reset.insert_empty_reset_resource::<Counter>();
-            },
-        );
-    }
+        let world = &game.sessions.get_mut("game").unwrap().world;
+        let mut reset = world.resource_mut::<ResetWorld>();
+        reset.drop_resource::<Counter>();
+        reset.reset_world(world);
 
-    // Step to reset
-    game.step(Instant::now());
-    {
-        let session = game.sessions.get("game").unwrap();
-        let counter = session.world.get_resource::<Counter>();
-
-        // Verify resource was removed instead of reseting to initial state of session build.
-        assert!(counter.is_none())
+        assert!(world.get_resource::<Counter>().is_none());
     }
 }

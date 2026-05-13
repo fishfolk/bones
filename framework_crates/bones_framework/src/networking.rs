@@ -808,6 +808,9 @@ where
                                     if world.resources.get::<RngGenerator>().is_none() {
                                         let rng_generator = RngGenerator::new(self.random_seed);
                                         world.insert_resource(rng_generator);
+                                        world
+                                            .init_resource::<ResetWorld>()
+                                            .retain_resource::<RngGenerator>();
                                     }
 
                                     // TODO: Make sure SyncingInfo is initialized immediately when session is created,
@@ -862,22 +865,6 @@ where
 
                                     // Run game session stages, advancing simulation
                                     stages.run(world);
-
-                                    // Handle any triggered resets of world + preserve runner's managed resources like RngGenerator.
-                                    if world.reset_triggered() {
-                                        let rng = world
-                                            .get_resource::<RngGenerator>()
-                                            .map(|r| (*r).clone());
-                                        if let Some(rng) = rng {
-                                            if let Some(mut reset) =
-                                                world.get_resource_mut::<ResetWorld>()
-                                            {
-                                                reset.insert_reset_resource(rng);
-                                            }
-                                        }
-
-                                        world.reset_internals();
-                                    }
                                 }
                             }
                         }
