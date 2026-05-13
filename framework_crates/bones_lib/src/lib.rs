@@ -11,9 +11,9 @@ pub use bones_ecs as ecs;
 /// Bones lib prelude
 pub mod prelude {
     pub use crate::{
-        ecs::prelude::*, instant::Instant, reset::*, time::*, Game, GamePlugin, Session,
-        SessionBuilder, SessionCommand, SessionOptions, SessionPlugin, SessionRunner, Sessions,
-        StartupResources,
+        ecs::prelude::*, instant::Instant, reset::*, single_success_system, time::*, Game,
+        GamePlugin, Session, SessionBuilder, SessionCommand, SessionOptions, SessionPlugin,
+        SessionRunner, Sessions, SingleSuccessSystems, StartupResources,
     };
     pub use ustr::{ustr, Ustr, UstrMap, UstrSet};
 }
@@ -161,14 +161,18 @@ impl SessionBuilder {
         self
     }
 
-    /// Add a system that will run each frame until it succeeds (returns Some). Runs before all stages. Uses Option to allow for easy usage of `?`.
+    /// Convenience method. Adds a system that will run each frame until it succeeds (returns Some).
+    /// Uses Option to allow for easy usage of `?`. System is added to
+    /// [`CoreStage::First`].
+    ///
+    /// See also the wrapper function used inside [`single_success_system`].
+    #[deprecated = "use `.add_system_to_stage(First, single_success_system(Ulid::new(), your_system)"]
     pub fn add_single_success_system<Args, S>(&mut self, system: S) -> &mut Self
     where
         S: IntoSystem<Args, (), Option<()>, Sys = StaticSystem<(), Option<()>>>,
     {
-        let id = self.init_resource::<SingleSuccessSystems>().next_id();
         self.stages
-            .add_system_to_stage(First, single_success_system(id, system));
+            .add_system_to_stage(First, single_success_system(Ulid::new(), system));
         self
     }
 
@@ -262,10 +266,14 @@ impl Drop for FinishGuard {
     }
 }
 
-/// Wrapper system for single success systems. Takes a system, and an `usize` id
-/// that is used to index whether or not the system has succeeded from the
-/// [`SingleSuccessSystems`] resource.
-fn single_success_system<Args, S>(id: usize, system: S) -> StaticSystem<(), ()>
+/// Wrapper system for single success systems.
+///
+/// Runs the given system each frame until it succeeds (returns Some). Uses
+/// `Option<()>` instead of a `bool` to allow for easy usage of `?`.
+///
+/// Takes a [`Ulid`] that is used to identify whether or not the system has
+/// succeeded from the [`SingleSuccessSystems`] resource.
+pub fn single_success_system<Args, S>(id: Ulid, system: S) -> StaticSystem<(), ()>
 where
     S: IntoSystem<Args, (), Option<()>, Sys = StaticSystem<(), Option<()>>>,
 {
@@ -283,35 +291,28 @@ where
     .system()
 }
 
-/// Resource tracking which of single success systems have completed.
-#[derive(HasSchema, Clone, Default)]
-pub struct SingleSuccessSystems {
-    /// Used for id creation as single success systems are added to the session.
-    last_id: usize,
-    /// Set of indices of single success systems that have succeeded.
-    pub systems_succeeded: HashSet<usize>,
-}
+/// Resource tracking which of single success systems have completed with a
+/// [`HashSet`] of [`Ulid`] for the succeeded.
+#[derive(HasSchema, Clone, Default, Deref, DerefMut)]
+pub struct SingleSuccessSystems(pub HashSet<Ulid>);
 
 impl SingleSuccessSystems {
-    /// Returns the next `usize` for the next single success system to use.
-    pub fn next_id(&mut self) -> usize {
-        self.last_id += 1;
-        self.last_id
-    }
     /// Reset single success systems completion status. so they run again until success.
-    #[allow(dead_code)]
+    #[inline]
     pub fn reset(&mut self) {
-        self.systems_succeeded.clear();
+        self.clear();
     }
 
     /// Check if system has completed
-    pub fn has_system_succeeded(&self, index: usize) -> bool {
-        self.systems_succeeded.contains(&index)
+    #[inline]
+    pub fn has_system_succeeded(&self, ulid: Ulid) -> bool {
+        self.contains(&ulid)
     }
 
     /// Mark system as completed.
-    pub fn set_system_completed(&mut self, index: usize) {
-        self.systems_succeeded.insert(index);
+    #[inline]
+    pub fn set_system_completed(&mut self, ulid: Ulid) {
+        self.insert(ulid);
     }
 }
 
