@@ -859,10 +859,12 @@ pub struct Sessions {
     /// Commands that operate on [`Sessions`], called after all sessions update.
     /// These may be used to add/delete/modify sessions.
     ///
-    /// Commands are useful in a situation where you want to remove / recreate
-    /// a session from within it's own system. You cannot do this while the `Session` is running.
+    /// Commands are useful in a situation where you want to remove / recreate a
+    /// session from within it's own system. You cannot do this while the
+    /// `Session` is running.
     ///
-    /// Commands added inside a session command will not be executed until next frame.
+    /// Commands added inside a session command will not be executed until after
+    /// the frame they were inserted.
     commands: VecDeque<Box<SessionCommand>>,
 }
 
