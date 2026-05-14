@@ -138,7 +138,7 @@ impl World {
         self.resource_mut()
     }
 
-    /// Insert a resource.
+    /// Insert a resource, replacing it if it already exists.
     pub fn insert_resource<R: HasSchema>(&self, resource: R) -> Option<R> {
         self.resources.insert(resource)
     }
