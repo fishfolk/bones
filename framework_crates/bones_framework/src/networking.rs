@@ -808,9 +808,6 @@ where
                                     if world.resources.get::<RngGenerator>().is_none() {
                                         let rng_generator = RngGenerator::new(self.random_seed);
                                         world.insert_resource(rng_generator);
-                                        world
-                                            .init_resource::<ResetWorld>()
-                                            .retain_resource::<RngGenerator>();
                                     }
 
                                     // TODO: Make sure SyncingInfo is initialized immediately when session is created,
@@ -841,7 +838,7 @@ where
 
                                     {
                                         world
-                                            .resource_mut::<Time>()
+                                            .init_resource::<Time>()
                                             .advance_exact(Duration::from_secs_f64(step));
 
                                         // update game controls from ggrs inputs

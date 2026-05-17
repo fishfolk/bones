@@ -139,13 +139,13 @@ struct MenuData {
 }
 
 /// Menu plugin
-pub fn menu_plugin(session: &mut SessionBuilder) {
+pub fn menu_plugin(session: &mut Session) {
     // Register our menu system
     session
         // Install the bones_framework default plugins for this session
         .install_plugin(DefaultSessionPlugin)
         // Initialize our menu data resource
-        .init_resource::<MenuData>();
+        .init_startup_resource::<MenuData>();
 
     // And add our systems.
     session
@@ -280,7 +280,7 @@ fn menu_system(
 }
 
 /// Plugin for running the sprite demo.
-fn sprite_demo_plugin(session: &mut SessionBuilder) {
+fn sprite_demo_plugin(session: &mut Session) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_system_to_stage(CoreStage::Startup, sprite_demo_startup)
@@ -344,7 +344,7 @@ fn move_sprite(
 }
 
 /// Plugin for running the tilemap demo.
-fn tilemap_demo_plugin(session: &mut SessionBuilder) {
+fn tilemap_demo_plugin(session: &mut Session) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_system_to_stage(CoreStage::Startup, tilemap_startup_system)
@@ -390,7 +390,7 @@ fn tilemap_startup_system(
 }
 
 /// Plugin for running the atlas demo.
-fn atlas_demo_plugin(session: &mut SessionBuilder) {
+fn atlas_demo_plugin(session: &mut Session) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_system_to_stage(CoreStage::Startup, atlas_demo_startup)
@@ -438,7 +438,7 @@ fn atlas_demo_startup(
     );
 }
 
-fn audio_demo_plugin(session: &mut SessionBuilder) {
+fn audio_demo_plugin(session: &mut Session) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_system_to_stage(Update, back_to_menu_ui)
@@ -464,7 +464,7 @@ fn audio_demo_ui(
         });
 }
 
-fn storage_demo_plugin(session: &mut SessionBuilder) {
+fn storage_demo_plugin(session: &mut Session) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_system_to_stage(Update, storage_demo_ui)
@@ -494,7 +494,7 @@ fn storage_demo_ui(
     });
 }
 
-fn path2d_demo_plugin(session: &mut SessionBuilder) {
+fn path2d_demo_plugin(session: &mut Session) {
     session
         .install_plugin(DefaultSessionPlugin)
         .add_system_to_stage(CoreStage::Startup, path2d_demo_startup)

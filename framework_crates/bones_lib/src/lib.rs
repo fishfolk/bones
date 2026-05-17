@@ -11,9 +11,8 @@ pub use bones_ecs as ecs;
 /// Bones lib prelude
 pub mod prelude {
     pub use crate::{
-        ecs::prelude::*, instant::Instant, reset::*, single_success_system, time::*, Game,
-        GamePlugin, Session, SessionBuilder, SessionCommand, SessionOptions, SessionPlugin,
-        SessionRunner, Sessions, SingleSuccessSystems, StartupResources,
+        ecs::prelude::*, instant::Instant, reset::*, time::*, Game, GamePlugin, Session,
+        SessionCommand, SessionOptions, SessionPlugin, SessionRunner, Sessions,
     };
     pub use ustr::{ustr, Ustr, UstrMap, UstrSet};
 }
@@ -27,305 +26,8 @@ use tracing::warn;
 
 use crate::prelude::*;
 
-/// Builder type used to create [`Session`]. If using this directly (as opposed to [`Sessions::create_with`]),
-/// it is important to rember to finish session and add to [`Sessions`] with [`SessionBuilder::finish_and_add`].
-pub struct SessionBuilder {
-    /// Name of session
-    pub name: Ustr,
-    /// System stage builder
-    pub stages: SystemStagesBuilder,
-    /// Resources to be inserted into the world when finished building. Inserted
-    /// collectively into the world as the [`StartupResources`] resource.
-    pub startup_resources: UntypedResourceSet,
-    /// Whether or not this session should have it's systems run.
-    pub active: bool,
-    /// Whether or not this session should be rendered.
-    pub visible: bool,
-    /// The priority of this session relative to other sessions in the [`Game`].
-    pub priority: i32,
-    /// The session runner to use for this session.
-    pub runner: Box<dyn SessionRunner>,
-
-    /// Tracks if builder has been finished, and warn on drop if not finished.
-    finish_guard: FinishGuard,
-}
-
-impl SessionBuilder {
-    /// Create a new [`SessionBuilder`]. Be sure to add it to [`Sessions`] when finished, with [`SessionBuilder::finish_and_add`], or [`Sessions::create`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if the `name.try_into()` cannot convert into [`Ustr`].
-    pub fn new<N: TryInto<Ustr>>(name: N) -> Self
-    where
-        <N as TryInto<Ustr>>::Error: Debug,
-    {
-        let name = name
-            .try_into()
-            .expect("Session name could not be converted into Ustr.");
-        Self {
-            name,
-            stages: default(),
-            startup_resources: default(),
-            active: true,
-            visible: true,
-            priority: 0,
-            runner: Box::new(DefaultSessionRunner),
-            finish_guard: FinishGuard { finished: false },
-        }
-    }
-
-    /// Create a [`SessionBuilder`] to match existing [`Session`], consuming it. This is useful if a [`GamePlugin`] wishes to modify a session created by another plugin.
-    /// The builder is initialized with settings from session, can be further modified, and then added to session to replace existing.
-    pub fn from_existing_session<N: TryInto<Ustr>>(name: N, session: Session) -> Self
-    where
-        <N as TryInto<Ustr>>::Error: Debug,
-    {
-        let name = name
-            .try_into()
-            .expect("Session name could not be converted into Ustr.");
-
-        Self {
-            name,
-            stages: SystemStagesBuilder::from_stages(session.stages),
-            startup_resources: session
-                .world
-                .resources
-                .remove::<StartupResources>()
-                .unwrap_or_default()
-                .0,
-            active: session.active,
-            visible: session.visible,
-            priority: session.priority,
-            runner: session.runner,
-            finish_guard: FinishGuard { finished: false },
-        }
-    }
-
-    /// Get the [`SystemStagesBuilder`] (though the stage build functions are also on [`SessionBuilder`] for convenience).
-    pub fn stages(&mut self) -> &mut SystemStagesBuilder {
-        &mut self.stages
-    }
-
-    /// Whether or not session should run systems.
-    pub fn set_active(&mut self, active: bool) -> &mut Self {
-        self.active = active;
-        self
-    }
-
-    /// Whether or not session should be rendered.
-    pub fn set_visible(&mut self, visible: bool) -> &mut Self {
-        self.visible = visible;
-        self
-    }
-
-    /// The priority of this session relative to other sessions in the [`Game`].
-    pub fn set_priority(&mut self, priority: i32) -> &mut Self {
-        self.priority = priority;
-        self
-    }
-
-    /// Insert a resource.
-    ///
-    /// Note: The resource is not actually initialized in World until first step of [`SystemStages`].
-    /// To mutate or inspect a resource inserted by another [`SessionPlugin`] during session build, use [`SessionBuilder::resource_mut`].
-    pub fn insert_resource<T: HasSchema>(&mut self, resource: T) -> &mut Self {
-        self.startup_resources.insert_resource(resource);
-        self
-    }
-
-    /// Insert a resource using default value (if not found). Returns a mutable ref for modification.
-    ///
-    /// Note: The resource is not actually initialized in World until first step of [`SystemStages`].
-    /// To mutate or inspect a resource inserted by another [`SessionPlugin`] during session build, use [`SessionBuilder::resource_mut`].
-    pub fn init_resource<T: HasSchema + Default>(&mut self) -> RefMut<'_, T> {
-        self.startup_resources.init_resource::<T>()
-    }
-
-    /// Get mutable reference to a resource if it exists.
-    pub fn resource_mut<T: HasSchema>(&self) -> Option<RefMut<'_, T>> {
-        self.startup_resources.resource_mut::<T>()
-    }
-
-    /// Add a system to the [`CoreStage::Startup`] stage which specially runs
-    /// only once, before all other core stages. Inserting [`StartupSystemsRan`]
-    /// into the world prevents systems in the startup stage from running.
-    #[deprecated = "use `add_system_to_stage(CoreStage::Startup, your_system)` instead"]
-    pub fn add_startup_system<Args, S>(&mut self, system: S) -> &mut Self
-    where
-        S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
-    {
-        self.stages
-            .add_system_to_stage(CoreStage::Startup, system.system());
-        self
-    }
-
-    /// Convenience method. Adds a system that will run each frame until it succeeds (returns Some).
-    /// Uses Option to allow for easy usage of `?`. System is added to
-    /// [`CoreStage::First`].
-    ///
-    /// See also the wrapper function used inside [`single_success_system`].
-    #[deprecated = "use `.add_system_to_stage(First, single_success_system(Ulid::new(), your_system)"]
-    pub fn add_single_success_system<Args, S>(&mut self, system: S) -> &mut Self
-    where
-        S: IntoSystem<Args, (), Option<()>, Sys = StaticSystem<(), Option<()>>>,
-    {
-        self.stages
-            .add_system_to_stage(First, single_success_system(Ulid::new(), system));
-        self
-    }
-
-    /// Add a [`System`] to the stage with the given label.
-    pub fn add_system_to_stage<Args, S>(&mut self, label: impl StageLabel, system: S) -> &mut Self
-    where
-        S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
-    {
-        self.stages.add_system_to_stage(label, system);
-        self
-    }
-
-    /// Insert a new stage, before another existing stage
-    pub fn insert_stage_before<L: StageLabel, S: SystemStage + 'static>(
-        &mut self,
-        label: L,
-        stage: S,
-    ) -> &mut SessionBuilder {
-        self.stages.insert_stage_before(label, stage);
-        self
-    }
-
-    /// Insert a new stage, after another existing stage
-    pub fn insert_stage_after<L: StageLabel, S: SystemStage + 'static>(
-        &mut self,
-        label: L,
-        stage: S,
-    ) -> &mut SessionBuilder {
-        self.stages.insert_stage_after(label, stage);
-
-        self
-    }
-
-    /// Set the session runner for this session.
-    pub fn set_session_runner(&mut self, runner: Box<dyn SessionRunner>) {
-        self.runner = runner;
-    }
-
-    /// Install a plugin.
-    pub fn install_plugin(&mut self, plugin: impl SessionPlugin) -> &mut Self {
-        plugin.install(self);
-        self
-    }
-
-    /// Finalize and add to [`Sessions`].
-    ///
-    /// Alternatively, you may directly pass a [`SessionBuilder`] to [`Sessions::create`] to add and finalize.
-    pub fn finish_and_add(mut self, sessions: &mut Sessions) -> &mut Session {
-        let mut session = Session {
-            world: {
-                let w = World::default();
-                w.init_resource::<Time>();
-                {
-                    let mut reset = w.init_resource::<ResetWorld>();
-                    for untyped in self.startup_resources.resources() {
-                        reset.reset_resources.insert(untyped.schema().id());
-                    }
-                }
-                w
-            },
-            stages: self.stages.finish(),
-            active: self.active,
-            visible: self.visible,
-            priority: self.priority,
-            runner: self.runner,
-        };
-
-        // mark guard as finished to avoid warning on drop of SessionBuilder.
-        self.finish_guard.finished = true;
-
-        // Insert startup resources so if other sessions look for them, they are present.
-        self.startup_resources
-            .insert_on_world(&mut session.world, true);
-        session
-            .world
-            .insert_resource(StartupResources(self.startup_resources));
-
-        sessions.add(self.name, session)
-    }
-}
-
-/// This is currently just used for letting you create a [`SessionBuilder`] from
-/// a session.
-#[derive(HasSchema, Clone, Default, Deref, DerefMut)]
-pub struct StartupResources(pub UntypedResourceSet);
-
-/// Guard for [`SessionBuilder` ensuring we warn if it goes out of scope without being finished and added to [`Sessions`].
-struct FinishGuard {
-    pub finished: bool,
-}
-
-impl Drop for FinishGuard {
-    fn drop(&mut self) {
-        if !self.finished {
-            warn!("`SessionBuilder` went out of scope. This may have been an acccident in building Session.
-                        `finish` the session builder, or directly add to Game's `Sessions` to ensure is created and saved.")
-        }
-    }
-}
-
-/// Wrapper system for single success systems.
-///
-/// Runs the given system each frame until it succeeds (returns Some). Uses
-/// `Option<()>` instead of a `bool` to allow for easy usage of `?`.
-///
-/// Takes a [`Ulid`] that is used to identify whether or not the system has
-/// succeeded from the [`SingleSuccessSystems`] resource.
-pub fn single_success_system<Args, S>(id: Ulid, system: S) -> StaticSystem<(), ()>
-where
-    S: IntoSystem<Args, (), Option<()>, Sys = StaticSystem<(), Option<()>>>,
-{
-    let mut system = system.system();
-    (move |world: &World| {
-        let succeeded = world
-            .init_resource::<SingleSuccessSystems>()
-            .has_system_succeeded(id);
-        if !succeeded && system.run(world, ()).is_some() {
-            world
-                .init_resource::<SingleSuccessSystems>()
-                .set_system_completed(id);
-        }
-    })
-    .system()
-}
-
-/// Resource tracking which of single success systems have completed with a
-/// [`HashSet`] of [`Ulid`] for the succeeded.
-#[derive(HasSchema, Clone, Default, Deref, DerefMut)]
-pub struct SingleSuccessSystems(pub HashSet<Ulid>);
-
-impl SingleSuccessSystems {
-    /// Reset single success systems completion status. so they run again until success.
-    #[inline]
-    pub fn reset(&mut self) {
-        self.clear();
-    }
-
-    /// Check if system has completed
-    #[inline]
-    pub fn has_system_succeeded(&self, ulid: Ulid) -> bool {
-        self.contains(&ulid)
-    }
-
-    /// Mark system as completed.
-    #[inline]
-    pub fn set_system_completed(&mut self, ulid: Ulid) {
-        self.insert(ulid);
-    }
-}
-
-/// A bones game. This includes all of the game worlds, and systems.
-///
-/// [`Session`] is not allowed to be constructed directly.
-/// See [`Sessions::create`] or [`SessionBuilder`] for creating a new `Session`.
+/// Contains a bones [`World`] for state, [`SystemStages`] for behavior, and a
+/// [`SessionRunner`] to determine how those are used.
 #[non_exhaustive]
 #[derive(Deref, DerefMut)]
 pub struct Session {
@@ -344,6 +46,27 @@ pub struct Session {
     pub runner: Box<dyn SessionRunner>,
 }
 
+impl Default for Session {
+    fn default() -> Self {
+        Self {
+            world: World::default(),
+            stages: default(),
+            active: true,
+            visible: true,
+            priority: 0,
+            runner: Box::new(DefaultSessionRunner),
+        }
+    }
+}
+
+impl Session {
+    /// Install a plugin.
+    pub fn install_plugin(&mut self, plugin: impl SessionPlugin) -> &mut Self {
+        plugin.install(self);
+        self
+    }
+}
+
 impl std::fmt::Debug for Session {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Session")
@@ -357,37 +80,13 @@ impl std::fmt::Debug for Session {
     }
 }
 
-impl Session {
-    /// Snapshot the world state.
-    ///
-    /// This is the same as `core.world.clone()`, but it is more explicit.
-    pub fn snapshot(&self) -> World {
-        self.world.clone()
-    }
-
-    /// Restore the world state.
-    ///
-    /// Re-sets the world state to that of the provided `world`, which may or may not have been
-    /// created with [`snapshot()`][Self::snapshot].
-    ///
-    /// This is the same as doing an [`std::mem::swap`] on `self.world`, but it is more explicit.
-    pub fn restore(&mut self, world: &mut World) {
-        std::mem::swap(&mut self.world, world)
-    }
-
-    /// Set the session runner for this session.
-    pub fn set_session_runner(&mut self, runner: Box<dyn SessionRunner>) {
-        self.runner = runner;
-    }
-}
-
 /// Trait for plugins that can be installed into a [`Session`].
 pub trait SessionPlugin {
     /// Install the plugin into the [`Session`].
-    fn install(self, session: &mut SessionBuilder);
+    fn install(self, session: &mut Session);
 }
-impl<F: FnOnce(&mut SessionBuilder)> SessionPlugin for F {
-    fn install(self, session: &mut SessionBuilder) {
+impl<F: FnOnce(&mut Session)> SessionPlugin for F {
+    fn install(self, session: &mut Session) {
         (self)(session)
     }
 }
@@ -419,11 +118,6 @@ pub trait SessionRunner: Sync + Send + 'static {
     /// fn step(&mut self, now: Instant, world: &mut World, stages: &mut SystemStages) {
     ///     world.resource_mut::<Time>().update_with_instant(now);
     ///     stages.run(world);
-    ///
-    ///     // Not required for runner - but calling this allows [`ResetWorld`] resource to
-    ///     // reset world state from gameplay.
-    ///     world.handle_world_reset();
-    ///
     /// }
     /// fn restart_session(&mut self) {}
     /// fn disable_local_input(&mut self, disable_input: bool) {}
@@ -446,7 +140,7 @@ pub trait SessionRunner: Sync + Send + 'static {
 pub struct DefaultSessionRunner;
 impl SessionRunner for DefaultSessionRunner {
     fn step(&mut self, now: instant::Instant, world: &mut World, stages: &mut SystemStages) {
-        world.resource_mut::<Time>().update_with_instant(now);
+        world.init_resource::<Time>().update_with_instant(now);
         stages.run(world);
     }
 
@@ -881,50 +575,35 @@ pub struct SessionOptions {
 }
 
 impl Sessions {
-    /// Create a new session from [`SessionBuilder`], insert into [`Sessions`], and borrow it mutably so it can be modified.
-    /// If session with same name already exists, it will be replaced.
-    pub fn create(&mut self, builder: SessionBuilder) -> &mut Session {
-        builder.finish_and_add(self)
+    /// Create a new session, and borrow it mutably so it can be modified.
+    #[track_caller]
+    pub fn create<K: TryInto<Ustr>>(&mut self, name: K) -> &mut Session
+    where
+        <K as TryInto<Ustr>>::Error: Debug,
+    {
+        let name = name.try_into().unwrap();
+        // Create a blank session
+        let session = Session::default();
+
+        // Insert it into the map
+        self.map.insert(name, session);
+
+        // And borrow it for the modification
+        self.map.get_mut(&name).unwrap()
     }
 
-    /// Create a new session from default [`SessionBuilder`], and modify in closure before it is added to [`Sessions`]. Then borrow it mutably so it can be modified.
-    ///
-    /// If session with same name already exists, it will be replaced.
-    pub fn create_with<N: TryInto<Ustr>>(
+    /// Create a new session, and borrow it mutably so it can be modified.
+    #[track_caller]
+    pub fn create_with<K: TryInto<Ustr>>(
         &mut self,
-        name: N,
+        name: K,
         plugin: impl SessionPlugin,
     ) -> &mut Session
     where
-        <N as TryInto<Ustr>>::Error: Debug,
+        <K as TryInto<Ustr>>::Error: Debug,
     {
-        let mut builder = SessionBuilder::new(name);
-        builder.install_plugin(plugin);
-        builder.finish_and_add(self)
-    }
-
-    /// Replaces an existing session after converting it into a [`SessionBuilder`] with same systems, stages, etc. It then is given to `build_function` to extend or modify it.
-    ///
-    /// WARNING - this is intended to allow a [`GamePlugin`] to extend a session created by another plugin during setup. It destroys and re-creates session, and if used during gameplay,
-    /// could break assumptions around determinism and cause desyncs in network play. The sessions [`World`] is not preserved. This is a utility for constructing session, not for runtime mutation.
-    ///
-    /// `None` is returned if the session with name was not found.
-    pub fn modify_and_replace_existing_session<N: TryInto<Ustr>>(
-        &mut self,
-        name: N,
-        build_function: impl FnOnce(&mut SessionBuilder),
-    ) -> Option<&mut Session>
-    where
-        <N as TryInto<Ustr>>::Error: Debug,
-    {
-        let name = name
-            .try_into()
-            .expect("Session name could not be converted into Ustr.");
-
-        let session = self.map.remove(&name)?;
-        let mut builder = SessionBuilder::from_existing_session(name, session);
-        build_function(&mut builder);
-        Some(builder.finish_and_add(self))
+        let session = self.create(name);
+        session.install_plugin(plugin)
     }
 
     /// Delete a session.
@@ -967,17 +646,5 @@ impl Sessions {
     /// Add a [`SessionCommand`] to queue.
     pub fn add_command(&mut self, command: Box<SessionCommand>) {
         self.commands.push_back(command);
-    }
-
-    /// Add a [`Session`] to [`Sessions`]. This function is private, used by [`SessionBuilder`] to save the finished `Session`,
-    /// and is not directly useful to user as a `Session` may not be directly constructed.
-    ///
-    /// To build a new session, see [`Sessions::create`] or [`Sessions::create_with`].
-    fn add(&mut self, name: Ustr, session: Session) -> &mut Session {
-        // Insert it into the map
-        self.map.insert(name, session);
-
-        // And borrow it for the modification
-        self.map.get_mut(&name).unwrap()
     }
 }

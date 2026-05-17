@@ -10,20 +10,20 @@ use crate::prelude::*;
 #[derive(Deref, DerefMut, Clone, Copy, HasSchema, Default)]
 pub struct CurrentSystemStage(pub Ulid);
 
-/// Builder for [`SystemStages`]. It is immutable once created,
-pub struct SystemStagesBuilder {
+/// An ordered collection of [`SystemStage`]s.
+pub struct SystemStages {
     /// The stages in the collection, in the order that they will be run.
     stages: Vec<Box<dyn SystemStage>>,
 }
 
-impl Default for SystemStagesBuilder {
+impl Default for SystemStages {
     fn default() -> Self {
         Self::with_core_stages()
     }
 }
 
-impl SystemStagesBuilder {
-    /// Create a [`SystemStagesBuilder`] for [`SystemStages`] collection, initialized with a stage for each [`CoreStage`].
+impl SystemStages {
+    /// Create a [`SystemStages`] collection, initialized with a stage for each [`CoreStage`].
     pub fn with_core_stages() -> Self {
         Self {
             stages: vec![
@@ -35,32 +35,6 @@ impl SystemStagesBuilder {
                 Box::new(SimpleSystemStage::new(CoreStage::Last)),
             ],
         }
-    }
-
-    /// Finish building and convert to [`SystemStages`]
-    pub fn finish(self) -> SystemStages {
-        SystemStages {
-            stages: self.stages,
-        }
-    }
-
-    /// Create [`SystemStagesBuilder`] by taking existing [`SystemStages`].
-    pub fn from_stages(stages: SystemStages) -> Self {
-        Self {
-            stages: stages.stages,
-        }
-    }
-
-    /// Add a system to the [`CoreStage::Startup`] stage which specially runs
-    /// only once, before all other core stages. Inserting [`StartupSystemsRan`]
-    /// into the world prevents systems in the startup stage from running.
-    #[deprecated = "use `.add_system_to_stage(CoreStage::Startup, your_system)` instead"]
-    pub fn add_startup_system<Args, S>(&mut self, system: S) -> &mut Self
-    where
-        S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
-    {
-        self.add_system_to_stage(CoreStage::Startup, system.system());
-        self
     }
 
     /// Add a [`System`] to the stage with the given label.
@@ -120,35 +94,6 @@ impl SystemStagesBuilder {
 
         self
     }
-}
-
-/// An ordered collection of [`SystemStage`]s.
-pub struct SystemStages {
-    /// The stages in the collection, in the order that they will be run.
-    stages: Vec<Box<dyn SystemStage>>,
-}
-
-impl std::fmt::Debug for SystemStages {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SystemStages")
-            // TODO: Add list of stages to the debug render for `SystemStages`.
-            // We can at least list the names of each stage for `SystemStages` debug
-            // implementation.
-            .finish()
-    }
-}
-
-impl Default for SystemStages {
-    fn default() -> Self {
-        SystemStagesBuilder::default().finish()
-    }
-}
-
-impl SystemStages {
-    /// Create builder for construction of [`SystemStages`].
-    pub fn builder() -> SystemStagesBuilder {
-        SystemStagesBuilder::default()
-    }
 
     /// Execute the systems on the given `world`.
     pub fn run(&mut self, world: &mut World) {
@@ -166,6 +111,97 @@ impl SystemStages {
 
         // Remove the current system stage resource
         world.resources.remove::<CurrentSystemStage>();
+    }
+
+    /// Add a system to the [`CoreStage::Startup`] stage which specially runs
+    /// only once, before all other core stages. Inserting [`StartupSystemsRan`]
+    /// into the world prevents systems in the startup stage from running.
+    #[deprecated = "use `.add_system_to_stage(CoreStage::Startup, your_system)` instead"]
+    pub fn add_startup_system<Args, S>(&mut self, system: S) -> &mut Self
+    where
+        S: IntoSystem<Args, (), (), Sys = StaticSystem<(), ()>>,
+    {
+        self.add_system_to_stage(CoreStage::Startup, system.system());
+        self
+    }
+
+    /// Convenience method. Adds a system that will run each frame until it succeeds (returns Some).
+    /// Uses Option to allow for easy usage of `?`. System is added to
+    /// [`CoreStage::First`].
+    ///
+    /// See also the wrapper function used inside [`single_success_system`].
+    #[deprecated = "use `.add_system_to_stage(First, single_success_system(Ulid::new(), your_system)"]
+    pub fn add_single_success_system<Args, S>(&mut self, system: S) -> &mut Self
+    where
+        S: IntoSystem<Args, (), Option<()>, Sys = StaticSystem<(), Option<()>>>,
+    {
+        self.add_system_to_stage(First, single_success_system(Ulid::new(), system));
+        self
+    }
+
+    /// Adds a system to [`CoreStage::Startup`] that inserts the default value
+    /// of a resource into the [`World`] if it doesn't already exist.
+    pub fn init_startup_resource<R: HasSchema + FromWorld>(&mut self) -> &mut Self {
+        self.add_system_to_stage(Startup, |world: &World| {
+            world.init_resource::<R>();
+        });
+        self
+    }
+
+    /// Adds a system to [`CoreStage::Startup`] that inserts the given resource
+    /// into the [`World`] if it doesn't already exist. The resource type is
+    /// required to have a [`HasSchema`] clone implementation to re-insert the
+    /// resource into the world after the first startup.
+    ///
+    /// # Clone Requirement Details
+    /// If the type being added implements [`HasSchema`] with the derive like
+    /// so:
+    /// ```ignore
+    /// #[derive(HasSchema, Default)]
+    /// #[schema(no_clone)] // This bypasses HasSchema clone requirements.
+    /// struct ResourceBeingInserted;
+    /// ```
+    /// Then the system being added to the [`Startup`] system stage will panic
+    /// when inserting a second time.
+    pub fn add_startup_resource<R: HasSchema>(&mut self, resource: R) -> &mut Self {
+        let mut once = Some(SchemaBox::new(resource));
+
+        self.add_system_to_stage(Startup, move |world: &World| {
+            if !world.resources.contains::<R>() {
+                let schema_box = if R::schema().clone_fn.is_some() {
+                    once.clone()
+                } else {
+                    once.take()
+                };
+
+                if let Some(schema_box) = schema_box {
+                    world
+                        .resources
+                        .untyped()
+                        .get(R::schema())
+                        .insert(schema_box)
+                        .unwrap();
+                } else {
+                    panic!(
+                        "The schema for this type does not allow cloning it.\nSchema: {:#?}; \
+                    You may need to add the resource to the `ResetWorld::reset_resources` \
+                    to avoid cloning on startup.",
+                        R::schema()
+                    )
+                };
+            }
+        });
+        self
+    }
+}
+
+impl std::fmt::Debug for SystemStages {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SystemStages")
+            // TODO: Add list of stages to the debug render for `SystemStages`.
+            // We can at least list the names of each stage for `SystemStages` debug
+            // implementation.
+            .finish()
     }
 }
 
@@ -299,6 +335,56 @@ impl SystemStage for StartupSystemStage {
 
     fn remove_all_systems(&mut self) {
         self.systems.clear();
+    }
+}
+
+/// Wrapper system for single success systems.
+///
+/// Runs the given system each frame until it succeeds (returns Some). Uses
+/// `Option<()>` instead of a `bool` to allow for easy usage of `?`.
+///
+/// Takes a [`Ulid`] that is used to identify whether or not the system has
+/// succeeded from the [`SingleSuccessSystems`] resource.
+pub fn single_success_system<Args, S>(id: Ulid, system: S) -> StaticSystem<(), ()>
+where
+    S: IntoSystem<Args, (), Option<()>, Sys = StaticSystem<(), Option<()>>>,
+{
+    let mut system = system.system();
+    (move |world: &World| {
+        let succeeded = world
+            .init_resource::<SingleSuccessSystems>()
+            .has_system_succeeded(id);
+        if !succeeded && system.run(world, ()).is_some() {
+            world
+                .init_resource::<SingleSuccessSystems>()
+                .set_system_completed(id);
+        }
+    })
+    .system()
+}
+
+/// Resource tracking which of single success systems have completed with a
+/// [`HashSet`] of [`Ulid`] for the succeeded.
+#[derive(HasSchema, Clone, Default, Deref, DerefMut)]
+pub struct SingleSuccessSystems(pub HashSet<Ulid>);
+
+impl SingleSuccessSystems {
+    /// Reset single success systems completion status. so they run again until success.
+    #[inline]
+    pub fn reset(&mut self) {
+        self.clear();
+    }
+
+    /// Check if system has completed
+    #[inline]
+    pub fn has_system_succeeded(&self, ulid: Ulid) -> bool {
+        self.contains(&ulid)
+    }
+
+    /// Mark system as completed.
+    #[inline]
+    pub fn set_system_completed(&mut self, ulid: Ulid) {
+        self.insert(ulid);
     }
 }
 

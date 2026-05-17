@@ -23,9 +23,8 @@ fn main() {
     GameMeta::register_schema();
 
     game.sessions
-        .create_with("launch", |builder: &mut SessionBuilder| {
-            builder.add_system_to_stage(CoreStage::Startup, launch_game_session);
-        });
+        .create("launch")
+        .add_system_to_stage(CoreStage::Startup, launch_game_session);
 
     let mut renderer = BonesBevyRenderer::new(game);
     renderer.app_namespace = (
@@ -43,16 +42,15 @@ fn launch_game_session(
 ) {
     session_ops.delete = true;
     // Build game session and add to `Sessions`
-    sessions.create_with("game", |builder: &mut SessionBuilder| {
-        builder
-            .install_plugin(DefaultSessionPlugin)
-            // Install the plugin that will load our lua plugins and run them in the game session
-            .install_plugin(LuaPluginLoaderSessionPlugin(
-                // Tell it to install the lua plugins specified in our game meta
-                Arc::new(meta.plugins.iter().copied().collect()),
-            ))
-            .add_system_to_stage(CoreStage::Startup, game_startup);
-    });
+    sessions
+        .create("game")
+        .install_plugin(DefaultSessionPlugin)
+        // Install the plugin that will load our lua plugins and run them in the game session
+        .install_plugin(LuaPluginLoaderSessionPlugin(
+            // Tell it to install the lua plugins specified in our game meta
+            Arc::new(meta.plugins.iter().copied().collect()),
+        ))
+        .add_system_to_stage(CoreStage::Startup, game_startup);
 }
 
 fn game_startup(

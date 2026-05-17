@@ -24,7 +24,7 @@ pub mod transform;
 pub mod ui;
 
 /// Bones framework rendering plugin.
-pub fn render_plugin(session: &mut SessionBuilder) {
+pub fn render_plugin(session: &mut Session) {
     session
         .install_plugin(sprite::sprite_plugin)
         .install_plugin(camera::plugin);
