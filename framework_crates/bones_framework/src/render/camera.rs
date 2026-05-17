@@ -125,7 +125,7 @@ pub fn spawn_default_camera(
 }
 
 /// Install the camera utilities on the given [`SystemStages`].
-pub fn plugin(session: &mut SessionBuilder) {
+pub fn plugin(session: &mut Session) {
     session
         .stages
         .add_system_to_stage(CoreStage::Last, apply_shake)

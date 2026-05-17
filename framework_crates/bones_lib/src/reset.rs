@@ -1,54 +1,69 @@
-//! Conveniences for resetting a World to its' startup state.
+//! Conveniences for resetting a World to its' default state.
 use crate::prelude::*;
 
-/// Convenience resource for reseting the [`World`] while retaining a selection of resources if desired.
+/// Convenience type for selecting resources to keep before clearing the
+/// components, entities, and resources on a [`World`].
+///  ```ignore
+/// ResetWorld::standard()
+///     .keep::<Scoreboard>()
+///     .keep::<WritingRust>()
+///     .keep::<TheBugsAway>()
+///     .reset(world);
+/// ```
+/// Reseting the world should likely be the first call in your systems when
+/// applicable so that components are rendered continuously without disappearing
+/// for a frame before respawning world startup components.
 ///
-/// See [`Self::reset_world`]
-#[derive(HasSchema, Clone, Default)]
-pub struct ResetWorld {
-    /// Set of [`SchemaId`]s for the resources that will not be removed from the
-    /// world when calling [`Self::reset_world`].
-    pub reset_resources: HashSet<SchemaId>,
-}
+/// You can create the type with [`Self::standard`], which is recommended for
+/// keeping certain special resources like [`SessionOptions`] & [`Entities`] on
+/// creation, or you can use [`Self::empty`] to create a new type that won't
+/// keep any resources on creation.
+///
+/// To add more resources to the list you can use [`self.keep`](Self::keep) with
+/// the specified type, no data needed, and chain the methods like the example
+/// above.
+///
+/// Uses a [`HashSet`] of [`SchemaId`] to determine the resources that will not
+/// be removed from the world on reset.
+#[derive(HasSchema, Default, Clone, Deref, DerefMut)]
+pub struct ResetWorld(pub HashSet<SchemaId>);
 
 impl ResetWorld {
-    /// Adds the [`SchemaId`] of the type given to the set of resources to
-    /// retain on reset.
-    pub fn retain_resource<T: HasSchema>(&mut self) {
-        self.reset_resources.insert(T::schema().id());
+    /// Create a [`ResetWorld`] with no resources kept as opposed to the
+    /// [`Self::standard`] which keeps certain special resources on creation.
+    pub fn empty() -> Self {
+        Self(HashSet::default())
     }
-
-    /// Removes the [`SchemaId`] of the type given from the set of resources to
-    /// retain on reset.
-    pub fn drop_resource<T: HasSchema>(&mut self) {
-        self.reset_resources.remove(&T::schema().id());
+    /// Create a [`ResetWorld`] that already keeps some basic special resources
+    /// that are usually needed like [`SessionOptions`] & [`Entities`].
+    pub fn standard() -> Self {
+        Self::empty().keep::<Entities>().keep::<SessionOptions>()
     }
-
-    /// Convenience method for reseting the [`World`]. Clears components,
-    /// entities, and resources out of the world.
+    /// Adds the [`SchemaId`] of the type given to the set of resources to keep
+    /// on reset.
     ///
-    /// Resources in [`self.reset_resources`](Self::reset_resources) field are
-    /// not removed from the world and can be easily added via
-    /// [`Self::retain_resource`] or removed via [`Self::drop_resource`].
-    ///
-    /// [`Entities`], [`Time`], [`SessionOptions`], and [`ResetWorld`] are
-    /// always retained when calling.
-    ///
-    /// This should likely be the first call in your systems so that components
-    /// are rendered continuously without dropping out for one frame before
-    /// respawning world startup components.
-    ///
-    /// Safe to call while borrowing `Self` as a resource from the world without
-    /// panicking.
-    pub fn reset_world(&mut self, world: &World) {
-        self.retain_resource::<ResetWorld>(); // This prevents a mutable borrow in `retain_owned_resources`.
-        self.retain_resource::<Entities>();
-        self.retain_resource::<Time>(); // TODO: make sure we need the `Time` resource retained.
-        self.retain_resource::<SessionOptions>();
-
+    /// Returns `Self` to allow chaining the method:
+    /// ```ignore
+    /// Self::standard()
+    ///     .keep::<Scoreboard>()
+    ///     .keep::<WritingRust>()
+    ///     .keep::<TheBugsAway>()
+    ///     .reset(world);
+    /// ```
+    pub fn keep<T: HasSchema>(mut self) -> Self {
+        self.insert(T::schema().id());
+        self
+    }
+    /// Reset the given [`World`], clearing resources that are not included in
+    /// `self` as well as components and entities.
+    pub fn reset(self, world: &World) {
         world.resource_mut::<Entities>().kill_all(); // `kill_all` for component clearing
         world.maintain(); // clear components
         *world.resource_mut::<Entities>() = Entities::default(); // fully reset entities
-        world.retain_owned_resources(|schema_id| self.reset_resources.contains(&schema_id));
+        world.retain_owned_resources(|schema_id| self.contains(&schema_id));
+    }
+    /// Reset the given [`World`]'s resources that are not included in `self`.
+    pub fn reset_resources(self, world: &World) {
+        world.retain_owned_resources(|schema_id| self.contains(&schema_id));
     }
 }

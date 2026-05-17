@@ -23,16 +23,13 @@ fn main() {
     let mut world = World::new();
 
     // Build SystemStages to store the systems that we will run more than once.
-    let mut stages_builder = SystemStagesBuilder::with_core_stages();
+    let mut stages = SystemStages::with_core_stages();
 
     // Add our systems to the system stages
-    stages_builder
+    stages
         .add_system_to_stage(CoreStage::Startup, startup_system)
         .add_system_to_stage(CoreStage::Update, pos_vel_system)
         .add_system_to_stage(CoreStage::PostUpdate, print_system);
-
-    // Finish build to get `SystemStages`.
-    let mut stages = stages_builder.finish();
 
     // Run our game loop for 10 frames
     for _ in 0..10 {

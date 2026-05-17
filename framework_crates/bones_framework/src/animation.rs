@@ -3,7 +3,7 @@
 use crate::prelude::*;
 
 /// Install animation utilities into the given [`SystemStages`].
-pub fn animation_plugin(core: &mut SessionBuilder) {
+pub fn animation_plugin(core: &mut Session) {
     core.stages
         .add_system_to_stage(CoreStage::Last, update_animation_banks)
         .add_system_to_stage(CoreStage::Last, animate_sprites);
