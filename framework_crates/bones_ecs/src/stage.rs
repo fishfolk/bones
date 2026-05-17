@@ -4,12 +4,6 @@ use std::collections::VecDeque;
 
 use crate::prelude::*;
 
-/// Resource that is automatically added to the world while a system stage is being run
-/// that specifies the unique ID of the stage that being run.
-// TODO: remove this resource if unused.
-#[derive(Deref, DerefMut, Clone, Copy, HasSchema, Default)]
-pub struct CurrentSystemStage(pub Ulid);
-
 /// An ordered collection of [`SystemStage`]s.
 pub struct SystemStages {
     /// The stages in the collection, in the order that they will be run.
@@ -97,20 +91,11 @@ impl SystemStages {
 
     /// Execute the systems on the given `world`.
     pub fn run(&mut self, world: &mut World) {
-        // Run each stage
         for stage in &mut self.stages {
-            // Set the current stage resource
-            world.insert_resource(CurrentSystemStage(stage.id()));
-
-            // Run the stage
             stage.run(world);
         }
-
         // Cleanup killed entities
         world.maintain();
-
-        // Remove the current system stage resource
-        world.resources.remove::<CurrentSystemStage>();
     }
 
     /// Add a system to the [`CoreStage::Startup`] stage which specially runs
