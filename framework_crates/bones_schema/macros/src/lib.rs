@@ -15,22 +15,21 @@ macro_rules! throw {
 
 /// Derive macro for the HasSchema trait.
 ///
-/// ## Usage with #[repr(C)]
-/// HasSchema works with the #[repr(C)] annotation to fully implement its features.
+/// ## Usage with `#[repr(C)]`
+/// HasSchema works with the `#[repr(C)]` annotation to fully implement its features.
 ///
-/// If there is no #[repr(C)] annotation, the SchemaKind of your type's schema will be Opaque.
+/// If there is no `#[repr(C)]` annotation, the SchemaKind of your type's schema will be Opaque.
 ///
-/// This means if you don't know the kind of type, like in the case of a SchemaBox, you'll be unable
+/// This means if you don't know the kind of type, like in the case of a `SchemaBox`, you'll be unable
 /// to read the fields.
 ///
-/// This applies to bones' lua scripting since SchemaBox is effectively the "lua type".
-/// See SchemaBox.
+/// This applies to bones' lua scripting since `SchemaBox` is effectively the "lua type".
 ///
-/// If you intend a type to be opaque even though it has #[repr(C)] you can use #[schema(opaque)]
+/// If you intend a type to be opaque even though it has `#[repr(C)]` you can use `#[schema(opaque)]`
 /// to force an opaque schema representation.
 ///
-/// Keep in mind, enums deriving HasSchema with a #[repr(C)] annotation must also specify an
-/// enum tag type like #[repr(C, u8)] where u8 could be either u16 or u32 if you need
+/// Keep in mind, enums deriving HasSchema with a `#[repr(C)]` annotation must also specify an
+/// enum tag type like `#[repr(u8)]` where `u8` could be either `u16` or `u32` if you need
 /// more than 256 enum variants.
 ///
 /// ## no_default & no_clone attributes
