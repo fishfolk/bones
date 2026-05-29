@@ -64,7 +64,18 @@ pub struct GamepadButtonEvent {
 
 /// A specific button on a gamepad.
 #[allow(missing_docs)]
-#[derive(HasSchema, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(
+    HasSchema,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    Hash,
+    serde::Deserialize,
+    serde::Serialize,
+)]
 #[repr(C, u8)]
 pub enum GamepadButton {
     #[default]
@@ -135,7 +146,9 @@ pub struct GamepadAxisEvent {
 }
 
 /// A specific gamepad axis that may have changed.
-#[derive(HasSchema, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(
+    HasSchema, Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize,
+)]
 #[schema(no_default)]
 #[allow(missing_docs)]
 #[repr(C, u8)]

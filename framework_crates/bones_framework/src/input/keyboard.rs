@@ -23,7 +23,18 @@ pub struct KeyboardEvent {
 }
 
 /// The key code of a keyboard key.
-#[derive(HasSchema, Clone, Copy, Default, Debug, PartialEq, Eq, Hash)]
+#[derive(
+    HasSchema,
+    Clone,
+    Copy,
+    Default,
+    Debug,
+    PartialEq,
+    Eq,
+    Hash,
+    serde::Deserialize,
+    serde::Serialize,
+)]
 #[repr(u32)]
 pub enum KeyCode {
     #[default]
