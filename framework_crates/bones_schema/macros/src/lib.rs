@@ -16,26 +16,29 @@ macro_rules! throw {
 /// Derive macro for the HasSchema trait.
 ///
 /// ## Usage with `#[repr(C)]`
-/// HasSchema works with the `#[repr(C)]` annotation to fully implement its features.
+/// HasSchema works with the `#[repr(C)]` annotation to fully implement its
+/// features.
 ///
-/// If there is no `#[repr(C)]` annotation, the SchemaKind of your type's schema will be Opaque.
+/// If there is no `#[repr(C)]` annotation, the SchemaKind of your type's schema
+/// will be Opaque.
 ///
-/// This means if you don't know the kind of type, like in the case of a `SchemaBox`, you'll be unable
-/// to read the fields.
+/// This means if you don't know the kind of type, like in the case of a
+/// `SchemaBox`, you'll be unable to read the fields.
 ///
-/// This applies to bones' lua scripting since `SchemaBox` is effectively the "lua type".
+/// This applies to bones' lua scripting since `SchemaBox` is effectively the
+/// "lua type".
 ///
-/// If you intend a type to be opaque even though it has `#[repr(C)]` you can use `#[schema(opaque)]`
-/// to force an opaque schema representation.
+/// If you intend a type to be opaque even though it has `#[repr(C)]` you can
+/// use `#[schema(opaque)]` to force an opaque schema representation.
 ///
-/// Keep in mind, enums deriving HasSchema with a `#[repr(C)]` annotation must also specify an
-/// enum tag type like `#[repr(u8)]` where `u8` could be either `u16` or `u32` if you need
-/// more than 256 enum variants.
+/// Keep in mind, enums deriving HasSchema with a `#[repr(C)]` annotation must
+/// also specify an enum tag type like `#[repr(u8)]` where `u8` could be either
+/// `u16` or `u32` if you need more than 256 enum variants.
 ///
 /// ## no_default & no_clone attributes
-/// HasSchema derive requires the type to implement Default & Clone, if either of these cannot be
-/// implemented you can use the no_default & no_clone schema attributes respectively to ignore
-/// these requirements.
+/// HasSchema derive requires the type to implement Default & Clone, if either
+/// of these cannot be implemented you can use the no_default & no_clone schema
+/// attributes respectively to ignore these requirements.
 /// ```ignore
 /// #[derive(HasSchema, Default)]
 /// #[schema(no_clone)]
@@ -45,25 +48,40 @@ macro_rules! throw {
 /// #[schema(no_default)]
 /// struct DoesntImplDefault;
 /// ```
-/// The caveat for putting no_default on your type is that it cannot be created from a Schema.
-/// This is necessary if you want to create your type within a bones lua script.
+/// The caveat for putting no_default on your type is that it cannot be created
+/// from a Schema. This is necessary if you want to create your type within a
+/// bones lua script.
 ///
-/// Since the fields that need to be initialized to create a complete version of your type cannot be
-/// determined, Schema needs a default function to initialize the data properly.
+/// Since the fields that need to be initialized to create a complete version of
+/// your type cannot be determined, Schema needs a default function to
+/// initialize the data properly.
 ///
-/// The caveat for putting no_clone on your type is that it cannot be cloned in the form of a
-/// SchemaBox.
+/// The caveat for putting no_clone on your type is that it cannot be cloned in
+/// the form of a SchemaBox.
 ///
-/// This is critical in the case of bones' networking which will panic if your type is in the world
-/// and does not implement clone during the network rollback.
+/// This is critical in the case of bones' networking which will panic if your
+/// type is in the world and does not implement clone during the network
+/// rollback.
+///
+/// ## hash & eq attributes
+/// In order for a Schema to implement Hash and Eq, the derive requires opt in
+/// attributes instead of the opt out attributes required for Clone and Default
+/// since you are more likely to leave Hash and Eq out than you are to implement
+/// it.
+/// ```ignore
+/// #[derive(HasSchema, Clone, Default, PartialEq, Eq, Hash)]
+/// #[schema(hash, eq)]
+/// struct DoesImplHashAndEq;
+/// ```
 ///
 /// ## type_data attribute
-/// This attribute takes an expression and stores that value in what is basically
-/// a type keyed map accessible from your type's Schema.
+/// This attribute takes an expression and stores that value in what is
+/// basically a type keyed map accessible from your type's Schema.
 ///
 /// ## derive_type_data attribute
-/// This attribute is simply a shortcut equivalent to using the type_data attribute
-/// with any type's `FromType<YourHasSchemaType>` implementation like so:
+/// This attribute is simply a shortcut equivalent to using the type_data
+/// attribute with any type's `FromType<YourHasSchemaType>` implementation like
+/// so:
 /// ```ignore
 /// #[derive(HasSchema, Clone, Default)]
 /// #[type_data(<OtherType as FromType<Data>>::from_type())]
@@ -77,8 +95,8 @@ macro_rules! throw {
 /// ```
 /// ## Known Limitations
 ///
-/// Currently it isn't possible to construct a struct that contains itself. For example, this will
-/// not work:
+/// Currently it isn't possible to construct a struct that contains itself. For
+/// example, this will not work:
 ///
 /// ```ignore
 /// #[derive(HasSchema)]
@@ -155,6 +173,8 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
     let schema_flags = get_flags_for_attr(&input, "schema");
     let no_clone = schema_flags.iter().any(|x| x.as_str() == "no_clone");
     let no_default = schema_flags.iter().any(|x| x.as_str() == "no_default");
+    let has_hash = schema_flags.iter().any(|x| x.as_str() == "hash");
+    let has_eq = schema_flags.iter().any(|x| x.as_str() == "eq");
     let is_opaque = schema_flags.iter().any(|x| x.as_str() == "opaque")
         || !(repr_c || primitive_repr.is_some());
 
@@ -168,6 +188,16 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
         quote!(None)
     } else {
         quote!(Some(<Self as #schema_mod::raw_fns::RawDefault>::raw_default_cb()))
+    };
+    let hash_fn = if !has_hash {
+        quote!(None)
+    } else {
+        quote!(Some(<Self as #schema_mod::raw_fns::RawHash>::raw_hash_cb()))
+    };
+    let eq_fn = if !has_eq {
+        quote!(None)
+    } else {
+        quote!(Some(<Self as #schema_mod::raw_fns::RawEq>::raw_eq_cb()))
     };
 
     // Get the schema kind
@@ -228,8 +258,8 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
                                             type_data: #type_datas,
                                             clone_fn: #clone_fn,
                                             default_fn: #default_fn,
-                                            eq_fn: None,
-                                            hash_fn: None,
+                                            eq_fn: #eq_fn,
+                                            hash_fn: #hash_fn,
                                             drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop_cb()),
                                         })
                                     },
@@ -358,8 +388,8 @@ pub fn derive_has_schema(input: TokenStream) -> TokenStream {
             type_data: #type_datas,
             default_fn: #default_fn,
             clone_fn: #clone_fn,
-            eq_fn: None,
-            hash_fn: None,
+            eq_fn: #eq_fn,
+            hash_fn: #hash_fn,
             drop_fn: Some(<Self as #schema_mod::raw_fns::RawDrop>::raw_drop_cb()),
         })
     };
