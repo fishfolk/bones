@@ -282,6 +282,13 @@ impl<T> From<Option<T>> for Maybe<T> {
     }
 }
 
+impl<T> From<T> for Maybe<T> {
+    #[inline]
+    fn from(value: T) -> Self {
+        Maybe::Set(value)
+    }
+}
+
 fn maybe_loader(
     ctx: &mut MetaAssetLoadCtx,
     ptr: SchemaRefMut<'_>,
