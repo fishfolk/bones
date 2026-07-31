@@ -16,7 +16,6 @@ pub struct Camera {
     /// The height of the camera in in-game pixels.
     ///
     /// The width of the camera will be determined from the window aspect ratio.
-    // TODO: implement different scaling modes for bones cameras.
     pub size: CameraSize,
     /// Whether or not the camera is enabled and rendering.
     pub active: bool,
