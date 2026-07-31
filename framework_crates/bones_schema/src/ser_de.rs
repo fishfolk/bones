@@ -14,7 +14,7 @@ mod serializer_deserializer {
         de::{Unexpected, VariantAccess, Visitor},
         ser::{SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant},
     };
-    use ustr::{ustr, Ustr};
+    use ustr::Ustr;
 
     use super::*;
 
@@ -301,8 +301,8 @@ mod serializer_deserializer {
         {
             // SOUND: schema asserts this is a SchemaVec.
             let v = unsafe { &mut *(self.0.as_ptr() as *mut SchemaVec) };
+            let item_schema = v.schema();
             loop {
-                let item_schema = v.schema();
                 let mut item = SchemaBox::default(item_schema);
                 let item_ref = item.as_mut();
                 if seq.next_element_seed(item_ref)?.is_none() {
@@ -331,19 +331,16 @@ mod serializer_deserializer {
         {
             // SOUND: schema asserts this is a SchemaMap.
             let v = unsafe { &mut *(self.0.as_ptr() as *mut SchemaMap) };
-            let is_ustr = v.key_schema() == Ustr::schema();
-            if v.key_schema() != String::schema() && !is_ustr {
-                return Err(A::Error::custom(
-                    "Can only deserialize maps with `String` or `Ustr` keys.",
-                ));
-            }
-            while let Some(key) = map.next_key::<String>()? {
-                let key = if is_ustr {
-                    SchemaBox::new(ustr(&key))
-                } else {
-                    SchemaBox::new(key)
-                };
-                let mut value = SchemaBox::default(v.value_schema());
+
+            let key_schema = v.key_schema();
+            let value_schema = v.value_schema();
+            loop {
+                let mut key = SchemaBox::default(key_schema);
+                let mut value = SchemaBox::default(value_schema);
+
+                if map.next_key_seed(key.as_mut())?.is_none() {
+                    break;
+                }
                 map.next_value_seed(value.as_mut())?;
 
                 v.insert_box(key, value);
