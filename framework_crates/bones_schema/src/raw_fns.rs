@@ -91,6 +91,7 @@ impl<T: Hash> RawHash for T {
 /// Trait implemented automatically for types that implement [`Eq`] that can compare two values
 /// through their pointers.
 pub trait RawEq {
+    // TODO: correctly document this function ( it thinks it is `raw_hash` )
     /// Get the hash of the type.
     ///
     /// # Safety
