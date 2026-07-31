@@ -9,7 +9,7 @@ use send_wrapper::SendWrapper;
 
 /// Lazy-initialized GilrsContext
 #[cfg(not(target_arch = "wasm32"))]
-static GILRS_CONTEXT: Lazy<Arc<Mutex<GilrsContext>>> = Lazy::new(|| {
+pub static GILRS_CONTEXT: Lazy<Arc<Mutex<GilrsContext>>> = Lazy::new(|| {
     Arc::new(Mutex::new(
         GilrsContext::new().expect("Failed to initialize GilrsContext"),
     ))
@@ -20,7 +20,7 @@ static GILRS_CONTEXT: Lazy<Arc<Mutex<GilrsContext>>> = Lazy::new(|| {
 // accessed from one thread.
 /// Lazy-initialized GilrsContext
 #[cfg(target_arch = "wasm32")]
-static GILRS_CONTEXT: Lazy<Arc<Mutex<SendWrapper<GilrsContext>>>> = Lazy::new(|| {
+pub static GILRS_CONTEXT: Lazy<Arc<Mutex<SendWrapper<GilrsContext>>>> = Lazy::new(|| {
     Arc::new(Mutex::new(SendWrapper::new(
         GilrsContext::new().expect("Failed to initialize GilrsContext"),
     )))
@@ -36,10 +36,9 @@ pub fn process_gamepad_events() -> GamepadInputs {
     {
         gilrs.update(&gilrs_event);
 
-        let gamepad = usize::from(gilrs_event.id) as u32;
+        let gamepad = gilrs_event.id;
         match gilrs_event.event {
             EventType::Connected => {
-                let _pad = gilrs.gamepad(gilrs_event.id);
                 gamepad_inputs.gamepad_events.push(GamepadEvent::Connection(
                     GamepadConnectionEvent {
                         gamepad,
