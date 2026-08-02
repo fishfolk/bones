@@ -37,7 +37,13 @@ impl ResetWorld {
     /// Create a [`ResetWorld`] that already keeps some basic special resources
     /// that are usually needed like [`SessionOptions`] & [`Entities`].
     pub fn standard() -> Self {
-        Self::empty().keep::<Entities>().keep::<SessionOptions>()
+        Self::empty()
+            // Even though Entities is completely cleared on reset, it is always
+            // expected everywhere so we can't remove it from the World.
+            .keep::<Entities>()
+            // SessionOptions is re-inserted every frame, but may still be
+            // wanted right after reset and is expected in `Game` right now.
+            .keep::<SessionOptions>()
     }
     /// Adds the [`SchemaId`] of the type given to the set of resources to keep
     /// on reset.
