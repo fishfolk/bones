@@ -98,7 +98,7 @@ pub trait DenseInputConfig<'a> {
     type Control: DenseControl<Self::Dense>;
 
     // Must be HasSchema because expected to be retrieved from `World` as `Resource`.
-    type Controls: Controls<'a, Self::Control> + HasSchema;
+    type Controls: Controls<'a, Self::Control> + HasSchema + Default;
 
     // InputCollector type params must match that of Controls, so using associated types.
     type InputCollector: InputCollector<'a, Self::Control> + Default;
