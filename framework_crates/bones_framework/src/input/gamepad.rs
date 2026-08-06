@@ -12,7 +12,6 @@ pub struct GamepadInputs {
 
 /// A gamepad event.
 #[derive(HasSchema, Clone, Copy, Debug)]
-#[schema(no_default)]
 #[repr(C, u8)]
 pub enum GamepadEvent {
     /// A connection event.
@@ -23,14 +22,18 @@ pub enum GamepadEvent {
     Axis(GamepadAxisEvent),
 }
 
+impl Default for GamepadEvent {
+    fn default() -> Self {
+        Self::Connection(default())
+    }
+}
+
 /// A gamepad connection event.
-#[derive(HasSchema, Clone, Copy, Debug)]
-#[schema(no_default)]
+#[derive(HasSchema, Clone, Copy, Debug, Default)]
 #[repr(C)]
 pub struct GamepadConnectionEvent {
     /// The ID of the gamepad.
-    #[schema(opaque)]
-    pub gamepad: gilrs::GamepadId,
+    pub gamepad: u32,
     /// The type of connection event.
     pub event: GamepadConnectionEventKind,
 }
@@ -47,13 +50,11 @@ pub enum GamepadConnectionEventKind {
 }
 
 /// A gamepad button event.
-#[derive(HasSchema, Clone, Copy, Debug)]
-#[schema(no_default)]
+#[derive(HasSchema, Clone, Copy, Debug, Default)]
 #[repr(C)]
 pub struct GamepadButtonEvent {
     /// The ID of the gamepad.
-    #[schema(opaque)]
-    pub gamepad: gilrs::GamepadId,
+    pub gamepad: u32,
     /// The gamepad button.
     pub button: GamepadButton,
     /// The value of the button, for example, this will be `1.0` when presssed and `0.0` when
@@ -138,8 +139,7 @@ impl std::fmt::Display for GamepadButton {
 #[repr(C)]
 pub struct GamepadAxisEvent {
     /// The ID of the gamepad.
-    #[schema(opaque)]
-    pub gamepad: gilrs::GamepadId,
+    pub gamepad: u32,
     /// The axis that has changed.
     pub axis: GamepadAxis,
     /// The value of the axis.
