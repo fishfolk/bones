@@ -36,7 +36,7 @@ pub fn process_gamepad_events() -> GamepadInputs {
     {
         gilrs.update(&gilrs_event);
 
-        let gamepad = gilrs_event.id;
+        let gamepad = usize::from(gilrs_event.id) as u32;
         match gilrs_event.event {
             EventType::Connected => {
                 gamepad_inputs.gamepad_events.push(GamepadEvent::Connection(
