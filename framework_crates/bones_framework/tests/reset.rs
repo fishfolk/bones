@@ -44,7 +44,7 @@ pub fn single_success_system_reset() {
     let mut game = Game::new();
 
     game.sessions
-        .create_with("game")
+        .create("game")
         // Counter should not be kept on reset.
         .add_system_to_stage(Startup, |world: &World| {
             world.insert_resource(Counter(0));
