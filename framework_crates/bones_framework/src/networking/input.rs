@@ -16,9 +16,6 @@ pub trait NetworkControls<'a, Dense: DenseInput, Control>: Controls<'a, Control>
         dense_input: &Dense,
         status: NetworkInputStatus,
     );
-
-    /// Get dense control for player.
-    fn get_dense_control(&self, player_idx: usize) -> Dense;
 }
 
 impl<'a, T, Dense, Control> NetworkControls<'a, Dense, Control> for T
@@ -36,9 +33,5 @@ where
     ) {
         self.get_control_mut(player_idx)
             .update_from_dense(dense_input);
-    }
-
-    fn get_dense_control(&self, player_idx: usize) -> Dense {
-        self.get_control(player_idx).get_dense_input()
     }
 }

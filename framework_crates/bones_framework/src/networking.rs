@@ -1,7 +1,7 @@
 #![doc = include_str!("./networking.md")]
 
 use self::{input::NetworkControls, socket::Socket};
-use crate::input::{DenseControl, DenseInput, DenseInputConfig};
+use crate::input::{DenseInput, DenseInputConfig};
 use crate::networking::online::OnlineMatchmakerResponse;
 pub use crate::networking::random::RngGenerator;
 use crate::prelude::*;
@@ -655,10 +655,9 @@ where
 
         // Collect inputs and update controls
         self.input_collector.apply_inputs(world);
-        self.input_collector.update_just_pressed();
 
         // save local players dense input for use with ggrs
-        self.last_player_input = self.input_collector.get_control().get_dense_input();
+        self.last_player_input = self.input_collector.get_state();
 
         #[cfg(feature = "net-debug")]
         // Current frame before we start network update loop
@@ -788,6 +787,11 @@ where
                                     inputs: network_inputs,
                                 } => {
                                     // Input has been consumed, signal that we are in new input frame
+
+                                    // TODO: only call `InputCollector::advance_frame`
+                                    // when we are in a "prediction frame", not a "rollback catchup frame".
+                                    // If there are requests to load a snapshot and re-run frames the
+                                    // input collector's input has already been defined for those frames.
                                     self.input_collector.advance_frame();
 
                                     // Fetch the PlayerNetworkStats for each remote player, guaranteeing each one is inserted into the index matching its handle

@@ -2,6 +2,7 @@
 
 use bones_lib::ecs::World;
 use bones_schema::HasSchema;
+use std::fmt::Debug;
 
 pub mod gamepad;
 pub mod gilrs;
@@ -10,7 +11,7 @@ pub mod mouse;
 pub mod proto;
 pub mod window;
 
-/// The state of a button, ether pressed or released.
+/// The state of a button, either pressed or released.
 #[derive(HasSchema, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[repr(u8)]
 pub enum ButtonState {
@@ -31,41 +32,45 @@ impl ButtonState {
 /// Module prelude.
 pub mod prelude {
     pub use super::{gamepad::*, keyboard::*, mouse::*, proto, window::*, ButtonState};
-    pub use crate::input::{
-        Controls, DenseControl, DenseInput, DenseInputCollector, DenseInputConfig, InputCollector,
-    };
+    pub use crate::input::{Controls, DenseControl, DenseInput, DenseInputConfig, InputCollector};
 }
 
-/// Maps raw inputs to game controls and exposes controls for respective player and their control source.
-///
-/// [`InputCollector::apply_inputs`] maps raw input to game controls and updates them.
-///
-/// [`InputCollector::update_just_pressed`] computes any changes in pressed buttons that may be stored on control.
-///
-/// [`InputCollector::advance_frame`] is  used to mark that the input has been consumed, and update the prev frame inputs to current, to compute changes next frame.
-pub trait InputCollector<'a, Control>: Send + Sync {
-    /// Update the internal state with new inputs. This must be called every render frame with the
-    /// input events. This updates which buttons are pressed, but does not compute what buttons were "just_pressed".
-    /// use [`InputCollector::update_just_pressed`] to do this.
+/// Dense input super trait for network replication.
+pub trait DenseInput:
+    bytemuck::Pod + bytemuck::Zeroable + Copy + Clone + PartialEq + Eq + Send + Sync
+{
+}
+// Automatic implementation for `DenseInput`.
+impl<T> DenseInput for T where
+    T: bytemuck::Pod + bytemuck::Zeroable + Copy + Clone + PartialEq + Eq + Send + Sync
+{
+}
+
+/// Collects local input state for the network client from the [`World`].
+pub trait InputCollector<'a, State>: Send + Sync {
+    /// Update the internal state with the [`World`].
+    ///
+    /// This should be called every render frame / cpu cycle after input events.
     fn apply_inputs(&mut self, world: &World);
 
-    /// Indicate input for this frame has been consumed. An implementation of [`InputCollector`] that is
-    /// used with a fixed simulation step may track what keys are currently pressed, and what keys were "just pressed",
-    /// (changing from previous state).
+    /// Indicates to the collector that its input has been consumed.
     ///
-    /// This saves current inputs as previous frame's inputs, allowing for determining what is "just pressed" next frame.
+    /// This should be called on frame update when input for this frame has been
+    /// consumed as opposed to the cpu cycle. In a network session, by the time
+    /// this is called, the dense input should be sent across the network.
     fn advance_frame(&mut self);
 
-    /// Update which buttons have been "just pressed", when input has changed from last frame and current input state.
-    ///
-    /// This does not modify previous frame's input, to do this use [`InputCollector::advance_frame`].
-    fn update_just_pressed(&mut self);
-
-    /// Get control for player.
-    fn get_control(&self) -> &Control;
+    /// Get the internally stored input state.
+    fn get_state(&self) -> State;
 }
 
-/// Trait that tracks player control state. Provides associated types for other input trait implementations.
+/// A trait representing a control type capable of being updated by a [`DenseInput`].
+pub trait DenseControl<Dense: DenseInput>: Send + Sync + Default {
+    /// Update this control with a [`DenseInput`].
+    fn update_from_dense(&mut self, new_control: &Dense);
+}
+
+/// Trait for getting every player control via index.
 pub trait Controls<'a, Control> {
     /// Get control for player.
     fn get_control(&self, player_idx: usize) -> &Control;
@@ -74,67 +79,31 @@ pub trait Controls<'a, Control> {
     fn get_control_mut(&mut self, player_idx: usize) -> &mut Control;
 }
 
-use std::fmt::Debug;
-
-/// Dense input for network replication.
-pub trait DenseInput:
-    bytemuck::Pod + bytemuck::Zeroable + Copy + Clone + PartialEq + Eq + Send + Sync
-{
-}
-
-/// Automatic implementation for `DenseInput`.
-impl<T> DenseInput for T where
-    T: bytemuck::Pod + bytemuck::Zeroable + Copy + Clone + PartialEq + Eq + Send + Sync
-{
-}
-
-/// Define input types used by game for use in networking.
-///
-/// As long as types `Controls` and `InputCollector` implement traits [`Controls`] and [`InputCollector`],
-/// trait bounds [`DenseControl`] and [`DenseInputCollector`] are automatically implemented.
+/// Defines input types for use in networking.
 #[allow(missing_docs)]
 pub trait DenseInputConfig<'a> {
+    /// Current input state for a client. This is what is sent across the
+    /// network. All input history and other data derived from the state should
+    /// be stored by the [`Control`](DenseInputConfig::Control).
     type Dense: DenseInput + Debug + Default;
+
+    /// Local configuration for getting [`Dense`](DenseInputConfig::Dense) from
+    /// the [`World`] to be sent across the network.
+    type InputCollector: InputCollector<'a, Self::Dense> + Default;
+
+    /// The complete input data of a client. Updated with
+    /// [`Dense`](DenseInputConfig::Dense) when recieved from the network. The
+    /// [`Controls`](DenseInputConfig::Controls) resource in the [`World`] will
+    /// contain every client's control after update.
     type Control: DenseControl<Self::Dense>;
 
-    // Must be HasSchema because expected to be retrieved from `World` as `Resource`.
-    type Controls: Controls<'a, Self::Control> + HasSchema + Default;
-
-    // InputCollector type params must match that of Controls, so using associated types.
-    type InputCollector: InputCollector<'a, Self::Control> + Default;
-}
-
-///  Trait allowing for creating and applying [`DenseInput`] from control.
-pub trait DenseControl<Dense: DenseInput>: Send + Sync + Default {
-    /// Get [`DenseInput`] for control.
-    fn get_dense_input(&self) -> Dense;
-
-    /// Update control from [`DenseInput`].
-    fn update_from_dense(&mut self, new_control: &Dense);
-}
-
-/// Extension of [`InputCollector`] exposing dense control for networking.
-///
-/// This trait is automatically implemented for [`InputCollector`]'s such that `Control`
-/// implements [`DenseControl`] (i.e. implements dense input)
-pub trait DenseInputCollector<'a, Dense, Control>: InputCollector<'a, Control>
-where
-    Dense: DenseInput,
-    Control: DenseControl<Dense>,
-{
-    /// Get dense control
-    fn get_dense_control(&self) -> Dense;
-}
-
-/// Provide automatic [`DenseInputCollector`] for [`InputCollector`] when type parameters
-/// meet required bounds for networking.
-impl<'a, T, Dense, Control> DenseInputCollector<'a, Dense, Control> for T
-where
-    Dense: DenseInput,
-    Control: DenseControl<Dense>,
-    T: InputCollector<'a, Control>,
-{
-    fn get_dense_control(&self) -> Dense {
-        self.get_control().get_dense_input()
-    }
+    /// The resource that will contain a [`Control`](DenseInputConfig::Control)
+    /// for every client in a network session.
+    type Controls: Controls<'a, Self::Control>
+        // HasSchema because expected to be retrieved from `World` as
+        // `Resource`.
+        + HasSchema
+        // Default because not expected to be initialized when retrieved from
+        // `World`.
+        + Default;
 }
