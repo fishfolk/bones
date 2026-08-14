@@ -28,6 +28,7 @@ use crate::prelude::*;
 
 /// Contains a bones [`World`] for state, [`SystemStages`] for behavior, and a
 /// [`SessionRunner`] to determine how those are used.
+// TODO: add network safety docs for `Session`.
 #[non_exhaustive]
 #[derive(Deref, DerefMut)]
 pub struct Session {
@@ -60,7 +61,47 @@ impl Default for Session {
 }
 
 impl Session {
-    /// Install a plugin.
+    /// Set the priority of this session relative to other sessions in the [`Game`].
+    pub fn priority(&mut self, priority: i32) -> &mut Self {
+        self.priority = priority;
+        self
+    }
+    /// Set the [`SessionRunner`] to use for this session.
+    pub fn runner(&mut self, runner: Box<dyn SessionRunner>) -> &mut Self {
+        self.runner = runner;
+        self
+    }
+    /// Set whether or not this session should have it's systems run.
+    pub fn activity(&mut self, active: bool) -> &mut Self {
+        self.active = active;
+        self
+    }
+    /// Set whether or not this session should be rendered.
+    pub fn visibility(&mut self, visible: bool) -> &mut Self {
+        self.visible = visible;
+        self
+    }
+    /// Set this session to be rendered.
+    pub fn visible(&mut self) -> &mut Self {
+        self.visible = true;
+        self
+    }
+    /// Set this session to not be rendered.
+    pub fn invisible(&mut self) -> &mut Self {
+        self.visible = false;
+        self
+    }
+    /// Set this session to have it's systems run.
+    pub fn active(&mut self) -> &mut Self {
+        self.active = true;
+        self
+    }
+    /// Set this session to not have it's systems run.
+    pub fn inactive(&mut self) -> &mut Self {
+        self.active = false;
+        self
+    }
+    /// Install a [`SessionPlugin`].
     pub fn install_plugin(&mut self, plugin: impl SessionPlugin) -> &mut Self {
         plugin.install(self);
         self
@@ -592,6 +633,7 @@ impl Sessions {
         self.map.get_mut(&name).unwrap()
     }
 
+    // TODO: `create_with` should be removed if `create` stays appropriate.
     /// Create a new session, and borrow it mutably so it can be modified.
     #[track_caller]
     pub fn create_with<K: TryInto<Ustr>>(
