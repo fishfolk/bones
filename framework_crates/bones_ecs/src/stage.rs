@@ -147,7 +147,9 @@ impl SystemStages {
     /// struct ResourceBeingInserted;
     /// ```
     /// Then the system being added to the [`Startup`] system stage will panic
-    /// when inserting a second time.
+    /// when inserting a second time. The startup stage only runs once so it is
+    /// therefore safe to use a type like the example above as long as you don't
+    /// plan on removing the [`StartupSystemsRan`] resource from the [`World`].
     pub fn add_startup_resource<R: HasSchema>(&mut self, resource: R) -> &mut Self {
         let mut once = Some(SchemaBox::new(resource));
 
@@ -347,6 +349,12 @@ where
     })
     .system()
 }
+
+// TODO: Figure out a name for a function that creates a single success system
+// with the Ulid created automatically internally. Maybe rename the current
+// function to something else and have the auto-generated id function as
+// standard since there is probably only a slim possibility that you will need
+// to re-use a Ulid for these kind of systems.
 
 /// Resource tracking which of single success systems have completed with a
 /// [`HashSet`] of [`Ulid`] for the succeeded.
