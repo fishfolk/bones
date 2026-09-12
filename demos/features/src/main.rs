@@ -365,10 +365,9 @@ fn tilemap_startup_system(
 
     // Load our map and atlas info
     let map_info = assets.get(meta.tilemap_demo);
-    let atlas = assets.get(map_info.atlas);
 
     // Create a new map layer
-    let mut layer = TileLayer::new(map_info.map_size, atlas.tile_size, map_info.atlas);
+    let mut layer = TileLayer::new(map_info.map_size, map_info.atlas);
 
     // Load the layer up with the tiles from our metadata
     for tile in &map_info.tiles {

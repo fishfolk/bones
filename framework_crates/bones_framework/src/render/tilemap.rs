@@ -10,8 +10,6 @@ pub struct EntityGridMap {
     pub tiles: Vec<Option<Entity>>,
     /// The size of the map in tiles (or columns and rows).
     pub grid_size: UVec2,
-    /// The size of each tile in the layer.
-    pub tile_size: Vec2,
 }
 
 /// A tilemap layer component.
@@ -25,9 +23,9 @@ pub struct TileLayer {
 }
 impl TileLayer {
     /// Create a new [`TileLayer`].
-    pub fn new(grid_size: UVec2, tile_size: Vec2, atlas: Handle<Atlas>) -> Self {
+    pub fn new(grid_size: UVec2, atlas: Handle<Atlas>) -> Self {
         Self {
-            map: EntityGridMap::new(grid_size, tile_size),
+            map: EntityGridMap::new(grid_size),
             atlas,
         }
     }
@@ -47,19 +45,13 @@ pub struct Tile {
 
 impl EntityGridMap {
     /// Create a new tile layer
-    pub fn new(grid_size: UVec2, tile_size: Vec2) -> Self {
+    pub fn new(grid_size: UVec2) -> Self {
         let mut out = Self {
             tiles: Vec::new(),
             grid_size,
-            tile_size,
         };
         out.ensure_space();
         out
-    }
-
-    /// Get the overall world size
-    pub fn size(&self) -> Vec2 {
-        self.grid_size.as_vec2() * self.tile_size
     }
 
     /// Get's the entity at the given position in the grid if set, indexed with
@@ -188,7 +180,7 @@ impl EntityGridMap {
     /// If shrinking the layer, tiles that are out-of-bounds will be removed.
     pub fn resize_grid(&mut self, grid_size: UVec2) {
         // Create a new layer with the desired grid size
-        let mut new_layer = EntityGridMap::new(grid_size, self.tile_size);
+        let mut new_layer = EntityGridMap::new(grid_size);
 
         // Copy the tiles from this layer into the new one
         new_layer.copy_from(self);
