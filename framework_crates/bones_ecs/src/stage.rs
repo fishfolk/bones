@@ -1,6 +1,7 @@
 //! Implementation of stage abstraction for running collections of systems over a [`World`].
 
 use std::collections::VecDeque;
+use std::marker::PhantomData;
 
 use crate::prelude::*;
 
@@ -21,7 +22,14 @@ impl SystemStages {
     pub fn with_core_stages() -> Self {
         Self {
             stages: vec![
-                Box::new(StartupSystemStage::new(CoreStage::Startup)),
+                Box::new(
+                    StartupSystemStage::<CoreStageStartupResourceSystemsRan>::new(
+                        CoreStage::StartupResource,
+                    ),
+                ),
+                Box::new(StartupSystemStage::<CoreStageStartupSystemsRan>::new(
+                    CoreStage::Startup,
+                )),
                 Box::new(SimpleSystemStage::new(CoreStage::First)),
                 Box::new(SimpleSystemStage::new(CoreStage::PreUpdate)),
                 Box::new(SimpleSystemStage::new(CoreStage::Update)),
@@ -127,16 +135,16 @@ impl SystemStages {
     /// Adds a system to [`CoreStage::Startup`] that inserts the default value
     /// of a resource into the [`World`] if it doesn't already exist.
     pub fn init_startup_resource<R: HasSchema + FromWorld>(&mut self) -> &mut Self {
-        self.add_system_to_stage(Startup, |world: &World| {
+        self.add_system_to_stage(StartupResource, |world: &World| {
             world.init_resource::<R>();
         });
         self
     }
 
-    /// Adds a system to [`CoreStage::Startup`] that inserts the given resource
-    /// into the [`World`] if it doesn't already exist. The resource type is
-    /// required to have a [`HasSchema`] clone implementation to re-insert the
-    /// resource into the world after the first startup.
+    /// Adds a system to [`CoreStage::StartupResource`] that inserts the given
+    /// resource into the [`World`] if it doesn't already exist. The resource
+    /// type is required to have a [`HasSchema`] clone implementation to
+    /// re-insert the resource into the world after the first startup.
     ///
     /// # Clone Requirement Details
     /// If the type being added implements [`HasSchema`] with the derive like
@@ -146,14 +154,16 @@ impl SystemStages {
     /// #[schema(no_clone)] // This bypasses HasSchema clone requirements.
     /// struct ResourceBeingInserted;
     /// ```
-    /// Then the system being added to the [`Startup`] system stage will panic
-    /// when inserting a second time. The startup stage only runs once so it is
-    /// therefore safe to use a type like the example above as long as you don't
-    /// plan on removing the [`StartupSystemsRan`] resource from the [`World`].
+    /// Then the system being added to the [`StartupResource`] system stage will
+    /// panic when inserting a second time. The startup resource stage only runs
+    /// once so it is therefore safe to use a type like the example above as
+    /// long as you don't plan on removing from the [`World`] the
+    /// [`StartupSystemStage`] tag which in this case is
+    /// [`CoreStageStartupResourceSystemsRan`].
     pub fn add_startup_resource<R: HasSchema>(&mut self, resource: R) -> &mut Self {
         let mut once = Some(SchemaBox::new(resource));
 
-        self.add_system_to_stage(Startup, move |world: &World| {
+        self.add_system_to_stage(StartupResource, move |world: &World| {
             if !world.resources.contains::<R>() {
                 let schema_box = if R::schema().clone_fn.is_some() {
                     once.clone()
@@ -264,12 +274,17 @@ impl SystemStage for SimpleSystemStage {
 }
 
 /// Resource for tracking whether or not the game has run the startup systems in
-/// the [`StartupSystemStage`].
+/// [`CoreStage::Startup`].
 #[derive(HasSchema, Clone, Default, Debug)]
-pub struct StartupSystemsRan;
+pub struct CoreStageStartupSystemsRan;
+
+/// Resource for tracking whether or not the game has run the startup systems in
+/// [`CoreStage::StartupResource`].
+#[derive(HasSchema, Clone, Default, Debug)]
+pub struct CoreStageStartupResourceSystemsRan;
 
 /// [`SystemStage`] for running systems once on startup.
-pub struct StartupSystemStage {
+pub struct StartupSystemStage<T: HasSchema + Default + Clone> {
     /// The unique identifier for the stage.
     pub id: Ulid,
     /// The human-readable name for the stage, used for error messages when something goes wrong.
@@ -278,18 +293,20 @@ pub struct StartupSystemStage {
     ///
     /// Each system will be run in the order that they are in in this list.
     pub systems: Vec<StaticSystem<(), ()>>,
+    _phantom_data: PhantomData<T>,
 }
-impl StartupSystemStage {
+impl<T: HasSchema + Clone + Default> StartupSystemStage<T> {
     /// Create a new, empty stage, for the given label.
     pub fn new<L: StageLabel>(label: L) -> Self {
         Self {
             id: label.id(),
             name: label.name(),
             systems: Default::default(),
+            _phantom_data: PhantomData,
         }
     }
 }
-impl SystemStage for StartupSystemStage {
+impl<T: HasSchema + Clone + Default> SystemStage for StartupSystemStage<T> {
     fn id(&self) -> Ulid {
         self.id
     }
@@ -299,12 +316,12 @@ impl SystemStage for StartupSystemStage {
     }
 
     fn run(&mut self, world: &World) {
-        if world.get_resource_mut::<StartupSystemsRan>().is_none() {
+        if world.get_resource_mut::<T>().is_none() {
             // Run the systems
             for system in &mut self.systems {
                 system.run(world, ());
             }
-            world.insert_resource(StartupSystemsRan);
+            world.insert_resource(T::default());
         }
 
         // Drain the command queue
@@ -392,6 +409,8 @@ pub trait StageLabel {
 /// A [`StageLabel`] for the 5 core stages.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum CoreStage {
+    /// The startup resource insertion stage
+    StartupResource,
     /// The startup stage
     Startup,
     /// The first stage
@@ -413,6 +432,7 @@ impl StageLabel for CoreStage {
 
     fn id(&self) -> Ulid {
         match self {
+            CoreStage::StartupResource => Ulid(2162940536129995539438442124983465554),
             CoreStage::Startup => Ulid(2149923225027836290977818907354065512),
             CoreStage::First => Ulid(2021715391084198804812356024998495966),
             CoreStage::PreUpdate => Ulid(2021715401330719559452824437611089988),
