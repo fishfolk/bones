@@ -430,7 +430,7 @@ pub fn extract_bones_tilemaps(
                 let tile = tiles.get(*tile_ent).unwrap();
 
                 let tile_pos = tile_layer.pos(tile_pos_idx as u32);
-                let tile_offset = tile_pos.as_vec2() * tile_layer.tile_size;
+                let tile_offset = tile_pos.as_vec2() * atlas.tile_size;
 
                 let sprite_idx = tile.idx;
                 let y = sprite_idx / atlas.columns;
