@@ -123,12 +123,12 @@ impl SystemStages {
     /// [`CoreStage::First`].
     ///
     /// See also the wrapper function used inside [`single_success_system`].
-    #[deprecated = "use `.add_system_to_stage(First, single_success_system(Ulid::new(), your_system)"]
+    #[deprecated = "use `.add_system_to_stage(First, single_success_system(your_system)"]
     pub fn add_single_success_system<Args, S>(&mut self, system: S) -> &mut Self
     where
         S: IntoSystem<Args, (), Option<()>, Sys = StaticSystem<(), Option<()>>>,
     {
-        self.add_system_to_stage(First, single_success_system(Ulid::new(), system));
+        self.add_system_to_stage(First, single_success_system(system));
         self
     }
 
@@ -347,56 +347,31 @@ impl<T: HasSchema + Clone + Default> SystemStage for StartupSystemStage<T> {
 /// Runs the given system each frame until it succeeds (returns Some). Uses
 /// `Option<()>` instead of a `bool` to allow for easy usage of `?`.
 ///
-/// Takes a [`Ulid`] that is used to identify whether or not the system has
-/// succeeded from the [`SingleSuccessSystems`] resource.
-pub fn single_success_system<Args, S>(id: Ulid, system: S) -> StaticSystem<(), ()>
+/// System success is tracked with the [`SingleSuccessSystems`] resource which
+/// can be removed if you wish to let all single success systems run again.
+pub fn single_success_system<Args, S>(system: S) -> StaticSystem<(), ()>
 where
     S: IntoSystem<Args, (), Option<()>, Sys = StaticSystem<(), Option<()>>>,
 {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static SINGLE_SUCCESS_SYSTEM_ID_GEN: AtomicU64 = AtomicU64::new(0);
+
+    let id = SINGLE_SUCCESS_SYSTEM_ID_GEN.fetch_add(1, Ordering::SeqCst);
     let mut system = system.system();
     (move |world: &World| {
-        let succeeded = world
-            .init_resource::<SingleSuccessSystems>()
-            .has_system_succeeded(id);
-        if !succeeded && system.run(world, ()).is_some() {
-            world
-                .init_resource::<SingleSuccessSystems>()
-                .set_system_completed(id);
+        if !world.init_resource::<SingleSuccessSystems>().contains(&id)
+            && system.run(world, ()).is_some()
+        {
+            world.init_resource::<SingleSuccessSystems>().insert(id);
         }
     })
     .system()
 }
 
-// TODO: Figure out a name for a function that creates a single success system
-// with the Ulid created automatically internally. Maybe rename the current
-// function to something else and have the auto-generated id function as
-// standard since there is probably only a slim possibility that you will need
-// to re-use a Ulid for these kind of systems.
-
-/// Resource tracking which of single success systems have completed with a
-/// [`HashSet`] of [`Ulid`] for the succeeded.
+/// Resource tracking which single success systems have completed using a
+/// [`HashSet`] of unique [`u64`]s for the succeeded.
 #[derive(HasSchema, Clone, Default, Deref, DerefMut)]
-pub struct SingleSuccessSystems(pub HashSet<Ulid>);
-
-impl SingleSuccessSystems {
-    /// Reset single success systems completion status. so they run again until success.
-    #[inline]
-    pub fn reset(&mut self) {
-        self.clear();
-    }
-
-    /// Check if system has completed
-    #[inline]
-    pub fn has_system_succeeded(&self, ulid: Ulid) -> bool {
-        self.contains(&ulid)
-    }
-
-    /// Mark system as completed.
-    #[inline]
-    pub fn set_system_completed(&mut self, ulid: Ulid) {
-        self.insert(ulid);
-    }
-}
+pub struct SingleSuccessSystems(pub HashSet<u64>);
 
 /// Trait for things that may be used to identify a system stage.
 pub trait StageLabel {
