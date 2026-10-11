@@ -202,7 +202,7 @@ impl std::fmt::Debug for SystemStages {
     }
 }
 
-/// Trait for system stages. A stage is a
+/// Trait for system stages.
 pub trait SystemStage: Sync + Send {
     /// The unique identifier for the stage.
     fn id(&self) -> Ulid;
