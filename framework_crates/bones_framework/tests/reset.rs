@@ -26,8 +26,8 @@ pub fn startup_system_reset() {
     assert_eq!(game.shared_resource::<Counter>().0, 1);
 
     // Reset the world; Equivalent to reseting at the start or end of the frame.
-    // `StartupSystemsRan` is inserted into the world to indicate completion,
-    // but is not kept so startup systems should run again.
+    // `CoreStageStartupSystemsRan` is inserted into the world to indicate
+    // completion, but is not kept so startup systems should run again.
     ResetWorld::standard().reset(&game.sessions.get_mut("game").unwrap().world);
 
     // step again to trigger startup
@@ -52,7 +52,7 @@ pub fn single_success_system_reset() {
         // Single success system increments counter by 1 until 2.
         .add_system_to_stage(
             First,
-            single_success_system(Ulid::new(), |mut counter: ResMut<Counter>| -> Option<()> {
+            single_success_system(|mut counter: ResMut<Counter>| -> Option<()> {
                 // Increment until 2
                 counter.0 += 1;
                 if counter.0 >= 2 {
