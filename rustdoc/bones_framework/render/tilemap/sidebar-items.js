@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Tile","TileLayer"]};
+window.SIDEBAR_ITEMS = {"struct":["EntityGridMap","Tile","TileLayer"]};

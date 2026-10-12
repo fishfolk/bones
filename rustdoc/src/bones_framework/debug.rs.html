@@ -51,7 +51,7 @@
 <a href=#51 id=51 data-nosnippet>51</a>
 <a href=#52 id=52 data-nosnippet>52</a><span class="doccomment">/// If installed, allows opening egui window with [`FrameTimeWindowState`] in [`EguiCtx`] state
 <a href=#53 id=53 data-nosnippet>53</a>/// to get frame time information.
-<a href=#54 id=54 data-nosnippet>54</a></span><span class="kw">pub fn </span>frame_time_diagnostics_plugin(core: <span class="kw-2">&amp;mut </span>SessionBuilder) {
+<a href=#54 id=54 data-nosnippet>54</a></span><span class="kw">pub fn </span>frame_time_diagnostics_plugin(core: <span class="kw-2">&amp;mut </span>Session) {
 <a href=#55 id=55 data-nosnippet>55</a>    core.stages
 <a href=#56 id=56 data-nosnippet>56</a>        .add_system_to_stage(CoreStage::Last, frame_diagnostic_window);
 <a href=#57 id=57 data-nosnippet>57</a>}

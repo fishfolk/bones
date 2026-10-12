@@ -430,7 +430,7 @@
 <a href=#430 id=430 data-nosnippet>430</a>                <span class="kw">let </span>tile = tiles.get(<span class="kw-2">*</span>tile_ent).unwrap();
 <a href=#431 id=431 data-nosnippet>431</a>
 <a href=#432 id=432 data-nosnippet>432</a>                <span class="kw">let </span>tile_pos = tile_layer.pos(tile_pos_idx <span class="kw">as </span>u32);
-<a href=#433 id=433 data-nosnippet>433</a>                <span class="kw">let </span>tile_offset = tile_pos.as_vec2() * tile_layer.tile_size;
+<a href=#433 id=433 data-nosnippet>433</a>                <span class="kw">let </span>tile_offset = tile_pos.as_vec2() * atlas.tile_size;
 <a href=#434 id=434 data-nosnippet>434</a>
 <a href=#435 id=435 data-nosnippet>435</a>                <span class="kw">let </span>sprite_idx = tile.idx;
 <a href=#436 id=436 data-nosnippet>436</a>                <span class="kw">let </span>y = sprite_idx / atlas.columns;

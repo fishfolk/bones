@@ -139,18 +139,18 @@
 <a href=#139 id=139 data-nosnippet>139</a>}
 <a href=#140 id=140 data-nosnippet>140</a>
 <a href=#141 id=141 data-nosnippet>141</a><span class="doccomment">/// Menu plugin
-<a href=#142 id=142 data-nosnippet>142</a></span><span class="kw">pub fn </span>menu_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
+<a href=#142 id=142 data-nosnippet>142</a></span><span class="kw">pub fn </span>menu_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
 <a href=#143 id=143 data-nosnippet>143</a>    <span class="comment">// Register our menu system
 <a href=#144 id=144 data-nosnippet>144</a>    </span>session
 <a href=#145 id=145 data-nosnippet>145</a>        <span class="comment">// Install the bones_framework default plugins for this session
 <a href=#146 id=146 data-nosnippet>146</a>        </span>.install_plugin(DefaultSessionPlugin)
 <a href=#147 id=147 data-nosnippet>147</a>        <span class="comment">// Initialize our menu data resource
-<a href=#148 id=148 data-nosnippet>148</a>        </span>.init_resource::&lt;MenuData&gt;();
+<a href=#148 id=148 data-nosnippet>148</a>        </span>.init_startup_resource::&lt;MenuData&gt;();
 <a href=#149 id=149 data-nosnippet>149</a>
 <a href=#150 id=150 data-nosnippet>150</a>    <span class="comment">// And add our systems.
 <a href=#151 id=151 data-nosnippet>151</a>    </span>session
 <a href=#152 id=152 data-nosnippet>152</a>        .add_system_to_stage(Update, menu_system)
-<a href=#153 id=153 data-nosnippet>153</a>        .add_startup_system(menu_startup);
+<a href=#153 id=153 data-nosnippet>153</a>        .add_system_to_stage(CoreStage::Startup, menu_startup);
 <a href=#154 id=154 data-nosnippet>154</a>}
 <a href=#155 id=155 data-nosnippet>155</a>
 <a href=#156 id=156 data-nosnippet>156</a><span class="doccomment">/// Setup the main menu.
@@ -280,10 +280,10 @@
 <a href=#280 id=280 data-nosnippet>280</a>}
 <a href=#281 id=281 data-nosnippet>281</a>
 <a href=#282 id=282 data-nosnippet>282</a><span class="doccomment">/// Plugin for running the sprite demo.
-<a href=#283 id=283 data-nosnippet>283</a></span><span class="kw">fn </span>sprite_demo_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
+<a href=#283 id=283 data-nosnippet>283</a></span><span class="kw">fn </span>sprite_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
 <a href=#284 id=284 data-nosnippet>284</a>    session
 <a href=#285 id=285 data-nosnippet>285</a>        .install_plugin(DefaultSessionPlugin)
-<a href=#286 id=286 data-nosnippet>286</a>        .add_startup_system(sprite_demo_startup)
+<a href=#286 id=286 data-nosnippet>286</a>        .add_system_to_stage(CoreStage::Startup, sprite_demo_startup)
 <a href=#287 id=287 data-nosnippet>287</a>        .add_system_to_stage(Update, back_to_menu_ui)
 <a href=#288 id=288 data-nosnippet>288</a>        .add_system_to_stage(Update, move_sprite);
 <a href=#289 id=289 data-nosnippet>289</a>}
@@ -344,10 +344,10 @@
 <a href=#344 id=344 data-nosnippet>344</a>}
 <a href=#345 id=345 data-nosnippet>345</a>
 <a href=#346 id=346 data-nosnippet>346</a><span class="doccomment">/// Plugin for running the tilemap demo.
-<a href=#347 id=347 data-nosnippet>347</a></span><span class="kw">fn </span>tilemap_demo_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
+<a href=#347 id=347 data-nosnippet>347</a></span><span class="kw">fn </span>tilemap_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
 <a href=#348 id=348 data-nosnippet>348</a>    session
 <a href=#349 id=349 data-nosnippet>349</a>        .install_plugin(DefaultSessionPlugin)
-<a href=#350 id=350 data-nosnippet>350</a>        .add_startup_system(tilemap_startup_system)
+<a href=#350 id=350 data-nosnippet>350</a>        .add_system_to_stage(CoreStage::Startup, tilemap_startup_system)
 <a href=#351 id=351 data-nosnippet>351</a>        .add_system_to_stage(Update, back_to_menu_ui);
 <a href=#352 id=352 data-nosnippet>352</a>}
 <a href=#353 id=353 data-nosnippet>353</a>
@@ -365,207 +365,206 @@
 <a href=#365 id=365 data-nosnippet>365</a>
 <a href=#366 id=366 data-nosnippet>366</a>    <span class="comment">// Load our map and atlas info
 <a href=#367 id=367 data-nosnippet>367</a>    </span><span class="kw">let </span>map_info = assets.get(meta.tilemap_demo);
-<a href=#368 id=368 data-nosnippet>368</a>    <span class="kw">let </span>atlas = assets.get(map_info.atlas);
-<a href=#369 id=369 data-nosnippet>369</a>
-<a href=#370 id=370 data-nosnippet>370</a>    <span class="comment">// Create a new map layer
-<a href=#371 id=371 data-nosnippet>371</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>layer = TileLayer::new(map_info.map_size, atlas.tile_size, map_info.atlas);
-<a href=#372 id=372 data-nosnippet>372</a>
-<a href=#373 id=373 data-nosnippet>373</a>    <span class="comment">// Load the layer up with the tiles from our metadata
-<a href=#374 id=374 data-nosnippet>374</a>    </span><span class="kw">for </span>tile <span class="kw">in </span><span class="kw-2">&amp;</span>map_info.tiles {
-<a href=#375 id=375 data-nosnippet>375</a>        <span class="kw">let </span>tile_ent = entities.create();
-<a href=#376 id=376 data-nosnippet>376</a>        tiles.insert(
-<a href=#377 id=377 data-nosnippet>377</a>            tile_ent,
-<a href=#378 id=378 data-nosnippet>378</a>            Tile {
-<a href=#379 id=379 data-nosnippet>379</a>                idx: tile.idx,
-<a href=#380 id=380 data-nosnippet>380</a>                ..default()
-<a href=#381 id=381 data-nosnippet>381</a>            },
-<a href=#382 id=382 data-nosnippet>382</a>        );
-<a href=#383 id=383 data-nosnippet>383</a>        layer.set(tile.pos, <span class="prelude-val">Some</span>(tile_ent))
-<a href=#384 id=384 data-nosnippet>384</a>    }
-<a href=#385 id=385 data-nosnippet>385</a>
-<a href=#386 id=386 data-nosnippet>386</a>    <span class="comment">// Spawn the layer
-<a href=#387 id=387 data-nosnippet>387</a>    </span><span class="kw">let </span>layer_ent = entities.create();
-<a href=#388 id=388 data-nosnippet>388</a>    tile_layers.insert(layer_ent, layer);
-<a href=#389 id=389 data-nosnippet>389</a>    transforms.insert(layer_ent, default());
-<a href=#390 id=390 data-nosnippet>390</a>}
-<a href=#391 id=391 data-nosnippet>391</a>
-<a href=#392 id=392 data-nosnippet>392</a><span class="doccomment">/// Plugin for running the atlas demo.
-<a href=#393 id=393 data-nosnippet>393</a></span><span class="kw">fn </span>atlas_demo_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
-<a href=#394 id=394 data-nosnippet>394</a>    session
-<a href=#395 id=395 data-nosnippet>395</a>        .install_plugin(DefaultSessionPlugin)
-<a href=#396 id=396 data-nosnippet>396</a>        .add_startup_system(atlas_demo_startup)
-<a href=#397 id=397 data-nosnippet>397</a>        .add_system_to_stage(Update, back_to_menu_ui);
-<a href=#398 id=398 data-nosnippet>398</a>}
-<a href=#399 id=399 data-nosnippet>399</a>
-<a href=#400 id=400 data-nosnippet>400</a><span class="doccomment">/// System to startup the atlas demo.
-<a href=#401 id=401 data-nosnippet>401</a></span><span class="kw">fn </span>atlas_demo_startup(
-<a href=#402 id=402 data-nosnippet>402</a>    <span class="kw-2">mut </span>entities: ResMut&lt;Entities&gt;,
-<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw-2">mut </span>transforms: CompMut&lt;Transform&gt;,
-<a href=#404 id=404 data-nosnippet>404</a>    <span class="kw-2">mut </span>cameras: CompMut&lt;Camera&gt;,
-<a href=#405 id=405 data-nosnippet>405</a>    <span class="kw-2">mut </span>atlas_sprites: CompMut&lt;AtlasSprite&gt;,
-<a href=#406 id=406 data-nosnippet>406</a>    <span class="kw-2">mut </span>animated_sprites: CompMut&lt;AnimatedSprite&gt;,
-<a href=#407 id=407 data-nosnippet>407</a>    <span class="kw-2">mut </span>clear_color: ResMutInit&lt;ClearColor&gt;,
-<a href=#408 id=408 data-nosnippet>408</a>    meta: Root&lt;GameMeta&gt;,
-<a href=#409 id=409 data-nosnippet>409</a>    assets: Res&lt;AssetServer&gt;,
-<a href=#410 id=410 data-nosnippet>410</a>) {
-<a href=#411 id=411 data-nosnippet>411</a>    <span class="comment">// Set the clear color
-<a href=#412 id=412 data-nosnippet>412</a>    </span><span class="kw-2">**</span>clear_color = Color::GRAY;
-<a href=#413 id=413 data-nosnippet>413</a>
-<a href=#414 id=414 data-nosnippet>414</a>    <span class="comment">// Get the atlas metadata
-<a href=#415 id=415 data-nosnippet>415</a>    </span><span class="kw">let </span>demo = assets.get(meta.atlas_demo);
-<a href=#416 id=416 data-nosnippet>416</a>
-<a href=#417 id=417 data-nosnippet>417</a>    <span class="comment">// Spawn the camera
-<a href=#418 id=418 data-nosnippet>418</a>    </span><span class="kw">let </span>camera_ent = spawn_default_camera(<span class="kw-2">&amp;mut </span>entities, <span class="kw-2">&amp;mut </span>transforms, <span class="kw-2">&amp;mut </span>cameras);
-<a href=#419 id=419 data-nosnippet>419</a>    cameras.get_mut(camera_ent).unwrap().size = demo.camera_size;
-<a href=#420 id=420 data-nosnippet>420</a>
-<a href=#421 id=421 data-nosnippet>421</a>    <span class="comment">// Spawn the character sprite.
-<a href=#422 id=422 data-nosnippet>422</a>    </span><span class="kw">let </span>sprite_ent = entities.create();
-<a href=#423 id=423 data-nosnippet>423</a>    transforms.insert(sprite_ent, default());
-<a href=#424 id=424 data-nosnippet>424</a>    atlas_sprites.insert(
-<a href=#425 id=425 data-nosnippet>425</a>        sprite_ent,
-<a href=#426 id=426 data-nosnippet>426</a>        AtlasSprite {
-<a href=#427 id=427 data-nosnippet>427</a>            atlas: demo.atlas,
-<a href=#428 id=428 data-nosnippet>428</a>            ..default()
-<a href=#429 id=429 data-nosnippet>429</a>        },
-<a href=#430 id=430 data-nosnippet>430</a>    );
-<a href=#431 id=431 data-nosnippet>431</a>    animated_sprites.insert(
-<a href=#432 id=432 data-nosnippet>432</a>        sprite_ent,
-<a href=#433 id=433 data-nosnippet>433</a>        AnimatedSprite {
-<a href=#434 id=434 data-nosnippet>434</a>            frames: demo.animation.iter().copied().collect(),
-<a href=#435 id=435 data-nosnippet>435</a>            fps: demo.fps,
-<a href=#436 id=436 data-nosnippet>436</a>            ..default()
-<a href=#437 id=437 data-nosnippet>437</a>        },
-<a href=#438 id=438 data-nosnippet>438</a>    );
-<a href=#439 id=439 data-nosnippet>439</a>}
-<a href=#440 id=440 data-nosnippet>440</a>
-<a href=#441 id=441 data-nosnippet>441</a><span class="kw">fn </span>audio_demo_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
-<a href=#442 id=442 data-nosnippet>442</a>    session
-<a href=#443 id=443 data-nosnippet>443</a>        .install_plugin(DefaultSessionPlugin)
-<a href=#444 id=444 data-nosnippet>444</a>        .add_system_to_stage(Update, back_to_menu_ui)
-<a href=#445 id=445 data-nosnippet>445</a>        .add_system_to_stage(Update, audio_demo_ui);
-<a href=#446 id=446 data-nosnippet>446</a>}
-<a href=#447 id=447 data-nosnippet>447</a>
-<a href=#448 id=448 data-nosnippet>448</a><span class="kw">fn </span>audio_demo_ui(
-<a href=#449 id=449 data-nosnippet>449</a>    ctx: Res&lt;EguiCtx&gt;,
-<a href=#450 id=450 data-nosnippet>450</a>    localization: Localization&lt;GameMeta&gt;,
-<a href=#451 id=451 data-nosnippet>451</a>    <span class="kw-2">mut </span>audio: ResMut&lt;AudioManager&gt;,
-<a href=#452 id=452 data-nosnippet>452</a>    meta: Root&lt;GameMeta&gt;,
-<a href=#453 id=453 data-nosnippet>453</a>    assets: Res&lt;AssetServer&gt;,
-<a href=#454 id=454 data-nosnippet>454</a>) {
-<a href=#455 id=455 data-nosnippet>455</a>    egui::CentralPanel::default()
-<a href=#456 id=456 data-nosnippet>456</a>        .frame(egui::Frame::none())
-<a href=#457 id=457 data-nosnippet>457</a>        .show(<span class="kw-2">&amp;</span>ctx, |ui| {
-<a href=#458 id=458 data-nosnippet>458</a>            ui.vertical_centered(|ui| {
-<a href=#459 id=459 data-nosnippet>459</a>                ui.add_space(<span class="number">50.0</span>);
-<a href=#460 id=460 data-nosnippet>460</a>                <span class="kw">if </span>ui.button(localization.get(<span class="string">"play-sound"</span>)).clicked() {
-<a href=#461 id=461 data-nosnippet>461</a>                    audio.play(<span class="kw-2">&amp;*</span>assets.get(meta.audio_demo)).unwrap();
-<a href=#462 id=462 data-nosnippet>462</a>                }
-<a href=#463 id=463 data-nosnippet>463</a>            })
-<a href=#464 id=464 data-nosnippet>464</a>        });
-<a href=#465 id=465 data-nosnippet>465</a>}
-<a href=#466 id=466 data-nosnippet>466</a>
-<a href=#467 id=467 data-nosnippet>467</a><span class="kw">fn </span>storage_demo_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
-<a href=#468 id=468 data-nosnippet>468</a>    session
-<a href=#469 id=469 data-nosnippet>469</a>        .install_plugin(DefaultSessionPlugin)
-<a href=#470 id=470 data-nosnippet>470</a>        .add_system_to_stage(Update, storage_demo_ui)
-<a href=#471 id=471 data-nosnippet>471</a>        .add_system_to_stage(Update, back_to_menu_ui);
-<a href=#472 id=472 data-nosnippet>472</a>}
-<a href=#473 id=473 data-nosnippet>473</a>
-<a href=#474 id=474 data-nosnippet>474</a><span class="kw">fn </span>storage_demo_ui(
-<a href=#475 id=475 data-nosnippet>475</a>    ctx: Res&lt;EguiCtx&gt;,
-<a href=#476 id=476 data-nosnippet>476</a>    <span class="kw-2">mut </span>storage: ResMut&lt;Storage&gt;,
-<a href=#477 id=477 data-nosnippet>477</a>    localization: Localization&lt;GameMeta&gt;,
-<a href=#478 id=478 data-nosnippet>478</a>) {
-<a href=#479 id=479 data-nosnippet>479</a>    egui::CentralPanel::default().show(<span class="kw-2">&amp;</span>ctx, |ui| {
-<a href=#480 id=480 data-nosnippet>480</a>        ui.add_space(<span class="number">20.0</span>);
-<a href=#481 id=481 data-nosnippet>481</a>
-<a href=#482 id=482 data-nosnippet>482</a>        ui.vertical_centered(|ui| {
-<a href=#483 id=483 data-nosnippet>483</a>            ui.set_width(<span class="number">300.0</span>);
-<a href=#484 id=484 data-nosnippet>484</a>            {
-<a href=#485 id=485 data-nosnippet>485</a>                <span class="kw">let </span>data = storage.get_or_insert_default_mut::&lt;PersistedTextData&gt;();
-<a href=#486 id=486 data-nosnippet>486</a>                egui::TextEdit::singleline(<span class="kw-2">&amp;mut </span>data.<span class="number">0</span>)
-<a href=#487 id=487 data-nosnippet>487</a>                    .hint_text(localization.get(<span class="string">"persisted-text-box-content"</span>))
-<a href=#488 id=488 data-nosnippet>488</a>                    .show(ui);
-<a href=#489 id=489 data-nosnippet>489</a>            }
-<a href=#490 id=490 data-nosnippet>490</a>            <span class="kw">if </span>ui.button(localization.get(<span class="string">"save"</span>)).clicked() {
-<a href=#491 id=491 data-nosnippet>491</a>                storage.save()
-<a href=#492 id=492 data-nosnippet>492</a>            }
-<a href=#493 id=493 data-nosnippet>493</a>        });
-<a href=#494 id=494 data-nosnippet>494</a>    });
-<a href=#495 id=495 data-nosnippet>495</a>}
-<a href=#496 id=496 data-nosnippet>496</a>
-<a href=#497 id=497 data-nosnippet>497</a><span class="kw">fn </span>path2d_demo_plugin(session: <span class="kw-2">&amp;mut </span>SessionBuilder) {
-<a href=#498 id=498 data-nosnippet>498</a>    session
-<a href=#499 id=499 data-nosnippet>499</a>        .install_plugin(DefaultSessionPlugin)
-<a href=#500 id=500 data-nosnippet>500</a>        .add_startup_system(path2d_demo_startup)
-<a href=#501 id=501 data-nosnippet>501</a>        .add_system_to_stage(Update, back_to_menu_ui);
-<a href=#502 id=502 data-nosnippet>502</a>}
-<a href=#503 id=503 data-nosnippet>503</a>
-<a href=#504 id=504 data-nosnippet>504</a><span class="kw">fn </span>path2d_demo_startup(
-<a href=#505 id=505 data-nosnippet>505</a>    meta: Root&lt;GameMeta&gt;,
-<a href=#506 id=506 data-nosnippet>506</a>    <span class="kw-2">mut </span>entities: ResMut&lt;Entities&gt;,
-<a href=#507 id=507 data-nosnippet>507</a>    <span class="kw-2">mut </span>transforms: CompMut&lt;Transform&gt;,
-<a href=#508 id=508 data-nosnippet>508</a>    <span class="kw-2">mut </span>cameras: CompMut&lt;Camera&gt;,
-<a href=#509 id=509 data-nosnippet>509</a>    <span class="kw-2">mut </span>path2ds: CompMut&lt;Path2d&gt;,
-<a href=#510 id=510 data-nosnippet>510</a>) {
-<a href=#511 id=511 data-nosnippet>511</a>    spawn_default_camera(<span class="kw-2">&amp;mut </span>entities, <span class="kw-2">&amp;mut </span>transforms, <span class="kw-2">&amp;mut </span>cameras);
-<a href=#512 id=512 data-nosnippet>512</a>
-<a href=#513 id=513 data-nosnippet>513</a>    <span class="kw">let </span>ent = entities.create();
-<a href=#514 id=514 data-nosnippet>514</a>    transforms.insert(ent, default());
-<a href=#515 id=515 data-nosnippet>515</a>    <span class="kw">const </span>SIZE: f32 = <span class="number">40.</span>;
-<a href=#516 id=516 data-nosnippet>516</a>    path2ds.insert(
-<a href=#517 id=517 data-nosnippet>517</a>        ent,
-<a href=#518 id=518 data-nosnippet>518</a>        Path2d {
-<a href=#519 id=519 data-nosnippet>519</a>            color: meta.path2d_color,
-<a href=#520 id=520 data-nosnippet>520</a>            points: <span class="macro">vec!</span>[
-<a href=#521 id=521 data-nosnippet>521</a>                vec2(-SIZE, <span class="number">0.</span>),
-<a href=#522 id=522 data-nosnippet>522</a>                vec2(<span class="number">0.</span>, SIZE),
-<a href=#523 id=523 data-nosnippet>523</a>                vec2(SIZE, <span class="number">0.</span>),
-<a href=#524 id=524 data-nosnippet>524</a>                vec2(-SIZE, <span class="number">0.</span>),
-<a href=#525 id=525 data-nosnippet>525</a>            ],
-<a href=#526 id=526 data-nosnippet>526</a>            thickness: <span class="number">2.0</span>,
-<a href=#527 id=527 data-nosnippet>527</a>            ..default()
-<a href=#528 id=528 data-nosnippet>528</a>        },
-<a href=#529 id=529 data-nosnippet>529</a>    );
-<a href=#530 id=530 data-nosnippet>530</a>}
-<a href=#531 id=531 data-nosnippet>531</a>
-<a href=#532 id=532 data-nosnippet>532</a><span class="doccomment">/// Simple UI system that shows a button at the bottom of the screen to delete the current session
-<a href=#533 id=533 data-nosnippet>533</a>/// and  go back to the main menu.
-<a href=#534 id=534 data-nosnippet>534</a></span><span class="kw">fn </span>back_to_menu_ui(
-<a href=#535 id=535 data-nosnippet>535</a>    ctx: Res&lt;EguiCtx&gt;,
-<a href=#536 id=536 data-nosnippet>536</a>    <span class="kw-2">mut </span>sessions: ResMut&lt;Sessions&gt;,
-<a href=#537 id=537 data-nosnippet>537</a>    <span class="kw-2">mut </span>session_options: ResMut&lt;SessionOptions&gt;,
-<a href=#538 id=538 data-nosnippet>538</a>    localization: Localization&lt;GameMeta&gt;,
-<a href=#539 id=539 data-nosnippet>539</a>) {
-<a href=#540 id=540 data-nosnippet>540</a>    egui::TopBottomPanel::bottom(<span class="string">"back-to-menu"</span>)
-<a href=#541 id=541 data-nosnippet>541</a>        .frame(egui::Frame::none())
-<a href=#542 id=542 data-nosnippet>542</a>        .show_separator_line(<span class="bool-val">false</span>)
-<a href=#543 id=543 data-nosnippet>543</a>        .show(<span class="kw-2">&amp;</span>ctx, |ui| {
-<a href=#544 id=544 data-nosnippet>544</a>            ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
-<a href=#545 id=545 data-nosnippet>545</a>                ui.add_space(<span class="number">20.0</span>);
-<a href=#546 id=546 data-nosnippet>546</a>                <span class="kw">if </span>ui.button(localization.get(<span class="string">"back-to-menu"</span>)).clicked() {
-<a href=#547 id=547 data-nosnippet>547</a>                    session_options.delete = <span class="bool-val">true</span>;
-<a href=#548 id=548 data-nosnippet>548</a>                    sessions.create_with(<span class="string">"menu"</span>, menu_plugin);
-<a href=#549 id=549 data-nosnippet>549</a>                }
-<a href=#550 id=550 data-nosnippet>550</a>            });
-<a href=#551 id=551 data-nosnippet>551</a>        });
-<a href=#552 id=552 data-nosnippet>552</a>}
-<a href=#553 id=553 data-nosnippet>553</a>
-<a href=#554 id=554 data-nosnippet>554</a><span class="doccomment">/// This is an example widget system.
-<a href=#555 id=555 data-nosnippet>555</a></span><span class="kw">fn </span>demo_widget(
-<a href=#556 id=556 data-nosnippet>556</a>    <span class="comment">// Widget systems must have an `In&lt;&amp;mut egui::Ui&gt;` parameter as their first argument.
-<a href=#557 id=557 data-nosnippet>557</a>    </span><span class="kw-2">mut </span>ui: In&lt;<span class="kw-2">&amp;mut </span>egui::Ui&gt;,
-<a href=#558 id=558 data-nosnippet>558</a>    <span class="comment">// They can have any normal bones system parameters
-<a href=#559 id=559 data-nosnippet>559</a>    </span>meta: Root&lt;GameMeta&gt;,
-<a href=#560 id=560 data-nosnippet>560</a>    egui_textures: Res&lt;EguiTextures&gt;,
-<a href=#561 id=561 data-nosnippet>561</a>    <span class="comment">// And they may return an `egui::Response` or any other value.
-<a href=#562 id=562 data-nosnippet>562</a></span>) -&gt; egui::Response {
-<a href=#563 id=563 data-nosnippet>563</a>    ui.label(<span class="string">"Demo Widget"</span>);
-<a href=#564 id=564 data-nosnippet>564</a>    <span class="comment">// When using a bones image in egui, we have to get it's corresponding egui texture
-<a href=#565 id=565 data-nosnippet>565</a>    // from the egui textures resource.
-<a href=#566 id=566 data-nosnippet>566</a>    </span>ui.image(egui::load::SizedTexture::new(
-<a href=#567 id=567 data-nosnippet>567</a>        egui_textures.get(meta.menu_image),
-<a href=#568 id=568 data-nosnippet>568</a>        [<span class="number">50.</span>, <span class="number">50.</span>],
-<a href=#569 id=569 data-nosnippet>569</a>    ))
-<a href=#570 id=570 data-nosnippet>570</a>}
+<a href=#368 id=368 data-nosnippet>368</a>
+<a href=#369 id=369 data-nosnippet>369</a>    <span class="comment">// Create a new map layer
+<a href=#370 id=370 data-nosnippet>370</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>layer = TileLayer::new(map_info.map_size, map_info.atlas);
+<a href=#371 id=371 data-nosnippet>371</a>
+<a href=#372 id=372 data-nosnippet>372</a>    <span class="comment">// Load the layer up with the tiles from our metadata
+<a href=#373 id=373 data-nosnippet>373</a>    </span><span class="kw">for </span>tile <span class="kw">in </span><span class="kw-2">&amp;</span>map_info.tiles {
+<a href=#374 id=374 data-nosnippet>374</a>        <span class="kw">let </span>tile_ent = entities.create();
+<a href=#375 id=375 data-nosnippet>375</a>        tiles.insert(
+<a href=#376 id=376 data-nosnippet>376</a>            tile_ent,
+<a href=#377 id=377 data-nosnippet>377</a>            Tile {
+<a href=#378 id=378 data-nosnippet>378</a>                idx: tile.idx,
+<a href=#379 id=379 data-nosnippet>379</a>                ..default()
+<a href=#380 id=380 data-nosnippet>380</a>            },
+<a href=#381 id=381 data-nosnippet>381</a>        );
+<a href=#382 id=382 data-nosnippet>382</a>        layer.set(tile.pos, <span class="prelude-val">Some</span>(tile_ent))
+<a href=#383 id=383 data-nosnippet>383</a>    }
+<a href=#384 id=384 data-nosnippet>384</a>
+<a href=#385 id=385 data-nosnippet>385</a>    <span class="comment">// Spawn the layer
+<a href=#386 id=386 data-nosnippet>386</a>    </span><span class="kw">let </span>layer_ent = entities.create();
+<a href=#387 id=387 data-nosnippet>387</a>    tile_layers.insert(layer_ent, layer);
+<a href=#388 id=388 data-nosnippet>388</a>    transforms.insert(layer_ent, default());
+<a href=#389 id=389 data-nosnippet>389</a>}
+<a href=#390 id=390 data-nosnippet>390</a>
+<a href=#391 id=391 data-nosnippet>391</a><span class="doccomment">/// Plugin for running the atlas demo.
+<a href=#392 id=392 data-nosnippet>392</a></span><span class="kw">fn </span>atlas_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+<a href=#393 id=393 data-nosnippet>393</a>    session
+<a href=#394 id=394 data-nosnippet>394</a>        .install_plugin(DefaultSessionPlugin)
+<a href=#395 id=395 data-nosnippet>395</a>        .add_system_to_stage(CoreStage::Startup, atlas_demo_startup)
+<a href=#396 id=396 data-nosnippet>396</a>        .add_system_to_stage(Update, back_to_menu_ui);
+<a href=#397 id=397 data-nosnippet>397</a>}
+<a href=#398 id=398 data-nosnippet>398</a>
+<a href=#399 id=399 data-nosnippet>399</a><span class="doccomment">/// System to startup the atlas demo.
+<a href=#400 id=400 data-nosnippet>400</a></span><span class="kw">fn </span>atlas_demo_startup(
+<a href=#401 id=401 data-nosnippet>401</a>    <span class="kw-2">mut </span>entities: ResMut&lt;Entities&gt;,
+<a href=#402 id=402 data-nosnippet>402</a>    <span class="kw-2">mut </span>transforms: CompMut&lt;Transform&gt;,
+<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw-2">mut </span>cameras: CompMut&lt;Camera&gt;,
+<a href=#404 id=404 data-nosnippet>404</a>    <span class="kw-2">mut </span>atlas_sprites: CompMut&lt;AtlasSprite&gt;,
+<a href=#405 id=405 data-nosnippet>405</a>    <span class="kw-2">mut </span>animated_sprites: CompMut&lt;AnimatedSprite&gt;,
+<a href=#406 id=406 data-nosnippet>406</a>    <span class="kw-2">mut </span>clear_color: ResMutInit&lt;ClearColor&gt;,
+<a href=#407 id=407 data-nosnippet>407</a>    meta: Root&lt;GameMeta&gt;,
+<a href=#408 id=408 data-nosnippet>408</a>    assets: Res&lt;AssetServer&gt;,
+<a href=#409 id=409 data-nosnippet>409</a>) {
+<a href=#410 id=410 data-nosnippet>410</a>    <span class="comment">// Set the clear color
+<a href=#411 id=411 data-nosnippet>411</a>    </span><span class="kw-2">**</span>clear_color = Color::GRAY;
+<a href=#412 id=412 data-nosnippet>412</a>
+<a href=#413 id=413 data-nosnippet>413</a>    <span class="comment">// Get the atlas metadata
+<a href=#414 id=414 data-nosnippet>414</a>    </span><span class="kw">let </span>demo = assets.get(meta.atlas_demo);
+<a href=#415 id=415 data-nosnippet>415</a>
+<a href=#416 id=416 data-nosnippet>416</a>    <span class="comment">// Spawn the camera
+<a href=#417 id=417 data-nosnippet>417</a>    </span><span class="kw">let </span>camera_ent = spawn_default_camera(<span class="kw-2">&amp;mut </span>entities, <span class="kw-2">&amp;mut </span>transforms, <span class="kw-2">&amp;mut </span>cameras);
+<a href=#418 id=418 data-nosnippet>418</a>    cameras.get_mut(camera_ent).unwrap().size = demo.camera_size;
+<a href=#419 id=419 data-nosnippet>419</a>
+<a href=#420 id=420 data-nosnippet>420</a>    <span class="comment">// Spawn the character sprite.
+<a href=#421 id=421 data-nosnippet>421</a>    </span><span class="kw">let </span>sprite_ent = entities.create();
+<a href=#422 id=422 data-nosnippet>422</a>    transforms.insert(sprite_ent, default());
+<a href=#423 id=423 data-nosnippet>423</a>    atlas_sprites.insert(
+<a href=#424 id=424 data-nosnippet>424</a>        sprite_ent,
+<a href=#425 id=425 data-nosnippet>425</a>        AtlasSprite {
+<a href=#426 id=426 data-nosnippet>426</a>            atlas: demo.atlas,
+<a href=#427 id=427 data-nosnippet>427</a>            ..default()
+<a href=#428 id=428 data-nosnippet>428</a>        },
+<a href=#429 id=429 data-nosnippet>429</a>    );
+<a href=#430 id=430 data-nosnippet>430</a>    animated_sprites.insert(
+<a href=#431 id=431 data-nosnippet>431</a>        sprite_ent,
+<a href=#432 id=432 data-nosnippet>432</a>        AnimatedSprite {
+<a href=#433 id=433 data-nosnippet>433</a>            frames: demo.animation.iter().copied().collect(),
+<a href=#434 id=434 data-nosnippet>434</a>            fps: demo.fps,
+<a href=#435 id=435 data-nosnippet>435</a>            ..default()
+<a href=#436 id=436 data-nosnippet>436</a>        },
+<a href=#437 id=437 data-nosnippet>437</a>    );
+<a href=#438 id=438 data-nosnippet>438</a>}
+<a href=#439 id=439 data-nosnippet>439</a>
+<a href=#440 id=440 data-nosnippet>440</a><span class="kw">fn </span>audio_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+<a href=#441 id=441 data-nosnippet>441</a>    session
+<a href=#442 id=442 data-nosnippet>442</a>        .install_plugin(DefaultSessionPlugin)
+<a href=#443 id=443 data-nosnippet>443</a>        .add_system_to_stage(Update, back_to_menu_ui)
+<a href=#444 id=444 data-nosnippet>444</a>        .add_system_to_stage(Update, audio_demo_ui);
+<a href=#445 id=445 data-nosnippet>445</a>}
+<a href=#446 id=446 data-nosnippet>446</a>
+<a href=#447 id=447 data-nosnippet>447</a><span class="kw">fn </span>audio_demo_ui(
+<a href=#448 id=448 data-nosnippet>448</a>    ctx: Res&lt;EguiCtx&gt;,
+<a href=#449 id=449 data-nosnippet>449</a>    localization: Localization&lt;GameMeta&gt;,
+<a href=#450 id=450 data-nosnippet>450</a>    <span class="kw-2">mut </span>audio: ResMut&lt;AudioManager&gt;,
+<a href=#451 id=451 data-nosnippet>451</a>    meta: Root&lt;GameMeta&gt;,
+<a href=#452 id=452 data-nosnippet>452</a>    assets: Res&lt;AssetServer&gt;,
+<a href=#453 id=453 data-nosnippet>453</a>) {
+<a href=#454 id=454 data-nosnippet>454</a>    egui::CentralPanel::default()
+<a href=#455 id=455 data-nosnippet>455</a>        .frame(egui::Frame::none())
+<a href=#456 id=456 data-nosnippet>456</a>        .show(<span class="kw-2">&amp;</span>ctx, |ui| {
+<a href=#457 id=457 data-nosnippet>457</a>            ui.vertical_centered(|ui| {
+<a href=#458 id=458 data-nosnippet>458</a>                ui.add_space(<span class="number">50.0</span>);
+<a href=#459 id=459 data-nosnippet>459</a>                <span class="kw">if </span>ui.button(localization.get(<span class="string">"play-sound"</span>)).clicked() {
+<a href=#460 id=460 data-nosnippet>460</a>                    audio.play(<span class="kw-2">&amp;*</span>assets.get(meta.audio_demo)).unwrap();
+<a href=#461 id=461 data-nosnippet>461</a>                }
+<a href=#462 id=462 data-nosnippet>462</a>            })
+<a href=#463 id=463 data-nosnippet>463</a>        });
+<a href=#464 id=464 data-nosnippet>464</a>}
+<a href=#465 id=465 data-nosnippet>465</a>
+<a href=#466 id=466 data-nosnippet>466</a><span class="kw">fn </span>storage_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+<a href=#467 id=467 data-nosnippet>467</a>    session
+<a href=#468 id=468 data-nosnippet>468</a>        .install_plugin(DefaultSessionPlugin)
+<a href=#469 id=469 data-nosnippet>469</a>        .add_system_to_stage(Update, storage_demo_ui)
+<a href=#470 id=470 data-nosnippet>470</a>        .add_system_to_stage(Update, back_to_menu_ui);
+<a href=#471 id=471 data-nosnippet>471</a>}
+<a href=#472 id=472 data-nosnippet>472</a>
+<a href=#473 id=473 data-nosnippet>473</a><span class="kw">fn </span>storage_demo_ui(
+<a href=#474 id=474 data-nosnippet>474</a>    ctx: Res&lt;EguiCtx&gt;,
+<a href=#475 id=475 data-nosnippet>475</a>    <span class="kw-2">mut </span>storage: ResMut&lt;Storage&gt;,
+<a href=#476 id=476 data-nosnippet>476</a>    localization: Localization&lt;GameMeta&gt;,
+<a href=#477 id=477 data-nosnippet>477</a>) {
+<a href=#478 id=478 data-nosnippet>478</a>    egui::CentralPanel::default().show(<span class="kw-2">&amp;</span>ctx, |ui| {
+<a href=#479 id=479 data-nosnippet>479</a>        ui.add_space(<span class="number">20.0</span>);
+<a href=#480 id=480 data-nosnippet>480</a>
+<a href=#481 id=481 data-nosnippet>481</a>        ui.vertical_centered(|ui| {
+<a href=#482 id=482 data-nosnippet>482</a>            ui.set_width(<span class="number">300.0</span>);
+<a href=#483 id=483 data-nosnippet>483</a>            {
+<a href=#484 id=484 data-nosnippet>484</a>                <span class="kw">let </span>data = storage.get_or_insert_default_mut::&lt;PersistedTextData&gt;();
+<a href=#485 id=485 data-nosnippet>485</a>                egui::TextEdit::singleline(<span class="kw-2">&amp;mut </span>data.<span class="number">0</span>)
+<a href=#486 id=486 data-nosnippet>486</a>                    .hint_text(localization.get(<span class="string">"persisted-text-box-content"</span>))
+<a href=#487 id=487 data-nosnippet>487</a>                    .show(ui);
+<a href=#488 id=488 data-nosnippet>488</a>            }
+<a href=#489 id=489 data-nosnippet>489</a>            <span class="kw">if </span>ui.button(localization.get(<span class="string">"save"</span>)).clicked() {
+<a href=#490 id=490 data-nosnippet>490</a>                storage.save()
+<a href=#491 id=491 data-nosnippet>491</a>            }
+<a href=#492 id=492 data-nosnippet>492</a>        });
+<a href=#493 id=493 data-nosnippet>493</a>    });
+<a href=#494 id=494 data-nosnippet>494</a>}
+<a href=#495 id=495 data-nosnippet>495</a>
+<a href=#496 id=496 data-nosnippet>496</a><span class="kw">fn </span>path2d_demo_plugin(session: <span class="kw-2">&amp;mut </span>Session) {
+<a href=#497 id=497 data-nosnippet>497</a>    session
+<a href=#498 id=498 data-nosnippet>498</a>        .install_plugin(DefaultSessionPlugin)
+<a href=#499 id=499 data-nosnippet>499</a>        .add_system_to_stage(CoreStage::Startup, path2d_demo_startup)
+<a href=#500 id=500 data-nosnippet>500</a>        .add_system_to_stage(Update, back_to_menu_ui);
+<a href=#501 id=501 data-nosnippet>501</a>}
+<a href=#502 id=502 data-nosnippet>502</a>
+<a href=#503 id=503 data-nosnippet>503</a><span class="kw">fn </span>path2d_demo_startup(
+<a href=#504 id=504 data-nosnippet>504</a>    meta: Root&lt;GameMeta&gt;,
+<a href=#505 id=505 data-nosnippet>505</a>    <span class="kw-2">mut </span>entities: ResMut&lt;Entities&gt;,
+<a href=#506 id=506 data-nosnippet>506</a>    <span class="kw-2">mut </span>transforms: CompMut&lt;Transform&gt;,
+<a href=#507 id=507 data-nosnippet>507</a>    <span class="kw-2">mut </span>cameras: CompMut&lt;Camera&gt;,
+<a href=#508 id=508 data-nosnippet>508</a>    <span class="kw-2">mut </span>path2ds: CompMut&lt;Path2d&gt;,
+<a href=#509 id=509 data-nosnippet>509</a>) {
+<a href=#510 id=510 data-nosnippet>510</a>    spawn_default_camera(<span class="kw-2">&amp;mut </span>entities, <span class="kw-2">&amp;mut </span>transforms, <span class="kw-2">&amp;mut </span>cameras);
+<a href=#511 id=511 data-nosnippet>511</a>
+<a href=#512 id=512 data-nosnippet>512</a>    <span class="kw">let </span>ent = entities.create();
+<a href=#513 id=513 data-nosnippet>513</a>    transforms.insert(ent, default());
+<a href=#514 id=514 data-nosnippet>514</a>    <span class="kw">const </span>SIZE: f32 = <span class="number">40.</span>;
+<a href=#515 id=515 data-nosnippet>515</a>    path2ds.insert(
+<a href=#516 id=516 data-nosnippet>516</a>        ent,
+<a href=#517 id=517 data-nosnippet>517</a>        Path2d {
+<a href=#518 id=518 data-nosnippet>518</a>            color: meta.path2d_color,
+<a href=#519 id=519 data-nosnippet>519</a>            points: <span class="macro">vec!</span>[
+<a href=#520 id=520 data-nosnippet>520</a>                vec2(-SIZE, <span class="number">0.</span>),
+<a href=#521 id=521 data-nosnippet>521</a>                vec2(<span class="number">0.</span>, SIZE),
+<a href=#522 id=522 data-nosnippet>522</a>                vec2(SIZE, <span class="number">0.</span>),
+<a href=#523 id=523 data-nosnippet>523</a>                vec2(-SIZE, <span class="number">0.</span>),
+<a href=#524 id=524 data-nosnippet>524</a>            ],
+<a href=#525 id=525 data-nosnippet>525</a>            thickness: <span class="number">2.0</span>,
+<a href=#526 id=526 data-nosnippet>526</a>            ..default()
+<a href=#527 id=527 data-nosnippet>527</a>        },
+<a href=#528 id=528 data-nosnippet>528</a>    );
+<a href=#529 id=529 data-nosnippet>529</a>}
+<a href=#530 id=530 data-nosnippet>530</a>
+<a href=#531 id=531 data-nosnippet>531</a><span class="doccomment">/// Simple UI system that shows a button at the bottom of the screen to delete the current session
+<a href=#532 id=532 data-nosnippet>532</a>/// and  go back to the main menu.
+<a href=#533 id=533 data-nosnippet>533</a></span><span class="kw">fn </span>back_to_menu_ui(
+<a href=#534 id=534 data-nosnippet>534</a>    ctx: Res&lt;EguiCtx&gt;,
+<a href=#535 id=535 data-nosnippet>535</a>    <span class="kw-2">mut </span>sessions: ResMut&lt;Sessions&gt;,
+<a href=#536 id=536 data-nosnippet>536</a>    <span class="kw-2">mut </span>session_options: ResMut&lt;SessionOptions&gt;,
+<a href=#537 id=537 data-nosnippet>537</a>    localization: Localization&lt;GameMeta&gt;,
+<a href=#538 id=538 data-nosnippet>538</a>) {
+<a href=#539 id=539 data-nosnippet>539</a>    egui::TopBottomPanel::bottom(<span class="string">"back-to-menu"</span>)
+<a href=#540 id=540 data-nosnippet>540</a>        .frame(egui::Frame::none())
+<a href=#541 id=541 data-nosnippet>541</a>        .show_separator_line(<span class="bool-val">false</span>)
+<a href=#542 id=542 data-nosnippet>542</a>        .show(<span class="kw-2">&amp;</span>ctx, |ui| {
+<a href=#543 id=543 data-nosnippet>543</a>            ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
+<a href=#544 id=544 data-nosnippet>544</a>                ui.add_space(<span class="number">20.0</span>);
+<a href=#545 id=545 data-nosnippet>545</a>                <span class="kw">if </span>ui.button(localization.get(<span class="string">"back-to-menu"</span>)).clicked() {
+<a href=#546 id=546 data-nosnippet>546</a>                    session_options.delete = <span class="bool-val">true</span>;
+<a href=#547 id=547 data-nosnippet>547</a>                    sessions.create_with(<span class="string">"menu"</span>, menu_plugin);
+<a href=#548 id=548 data-nosnippet>548</a>                }
+<a href=#549 id=549 data-nosnippet>549</a>            });
+<a href=#550 id=550 data-nosnippet>550</a>        });
+<a href=#551 id=551 data-nosnippet>551</a>}
+<a href=#552 id=552 data-nosnippet>552</a>
+<a href=#553 id=553 data-nosnippet>553</a><span class="doccomment">/// This is an example widget system.
+<a href=#554 id=554 data-nosnippet>554</a></span><span class="kw">fn </span>demo_widget(
+<a href=#555 id=555 data-nosnippet>555</a>    <span class="comment">// Widget systems must have an `In&lt;&amp;mut egui::Ui&gt;` parameter as their first argument.
+<a href=#556 id=556 data-nosnippet>556</a>    </span><span class="kw-2">mut </span>ui: In&lt;<span class="kw-2">&amp;mut </span>egui::Ui&gt;,
+<a href=#557 id=557 data-nosnippet>557</a>    <span class="comment">// They can have any normal bones system parameters
+<a href=#558 id=558 data-nosnippet>558</a>    </span>meta: Root&lt;GameMeta&gt;,
+<a href=#559 id=559 data-nosnippet>559</a>    egui_textures: Res&lt;EguiTextures&gt;,
+<a href=#560 id=560 data-nosnippet>560</a>    <span class="comment">// And they may return an `egui::Response` or any other value.
+<a href=#561 id=561 data-nosnippet>561</a></span>) -&gt; egui::Response {
+<a href=#562 id=562 data-nosnippet>562</a>    ui.label(<span class="string">"Demo Widget"</span>);
+<a href=#563 id=563 data-nosnippet>563</a>    <span class="comment">// When using a bones image in egui, we have to get it's corresponding egui texture
+<a href=#564 id=564 data-nosnippet>564</a>    // from the egui textures resource.
+<a href=#565 id=565 data-nosnippet>565</a>    </span>ui.image(egui::load::SizedTexture::new(
+<a href=#566 id=566 data-nosnippet>566</a>        egui_textures.get(meta.menu_image),
+<a href=#567 id=567 data-nosnippet>567</a>        [<span class="number">50.</span>, <span class="number">50.</span>],
+<a href=#568 id=568 data-nosnippet>568</a>    ))
+<a href=#569 id=569 data-nosnippet>569</a>}
 </code></pre></div></section></main></body></html>

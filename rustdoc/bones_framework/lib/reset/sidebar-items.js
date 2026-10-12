@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["ResetWorld"],"trait":["WorldExt"]};
+window.SIDEBAR_ITEMS = {"struct":["ResetWorld"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["process_gamepad_events"]};
+window.SIDEBAR_ITEMS = {"fn":["process_gamepad_events"],"static":["GILRS_CONTEXT"]};
