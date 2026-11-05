@@ -598,8 +598,10 @@ pub fn update_uniforms(
         sprite_lists.batches = batches;
         drop(sprite_lists);
 
-        let mut path_entities: Vec<(&bones::Path2d, &bones::Transform)> =
-            entities.iter_with((&paths, &transforms)).map(|(_, pt)| pt).collect();
+        let mut path_entities: Vec<(&bones::Path2d, &bones::Transform)> = entities
+            .iter_with((&paths, &transforms))
+            .map(|(_, pt)| pt)
+            .collect();
         path_entities.sort_by(|a, b| a.1.translation.z.total_cmp(&b.1.translation.z));
 
         let mut session_line_draws = Vec::with_capacity(path_entities.len());
@@ -799,11 +801,7 @@ pub fn camera_view_size(camera: &bones::Camera, viewport_size: Vec2) -> (f32, f3
 
 /// Converts a physical screen cursor position `(x, y)` (top-left origin) to 2D world space
 /// using the active camera.
-pub fn screen_to_world_2d(
-    game: &bones::Game,
-    screen_pos: Vec2,
-    window_size: Vec2,
-) -> Option<Vec2> {
+pub fn screen_to_world_2d(game: &bones::Game, screen_pos: Vec2, window_size: Vec2) -> Option<Vec2> {
     if window_size.x <= 0.0 || window_size.y <= 0.0 {
         return None;
     }
