@@ -49,25 +49,15 @@ impl AtlasSpriteUniform {
         atlas: &bones::Atlas,
         transform: &bones::Transform,
         uvs: ([f32; 2], [f32; 2]),
+        image_size: Vec2,
     ) -> Self {
-        let image_size = [
-            atlas.offset.x + ((atlas.tile_size.x + atlas.padding.x) * atlas.columns as f32),
-            atlas.offset.y + ((atlas.tile_size.y + atlas.padding.y) * atlas.rows as f32),
-        ];
-
-        if atlas_sprite.flip_x {
-            println!("Flipping X for sprite: {:?}", atlas_sprite.index);
-        } else {
-            println!("Not flipping X for sprite: {:?}", atlas_sprite.index);
-        }
-
         Self {
             tile_size: atlas.tile_size.into(),
             columns: atlas.columns,
             padding: atlas.padding.into(),
             offset: atlas.offset.into(),
             index: atlas_sprite.index,
-            image_size,
+            image_size: image_size.into(),
             entity_type: 1,
             flip_x: atlas_sprite.flip_x as u32,
             flip_y: atlas_sprite.flip_y as u32,
@@ -85,18 +75,15 @@ impl AtlasSpriteUniform {
         atlas: &bones::Atlas,
         transform: &bones::Transform,
         uvs: ([f32; 2], [f32; 2]),
+        image_size: Vec2,
         index: usize,
         tile_layer: &bones::TileLayer,
     ) -> Self {
-        let image_size = [
-            atlas.offset.x + ((atlas.tile_size.x + atlas.padding.x) * atlas.columns as f32),
-            atlas.offset.y + ((atlas.tile_size.y + atlas.padding.y) * atlas.rows as f32),
-        ];
         let mut transform = transform.clone();
         transform.translation.x +=
-            tile_layer.tile_size.x * (index as u32 % tile_layer.grid_size.x) as f32;
+            tile_layer.tile_size.x * ((index as u32 % tile_layer.grid_size.x) as f32 + 0.5);
         transform.translation.y +=
-            tile_layer.tile_size.y * (index as u32 / tile_layer.grid_size.x) as f32;
+            tile_layer.tile_size.y * ((index as u32 / tile_layer.grid_size.x) as f32 + 0.5);
 
         Self {
             tile_size: atlas.tile_size.into(),
@@ -104,7 +91,7 @@ impl AtlasSpriteUniform {
             padding: atlas.padding.into(),
             offset: atlas.offset.into(),
             index: tile.idx,
-            image_size,
+            image_size: image_size.into(),
             entity_type: 1,
             flip_x: tile.flip_x as u32,
             flip_y: tile.flip_y as u32,
@@ -122,12 +109,6 @@ impl AtlasSpriteUniform {
         uvs: ([f32; 2], [f32; 2]),
         image_size: Vec2,
     ) -> Self {
-        if sprite.flip_x {
-            println!("Flipping X for sprite: {:?}", sprite);
-        } else {
-            println!("Not flipping X for sprite: {:?}", sprite);
-        }
-
         Self {
             color_tint: sprite.color.as_rgba_f32(),
             flip_x: sprite.flip_x as u32,
@@ -142,36 +123,55 @@ impl AtlasSpriteUniform {
     }
 }
 
+struct AtlasAllocationGuard {
+    atlas_id: usize,
+    alloc: Allocation,
+    sender: crossbeam_channel::Sender<(bones::Ustr, bones::Entity, usize, Allocation)>,
+    session: bones::Ustr,
+    entity: bones::Entity,
+}
+
+impl Drop for AtlasAllocationGuard {
+    fn drop(&mut self) {
+        // Send the entity to the atlas pool for deallocation
+        if let Err(e) = self
+            .sender
+            .send((self.session, self.entity, self.atlas_id, self.alloc))
+        {
+            log::warn!("Failed to send entity for deallocation: {:?}", e);
+        }
+    }
+}
+
 #[derive(bones_schema::HasSchema, Clone)]
 #[schema(no_default)]
 /// Points to the atlas and rectangle this sprite lives in.
 pub struct AtlasPoolHandle {
     pub atlas_id: usize,
     pub alloc: Allocation,
-    pub uv_min: [f32; 2], // Atlas UV coordinates (min_x, min_y)
-    pub uv_max: [f32; 2], // Atlas UV coordinates (max_x, max_y)
+    pub uv_min: [f32; 2],     // Atlas UV coordinates (min_x, min_y)
+    pub uv_max: [f32; 2],     // Atlas UV coordinates (max_x, max_y)
     pub image_size: [f32; 2], // Original image size (width, height)
-
-    sender: crossbeam_channel::Sender<(bones::Entity, usize, Allocation)>,
-    entity: bones::Entity,
+    pub image: bones::Handle<bones::Image>,
+    _guard: Arc<AtlasAllocationGuard>,
 }
 
-impl Drop for AtlasPoolHandle {
-    fn drop(&mut self) {
-        // Send the entity to the atlas pool for deallocation
-        if let Err(e) = self.sender.send((self.entity, self.atlas_id, self.alloc)) {
-            eprintln!("Failed to send entity for deallocation: {:?}", e);
-        }
-    }
-}
-
-//TODO Add tiles
 pub fn update_atlas_pool(game: &mut bones::Game, atlas_pool: &mut AtlasPool) {
     let assets = game.shared_resource_cell::<bones::AssetServer>().unwrap();
     let queue = game.shared_resource_cell::<WgpuQueue>().unwrap();
 
-    for (_, session) in game.sessions.iter_mut() {
-        if !session.active {
+    // First, deallocate any atlas allocations whose `AtlasPoolHandle` was dropped.
+    while let Ok((session_name, ent, atlas_id, alloc)) = atlas_pool.receiver.try_recv() {
+        log::debug!(
+            "Removing sprite from atlas pool: {:?} {:?}",
+            session_name,
+            ent
+        );
+        atlas_pool.deallocate(atlas_id, alloc);
+    }
+
+    for (session_name, session) in game.sessions.iter_mut() {
+        if !session.active && !session.visible {
             continue;
         }
 
@@ -185,6 +185,49 @@ pub fn update_atlas_pool(game: &mut bones::Game, atlas_pool: &mut AtlasPool) {
         bitset.bit_or(atlases.bitset());
         bitset.bit_or(tile_layers.bitset());
 
+        // Check existing handles to see if the entity lost its sprite component or changed its image.
+        let existing_handle_bitset = atlas_pool_handles.bitset().clone();
+        let mut stale_entities = Vec::new();
+        for ent in entities.iter_with_bitset(&existing_handle_bitset) {
+            let current_image = if let Some(sprite) = sprites.get(ent) {
+                (sprite.image != bones::Handle::default()).then_some(sprite.image)
+            } else if let Some(atlas_sprite) = atlases.get(ent) {
+                if atlas_sprite.atlas == bones::Handle::default() {
+                    None
+                } else {
+                    let assets = assets.borrow().unwrap();
+                    let image = assets.get(atlas_sprite.atlas).image;
+                    Some(image)
+                }
+            } else if let Some(tile_layer) = tile_layers.get(ent) {
+                if tile_layer.atlas == bones::Handle::default() {
+                    None
+                } else {
+                    let assets = assets.borrow().unwrap();
+                    let image = assets.get(tile_layer.atlas).image;
+                    Some(image)
+                }
+            } else {
+                None
+            };
+
+            let handle_matches = atlas_pool_handles
+                .get(ent)
+                .zip(current_image)
+                .is_some_and(|(h, img)| h.image == img);
+            if !handle_matches {
+                stale_entities.push(ent);
+            }
+        }
+        for ent in stale_entities {
+            atlas_pool_handles.remove(ent);
+        }
+
+        // Reclaim any allocations that were just removed above before allocating new ones.
+        while let Ok((_session_name, _ent, atlas_id, alloc)) = atlas_pool.receiver.try_recv() {
+            atlas_pool.deallocate(atlas_id, alloc);
+        }
+
         let mut not_atlas_handle_bitset = atlas_pool_handles.bitset().clone();
         not_atlas_handle_bitset.bit_not();
 
@@ -192,23 +235,38 @@ pub fn update_atlas_pool(game: &mut bones::Game, atlas_pool: &mut AtlasPool) {
         without_handle.bit_and(&not_atlas_handle_bitset);
 
         for ent in entities.iter_with_bitset(&without_handle) {
-            println!("Adding sprite to atlas pool: {:?}", ent);
+            log::debug!("Adding sprite to atlas pool: {:?}", ent);
 
-            let image;
+            let image_handle;
             if let Some(sprite) = sprites.get(ent) {
-                image = sprite.image;
+                if sprite.image == bones::Handle::default() {
+                    continue;
+                }
+                image_handle = sprite.image;
             } else if let Some(atlas_sprite) = atlases.get(ent) {
+                if atlas_sprite.atlas == bones::Handle::default() {
+                    continue;
+                }
                 let assets = assets.borrow().unwrap();
                 let atlas = assets.get(atlas_sprite.atlas);
-                image = atlas.image.clone();
+                if atlas.image == bones::Handle::default() {
+                    continue;
+                }
+                image_handle = atlas.image;
             } else {
                 let tile_layer = tile_layers.get(ent).unwrap();
+                if tile_layer.atlas == bones::Handle::default() {
+                    continue;
+                }
                 let assets = assets.borrow().unwrap();
                 let atlas = assets.get(tile_layer.atlas);
-                image = atlas.image.clone();
+                if atlas.image == bones::Handle::default() {
+                    continue;
+                }
+                image_handle = atlas.image;
             }
             let assets = assets.borrow().unwrap();
-            let image = assets.get(image);
+            let image = assets.get(image_handle);
 
             if let bones::Image::Data(img) = &*image {
                 //Allocate in the atlas pool guiliotiere
@@ -228,9 +286,6 @@ pub fn update_atlas_pool(game: &mut bones::Game, atlas_pool: &mut AtlasPool) {
                 let uv_min = [rect.min.x as f32 / atlas_w, rect.min.y as f32 / atlas_h];
                 let uv_max = [rect.max.x as f32 / atlas_w, rect.max.y as f32 / atlas_h];
 
-                println!("{} {}", uv_min[0], uv_min[1]);
-                println!("{} {}", uv_max[0], uv_max[1]);
-
                 atlas_pool_handles.insert(
                     ent,
                     AtlasPoolHandle {
@@ -239,8 +294,14 @@ pub fn update_atlas_pool(game: &mut bones::Game, atlas_pool: &mut AtlasPool) {
                         uv_min,
                         uv_max,
                         image_size: [img.width() as f32, img.height() as f32],
-                        entity: ent,
-                        sender: atlas_pool.sender.clone(),
+                        image: image_handle,
+                        _guard: Arc::new(AtlasAllocationGuard {
+                            atlas_id,
+                            alloc,
+                            entity: ent,
+                            session: *session_name,
+                            sender: atlas_pool.sender.clone(),
+                        }),
                     },
                 );
 
@@ -268,7 +329,12 @@ pub fn update_atlas_pool(game: &mut bones::Game, atlas_pool: &mut AtlasPool) {
                         .copy_from_slice(&raw[src_offset..src_offset + unpadded_stride]);
                 }
 
-                println!("Texture {:?}", atlas_pool.atlases[atlas_id].texture);
+                log::debug!(
+                    "Uploaded sprite to atlas {} at {:?}..{:?}",
+                    atlas_id,
+                    rect.min,
+                    rect.max
+                );
 
                 let data_layout = wgpu::TexelCopyBufferLayout {
                     offset: 0,
@@ -291,16 +357,7 @@ pub fn update_atlas_pool(game: &mut bones::Game, atlas_pool: &mut AtlasPool) {
                         depth_or_array_layers: 1,
                     },
                 );
-                queue.get().submit([]);
             }
-        }
-
-        // Deallocate sprites that were removed
-        let removed: Vec<_> = atlas_pool.receiver.try_iter().collect();
-        for (ent, atlas_id, alloc) in removed {
-            println!("Removing sprite from atlas pool: {:?}", ent);
-            atlas_pool.deallocate(atlas_id, alloc);
-            atlas_pool_handles.remove(ent);
         }
     }
 }
@@ -310,14 +367,29 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
     //TODO put lenght
     let mut instances = Vec::new();
 
+    // Build a mapping from session to base camera index in the camera uniform buffer.
+    // The camera uniform buffer is populated by `update_cameras_uniform` in the same ordering.
+    let mut session_camera_index: HashMap<Ustr, u32> = HashMap::new();
+    if let Some(cameras_sorted) = game.shared_resource::<Cameras>() {
+        let mut idx: u32 = 0;
+        for (session_name, camera_vec) in cameras_sorted.0.iter() {
+            if !camera_vec.is_empty() {
+                session_camera_index.insert(*session_name, idx);
+            }
+            idx = idx.saturating_add(camera_vec.len() as u32);
+        }
+    }
+
     let queue = game.shared_resource_cell::<WgpuQueue>().unwrap();
     let device = game.shared_resource_cell::<WgpuDevice>().unwrap();
     let assets = game.shared_resource_cell::<bones::AssetServer>().unwrap();
 
-    for (_, session) in game.sessions.iter_mut() {
+    for (session_name, session) in game.sessions.iter_mut() {
         if !session.visible {
             continue;
         }
+
+        let camera_index_for_session = session_camera_index.get(session_name).copied().unwrap_or(0);
 
         let entities = session.world.resource::<bones::Entities>();
         let sprite_lists = session.world.resource::<SpriteLists>();
@@ -330,6 +402,10 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
         let paths = session.world.component::<bones::Path2d>();
         let atlas_handles = session.world.component::<AtlasPoolHandle>();
 
+        let mut index_of = HashMap::with_capacity(
+            sprite_lists.opaque_list.len() + sprite_lists.transparent_list.len(),
+        );
+
         for entity in sprite_lists
             .opaque_list
             .iter()
@@ -341,6 +417,11 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
                     .unwrap()
             });
 
+            // Record the global instance index for this entity.
+            // This must match the index used by the render loop's instanced draw call.
+            let instance_idx = instances.len() as u32;
+            index_of.insert(*entity, instance_idx);
+
             if let Some(sprite) = sprites.get(*entity) {
                 let Some(atlas_handle) = atlas_handles.get(*entity) else {
                     panic!("Texture not loaded in atlas pool!")
@@ -350,11 +431,13 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
                 // Get dynamic image size from the atlas handle (stored when the image was loaded)
                 let image_size = Vec2::new(atlas_handle.image_size[0], atlas_handle.image_size[1]);
 
-                let atlas_sprite =
-                    AtlasSpriteUniform::from_sprite(sprite, &transform, (uv_min, uv_max), image_size);
-
-                println!("Adding atlas sprite: {:?}", atlas_sprite);
-
+                let mut atlas_sprite = AtlasSpriteUniform::from_sprite(
+                    sprite,
+                    &transform,
+                    (uv_min, uv_max),
+                    image_size,
+                );
+                atlas_sprite.camera_index = camera_index_for_session;
                 instances.push(atlas_sprite);
             } else if let Some(atlas_sprite) = atlases.get(*entity) {
                 let assets = assets.borrow().unwrap();
@@ -364,16 +447,16 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
                     panic!("Texture not loaded in atlas pool!")
                 };
                 let (uv_min, uv_max) = (atlas_handle.uv_min, atlas_handle.uv_max);
+                let image_size = Vec2::new(atlas_handle.image_size[0], atlas_handle.image_size[1]);
 
-                let atlas_sprite = AtlasSpriteUniform::from_atlas_sprite(
+                let mut atlas_sprite = AtlasSpriteUniform::from_atlas_sprite(
                     atlas_sprite,
                     &atlas,
                     &transform,
                     (uv_min, uv_max),
+                    image_size,
                 );
-
-                println!("Adding atlas sprite: {:?}", atlas_sprite);
-
+                atlas_sprite.camera_index = camera_index_for_session;
                 instances.push(atlas_sprite);
             } else if let Some(tile) = tiles.get(*entity) {
                 let tile_layer_ent = sprite_lists.tile_layer.get(&entity).unwrap();
@@ -385,21 +468,30 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
                     panic!("Texture not loaded in atlas pool!")
                 };
                 let (uv_min, uv_max) = (atlas_handle.uv_min, atlas_handle.uv_max);
+                let image_size = Vec2::new(atlas_handle.image_size[0], atlas_handle.image_size[1]);
 
-                let tile_sprite = AtlasSpriteUniform::from_tile(
+                let mut tile_sprite = AtlasSpriteUniform::from_tile(
                     tile,
                     &atlas,
                     &transform,
                     (uv_min, uv_max),
+                    image_size,
                     tile_layer_ent.1,
                     tile_layer,
                 );
+
+                tile_sprite.camera_index = camera_index_for_session;
 
                 instances.push(tile_sprite);
             } else {
                 unreachable!()
             }
         }
+
+        // Update per-session entity->instance mapping using global indices.
+        drop(sprite_lists);
+        let mut sprite_lists = session.world.resource_mut::<SpriteLists>();
+        sprite_lists.index_of = index_of;
 
         for (entity, path) in entities.iter_with(&paths) {
             let Some(transform) = transforms.get(entity) else {
@@ -408,6 +500,7 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
 
             instances.push(AtlasSpriteUniform {
                 entity_type: 2,
+                camera_index: camera_index_for_session,
                 transform: transform.to_matrix_none().to_cols_array_2d(),
                 color_tint: path.color.as_rgba_f32(),
                 ..Default::default()
@@ -418,7 +511,7 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
     let device = device.borrow().unwrap();
     let queue = queue.borrow().unwrap();
 
-    println!("{}: {:?}", instances.len(), instances);
+    log::trace!("Updated sprite instances: {}", instances.len());
 
     // Update buffers (with dynamic resizing)
     dynamic_storage.write_pods(&device.get(), queue.get(), &instances);
@@ -463,6 +556,7 @@ pub fn sort_sprites(game: &mut bones::Game) {
         sprites_atlases.bit_or(tile_layers.bitset());
         let mut bitset = atlas_handles.bitset().clone();
         bitset.bit_and(&sprites_atlases);
+        bitset.bit_and(transforms.bitset());
 
         // Pre‐frame (CPU) work:
         let mut opaque_list: Vec<bones::Entity> = Vec::new();
@@ -470,103 +564,114 @@ pub fn sort_sprites(game: &mut bones::Game) {
 
         let mut tile_layer_hash = HashMap::with_capacity(tiles.bitset().len());
 
-        //TODO This is wrong! When adding sprite we should also check if we find a transparent pixel!
-        //And add a flag, but its fine for now i guess
         for ent in entities.iter_with_bitset(&bitset) {
-            println!("Sorting sprite: {:?}", ent);
-
-            if let Some(sprite) = sprites.get(ent) {
-                let color = sprite.color;
-
-                if color.a() != 1.0 {
-                    transparent_list.push(ent);
-                } else {
-                    opaque_list.push(ent);
-                }
-            } else if let Some(atlas_sprite) = atlases.get(ent) {
-                let color = atlas_sprite.color;
-
-                if color.a() != 1.0 {
-                    transparent_list.push(ent);
-                } else {
-                    opaque_list.push(ent);
-                }
+            if sprites.get(ent).is_some() || atlases.get(ent).is_some() {
+                opaque_list.push(ent);
             } else if let Some(tile_layer) = tile_layers.get(ent) {
                 for (i, tile) in tile_layer.tiles.iter().enumerate() {
                     if let Some(tile_ent) = tile {
-                        let tile = tiles.get(*tile_ent).unwrap();
-                        if tile.color.a() != 1.0 {
-                            transparent_list.push(*tile_ent);
-                        } else {
+                        if tiles.get(*tile_ent).is_some() {
                             opaque_list.push(*tile_ent);
+                            tile_layer_hash.insert(*tile_ent, (ent, i));
                         }
-                        tile_layer_hash.insert(*tile_ent, (ent, i));
                     }
                 }
             }
         }
 
-        // sort opaque front‐to‐back by layer, then atlas
-        opaque_list.sort_by_key(|ent| {
-            let atlas_handle = atlas_handles.get(*ent).unwrap_or_else(|| {
-                atlas_handles
-                    .get(tile_layer_hash.get(ent).unwrap().0)
-                    .unwrap()
-            });
+        // Sort back-to-front (ascending Z) by layer, then by atlas_id for instanced batching.
+        opaque_list.sort_by(|a, b| {
+            let atlas_a = atlas_handles
+                .get(*a)
+                .unwrap_or_else(|| {
+                    atlas_handles
+                        .get(tile_layer_hash.get(a).unwrap().0)
+                        .unwrap()
+                })
+                .atlas_id;
+            let atlas_b = atlas_handles
+                .get(*b)
+                .unwrap_or_else(|| {
+                    atlas_handles
+                        .get(tile_layer_hash.get(b).unwrap().0)
+                        .unwrap()
+                })
+                .atlas_id;
 
-            let layer = transforms
-                .get(*ent)
-                .unwrap_or_else(|| transforms.get(tile_layer_hash.get(ent).unwrap().0).unwrap())
+            let layer_a = transforms
+                .get(*a)
+                .unwrap_or_else(|| transforms.get(tile_layer_hash.get(a).unwrap().0).unwrap())
+                .translation
+                .z;
+            let layer_b = transforms
+                .get(*b)
+                .unwrap_or_else(|| transforms.get(tile_layer_hash.get(b).unwrap().0).unwrap())
                 .translation
                 .z;
 
-            (layer.to_bits(), atlas_handle.atlas_id)
+            layer_a
+                .total_cmp(&layer_b)
+                .then_with(|| atlas_a.cmp(&atlas_b))
         });
-        // sort transparent back‐to‐front, then atlas
-        transparent_list.sort_by_key(|ent| {
-            let atlas_handle = atlas_handles.get(*ent).unwrap_or_else(|| {
-                atlas_handles
-                    .get(tile_layer_hash.get(ent).unwrap().0)
-                    .unwrap()
-            });
+        transparent_list.sort_by(|a, b| {
+            let atlas_a = atlas_handles
+                .get(*a)
+                .unwrap_or_else(|| {
+                    atlas_handles
+                        .get(tile_layer_hash.get(a).unwrap().0)
+                        .unwrap()
+                })
+                .atlas_id;
+            let atlas_b = atlas_handles
+                .get(*b)
+                .unwrap_or_else(|| {
+                    atlas_handles
+                        .get(tile_layer_hash.get(b).unwrap().0)
+                        .unwrap()
+                })
+                .atlas_id;
 
-            let layer = transforms
-                .get(*ent)
-                .unwrap_or_else(|| transforms.get(tile_layer_hash.get(ent).unwrap().0).unwrap())
+            let layer_a = transforms
+                .get(*a)
+                .unwrap_or_else(|| transforms.get(tile_layer_hash.get(a).unwrap().0).unwrap())
+                .translation
+                .z;
+            let layer_b = transforms
+                .get(*b)
+                .unwrap_or_else(|| transforms.get(tile_layer_hash.get(b).unwrap().0).unwrap())
                 .translation
                 .z;
 
-            (!layer.to_bits(), atlas_handle.atlas_id)
+            layer_a
+                .total_cmp(&layer_b)
+                .then_with(|| atlas_a.cmp(&atlas_b))
         });
-
-        /*
-        println!(
-            "Opaque sprites: {}, Transparent sprites: {}",
-            opaque_list.len(),
-            transparent_list.len()
-        );
-        */
-
-        // Create index map for fast lookup
-        let mut index_of = HashMap::with_capacity(opaque_list.len() + transparent_list.len());
-        for (i, &e) in opaque_list.iter().chain(&transparent_list).enumerate() {
-            index_of.insert(e, i as u32);
-        }
 
         let mut sprite_lists = session.world.resource_mut::<SpriteLists>();
-        sprite_lists.index_of = index_of;
-
         sprite_lists.opaque_list = opaque_list;
         sprite_lists.transparent_list = transparent_list;
         sprite_lists.tile_layer = tile_layer_hash;
+
+        if log::log_enabled!(log::Level::Debug) {
+            log::debug!(
+                "SpriteLists: opaque={}, transparent={}, tiles={}",
+                sprite_lists.opaque_list.len(),
+                sprite_lists.transparent_list.len(),
+                sprite_lists.tile_layer.len(),
+            );
+        }
     }
 }
 
 pub fn update_cameras_uniform(
     game: &mut bones::Game,
     dynamic_uniform: &mut DynamicBuffer,
-    mut window_size: IVec2,
+    window_size: IVec2,
 ) {
+    // NOTE: This must match `pixel_scale` in `atlas_sprite.wgsl`.
+    // It is used to keep world-space values (in pixels) numerically small on the GPU.
+    const PIXEL_SCALE: f32 = 0.001;
+
     let mut instances: Vec<(&Ustr, Vec<(i32, CameraTransform, bones::Entity, Vec2)>)> = Vec::new();
 
     let queue = game.shared_resource_cell::<WgpuQueue>().unwrap();
@@ -599,69 +704,61 @@ pub fn update_cameras_uniform(
                 continue;
             }
 
-            let scale_ratio;
-            if let Some(viewport) = camera.viewport.option() {
-                //Get the viewport size, cropping it if needed
-                window_size -= viewport.position.as_ivec2();
-                window_size = IVec2::new(
-                    (viewport.size.x as i32).min(window_size.x),
-                    (viewport.size.y as i32).min(window_size.y),
-                );
-
-                if window_size.x <= 0 || window_size.y <= 0 {
-                    continue;
-                }
-
-                if viewport.size.y <= viewport.size.x {
-                    scale_ratio = Mat4::from_scale(Vec3::new(
-                        window_size.x as f32 / viewport.size.x as f32,
-                        viewport.size.y as f32 / viewport.size.x as f32 * window_size.y as f32
-                            / viewport.size.y as f32,
-                        1.,
-                    ))
-                    .inverse();
-                } else {
-                    scale_ratio = Mat4::from_scale(Vec3::new(
-                        viewport.size.x as f32 / viewport.size.y as f32 * window_size.x as f32
-                            / viewport.size.x as f32,
-                        window_size.y as f32 / viewport.size.y as f32,
-                        1.,
-                    ))
-                    .inverse();
-                }
-            } else if window_size.x <= 0 || window_size.y <= 0 {
+            // IMPORTANT: treat the input `window_size` as the base size for each camera.
+            // Cameras may have viewports (and there may be multiple cameras per session),
+            // so we must not shrink `window_size` cumulatively across iterations.
+            let viewport_size = camera
+                .viewport
+                .option()
+                .map(|v| v.size.as_vec2())
+                .unwrap_or(window_size.as_vec2());
+            if viewport_size.x <= 0.0 || viewport_size.y <= 0.0 {
                 continue;
-            } else if window_size.y <= window_size.x {
-                scale_ratio = Mat4::from_scale(Vec3::new(
-                    1.,
-                    window_size.y as f32 / window_size.x as f32,
-                    1.,
-                ))
-                .inverse();
-            } else {
-                scale_ratio = Mat4::from_scale(Vec3::new(
-                    window_size.x as f32 / window_size.y as f32,
-                    1.,
-                    1.,
-                ))
-                .inverse();
             }
+            let aspect = viewport_size.x / viewport_size.y;
 
-            let pixel_to_clip_space = Mat4::from_scale(Vec3::new(
-                2.0 / window_size.x as f32,
-                -2.0 / window_size.y as f32,
-                1.0,
-            )) * Mat4::from_translation(Vec3::new(-1.0, 1.0, 0.0));
+            // Compute the camera view size in game pixels, then scale to the shader's "pixel units".
+            let (camera_width_px, camera_height_px) = match camera.size {
+                bones::CameraSize::FixedHeight(h) => (h * aspect, h),
+                bones::CameraSize::FixedWidth(w) => (w, w / aspect),
+            };
+
+            let camera_width = camera_width_px * PIXEL_SCALE;
+            let camera_height = camera_height_px * PIXEL_SCALE;
+
+            // Build a proper view-projection matrix.
+            // Sprites use X/Y in scaled pixel units (PIXEL_SCALE) but Z in world units, so the
+            // camera translation must match that convention.
+            let mut cam_translation = transform.translation;
+            cam_translation.x *= PIXEL_SCALE;
+            cam_translation.y *= PIXEL_SCALE;
+
+            let cam_transform = bones::Transform {
+                translation: cam_translation,
+                rotation: transform.rotation,
+                scale: Vec3::ONE,
+            };
+
+            let view = cam_transform.to_matrix_none().inverse();
+            // Wide near/far to avoid clipping typical 2D layer Z values.
+            let proj = Mat4::orthographic_rh(
+                -camera_width * 0.5,
+                camera_width * 0.5,
+                -camera_height * 0.5,
+                camera_height * 0.5,
+                -10_000.0,
+                10_000.0,
+            );
+            let camera_to_clip = proj * view;
 
             session_instances.push((
                 camera.priority,
                 CameraTransform{
-                    transform: (/*Mat4::IDENTITYtransform.to_matrix((1.0 / window_size.as_vec2()).extend(1.0)) */ scale_ratio)
-                        .to_cols_array_2d(),
-                        screen_size: window_size.as_vec2().into(), ..Default::default()
+                    transform: camera_to_clip.to_cols_array_2d(),
+                        screen_size: viewport_size.into(), ..Default::default()
                 },
                 ent,
-                window_size.as_vec2()
+                viewport_size
             ));
         }
 
@@ -669,7 +766,11 @@ pub fn update_cameras_uniform(
         instances.push((session_name, session_instances));
     }
 
-    instances.sort_by(|a, b| a.0.cmp(&b.0));
+    instances.sort_by(|a, b| {
+        let prio_a = game.sessions.get(*a.0).map(|s| s.priority).unwrap_or(0);
+        let prio_b = game.sessions.get(*b.0).map(|s| s.priority).unwrap_or(0);
+        prio_a.cmp(&prio_b).then_with(|| a.0.cmp(&b.0))
+    });
 
     let device = device.borrow().unwrap();
     let queue = queue.borrow().unwrap();

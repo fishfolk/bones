@@ -12,7 +12,7 @@ use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
-    window::{Window, WindowId},
+    window::{Fullscreen, Window, WindowId},
 };
 
 use bones_framework::{
@@ -264,13 +264,14 @@ impl BonesWgpuRenderer {
             .init_shared_resource::<bones::MouseScreenPosition>();
         self.game
             .init_shared_resource::<bones::MouseWorldPosition>();
+        self.game.init_shared_resource::<bones::Window>();
 
         //Insert needed systems
         self.game.systems.add_startup_system(load_egui_textures);
         self.game.systems.add_startup_system(asset_load_status);
 
         // wgpu uses `log` for all of our logging, so we initialize a logger with the `env_logger` crate.
-        env_logger::init();
+        let _ = env_logger::try_init();
 
         let event_loop = EventLoop::builder().build().unwrap();
 
@@ -297,6 +298,7 @@ impl BonesWgpuRenderer {
             vertex_buffer,
             index_buffer,
             _now: Instant::now(),
+            preload_assets: self.preload,
             atlas_pool: atlas_pool::AtlasPool::new(
                 &device_clone,
                 &bind_group_clone,
@@ -306,8 +308,6 @@ impl BonesWgpuRenderer {
             ),
         };
         event_loop.run_app(&mut app).unwrap();
-
-        app.device.poll(wgpu::Maintain::Wait);
     }
 }
 
@@ -381,6 +381,15 @@ fn load_egui_textures(game: &mut bones::Game) {
     let mut egui_textures = game.shared_resource_mut::<bones::EguiTextures>().unwrap();
     let pixel_art = game.shared_resource::<PixelArt>().unwrap();
 
+    // egui enforces its own max texture side (default is often 2048).
+    // Also cap by the GPU/device limit so we don't upload textures the backend can't handle.
+    let egui_max_texture_side = ctx.input(|i| i.max_texture_side) as usize;
+    let device_max_texture_side = game
+        .shared_resource::<WgpuDevice>()
+        .and_then(|d| d.0.as_ref().map(|d| d.limits().max_texture_dimension_2d as usize))
+        .unwrap_or(usize::MAX);
+    let max_texture_side = egui_max_texture_side.min(device_max_texture_side);
+
     for entry in asset_server.store.asset_ids.iter() {
         let id = entry.key().typed();
         if egui_textures.contains_key(&id) {
@@ -392,6 +401,18 @@ fn load_egui_textures(game: &mut bones::Game) {
         if let Ok(bones::Image::Data(data)) = asset.data.try_cast_ref::<bones::Image>() {
             let rgba: RgbaImage = data.to_rgba8();
             let (w, h) = (rgba.width() as usize, rgba.height() as usize);
+
+            if w > max_texture_side || h > max_texture_side {
+                log::warn!(
+                    "Skipping egui texture upload for {:?} ({}x{} exceeds max texture side {})",
+                    entry.key(),
+                    w,
+                    h,
+                    max_texture_side
+                );
+                continue;
+            }
+
             let raw = rgba.into_raw();
 
             let handle = ctx.load_texture(
@@ -420,6 +441,7 @@ fn load_egui_textures(game: &mut bones::Game) {
 struct App {
     state: Option<State>,
     atlas_pool: atlas_pool::AtlasPool,
+    preload_assets: bool,
     instance: Arc<wgpu::Instance>,
     adapter: Arc<wgpu::Adapter>,
     device: Arc<wgpu::Device>,
@@ -477,9 +499,17 @@ impl ApplicationHandler for App {
                         1024,
                         wgpu::BufferUsages::STORAGE,
                     )),
+                self.preload_assets,
             );
 
             setup_egui(&mut self.game, &state.egui_renderer.context().clone());
+
+            // Initialize/update the Bones window resource now that we have a real window.
+            if let Some(mut bones_window) = self.game.shared_resource_mut::<bones::Window>() {
+                let logical: winit::dpi::LogicalSize<f32> =
+                    window.inner_size().to_logical(window.scale_factor());
+                bones_window.size = Vec2::new(logical.width, logical.height);
+            }
 
             self.state = Some(state);
         }
@@ -488,12 +518,10 @@ impl ApplicationHandler for App {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
-        let state = self.state.as_mut().unwrap();
-        // TODO: investigate possible ways to avoid allocating vectors every frame for event lists.
-        // TODO: Maybe add some multithreading for the diferent fors in the function?
-        let mut keyboard_inputs = bones::KeyboardInputs::default();
-        let mut wheel_events = Vec::new();
-        let mut button_events = Vec::new();
+        let Some(state) = self.state.as_mut() else {
+            // State may already be dropped during shutdown.
+            return;
+        };
 
         // Egui input handling
         state
@@ -502,18 +530,35 @@ impl ApplicationHandler for App {
 
         match event {
             WindowEvent::CloseRequested => {
-                //Close window
+                self.state.take();
                 event_loop.exit();
+                std::process::exit(0);
             }
             WindowEvent::RedrawRequested => {
                 //println!("{}", self.now.elapsed().as_secs_f32());
                 //self.now = Instant::now();
 
                 if self.game.shared_resource::<bones::ExitBones>().unwrap().0 {
+                    self.state.take();
                     event_loop.exit();
+                    std::process::exit(0);
                 }
 
                 state.render(&mut self.game, &mut self.atlas_pool);
+
+                // Clear per-frame input events after the game has been stepped/rendered.
+                if let Some(mut keyboard_inputs) =
+                    self.game.shared_resource_mut::<bones::KeyboardInputs>()
+                {
+                    keyboard_inputs.key_events.clear();
+                }
+                if let Some(mut mouse_inputs) = self.game.shared_resource_mut::<bones::MouseInputs>()
+                {
+                    mouse_inputs.wheel_events.clear();
+                    mouse_inputs.button_events.clear();
+                    mouse_inputs.movement = Vec2::ZERO;
+                }
+
                 // Emits a new redraw requested event.
                 state.get_window().request_redraw();
             }
@@ -526,7 +571,7 @@ impl ApplicationHandler for App {
                 let ev = match event.physical_key {
                     winit::keyboard::PhysicalKey::Code(code) => bones::KeyboardEvent {
                         scan_code: bones::Unset,
-                        key_code: bones::Set(code.into_bones()),
+                        key_code: code.into_bones(),
                         button_state: event.state.into_bones(),
                     },
                     winit::keyboard::PhysicalKey::Unidentified(native_key_code) => {
@@ -544,18 +589,28 @@ impl ApplicationHandler for App {
                         }
                     }
                 };
-                keyboard_inputs.key_events.push(ev);
+                if let Some(mut keyboard_inputs) =
+                    self.game.shared_resource_mut::<bones::KeyboardInputs>()
+                {
+                    keyboard_inputs.key_events.push(ev);
+                }
             }
             WindowEvent::MouseWheel { delta, .. } => {
                 let ev: bones::MouseScrollEvent = delta.into_bones();
-                wheel_events.push(ev);
+                if let Some(mut mouse_inputs) = self.game.shared_resource_mut::<bones::MouseInputs>()
+                {
+                    mouse_inputs.wheel_events.push(ev);
+                }
             }
             WindowEvent::MouseInput { state, button, .. } => {
                 let ev = bones::MouseButtonEvent {
                     button: button.into_bones(),
                     state: state.into_bones(),
                 };
-                button_events.push(ev);
+                if let Some(mut mouse_inputs) = self.game.shared_resource_mut::<bones::MouseInputs>()
+                {
+                    mouse_inputs.button_events.push(ev);
+                }
             }
             WindowEvent::CursorMoved { position, .. } => {
                 let screen_pos = Some(Vec2::new(position.x as f32, position.y as f32));
@@ -570,17 +625,8 @@ impl ApplicationHandler for App {
         }
 
         // Add the game inputs
-        //TODO: Add world position
-        //self.game.insert_shared_resource(MouseWorldPosition(world_pos));
-        self.game
-            .shared_resource_mut::<bones::MouseInputs>()
-            .unwrap()
-            .wheel_events = wheel_events;
-        self.game
-            .shared_resource_mut::<bones::MouseInputs>()
-            .unwrap()
-            .button_events = button_events;
-        self.game.insert_shared_resource(keyboard_inputs);
+        // TODO: Add world position
+        // self.game.insert_shared_resource(MouseWorldPosition(world_pos));
         self.game.insert_shared_resource(process_gamepad_events());
     }
 
@@ -619,6 +665,11 @@ struct State {
     camera_dynamic_uniform: DynamicBuffer,
     egui_renderer: EguiRenderer,
     egui_scale_factor: f32,
+    egui_fonts_loaded: bool,
+    preload_assets: bool,
+    /// When preloading assets, we pause all sessions to avoid running user startup systems before
+    /// assets exist (which would create default handles with no CID and panic on access).
+    saved_session_states: Option<Vec<(bones::Ustr, bool, bool)>>,
 }
 
 impl State {
@@ -633,6 +684,7 @@ impl State {
         index_buffer: Arc<wgpu::Buffer>,
         dynamic_storage: DynamicBuffer,
         camera_dynamic_uniform: DynamicBuffer,
+        preload_assets: bool,
     ) -> Self {
         let size = window.inner_size();
         let surface = instance.create_surface(window.clone()).unwrap();
@@ -703,7 +755,7 @@ impl State {
                     entry_point: Some("fs_main"),
                     targets: &[Some(wgpu::ColorTargetState {
                         format: config.format,
-                        blend: None, //For opaque
+                        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                         write_mask: wgpu::ColorWrites::ALL,
                     })],
                     compilation_options: Default::default(),
@@ -712,9 +764,7 @@ impl State {
                     topology: wgpu::PrimitiveTopology::TriangleList,
                     strip_index_format: None,
                     front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: Some(wgpu::Face::Back),
-                    // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
-                    // or Features::POLYGON_MODE_POINT
+                    cull_mode: None,
                     polygon_mode: wgpu::PolygonMode::Fill,
                     // Requires Features::DEPTH_CLIP_CONTROL
                     unclipped_depth: false,
@@ -722,14 +772,6 @@ impl State {
                     conservative: false,
                 },
                 depth_stencil: None,
-
-                /*Some(wgpu::DepthStencilState {
-                    format: wgpu::TextureFormat::Rgba8UnormSrgb,
-                    depth_write_enabled: true, //For opaque
-                    depth_compare: wgpu::CompareFunction::LessEqual,
-                    stencil: Default::default(),
-                    bias: Default::default(),
-                }),*/
                 multisample: wgpu::MultisampleState {
                     count: 1,
                     mask: !0,
@@ -766,9 +808,7 @@ impl State {
                     topology: wgpu::PrimitiveTopology::TriangleList,
                     strip_index_format: None,
                     front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: Some(wgpu::Face::Back),
-                    // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
-                    // or Features::POLYGON_MODE_POINT
+                    cull_mode: None,
                     polygon_mode: wgpu::PolygonMode::Fill,
                     // Requires Features::DEPTH_CLIP_CONTROL
                     unclipped_depth: false,
@@ -796,7 +836,13 @@ impl State {
                 cache: None,
             });
 
-        let egui_renderer = EguiRenderer::new(&device, surface_config.format, None, 1, &window);
+        let egui_renderer = EguiRenderer::new(
+            &device,
+            surface_format.add_srgb_suffix(),
+            None,
+            1,
+            &window,
+        );
 
         State {
             window,
@@ -811,8 +857,11 @@ impl State {
             dynamic_storage,
             camera_dynamic_uniform,
             egui_scale_factor: 1.0,
+            egui_fonts_loaded: false,
+            preload_assets,
             vertex_buffer,
             index_buffer,
+            saved_session_states: None,
         }
     }
 
@@ -846,20 +895,135 @@ impl State {
         // Create the command encoder.
         let mut encoder = self.device.create_command_encoder(&Default::default());
 
-        //Run needed egui related function, needs to run before step
-        self.egui_renderer.begin_frame(&self.window);
+        // Check whether assets have finished preloading before starting the egui pass so
+        // `update_egui_fonts` can register loaded font definitions before `begin_pass`.
+        let assets_loaded = game
+            .shared_resource::<bones::AssetServer>()
+            .map(|asset_server| asset_server.load_progress.is_finished())
+            .unwrap_or(true);
 
-        //Step bones
+        if (!self.preload_assets || assets_loaded) && !self.egui_fonts_loaded {
+            if let Some(bones_assets) = game.shared_resource::<bones::AssetServer>() {
+                update_egui_fonts(self.egui_renderer.context(), &bones_assets);
+            }
+            self.egui_fonts_loaded = true;
+        }
+
+        // Begin egui frame (and let the game mutate RawInput via EguiInputHook).
+        // Many games (including Jumpy) also piggyback on this hook to collect input for menus.
+        let mut raw_input = self.egui_renderer.take_raw_input(&self.window);
+        let input_hook = game
+            .shared_resource::<bones::EguiInputHook>()
+            .map(|h| h.0.clone());
+        if let Some(input_hook) = input_hook {
+            (input_hook)(game, &mut raw_input);
+        }
+        self.egui_renderer.begin_frame_with_raw_input(raw_input);
+
+        // Keep the Bones window resource in sync with the actual winit window size.
+        if let Some(mut bones_window) = game.shared_resource_mut::<bones::Window>() {
+            let logical: winit::dpi::LogicalSize<f32> =
+                self.window.inner_size().to_logical(self.window.scale_factor());
+            bones_window.size = Vec2::new(logical.width, logical.height);
+        }
+
+        if self.preload_assets && !assets_loaded {
+            // Save current session active/visible states once, then pause sessions.
+            // (Even though we skip stepping below, this prevents any external callers from
+            // observing sessions as "active" during preload.)
+            if self.saved_session_states.is_none() {
+                self.saved_session_states = Some(
+                    game.sessions
+                        .iter()
+                        .map(|(name, session)| (*name, session.active, session.visible))
+                        .collect(),
+                );
+            }
+            for (_, session) in game.sessions.iter_mut() {
+                session.active = false;
+            }
+
+            // Render the loading UI (and do NOT step the game).
+            asset_load_status(game);
+
+            let surface_texture = self
+                .surface
+                .get_current_texture()
+                .expect("failed to acquire next swapchain texture");
+            let texture_view = surface_texture
+                .texture
+                .create_view(&wgpu::TextureViewDescriptor {
+                    format: Some(self.surface_format.add_srgb_suffix()),
+                    ..Default::default()
+                });
+
+            let screen_descriptor = ScreenDescriptor {
+                size_in_pixels: [self.size.width, self.size.height],
+                pixels_per_point: self.window.as_ref().scale_factor() as f32 * self.egui_scale_factor,
+            };
+
+            self.egui_renderer.end_frame_and_draw(
+                &self.device,
+                &self.queue,
+                &mut encoder,
+                &self.window,
+                &texture_view,
+                screen_descriptor,
+            );
+
+            self.queue.submit([encoder.finish()]);
+            self.window.pre_present_notify();
+            surface_texture.present();
+            return;
+        }
+
+        if self.preload_assets {
+            if let Some(saved) = self.saved_session_states.take() {
+                // Restore original session active/visible states.
+                for (name, active, visible) in saved {
+                    if let Some(session) = game.sessions.get_mut(name) {
+                        session.active = active;
+                        session.visible = visible;
+                    }
+                }
+            }
+        }
+
+        // Ensure any newly loaded textures are registered in EguiTextures before stepping.
+        load_egui_textures(game);
+
+        // Step bones normally once assets are ready (or if preload is disabled).
         game.step(Instant::now());
+
+        // Sync egui scale factor from active sessions' EguiSettings resource.
+        for session_name in &game.sorted_session_keys {
+            if let Some(session) = game.sessions.get(*session_name) {
+                if let Some(settings) = session.world.get_resource::<bones::EguiSettings>() {
+                    self.egui_scale_factor = settings.scale as f32;
+                }
+            }
+        }
+
+        // Apply fullscreen changes requested by the game.
+        if let Some(bones_window) = game.shared_resource::<bones::Window>() {
+            let want_fullscreen = bones_window.fullscreen;
+            let is_fullscreen = self.window.fullscreen().is_some();
+
+            if want_fullscreen && !is_fullscreen {
+                self.window.set_fullscreen(Some(Fullscreen::Borderless(self.window.current_monitor())));
+            } else if !want_fullscreen && is_fullscreen {
+                self.window.set_fullscreen(None);
+            }
+        }
 
         update_atlas_pool(game, atlas_pool);
         sort_sprites(game);
-        update_uniforms(game, &mut self.dynamic_storage);
         update_cameras_uniform(
             game,
             &mut self.camera_dynamic_uniform,
             IVec2::new(self.size.width as i32, self.size.height as i32),
         );
+        update_uniforms(game, &mut self.dynamic_storage);
 
         let cameras_sorted = game.shared_resource::<Cameras>().unwrap();
 
@@ -877,7 +1041,57 @@ impl State {
                 ..Default::default()
             });
 
-        let mut camera_index = 0;
+        // Clear the frame once up-front.
+        let mut frame_clear_color = wgpu::Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        };
+        'find_clear: for (session_name, camera_vec) in cameras_sorted.0.iter() {
+            let session = game.sessions.get(*session_name).unwrap();
+            let cameras = session.world.component::<bones::Camera>();
+            let clear_color = session.world.get_resource::<bones::ClearColor>();
+
+            for (camera_ent, _camera_size) in camera_vec {
+                let camera = cameras.get(*camera_ent).unwrap();
+                if !camera.draw_background_color {
+                    continue;
+                }
+
+                let color: bones_framework::render::prelude::Color =
+                    match (camera.background_color.option(), clear_color) {
+                        (Some(color), _) => color,
+                        (None, Some(color)) => color.0,
+                        (None, None) => bones::Color::BLACK,
+                    };
+                let rgba = color.as_rgba_f64();
+                frame_clear_color = wgpu::Color {
+                    r: rgba[0],
+                    g: rgba[1],
+                    b: rgba[2],
+                    a: rgba[3],
+                };
+                break 'find_clear;
+            }
+        }
+
+        {
+            let _clear_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: None,
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &texture_view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(frame_clear_color),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+        }
         for (session_name, camera_vec) in cameras_sorted.0.iter() {
             let session = game.sessions.get(*session_name).unwrap();
 
@@ -885,42 +1099,21 @@ impl State {
             let atlas_handles = session.world.component::<AtlasPoolHandle>();
             let cameras = session.world.component::<bones::Camera>();
 
+            if log::log_enabled!(log::Level::Debug) {
+                log::debug!(
+                    "Render session {:?}: cameras={}, opaque={}, transparent={}, tiles={}, index_of={}",
+                    session_name,
+                    camera_vec.len(),
+                    sprite_lists.opaque_list.len(),
+                    sprite_lists.transparent_list.len(),
+                    sprite_lists.tile_layer.len(),
+                    sprite_lists.index_of.len(),
+                );
+            }
+
             for (camera_ent, camera_size) in camera_vec {
                 // Create render passes for each camera
                 let camera = cameras.get(*camera_ent).unwrap();
-
-                // Set the camera for the sprites
-                let n = self.dynamic_storage.capacity / size_of::<AtlasSpriteUniform>() as u64;
-                for i in 0..n {
-                    self.queue.write_buffer(
-                        &self.dynamic_storage.buffer,
-                        4 + i * size_of::<AtlasSpriteUniform>() as u64,
-                        bytemuck::cast_slice(&[(camera_index as u32)]),
-                    );
-                }
-
-                let clear_color = session.world.get_resource::<bones::ClearColor>();
-
-                let load = if camera.draw_background_color {
-                    let color: bones_framework::render::prelude::Color =
-                        match (camera.background_color.option(), clear_color) {
-                            (Some(color), _) => color,
-                            (None, Some(color)) => color.0,
-                            (None, None) => bones::Color::BLACK,
-                        };
-                    let color = color.as_rgba_f64();
-
-                    let color = wgpu::Color {
-                        r: color[0],
-                        g: color[1],
-                        b: color[2],
-                        a: color[3],
-                    };
-
-                    wgpu::LoadOp::Clear(color)
-                } else {
-                    wgpu::LoadOp::Load
-                };
 
                 let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: None,
@@ -957,12 +1150,6 @@ impl State {
 
                 // === OPAQUE PASS ===
                 pass.set_pipeline(&self.opaque_render_pipeline);
-
-                // Debug bind: use atlas 0 and instance 0 for a single test quad
-
-                //pass.set_bind_group(0, &atlas_pool.atlases[0].bind_group, &[]);
-                //pass.set_bind_group(1, self.dynamic_storage.get_bind_group(), &[]);
-                //pass.draw_indexed(0..6, 0, 0..1); // should draw the first sprite once
 
                 let opaque_list = &sprite_lists.opaque_list;
                 let transparent_list = &sprite_lists.transparent_list;
@@ -1010,28 +1197,29 @@ impl State {
 
                 let mut j = 0;
                 while j < transparent_list.len() {
-                    let atlas_pool_handle = atlas_handles.get(transparent_list[i]).unwrap_or(
-                        atlas_handles
-                            .get(sprite_lists.tile_layer.get(&transparent_list[i]).unwrap().0)
-                            .unwrap(),
-                    );
+                    let atlas_pool_handle =
+                        atlas_handles.get(transparent_list[j]).unwrap_or_else(|| {
+                            atlas_handles
+                                .get(sprite_lists.tile_layer.get(&transparent_list[j]).unwrap().0)
+                                .unwrap()
+                        });
                     let current_atlas = atlas_pool_handle.atlas_id;
 
                     let start = j;
                     while j < transparent_list.len()
                         && atlas_handles
-                            .get(transparent_list[i])
-                            .unwrap_or(
+                            .get(transparent_list[j])
+                            .unwrap_or_else(|| {
                                 atlas_handles
                                     .get(
                                         sprite_lists
                                             .tile_layer
-                                            .get(&transparent_list[i])
+                                            .get(&transparent_list[j])
                                             .unwrap()
                                             .0,
                                     )
-                                    .unwrap(),
-                            )
+                                    .unwrap()
+                            })
                             .atlas_id
                             == current_atlas
                     {
@@ -1045,12 +1233,62 @@ impl State {
 
                     pass.draw_indexed(0..6, 0, first_instance..first_instance + count);
                 }
-                camera_index += 1;
             }
         }
 
         // Draw the egui UI
         {
+            // F4 debug overlay to show atlas pool
+            static DEBUG_ATLAS_IDX: std::sync::Mutex<Option<usize>> = std::sync::Mutex::new(None);
+            let mut debug_idx = DEBUG_ATLAS_IDX.lock().unwrap();
+            let f4_pressed = game
+                .shared_resource::<bones::KeyboardInputs>()
+                .is_some_and(|k| {
+                    k.key_events.iter().any(|e| {
+                        e.key_code.option() == Some(bones::KeyCode::F4) && !e.button_state.pressed()
+                    })
+                });
+            if f4_pressed {
+                let n = atlas_pool.atlases.len();
+                *debug_idx = match *debug_idx {
+                    None if n > 0 => Some(0),
+                    Some(i) if i + 1 < n => Some(i + 1),
+                    _ => None,
+                };
+            }
+            let temp_tex_id = debug_idx
+                .and_then(|i| atlas_pool.atlases.get(i).map(|a| (i, a)))
+                .map(|(i, atlas)| {
+                    let tex_id = self.egui_renderer.renderer.register_native_texture(
+                        &self.device,
+                        &atlas.view,
+                        wgpu::FilterMode::Nearest,
+                    );
+                    egui::Area::new(egui::Id::new("debug_atlas_overlay"))
+                        .order(egui::Order::Debug)
+                        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                        .show(self.egui_renderer.context(), |ui| {
+                            egui::Frame::popup(ui.style())
+                                .fill(egui::Color32::from_black_alpha(220))
+                                .show(ui, |ui| {
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "Atlas #{} ({}/{}) [{} allocs] — F4 to cycle",
+                                            atlas.id,
+                                            i + 1,
+                                            atlas_pool.atlases.len(),
+                                            atlas.allocated
+                                        ))
+                                        .color(egui::Color32::WHITE)
+                                        .strong(),
+                                    );
+                                    let side = ui.ctx().screen_rect().height() * 0.85;
+                                    ui.image(egui::load::SizedTexture::new(tex_id, [side, side]));
+                                });
+                        });
+                    tex_id
+                });
+
             let screen_descriptor = ScreenDescriptor {
                 size_in_pixels: [self.size.width, self.size.height],
                 pixels_per_point: self.window.as_ref().scale_factor() as f32
@@ -1065,29 +1303,16 @@ impl State {
                 &texture_view,
                 screen_descriptor,
             );
+
+            if let Some(tex_id) = temp_tex_id {
+                self.egui_renderer.renderer.free_texture(&tex_id);
+            }
         }
 
         // Submit the command queue.
         self.queue.submit([encoder.finish()]);
         self.window.pre_present_notify();
         surface_texture.present();
-
-        /*Write atlas pool textures to png files for debugging
-        if !time_since_start().as_secs() < 10 {
-            for atlas in atlas_pool.atlases.iter() {
-                let path = String::from("atlas_") + &atlas.id.to_string() + ".png";
-
-                let result = crate::texture_file::dump_texture_to_png(
-                    &self.device,
-                    &self.queue,
-                    &atlas.texture,
-                    (atlas.texture.width(), atlas.texture.height()),
-                    std::path::Path::new(&path),
-                );
-                result.unwrap();
-            }
-            std::process::exit(1);
-        }*/
     }
 }
 
