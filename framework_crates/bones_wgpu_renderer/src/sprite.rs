@@ -705,6 +705,126 @@ pub fn sort_sprites(game: &mut bones::Game) {
     }
 }
 
+pub fn camera_view_size(camera: &bones::Camera, viewport_size: Vec2) -> (f32, f32) {
+    let aspect = viewport_size.x / viewport_size.y;
+    match camera.size {
+        bones::CameraSize::Fixed { width, height } => (width, height),
+        bones::CameraSize::FixedHeight(h) => (h * aspect, h),
+        bones::CameraSize::FixedWidth(w) => (w, w / aspect),
+        bones::CameraSize::Window { pixels_per_unit } => (
+            viewport_size.x / pixels_per_unit,
+            viewport_size.y / pixels_per_unit,
+        ),
+        bones::CameraSize::Min {
+            min_width,
+            min_height,
+        } => {
+            if viewport_size.x * min_height > min_width * viewport_size.y {
+                (min_height * aspect, min_height)
+            } else {
+                (min_width, min_width / aspect)
+            }
+        }
+        bones::CameraSize::Max {
+            max_width,
+            max_height,
+        } => {
+            if viewport_size.x * max_height < max_width * viewport_size.y {
+                (max_height * aspect, max_height)
+            } else {
+                (max_width, max_width / aspect)
+            }
+        }
+    }
+}
+
+/// Converts a physical screen cursor position `(x, y)` (top-left origin) to 2D world space
+/// using the active camera.
+pub fn screen_to_world_2d(
+    game: &bones::Game,
+    screen_pos: Vec2,
+    window_size: Vec2,
+) -> Option<Vec2> {
+    if window_size.x <= 0.0 || window_size.y <= 0.0 {
+        return None;
+    }
+
+    let mut candidates: Vec<(i32, Ustr, i32, bones::Camera, bones::Transform)> = Vec::new();
+    for (session_name, session) in game.sessions.iter() {
+        if !session.visible {
+            continue;
+        }
+        let entities = session.world.resource::<bones::Entities>();
+        let cameras = session.world.component::<bones::Camera>();
+        let transforms = session.world.component::<bones::Transform>();
+
+        for (_ent, (camera, transform)) in entities.iter_with((&cameras, &transforms)) {
+            if !camera.active {
+                continue;
+            }
+            candidates.push((
+                session.priority,
+                *session_name,
+                camera.priority,
+                camera.clone(),
+                *transform,
+            ));
+        }
+    }
+
+    if candidates.is_empty() {
+        return None;
+    }
+
+    candidates.sort_by(|a, b| {
+        a.0.cmp(&b.0)
+            .then_with(|| a.1.cmp(&b.1))
+            .then_with(|| a.2.cmp(&b.2))
+    });
+
+    // Prefer the highest-priority camera whose viewport contains `screen_pos`,
+    // falling back to the highest-priority active camera overall.
+    let chosen = candidates
+        .iter()
+        .rev()
+        .find(|(_, _, _, camera, _)| {
+            let (vp_pos, vp_size) = camera
+                .viewport
+                .option()
+                .map(|v| (v.position.as_vec2(), v.size.as_vec2()))
+                .unwrap_or((Vec2::ZERO, window_size));
+            screen_pos.x >= vp_pos.x
+                && screen_pos.x <= vp_pos.x + vp_size.x
+                && screen_pos.y >= vp_pos.y
+                && screen_pos.y <= vp_pos.y + vp_size.y
+        })
+        .or_else(|| candidates.last())?;
+
+    let (_, _, _, ref camera, ref transform) = *chosen;
+    let (viewport_pos, viewport_size) = camera
+        .viewport
+        .option()
+        .map(|v| (v.position.as_vec2(), v.size.as_vec2()))
+        .unwrap_or((Vec2::ZERO, window_size));
+    if viewport_size.x <= 0.0 || viewport_size.y <= 0.0 {
+        return None;
+    }
+
+    let (camera_width_px, camera_height_px) = camera_view_size(camera, viewport_size);
+    let rel = screen_pos - viewport_pos;
+    let ndc = Vec2::new(
+        (rel.x / viewport_size.x) * 2.0 - 1.0,
+        1.0 - (rel.y / viewport_size.y) * 2.0,
+    );
+    let local = Vec3::new(
+        ndc.x * (camera_width_px * 0.5),
+        ndc.y * (camera_height_px * 0.5),
+        0.0,
+    );
+    let world = (transform.rotation * local) + transform.translation;
+    Some(world.truncate())
+}
+
 pub fn update_cameras_uniform(
     game: &mut bones::Game,
     dynamic_uniform: &mut DynamicBuffer,
@@ -757,38 +877,9 @@ pub fn update_cameras_uniform(
             if viewport_size.x <= 0.0 || viewport_size.y <= 0.0 {
                 continue;
             }
-            let aspect = viewport_size.x / viewport_size.y;
 
             // Compute the camera view size in game pixels, then scale to the shader's "pixel units".
-            let (camera_width_px, camera_height_px) = match camera.size {
-                bones::CameraSize::Fixed { width, height } => (width, height),
-                bones::CameraSize::FixedHeight(h) => (h * aspect, h),
-                bones::CameraSize::FixedWidth(w) => (w, w / aspect),
-                bones::CameraSize::Window { pixels_per_unit } => (
-                    viewport_size.x / pixels_per_unit,
-                    viewport_size.y / pixels_per_unit,
-                ),
-                bones::CameraSize::Min {
-                    min_width,
-                    min_height,
-                } => {
-                    if viewport_size.x * min_height > min_width * viewport_size.y {
-                        (min_height * aspect, min_height)
-                    } else {
-                        (min_width, min_width / aspect)
-                    }
-                }
-                bones::CameraSize::Max {
-                    max_width,
-                    max_height,
-                } => {
-                    if viewport_size.x * max_height < max_width * viewport_size.y {
-                        (max_height * aspect, max_height)
-                    } else {
-                        (max_width, max_width / aspect)
-                    }
-                }
-            };
+            let (camera_width_px, camera_height_px) = camera_view_size(camera, viewport_size);
 
             let camera_width = camera_width_px * PIXEL_SCALE;
             let camera_height = camera_height_px * PIXEL_SCALE;

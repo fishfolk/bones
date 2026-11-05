@@ -24,6 +24,7 @@ image             = "0.24.9"
 crossbeam-channel = "0.5.14"
 bytemuck          = "1.22"
 lyon              = "1.0.1"
+gilrs             = "0.11.0"
 
 guillotiere       = "0.6.2"
 anyhow            = "1.0.98"

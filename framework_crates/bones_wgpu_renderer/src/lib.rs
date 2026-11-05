@@ -3,6 +3,7 @@ use convert::IntoBones;
 use image::RgbaImage;
 use pollster::FutureExt;
 use std::{
+    collections::VecDeque,
     path::{Path, PathBuf},
     sync::Arc,
     time::Instant,
@@ -27,6 +28,7 @@ mod atlas_pool;
 mod convert;
 mod dynamic_storage;
 mod line;
+mod rumble;
 mod sprite;
 mod storage;
 mod ui;
@@ -258,11 +260,14 @@ impl BonesWgpuRenderer {
         self.game.init_shared_resource::<bones::KeyboardInputs>();
         self.game.init_shared_resource::<bones::MouseInputs>();
         self.game.init_shared_resource::<bones::GamepadInputs>();
+        self.game.init_shared_resource::<bones::GamepadsRumble>();
         self.game
             .init_shared_resource::<bones::MouseScreenPosition>();
         self.game
             .init_shared_resource::<bones::MouseWorldPosition>();
         self.game.init_shared_resource::<bones::Window>();
+        self.game
+            .init_shared_resource::<bones::debug::FrameDiagState>();
 
         // wgpu uses `log` for all of our logging, so we initialize a logger with the `env_logger` crate.
         let _ = env_logger::try_init();
@@ -291,7 +296,9 @@ impl BonesWgpuRenderer {
             game: self.game,
             vertex_buffer,
             index_buffer,
-            _now: Instant::now(),
+            last_frame_instant: None,
+            frame_time_history: VecDeque::with_capacity(20),
+            rumble_manager: rumble::RumbleManager::default(),
             preload_assets: self.preload,
             atlas_pool: atlas_pool::AtlasPool::new(
                 &device_clone,
@@ -451,7 +458,9 @@ struct App {
     vertex_buffer: Arc<wgpu::Buffer>,
     index_buffer: Arc<wgpu::Buffer>,
     game: bones::Game,
-    _now: Instant,
+    last_frame_instant: Option<Instant>,
+    frame_time_history: VecDeque<f64>,
+    rumble_manager: rumble::RumbleManager,
 }
 
 impl ApplicationHandler for App {
@@ -538,16 +547,76 @@ impl ApplicationHandler for App {
                 std::process::exit(0);
             }
             WindowEvent::RedrawRequested => {
-                //println!("{}", self.now.elapsed().as_secs_f32());
-                //self.now = Instant::now();
-
                 if self.game.shared_resource::<bones::ExitBones>().0 {
                     self.state.take();
                     event_loop.exit();
                     std::process::exit(0);
                 }
 
+                // Update frame time diagnostics (`FrameDiagState`).
+                let now = Instant::now();
+                if let Some(last) = self.last_frame_instant.replace(now) {
+                    let dt_secs = now.duration_since(last).as_secs_f64();
+                    if dt_secs > 0.0 {
+                        const MAX_HISTORY: usize = 20;
+                        if self.frame_time_history.len() >= MAX_HISTORY {
+                            self.frame_time_history.pop_front();
+                        }
+                        self.frame_time_history.push_back(dt_secs);
+
+                        let avg_dt = self.frame_time_history.iter().sum::<f64>()
+                            / self.frame_time_history.len() as f64;
+                        let fps = 1.0 / dt_secs;
+                        let fps_avg = if avg_dt > 0.0 { 1.0 / avg_dt } else { 0.0 };
+                        let frame_time_ms = dt_secs * 1000.0;
+                        let frame_time_avg_ms = avg_dt * 1000.0;
+
+                        let mut diag = self
+                            .game
+                            .init_shared_resource::<bones::debug::FrameDiagState>();
+                        diag.fps = fps;
+                        diag.fps_avg = fps_avg;
+                        if fps < diag.min_fps {
+                            diag.min_fps = fps;
+                        }
+                        if fps > diag.max_fps {
+                            diag.max_fps = fps;
+                        }
+                        diag.frame_time = frame_time_ms;
+                        diag.frame_time_avg = frame_time_avg_ms;
+                        if frame_time_ms < diag.min_frame_time {
+                            diag.min_frame_time = frame_time_ms;
+                        }
+                        if frame_time_ms > diag.max_frame_time {
+                            diag.max_frame_time = frame_time_ms;
+                        }
+                    }
+                }
+
+                // Poll gamepad inputs once per frame and update mouse world position.
+                self.game.insert_shared_resource(process_gamepad_events());
+                let screen_pos = self
+                    .game
+                    .get_shared_resource::<bones::MouseScreenPosition>()
+                    .and_then(|p| p.0);
+                let world_pos = screen_pos.and_then(|sp| {
+                    screen_to_world_2d(
+                        &self.game,
+                        sp,
+                        Vec2::new(state.size.width as f32, state.size.height as f32),
+                    )
+                });
+                self.game
+                    .insert_shared_resource(bones::MouseWorldPosition(world_pos));
+
                 state.render(&mut self.game, &mut self.atlas_pool);
+
+                // Process any gamepad rumble requests queued during this frame.
+                if let Some(mut rumble) =
+                    self.game.get_shared_resource_mut::<bones::GamepadsRumble>()
+                {
+                    self.rumble_manager.process(&mut rumble);
+                }
 
                 // Clear per-frame input events after the game has been stepped/rendered.
                 if let Some(mut keyboard_inputs) =
@@ -619,21 +688,25 @@ impl ApplicationHandler for App {
                 }
             }
             WindowEvent::CursorMoved { position, .. } => {
-                let screen_pos = Some(Vec2::new(position.x as f32, position.y as f32));
+                let sp = Vec2::new(position.x as f32, position.y as f32);
+                let world_pos = screen_to_world_2d(
+                    &self.game,
+                    sp,
+                    Vec2::new(state.size.width as f32, state.size.height as f32),
+                );
                 self.game
-                    .insert_shared_resource(bones::MouseScreenPosition(screen_pos));
+                    .insert_shared_resource(bones::MouseScreenPosition(Some(sp)));
+                self.game
+                    .insert_shared_resource(bones::MouseWorldPosition(world_pos));
             }
             WindowEvent::CursorLeft { .. } => {
                 self.game
                     .insert_shared_resource(bones::MouseScreenPosition(None));
+                self.game
+                    .insert_shared_resource(bones::MouseWorldPosition(None));
             }
             _ => (),
         }
-
-        // Add the game inputs
-        // TODO: Add world position
-        // self.game.insert_shared_resource(MouseWorldPosition(world_pos));
-        self.game.insert_shared_resource(process_gamepad_events());
     }
 
     fn device_event(

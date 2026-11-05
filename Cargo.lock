@@ -959,6 +959,7 @@ dependencies = [
  "egui-wgpu",
  "egui-winit",
  "env_logger",
+ "gilrs",
  "guillotiere",
  "image 0.24.9",
  "log",
