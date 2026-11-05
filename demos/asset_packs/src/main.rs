@@ -1,4 +1,5 @@
 use bones_wgpu_renderer::BonesWgpuRenderer;
+use bones_wgpu_renderer::BonesWgpuRenderer;
 use bones_framework::prelude::*;
 
 //
@@ -53,13 +54,7 @@ fn main() {
         // Add our menu system to the update stage
         .add_system_to_stage(Update, menu_system);
 
-    let mut renderer = BonesWgpuRenderer::new(game);
-    if !renderer.asset_dir.exists() {
-        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-        renderer.asset_dir = manifest_dir.join("assets");
-        renderer.packs_dir = manifest_dir.join("packs");
-    }
-    renderer.run();
+    BonesBevyRenderer::new(game).app().run();
 }
 
 /// System to render the home menu.
