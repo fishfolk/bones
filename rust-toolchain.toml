@@ -1,2 +1,3 @@
 [toolchain]
 channel = "1.81"
+components = ["rust-analyzer"]
