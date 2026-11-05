@@ -1,5 +1,5 @@
-use bones_wgpu_renderer::BonesWgpuRenderer;
 use bones_framework::prelude::*;
+use bones_wgpu_renderer::BonesWgpuRenderer;
 
 fn main() {
     // Setup logging

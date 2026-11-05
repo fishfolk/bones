@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use bones_wgpu_renderer::BonesWgpuRenderer;
 use bones_framework::prelude::*;
+use bones_wgpu_renderer::BonesWgpuRenderer;
 
 #[derive(HasSchema, Default, Clone)]
 #[type_data(metadata_asset("game"))]

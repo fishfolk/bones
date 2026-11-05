@@ -29,7 +29,6 @@ mod dynamic_storage;
 mod line;
 mod sprite;
 mod storage;
-mod texture;
 mod texture_file;
 mod ui;
 
@@ -383,10 +382,13 @@ fn load_egui_textures(game: &mut bones::Game) {
 
     // egui enforces its own max texture side (default is often 2048).
     // Also cap by the GPU/device limit so we don't upload textures the backend can't handle.
-    let egui_max_texture_side = ctx.input(|i| i.max_texture_side) as usize;
+    let egui_max_texture_side = ctx.input(|i| i.max_texture_side);
     let device_max_texture_side = game
         .get_shared_resource::<WgpuDevice>()
-        .and_then(|d| d.0.as_ref().map(|d| d.limits().max_texture_dimension_2d as usize))
+        .and_then(|d| {
+            d.0.as_ref()
+                .map(|d| d.limits().max_texture_dimension_2d as usize)
+        })
         .unwrap_or(usize::MAX);
     let max_texture_side = egui_max_texture_side.min(device_max_texture_side);
 
@@ -553,7 +555,8 @@ impl ApplicationHandler for App {
                 {
                     keyboard_inputs.key_events.clear();
                 }
-                if let Some(mut mouse_inputs) = self.game.get_shared_resource_mut::<bones::MouseInputs>()
+                if let Some(mut mouse_inputs) =
+                    self.game.get_shared_resource_mut::<bones::MouseInputs>()
                 {
                     mouse_inputs.wheel_events.clear();
                     mouse_inputs.button_events.clear();
@@ -598,7 +601,8 @@ impl ApplicationHandler for App {
             }
             WindowEvent::MouseWheel { delta, .. } => {
                 let ev: bones::MouseScrollEvent = delta.into_bones();
-                if let Some(mut mouse_inputs) = self.game.get_shared_resource_mut::<bones::MouseInputs>()
+                if let Some(mut mouse_inputs) =
+                    self.game.get_shared_resource_mut::<bones::MouseInputs>()
                 {
                     mouse_inputs.wheel_events.push(ev);
                 }
@@ -608,7 +612,8 @@ impl ApplicationHandler for App {
                     button: button.into_bones(),
                     state: state.into_bones(),
                 };
-                if let Some(mut mouse_inputs) = self.game.get_shared_resource_mut::<bones::MouseInputs>()
+                if let Some(mut mouse_inputs) =
+                    self.game.get_shared_resource_mut::<bones::MouseInputs>()
                 {
                     mouse_inputs.button_events.push(ev);
                 }
@@ -673,6 +678,7 @@ struct State {
 }
 
 impl State {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         window: Arc<Window>,
         device: Arc<wgpu::Device>,
@@ -836,13 +842,8 @@ impl State {
                 cache: None,
             });
 
-        let egui_renderer = EguiRenderer::new(
-            &device,
-            surface_format.add_srgb_suffix(),
-            None,
-            1,
-            &window,
-        );
+        let egui_renderer =
+            EguiRenderer::new(&device, surface_format.add_srgb_suffix(), None, 1, &window);
 
         State {
             window,
@@ -922,8 +923,10 @@ impl State {
 
         // Keep the Bones window resource in sync with the actual winit window size.
         if let Some(mut bones_window) = game.get_shared_resource_mut::<bones::Window>() {
-            let logical: winit::dpi::LogicalSize<f32> =
-                self.window.inner_size().to_logical(self.window.scale_factor());
+            let logical: winit::dpi::LogicalSize<f32> = self
+                .window
+                .inner_size()
+                .to_logical(self.window.scale_factor());
             bones_window.size = Vec2::new(logical.width, logical.height);
             bones_window.focused = self.window.has_focus();
         }
@@ -960,7 +963,8 @@ impl State {
 
             let screen_descriptor = ScreenDescriptor {
                 size_in_pixels: [self.size.width, self.size.height],
-                pixels_per_point: self.window.as_ref().scale_factor() as f32 * self.egui_scale_factor,
+                pixels_per_point: self.window.as_ref().scale_factor() as f32
+                    * self.egui_scale_factor,
             };
 
             self.egui_renderer.end_frame_and_draw(
@@ -1011,7 +1015,8 @@ impl State {
             let is_fullscreen = self.window.fullscreen().is_some();
 
             if want_fullscreen && !is_fullscreen {
-                self.window.set_fullscreen(Some(Fullscreen::Borderless(self.window.current_monitor())));
+                self.window
+                    .set_fullscreen(Some(Fullscreen::Borderless(self.window.current_monitor())));
             } else if !want_fullscreen && is_fullscreen {
                 self.window.set_fullscreen(None);
             }
@@ -1146,8 +1151,8 @@ impl State {
                 pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
                 // Before your draw loops, once:
                 pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-                pass.set_bind_group(1, &*self.dynamic_storage.get_bind_group(), &[]);
-                pass.set_bind_group(2, &*self.camera_dynamic_uniform.get_bind_group(), &[]);
+                pass.set_bind_group(1, self.dynamic_storage.get_bind_group(), &[]);
+                pass.set_bind_group(2, self.camera_dynamic_uniform.get_bind_group(), &[]);
 
                 // === OPAQUE PASS ===
                 pass.set_pipeline(&self.opaque_render_pipeline);
@@ -1365,29 +1370,6 @@ const VERTICES: &[Vertex] = &[
     // Top-right vertex
     Vertex {
         position: [0.5, 0.5, 0.0],
-        tex_coords: [1.0, 0.0],
-    },
-];
-
-const VERTICES_FULL: &[Vertex] = &[
-    // Top-left vertex
-    Vertex {
-        position: [-1.0, 1.0, 0.0],
-        tex_coords: [0.0, 0.0],
-    },
-    // Bottom-left vertex
-    Vertex {
-        position: [-1.0, -1.0, 0.0],
-        tex_coords: [0.0, 1.0],
-    },
-    // Bottom-right vertex
-    Vertex {
-        position: [1.0, -1.0, 0.0],
-        tex_coords: [1.0, 1.0],
-    },
-    // Top-right vertex
-    Vertex {
-        position: [1.0, 1.0, 0.0],
         tex_coords: [1.0, 0.0],
     },
 ];

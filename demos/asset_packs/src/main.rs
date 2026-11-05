@@ -1,5 +1,5 @@
-use bones_wgpu_renderer::BonesWgpuRenderer;
 use bones_framework::prelude::*;
+use bones_wgpu_renderer::BonesWgpuRenderer;
 
 //
 // NOTE: You must run this example from within the `demos/asset_packs` folder. Also, be sure to

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use bones_framework::glam::Vec2;
 use lyon::math::Point;
 use lyon::path::Path;

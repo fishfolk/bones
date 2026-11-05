@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 /// Code for the AtlasPool and the TextureAtlas.
 /// A pool of texture atlases, each capable of holding multiple sprites.
-
 pub struct AtlasPool {
     device: Arc<wgpu::Device>,
     layout: Arc<wgpu::BindGroupLayout>,

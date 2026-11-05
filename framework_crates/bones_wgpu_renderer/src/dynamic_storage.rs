@@ -23,7 +23,7 @@ impl DynamicBuffer {
             mapped_at_creation: false,
         });
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &*layout,
+            layout: &layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
                 resource: buffer.as_entire_binding(),
@@ -53,7 +53,7 @@ impl DynamicBuffer {
             mapped_at_creation: false,
         });
         self.bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &*self.layout,
+            layout: &self.layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
                 resource: self.buffer.as_entire_binding(),
@@ -70,7 +70,7 @@ impl DynamicBuffer {
         queue: &wgpu::Queue,
         data: &[T],
     ) {
-        let needed_bytes = (data.len() * std::mem::size_of::<T>()) as u64;
+        let needed_bytes = std::mem::size_of_val(data) as u64;
         self.ensure_capacity(device, needed_bytes);
         queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(data));
 

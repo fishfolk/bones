@@ -1,7 +1,7 @@
 #![allow(clippy::too_many_arguments)]
 
-use bones_wgpu_renderer::BonesWgpuRenderer;
 use bones_framework::prelude::*;
+use bones_wgpu_renderer::BonesWgpuRenderer;
 
 /// Create our root asset type.
 ///

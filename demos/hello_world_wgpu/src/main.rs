@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use bones_framework::prelude::*;
 use bones_wgpu_renderer::BonesWgpuRenderer;
 
@@ -39,13 +41,11 @@ fn main() {
 
     // Create a new session for the game world. Each session is it's own bones world with it's own
     // plugins, systems, and entities.
-    game
-        .sessions
-        .create_with("world", |session: &mut Session| {
-            session.install_plugin(sprite_demo_plugin);
-            session.add_system_to_stage(Update, test);
-            //session.add_system_to_stage(Update, menu_system);
-        });
+    game.sessions.create_with("world", |session: &mut Session| {
+        session.install_plugin(sprite_demo_plugin);
+        session.add_system_to_stage(Update, test);
+        //session.add_system_to_stage(Update, menu_system);
+    });
 
     let mut renderer = BonesWgpuRenderer::new(game);
     if !renderer.asset_dir.exists() {

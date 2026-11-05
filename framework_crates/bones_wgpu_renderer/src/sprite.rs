@@ -1,7 +1,5 @@
 use crate::{atlas_pool::AtlasPool, *};
-use bones_framework::{
-    prelude::{self as bones, BitSet, ComponentIterBitset, Ustr},
-};
+use bones_framework::prelude::{self as bones, BitSet, ComponentIterBitset, Ustr};
 use guillotiere::Allocation;
 use std::collections::HashMap;
 
@@ -79,7 +77,7 @@ impl AtlasSpriteUniform {
         index: usize,
         tile_layer: &bones::TileLayer,
     ) -> Self {
-        let mut transform = transform.clone();
+        let mut transform = *transform;
         transform.translation.x +=
             atlas.tile_size.x * ((index as u32 % tile_layer.grid_size.x) as f32 + 0.5);
         transform.translation.y +=
@@ -148,6 +146,7 @@ impl Drop for AtlasAllocationGuard {
 /// Points to the atlas and rectangle this sprite lives in.
 pub struct AtlasPoolHandle {
     pub atlas_id: usize,
+    #[allow(dead_code)]
     pub alloc: Allocation,
     pub uv_min: [f32; 2],     // Atlas UV coordinates (min_x, min_y)
     pub uv_max: [f32; 2],     // Atlas UV coordinates (max_x, max_y)
@@ -318,7 +317,7 @@ pub fn update_atlas_pool(game: &mut bones::Game, atlas_pool: &mut AtlasPool) {
                 };
 
                 let unpadded_stride = (4 * w) as usize;
-                let padded_stride = ((unpadded_stride + 255) / 256) * 256;
+                let padded_stride = unpadded_stride.div_ceil(256) * 256;
                 let mut padded_data = vec![0u8; padded_stride * h as usize];
 
                 // copy each scanline into the padded buffer
@@ -427,13 +426,13 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
                     panic!("Texture not loaded in atlas pool!")
                 };
                 let (uv_min, uv_max) = (atlas_handle.uv_min, atlas_handle.uv_max);
-                
+
                 // Get dynamic image size from the atlas handle (stored when the image was loaded)
                 let image_size = Vec2::new(atlas_handle.image_size[0], atlas_handle.image_size[1]);
 
                 let mut atlas_sprite = AtlasSpriteUniform::from_sprite(
                     sprite,
-                    &transform,
+                    transform,
                     (uv_min, uv_max),
                     image_size,
                 );
@@ -452,14 +451,14 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
                 let mut atlas_sprite = AtlasSpriteUniform::from_atlas_sprite(
                     atlas_sprite,
                     &atlas,
-                    &transform,
+                    transform,
                     (uv_min, uv_max),
                     image_size,
                 );
                 atlas_sprite.camera_index = camera_index_for_session;
                 instances.push(atlas_sprite);
             } else if let Some(tile) = tiles.get(*entity) {
-                let tile_layer_ent = sprite_lists.tile_layer.get(&entity).unwrap();
+                let tile_layer_ent = sprite_lists.tile_layer.get(entity).unwrap();
                 let tile_layer = tile_layers.get(tile_layer_ent.0).unwrap();
                 let assets = assets.borrow().unwrap();
                 let atlas = assets.get(tile_layer.atlas).clone();
@@ -473,7 +472,7 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
                 let mut tile_sprite = AtlasSpriteUniform::from_tile(
                     tile,
                     &atlas,
-                    &transform,
+                    transform,
                     (uv_min, uv_max),
                     image_size,
                     tile_layer_ent.1,
@@ -514,7 +513,7 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
     log::trace!("Updated sprite instances: {}", instances.len());
 
     // Update buffers (with dynamic resizing)
-    dynamic_storage.write_pods(&device.get(), queue.get(), &instances);
+    dynamic_storage.write_pods(device.get(), queue.get(), &instances);
 }
 
 #[derive(bones_schema::HasSchema, Default, Clone)]
@@ -778,12 +777,13 @@ pub fn update_cameras_uniform(
 
             session_instances.push((
                 camera.priority,
-                CameraTransform{
+                CameraTransform {
                     transform: camera_to_clip.to_cols_array_2d(),
-                        screen_size: viewport_size.into(), ..Default::default()
+                    screen_size: viewport_size.into(),
+                    ..Default::default()
                 },
                 ent,
-                viewport_size
+                viewport_size,
             ));
         }
 
@@ -794,7 +794,7 @@ pub fn update_cameras_uniform(
     instances.sort_by(|a, b| {
         let prio_a = game.sessions.get(*a.0).map(|s| s.priority).unwrap_or(0);
         let prio_b = game.sessions.get(*b.0).map(|s| s.priority).unwrap_or(0);
-        prio_a.cmp(&prio_b).then_with(|| a.0.cmp(&b.0))
+        prio_a.cmp(&prio_b).then_with(|| a.0.cmp(b.0))
     });
 
     let device = device.borrow().unwrap();
@@ -808,14 +808,14 @@ pub fn update_cameras_uniform(
         .for_each(|(session_name, session_instances)| {
             let mut entities = Vec::new();
             for (_, transform, entity, window_size) in session_instances {
-                transforms.push(transform.clone());
+                transforms.push(*transform);
                 entities.push((*entity, *window_size));
             }
 
             cameras.0.push((**session_name, entities));
         });
 
-    dynamic_uniform.write_pods(&device.get(), queue.get(), &transforms);
+    dynamic_uniform.write_pods(device.get(), queue.get(), &transforms);
 }
 
 #[derive(bones_schema::HasSchema, Clone)]
