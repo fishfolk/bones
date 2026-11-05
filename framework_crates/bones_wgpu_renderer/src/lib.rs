@@ -29,7 +29,6 @@ mod dynamic_storage;
 mod line;
 mod sprite;
 mod storage;
-mod texture_file;
 mod ui;
 
 use dynamic_storage::DynamicBuffer;
@@ -265,10 +264,6 @@ impl BonesWgpuRenderer {
             .init_shared_resource::<bones::MouseWorldPosition>();
         self.game.init_shared_resource::<bones::Window>();
 
-        //Insert needed systems
-        self.game.systems.add_startup_system(load_egui_textures);
-        self.game.systems.add_startup_system(asset_load_status);
-
         // wgpu uses `log` for all of our logging, so we initialize a logger with the `env_logger` crate.
         let _ = env_logger::try_init();
 
@@ -474,7 +469,12 @@ impl ApplicationHandler for App {
 
             state.surface = self.instance.create_surface(window.clone()).unwrap();
             let cap = state.surface.get_capabilities(&self.adapter);
-            state.surface_format = cap.formats[0];
+            state.surface_format = cap
+                .formats
+                .iter()
+                .copied()
+                .find(|f| f.is_srgb())
+                .unwrap_or(cap.formats[0]);
 
             state.configure_surface();
         } else {
@@ -664,6 +664,8 @@ struct State {
     surface_format: wgpu::TextureFormat,
     opaque_render_pipeline: wgpu::RenderPipeline,
     transparent_render_pipeline: wgpu::RenderPipeline,
+    line_render_pipeline: wgpu::RenderPipeline,
+    line_buffers: line::LineBuffers,
     vertex_buffer: Arc<wgpu::Buffer>,
     index_buffer: Arc<wgpu::Buffer>,
     dynamic_storage: DynamicBuffer,
@@ -694,15 +696,21 @@ impl State {
     ) -> Self {
         let size = window.inner_size();
         let surface = instance.create_surface(window.clone()).unwrap();
-        let cap = surface.get_capabilities(adapter);
-        let surface_format = cap.formats[0];
+        let surface_caps = surface.get_capabilities(adapter);
+        let surface_format = surface_caps
+            .formats
+            .iter()
+            .copied()
+            .find(|f| f.is_srgb())
+            .unwrap_or(surface_caps.formats[0]);
+        let view_format = surface_format.add_srgb_suffix();
 
         // Configure surface for the first time
         let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface_format,
             // Request compatibility with the sRGB-format texture view we‘re going to create later.
-            view_formats: vec![surface_format.add_srgb_suffix()],
+            view_formats: vec![view_format],
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
             width: size.width,
             height: size.height,
@@ -710,25 +718,6 @@ impl State {
             present_mode: wgpu::PresentMode::AutoVsync,
         };
         surface.configure(&device, &surface_config);
-
-        let surface_caps = surface.get_capabilities(adapter);
-        // This accounts only for Srgb surfaces
-        let surface_format = surface_caps
-            .formats
-            .iter()
-            .copied()
-            .find(|f| f.is_srgb())
-            .unwrap_or(surface_caps.formats[0]);
-        let config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface_format,
-            width: size.width,
-            height: size.height,
-            present_mode: surface_caps.present_modes[0],
-            alpha_mode: surface_caps.alpha_modes[0],
-            view_formats: vec![],
-            desired_maximum_frame_latency: 2,
-        };
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
@@ -760,7 +749,7 @@ impl State {
                     module: &shader,
                     entry_point: Some("fs_main"),
                     targets: &[Some(wgpu::ColorTargetState {
-                        format: config.format,
+                        format: view_format,
                         blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                         write_mask: wgpu::ColorWrites::ALL,
                     })],
@@ -804,7 +793,7 @@ impl State {
                     module: &shader,
                     entry_point: Some("fs_main"),
                     targets: &[Some(wgpu::ColorTargetState {
-                        format: config.format,
+                        format: view_format,
                         blend: Some(wgpu::BlendState::ALPHA_BLENDING), //For transparent
                         write_mask: wgpu::ColorWrites::ALL,
                     })],
@@ -842,8 +831,60 @@ impl State {
                 cache: None,
             });
 
-        let egui_renderer =
-            EguiRenderer::new(&device, surface_format.add_srgb_suffix(), None, 1, &window);
+        let egui_renderer = EguiRenderer::new(&device, view_format, None, 1, &window);
+
+        let line_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Line Shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("line.wgsl").into()),
+        });
+
+        let line_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Line Render Pipeline Layout"),
+                bind_group_layouts: &[&dynamic_storage.layout, &camera_dynamic_uniform.layout],
+                push_constant_ranges: &[],
+            });
+
+        let line_render_pipeline =
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("Line Render Pipeline"),
+                layout: Some(&line_pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &line_shader,
+                    entry_point: Some("vs_main"),
+                    buffers: &[line::Vertex::desc()],
+                    compilation_options: Default::default(),
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &line_shader,
+                    entry_point: Some("fs_main"),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: view_format,
+                        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                    compilation_options: Default::default(),
+                }),
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: None,
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    unclipped_depth: false,
+                    conservative: false,
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState {
+                    count: 1,
+                    mask: !0,
+                    alpha_to_coverage_enabled: false,
+                },
+                multiview: None,
+                cache: None,
+            });
+
+        let line_buffers = line::LineBuffers::new(&device);
 
         State {
             window,
@@ -854,6 +895,8 @@ impl State {
             surface_format,
             opaque_render_pipeline,
             transparent_render_pipeline,
+            line_render_pipeline,
+            line_buffers,
             egui_renderer,
             dynamic_storage,
             camera_dynamic_uniform,
@@ -1029,7 +1072,7 @@ impl State {
             &mut self.camera_dynamic_uniform,
             IVec2::new(self.size.width as i32, self.size.height as i32),
         );
-        update_uniforms(game, &mut self.dynamic_storage);
+        update_uniforms(game, &mut self.dynamic_storage, &mut self.line_buffers);
 
         let cameras_sorted = game.shared_resource::<Cameras>();
 
@@ -1238,6 +1281,28 @@ impl State {
                     pass.set_bind_group(0, atlas_bg, &[]);
 
                     pass.draw_indexed(0..6, 0, first_instance..first_instance + count);
+                }
+
+                // === LINE (Path2d) PASS ===
+                if let Some(draws) = self.line_buffers.session_draws.get(session_name) {
+                    if !draws.is_empty() {
+                        pass.set_pipeline(&self.line_render_pipeline);
+                        pass.set_vertex_buffer(0, self.line_buffers.vertex_buffer.slice(..));
+                        pass.set_index_buffer(
+                            self.line_buffers.index_buffer.slice(..),
+                            wgpu::IndexFormat::Uint32,
+                        );
+                        pass.set_bind_group(0, self.dynamic_storage.get_bind_group(), &[]);
+                        pass.set_bind_group(1, self.camera_dynamic_uniform.get_bind_group(), &[]);
+
+                        for draw in draws {
+                            pass.draw_indexed(
+                                draw.index_range.clone(),
+                                draw.base_vertex,
+                                draw.instance_index..draw.instance_index + 1,
+                            );
+                        }
+                    }
                 }
             }
         }

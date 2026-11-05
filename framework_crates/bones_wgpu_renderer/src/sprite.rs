@@ -361,10 +361,17 @@ pub fn update_atlas_pool(game: &mut bones::Game, atlas_pool: &mut AtlasPool) {
     }
 }
 
-pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuffer) {
+pub fn update_uniforms(
+    game: &mut bones::Game,
+    dynamic_storage: &mut DynamicBuffer,
+    line_buffers: &mut line::LineBuffers,
+) {
     // Prepare instance data
     //TODO put lenght
     let mut instances = Vec::new();
+    line_buffers.session_draws.clear();
+    let mut all_line_vertices: Vec<line::Vertex> = Vec::new();
+    let mut all_line_indices: Vec<u32> = Vec::new();
 
     // Build a mapping from session to base camera index in the camera uniform buffer.
     // The camera uniform buffer is populated by `update_cameras_uniform` in the same ordering.
@@ -491,11 +498,24 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
         drop(sprite_lists);
         let mut sprite_lists = session.world.resource_mut::<SpriteLists>();
         sprite_lists.index_of = index_of;
+        drop(sprite_lists);
 
-        for (entity, path) in entities.iter_with(&paths) {
-            let Some(transform) = transforms.get(entity) else {
-                unreachable!()
-            };
+        let mut path_entities: Vec<(&bones::Path2d, &bones::Transform)> =
+            entities.iter_with((&paths, &transforms)).map(|(_, pt)| pt).collect();
+        path_entities.sort_by(|a, b| a.1.translation.z.total_cmp(&b.1.translation.z));
+
+        let mut session_line_draws = Vec::with_capacity(path_entities.len());
+        for (path, transform) in path_entities {
+            let geometry = line::tessellate_path(path);
+            if geometry.indices.is_empty() || geometry.vertices.is_empty() {
+                continue;
+            }
+
+            let instance_index = instances.len() as u32;
+            let mut transform = *transform;
+            // Offset the path towards the camera slightly to make sure it renders on top of a
+            // sprite/etc. if it is applied to an entity with both a sprite and a path.
+            transform.translation.z += 0.0001;
 
             instances.push(AtlasSpriteUniform {
                 entity_type: 2,
@@ -504,6 +524,23 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
                 color_tint: path.color.as_rgba_f32(),
                 ..Default::default()
             });
+
+            let base_vertex = all_line_vertices.len() as i32;
+            let index_start = all_line_indices.len() as u32;
+            all_line_vertices.extend_from_slice(&geometry.vertices);
+            all_line_indices.extend_from_slice(&geometry.indices);
+            let index_end = all_line_indices.len() as u32;
+
+            session_line_draws.push(line::LineDrawCall {
+                index_range: index_start..index_end,
+                base_vertex,
+                instance_index,
+            });
+        }
+        if !session_line_draws.is_empty() {
+            line_buffers
+                .session_draws
+                .insert(*session_name, session_line_draws);
         }
     }
 
@@ -514,6 +551,12 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
 
     // Update buffers (with dynamic resizing)
     dynamic_storage.write_pods(device.get(), queue.get(), &instances);
+    line_buffers.write_buffers(
+        device.get(),
+        queue.get(),
+        &all_line_vertices,
+        &all_line_indices,
+    );
 }
 
 #[derive(bones_schema::HasSchema, Default, Clone)]
@@ -822,377 +865,3 @@ pub fn update_cameras_uniform(
 #[schema(no_default)]
 /// Camera entities sorted by `update_cameras_uniform` with their respective sizes.
 pub struct Cameras(pub Vec<(Ustr, Vec<(bones::Entity, Vec2)>)>);
-
-/* OLD
-pub fn load_sprite(game: &mut bones::Game) {
-    let assets = game.shared_resource_cell::<bones::AssetServer>().unwrap();
-    let device = game.shared_resource_cell::<WgpuDevice>().unwrap();
-    let queue = game.shared_resource_cell::<WgpuQueue>().unwrap();
-    let texture_sender = game.shared_resource_cell::<TextureSender>().unwrap();
-    let pixel_art = game.shared_resource_cell::<PixelArt>().unwrap();
-
-    for (session_name, session) in game.sessions.iter_mut() {
-        if !session.visible {
-            continue;
-        }
-
-        let entities = session.world.resource::<bones::Entities>();
-        let sprites = session.world.component::<bones::Sprite>();
-        let mut buffers = session.world.component_mut::<AtlasSpriteBuffer>();
-        let mut texture_loaded = session.world.component_mut::<TextureLoaded>();
-        let transforms = session.world.component::<bones::Transform>();
-
-        let mut not_loaded = texture_loaded.bitset().clone();
-        not_loaded.bit_not();
-        not_loaded.bit_and(sprites.bitset());
-
-        for entity in entities.iter_with_bitset(&not_loaded) {
-            let Some(sprite) = sprites.get(entity) else {
-                unreachable!();
-            };
-            let Some(transform) = transforms.get(entity) else {
-                panic!("No transform found!");
-            };
-
-            //Load and send texture
-            let assets = assets.borrow().unwrap();
-            let image = assets.get(sprite.image);
-            if let bones::Image::Data(img) = &*image {
-                let texture = Arc::new(
-                    Texture::from_image(
-                        device.borrow().unwrap().get(),
-                        queue.borrow().unwrap().get(),
-                        img,
-                        None,
-                        pixel_art.borrow().unwrap().0,
-                    )
-                    .unwrap(),
-                );
-
-                let base = BaseInstance {
-                    color: sprite.color.as_rgba_f32(),
-                    entity_type: 0,
-                    transform: transform.to_matrix_none().to_cols_array_2d(),
-                };
-                let sprite_flags = SpriteFlags {
-                    flip: [sprite.flip_x as u32, sprite.flip_y as u32]
-                };
-
-                let atlas_sprite_buffer =
-                    Arc::new(device.borrow().unwrap().get().create_buffer_init(
-                        &wgpu::util::BufferInitDescriptor {
-                            label: Some("Atlas Sprite Buffer"),
-                            contents: bytemuck::cast_slice(&[base]),
-                            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                        },
-                    ));
-
-                //Add buffer to bones so we can update it
-                buffers.insert(entity, AtlasSpriteBuffer(atlas_sprite_buffer.clone()));
-
-                texture_sender
-                    .borrow()
-                    .unwrap()
-                    .0
-                    .send((texture, entity, atlas_sprite_buffer, *session_name))
-                    .unwrap();
-                texture_loaded.insert(entity, TextureLoaded);
-            } else {
-                unreachable!()
-            };
-        }
-    }
-}
-
-pub fn load_atlas_sprite(game: &mut bones::Game) {
-    let assets = game.shared_resource_cell::<bones::AssetServer>().unwrap();
-    let device = game.shared_resource_cell::<WgpuDevice>().unwrap();
-    let queue = game.shared_resource_cell::<WgpuQueue>().unwrap();
-    let texture_sender = game.shared_resource_cell::<TextureSender>().unwrap();
-    let pixel_art = game.shared_resource_cell::<PixelArt>().unwrap();
-
-    for (session_name, session) in game.sessions.iter_mut() {
-        if !session.visible {
-            continue;
-        }
-
-        let entities = session.world.resource::<bones::Entities>();
-        let atlas_sprites = session.world.component::<bones::AtlasSprite>();
-        let mut buffers = session.world.component_mut::<AtlasSpriteBuffer>();
-        let mut texture_loaded = session.world.component_mut::<TextureLoaded>();
-
-        let mut not_loaded = texture_loaded.bitset().clone();
-        not_loaded.bit_not();
-        not_loaded.bit_and(atlas_sprites.bitset());
-
-        for entity in entities.iter_with_bitset(&not_loaded) {
-            let Some(atlas_sprite) = atlas_sprites.get(entity) else {
-                unreachable!();
-            };
-
-            //Load and send texture
-            let assets = assets.borrow().unwrap();
-            let atlas = assets.get(atlas_sprite.atlas);
-            let image = assets.get(atlas.image);
-            if let bones::Image::Data(img) = &*image {
-                let texture = Arc::new(
-                    Texture::from_image(
-                        device.borrow().unwrap().get(),
-                        queue.borrow().unwrap().get(),
-                        img,
-                        None,
-                        pixel_art.borrow().unwrap().0,
-                    )
-                    .unwrap(),
-                );
-                // create and send the atlas sprite uniform along with the texture and entity
-                let uniform = AtlasSpriteUniform::from_atlas_sprite(
-                    atlas_sprite,
-                    &assets.get(atlas_sprite.atlas),
-                );
-
-                let atlas_sprite_buffer =
-                    Arc::new(device.borrow().unwrap().get().create_buffer_init(
-                        &wgpu::util::BufferInitDescriptor {
-                            label: Some("Atlas Sprite Buffer"),
-                            contents: bytemuck::cast_slice(&[uniform]),
-                            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                        },
-                    ));
-
-                //Add buffer to bones so we can update it
-                buffers.insert(entity, AtlasSpriteBuffer(atlas_sprite_buffer.clone()));
-
-                texture_sender
-                    .borrow()
-                    .unwrap()
-                    .0
-                    .send((texture, entity, atlas_sprite_buffer, *session_name))
-                    .unwrap();
-                texture_loaded.insert(entity, TextureLoaded);
-            } else {
-                unreachable!()
-            };
-        }
-    }
-}
-
-pub fn load_tile_sprite(game: &mut bones::Game) {
-    let assets = game.shared_resource_cell::<bones::AssetServer>().unwrap();
-    let device = game.shared_resource_cell::<WgpuDevice>().unwrap();
-    let queue = game.shared_resource_cell::<WgpuQueue>().unwrap();
-    let texture_sender = game.shared_resource_cell::<TextureSender>().unwrap();
-    let pixel_art = game.shared_resource_cell::<PixelArt>().unwrap();
-
-    for (session_name, session) in game.sessions.iter_mut() {
-        if !session.visible {
-            continue;
-        }
-
-        let entities = session.world.resource::<bones::Entities>();
-        let tile_layers = session.world.component::<bones::TileLayer>();
-        let tiles = session.world.component::<bones::Tile>();
-        let mut buffers = session.world.component_mut::<AtlasSpriteBuffer>();
-        let mut texture_loaded = session.world.component_mut::<TextureLoaded>();
-
-        let mut not_loaded = texture_loaded.bitset().clone();
-        not_loaded.bit_not();
-        not_loaded.bit_and(tile_layers.bitset());
-
-        for layer_ent in entities.iter_with_bitset(&not_loaded) {
-            let Some(tile_layer) = tile_layers.get(layer_ent) else {
-                unreachable!();
-            };
-
-            //Load and send texture
-            let assets = assets.borrow().unwrap();
-            let atlas = assets.get(tile_layer.atlas);
-            let image = assets.get(atlas.image);
-            if let bones::Image::Data(img) = &*image {
-                let texture = Arc::new(
-                    Texture::from_image(
-                        device.borrow().unwrap().get(),
-                        queue.borrow().unwrap().get(),
-                        img,
-                        None,
-                        pixel_art.borrow().unwrap().0,
-                    )
-                    .unwrap(),
-                );
-
-                for (tile_pos_idx, tile) in tile_layer.tiles.iter().enumerate() {
-                    let Some(tile_ent) = tile else {
-                        continue;
-                    };
-                    let Some(tile) = tiles.get(*tile_ent) else {
-                        panic!("Couldn't find tile entity!");
-                    };
-                    let mut transforms = session.world.component_mut::<bones::Transform>();
-
-                    let transform = if let Some(t) = transforms.get_mut(*tile_ent) {
-                        t
-                    } else {
-                        transforms.insert(*tile_ent, bones::Transform::default());
-                        transforms.get_mut(*tile_ent).unwrap()
-                    };
-
-                    let tile_pos = tile_layer.pos(tile_pos_idx as u32);
-                    let tile_offset = tile_pos.as_vec2() * tile_layer.tile_size;
-
-                    /*let sprite_idx = tile.idx;
-                    let y = sprite_idx / atlas.columns;
-                    let x = sprite_idx - (y * atlas.columns);
-                    let cell = Vec2::new(x as f32, y as f32);
-                    let current_padding = atlas.padding
-                        * Vec2::new(if x > 0 { 1.0 } else { 0.0 }, if y > 0 { 1.0 } else { 0.0 });
-                    let min = (atlas.tile_size + current_padding) * cell + atlas.offset;
-                    let rect = Rect {
-                        min,
-                        max: min + atlas.tile_size,
-                    };*/
-
-                    transform.translation += tile_offset.extend(0.0);
-                    // Scale up slightly to avoid bleeding between tiles.
-                    // TODO: Improve tile rendering
-                    // Currently we do a small hack here, scaling up the tiles a little bit, to prevent
-                    // visible gaps between tiles. This solution isn't perfect and we probably need to
-                    // create a proper tile renderer. That can render multiple tiles on one quad instead
-                    // of using a separate quad for each tile.
-                    transform.scale += Vec3::new(0.01, 0.01, 0.0);
-
-                    // create and send the atlas sprite uniform along with the texture and entity
-                    let uniform =
-                        AtlasSpriteUniform::from_tile(tile, &assets.get(tile_layer.atlas));
-
-                    let atlas_sprite_buffer =
-                        Arc::new(device.borrow().unwrap().get().create_buffer_init(
-                            &wgpu::util::BufferInitDescriptor {
-                                label: Some("Atlas Sprite Buffer"),
-                                contents: bytemuck::cast_slice(&[uniform]),
-                                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                            },
-                        ));
-
-                    //Add buffer to bones so we can update it
-                    buffers.insert(*tile_ent, AtlasSpriteBuffer(atlas_sprite_buffer.clone()));
-
-                    texture_sender
-                        .borrow()
-                        .unwrap()
-                        .0
-                        .send((
-                            texture.clone(),
-                            *tile_ent,
-                            atlas_sprite_buffer,
-                            *session_name,
-                        ))
-                        .unwrap();
-                }
-            } else {
-                unreachable!()
-            };
-            texture_loaded.insert(layer_ent, TextureLoaded);
-        }
-    }
-}
-
-// System for updating atlas uniforms
-pub fn update_atlas_uniforms(game: &mut bones::Game) {
-    let assets = game.shared_resource_cell::<bones::AssetServer>().unwrap();
-    let queue = game.shared_resource_cell::<WgpuQueue>().unwrap();
-
-    for (_, session) in game.sessions.iter_mut() {
-        if !session.visible {
-            continue;
-        }
-
-        let entities = session.world.resource::<bones::Entities>();
-        let atlases = session.world.component::<bones::AtlasSprite>();
-        let mut buffers = session.world.component_mut::<AtlasSpriteBuffer>();
-
-        for (_, (atlas_sprite, atlas_sprite_buffer)) in entities.iter_with((&atlases, &mut buffers))
-        {
-            let assets = assets.borrow().unwrap();
-            let atlas = assets.get(atlas_sprite.atlas).clone();
-            let uniform = AtlasSpriteUniform::from_atlas_sprite(atlas_sprite, &atlas);
-            queue.borrow().unwrap().get().write_buffer(
-                &atlas_sprite_buffer.0,
-                0,
-                bytemuck::bytes_of(&uniform),
-            );
-        }
-    }
-}
-
-// System for updating sprite uniforms
-pub fn update_sprite_uniforms(game: &mut bones::Game) {
-    let queue = game.shared_resource_cell::<WgpuQueue>().unwrap();
-
-    for (_, session) in game.sessions.iter_mut() {
-        if !session.visible {
-            continue;
-        }
-
-        let entities = session.world.resource::<bones::Entities>();
-        let sprites = session.world.component::<bones::Sprite>();
-        let mut buffers = session.world.component_mut::<RenderBuffers>();
-        let transform = session.world.component::<bones::Transform>();
-
-        for (_, (sprite, atlas_sprite_buffer)) in entities.iter_with((&sprites, &mut buffers)) {
-            let base = BaseInstance {
-                color: sprite.color.as_rgba_f32(),
-                entity_type: 0,
-                transform: transform.to_matrix_none().to_cols_array_2d(),
-            };
-            let sprite_flags = SpriteFlags {
-                flip: [sprite.flip_x as u32, sprite.flip_y as u32],
-            };
-
-            queue.borrow().unwrap().get().write_buffer(
-                &atlas_sprite_buffer.0,
-                0,
-                bytemuck::bytes_of(&uniform),
-            );
-        }
-    }
-}
-
-// System for updating tiles uniforms
-pub fn update_tiles_uniforms(game: &mut bones::Game) {
-    let assets = game.shared_resource_cell::<bones::AssetServer>().unwrap();
-    let queue = game.shared_resource_cell::<WgpuQueue>().unwrap();
-
-    for (_, session) in game.sessions.iter_mut() {
-        if !session.visible {
-            continue;
-        }
-
-        let entities = session.world.resource::<bones::Entities>();
-        let tile_layers = session.world.component::<bones::TileLayer>();
-        let tiles = session.world.component::<bones::Tile>();
-        let mut buffers = session.world.component_mut::<AtlasSpriteBuffer>();
-
-        for (_, (tile_layer, atlas_sprite_buffer)) in
-            entities.iter_with((&tile_layers, &mut buffers))
-        {
-            let assets = assets.borrow().unwrap();
-            let atlas = assets.get(tile_layer.atlas).clone();
-            for tile in &tile_layer.tiles {
-                let Some(tile) = tile else {
-                    continue;
-                };
-                let Some(tile) = tiles.get(*tile) else {
-                    panic!("Couldn't find tile entity!");
-                };
-
-                let uniform = AtlasSpriteUniform::from_tile(tile, &atlas);
-                queue.borrow().unwrap().get().write_buffer(
-                    &atlas_sprite_buffer.0,
-                    0,
-                    bytemuck::bytes_of(&uniform),
-                );
-            }
-        }
-    }
-}
-*/
