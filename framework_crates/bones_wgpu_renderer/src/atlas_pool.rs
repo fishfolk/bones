@@ -1,8 +1,39 @@
-use bones_framework::prelude::Entity;
-use bones_framework::prelude::Ustr;
+use bones_framework::prelude as bones;
 use crossbeam_channel::unbounded;
 use guillotiere::{size2, AllocId, Allocation, AtlasAllocator};
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Weak},
+};
+
+pub struct AtlasAllocationGuard {
+    pub image: bones::Handle<bones::Image>,
+    pub cid: bones::Cid,
+    pub atlas_id: usize,
+    pub alloc: Allocation,
+    pub sender:
+        crossbeam_channel::Sender<(bones::Handle<bones::Image>, bones::Cid, usize, Allocation)>,
+}
+
+impl Drop for AtlasAllocationGuard {
+    fn drop(&mut self) {
+        if let Err(e) = self
+            .sender
+            .send((self.image, self.cid, self.atlas_id, self.alloc))
+        {
+            log::warn!("Failed to send atlas allocation for deallocation: {:?}", e);
+        }
+    }
+}
+
+pub struct CachedAtlasAllocation {
+    pub atlas_id: usize,
+    pub alloc: Allocation,
+    pub uv_min: [f32; 2],
+    pub uv_max: [f32; 2],
+    pub image_size: [f32; 2],
+    pub guard: Weak<AtlasAllocationGuard>,
+}
 
 /// Code for the AtlasPool and the TextureAtlas.
 /// A pool of texture atlases, each capable of holding multiple sprites.
@@ -14,9 +45,12 @@ pub struct AtlasPool {
     max_atlases: usize,
     pub atlas_size: (u32, u32),
     pixel_art: bool,
-    //Used to remove deleted textures
-    pub sender: crossbeam_channel::Sender<(Ustr, Entity, usize, Allocation)>,
-    pub receiver: crossbeam_channel::Receiver<(Ustr, Entity, usize, Allocation)>,
+    pub cache: HashMap<(bones::Handle<bones::Image>, bones::Cid), CachedAtlasAllocation>,
+    // Used to remove deleted textures when their last reference drops
+    pub sender:
+        crossbeam_channel::Sender<(bones::Handle<bones::Image>, bones::Cid, usize, Allocation)>,
+    pub receiver:
+        crossbeam_channel::Receiver<(bones::Handle<bones::Image>, bones::Cid, usize, Allocation)>,
 }
 
 impl AtlasPool {
@@ -37,6 +71,7 @@ impl AtlasPool {
             max_atlases,
             atlas_size,
             pixel_art,
+            cache: HashMap::new(),
             sender,
             receiver,
         }

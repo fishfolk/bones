@@ -51,6 +51,7 @@ pub struct LineBuffers {
     pub index_buffer: wgpu::Buffer,
     index_capacity: u64,
     pub session_draws: HashMap<bones::Ustr, Vec<LineDrawCall>>,
+    pub camera_bg_draws: HashMap<(bones::Ustr, bones::Entity), LineDrawCall>,
 }
 
 impl LineBuffers {
@@ -75,6 +76,7 @@ impl LineBuffers {
             index_buffer,
             index_capacity: Self::INITIAL_CAPACITY,
             session_draws: HashMap::new(),
+            camera_bg_draws: HashMap::new(),
         }
     }
 

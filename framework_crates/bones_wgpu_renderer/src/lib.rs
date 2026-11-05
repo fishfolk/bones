@@ -73,7 +73,14 @@ struct PixelArt(bool);
 #[derive(bones_schema::HasSchema, Default, bones::Deref, bones::DerefMut)]
 #[schema(no_clone)]
 struct LoadingContext(pub Option<LoadingFunction>);
-type LoadingFunction = Box<dyn FnMut(&bones::AssetServer, &egui::Context) + Sync + Send + 'static>;
+/// Custom loading screen callback type used when [`BonesWgpuRenderer::preload`] is enabled.
+pub type LoadingFunction =
+    Box<dyn FnMut(&bones::AssetServer, &egui::Context) + Sync + Send + 'static>;
+
+#[derive(bones_schema::HasSchema, Default, Clone)]
+struct LoadedEguiAssets {
+    cids: std::collections::HashMap<bones::UntypedHandle, bones::Cid>,
+}
 
 /// Renderer for [`bones_framework`] [`Game`][bones::Game]s using wgpu.
 pub struct BonesWgpuRenderer {
@@ -100,6 +107,7 @@ pub struct BonesWgpuRenderer {
 }
 
 impl BonesWgpuRenderer {
+    /// Create a new [`BonesWgpuRenderer`] for the provided game.
     pub fn new(game: bones::Game) -> Self {
         BonesWgpuRenderer {
             preload: true,
@@ -110,6 +118,50 @@ impl BonesWgpuRenderer {
             app_namespace: ("local".into(), "developer".into(), "bones_demo_game".into()),
             asset_dir: PathBuf::from("assets"),
             packs_dir: PathBuf::from("packs"),
+        }
+    }
+
+    /// Whether or not to load all assets on startup with a loading screen,
+    /// or skip straight to running the bones game immediately.
+    pub fn preload(self, preload: bool) -> Self {
+        Self { preload, ..self }
+    }
+
+    /// Insert a custom loading screen function that will be used in place of the default.
+    pub fn loading_screen(mut self, function: LoadingFunction) -> Self {
+        self.custom_load_progress = Some(function);
+        self
+    }
+
+    /// Whether or not to use nearest-neighbor sampling for textures.
+    pub fn pixel_art(self, pixel_art: bool) -> Self {
+        Self { pixel_art, ..self }
+    }
+
+    /// The (qualifier, organization, application) that will be used to pick a persistent storage
+    /// location for the game.
+    ///
+    /// For example: `("org", "fishfolk", "jumpy")`
+    pub fn namespace(mut self, (qualifier, organization, application): (&str, &str, &str)) -> Self {
+        self.app_namespace = (qualifier.into(), organization.into(), application.into());
+        self
+    }
+
+    /// The path to load assets from.
+    pub fn asset_dir(self, asset_dir: PathBuf) -> Self {
+        Self { asset_dir, ..self }
+    }
+
+    /// The path to load asset packs from.
+    pub fn packs_dir(self, packs_dir: PathBuf) -> Self {
+        Self { packs_dir, ..self }
+    }
+
+    /// Set the version of the game, used for the asset loader.
+    pub fn version(self, game_version: bones::Version) -> Self {
+        Self {
+            game_version,
+            ..self
         }
     }
 
@@ -172,6 +224,8 @@ impl BonesWgpuRenderer {
             }],
         });
 
+        let camera_entry_size =
+            std::num::NonZeroU64::new(std::mem::size_of::<CameraTransform>() as u64);
         let camera_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("camera_bind_group_layout"),
             entries: &[wgpu::BindGroupLayoutEntry {
@@ -179,8 +233,8 @@ impl BonesWgpuRenderer {
                 visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                 ty: wgpu::BindingType::Buffer {
                     ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
+                    has_dynamic_offset: true,
+                    min_binding_size: camera_entry_size,
                 },
                 count: None,
             }],
@@ -207,8 +261,13 @@ impl BonesWgpuRenderer {
         //This is used to store dynamically some rendering data, like transform, flip, etc
         let dynamic_storage =
             DynamicBuffer::new(&device, storage_layout, 1024, wgpu::BufferUsages::STORAGE);
-        let camera_dynamic_uniform =
-            DynamicBuffer::new(&device, camera_layout, 1024, wgpu::BufferUsages::STORAGE);
+        let camera_dynamic_uniform = DynamicBuffer::new_with_binding_size(
+            &device,
+            camera_layout,
+            1024,
+            wgpu::BufferUsages::STORAGE,
+            camera_entry_size,
+        );
 
         //Insert wgpu resources
         self.game
@@ -254,6 +313,7 @@ impl BonesWgpuRenderer {
 
         self.game
             .insert_shared_resource(bones::EguiTextures::default());
+        self.game.init_shared_resource::<LoadedEguiAssets>();
         self.game.insert_shared_resource(bones::ExitBones(false));
 
         // Insert empty inputs that will be updated by the `insert_bones_input` system later.
@@ -375,11 +435,20 @@ pub fn update_egui_fonts(ctx: &egui::Context, bones_assets: &bones::AssetServer)
     ctx.set_fonts(fonts);
 }
 
-//TODO Handle asset changes
+/// System for handling asset changes in the bones asset server.
+pub fn handle_asset_changes(game: &mut bones::Game) {
+    if let Some(mut asset_server) = game.get_shared_resource_mut::<bones::AssetServer>() {
+        asset_server.handle_asset_changes(|_asset_server, _handle| {});
+    }
+}
+
 fn load_egui_textures(game: &mut bones::Game) {
-    let asset_server = game.shared_resource::<bones::AssetServer>();
+    let Some(asset_server) = game.get_shared_resource::<bones::AssetServer>() else {
+        return;
+    };
     let ctx = game.shared_resource::<bones::EguiCtx>();
     let mut egui_textures = game.shared_resource_mut::<bones::EguiTextures>();
+    let mut loaded_egui_assets = game.shared_resource_mut::<LoadedEguiAssets>();
     let pixel_art = game.shared_resource::<PixelArt>();
 
     // egui enforces its own max texture side (default is often 2048).
@@ -394,14 +463,22 @@ fn load_egui_textures(game: &mut bones::Game) {
         .unwrap_or(usize::MAX);
     let max_texture_side = egui_max_texture_side.min(device_max_texture_side);
 
+    let mut fonts_changed = false;
+
     for entry in asset_server.store.asset_ids.iter() {
-        let id = entry.key().typed();
-        if egui_textures.contains_key(&id) {
-            // we already loaded this one
+        let untyped_handle = *entry.key();
+        let cid = *entry.value();
+        let id = untyped_handle.typed();
+
+        if loaded_egui_assets.cids.get(&untyped_handle) == Some(&cid) {
+            // We already loaded this exact content version.
             continue;
         }
 
-        let asset = asset_server.store.assets.get_mut(entry.value()).unwrap();
+        let Some(asset) = asset_server.store.assets.get(&cid) else {
+            continue;
+        };
+
         if let Ok(bones::Image::Data(data)) = asset.data.try_cast_ref::<bones::Image>() {
             let rgba: RgbaImage = data.to_rgba8();
             let (w, h) = (rgba.width() as usize, rgba.height() as usize);
@@ -414,6 +491,7 @@ fn load_egui_textures(game: &mut bones::Game) {
                     h,
                     max_texture_side
                 );
+                loaded_egui_assets.cids.insert(untyped_handle, cid);
                 continue;
             }
 
@@ -437,7 +515,15 @@ fn load_egui_textures(game: &mut bones::Game) {
                 },
             );
             egui_textures.insert(id, handle);
+            loaded_egui_assets.cids.insert(untyped_handle, cid);
+        } else if asset.data.try_cast_ref::<bones::Font>().is_ok() {
+            loaded_egui_assets.cids.insert(untyped_handle, cid);
+            fonts_changed = true;
         }
+    }
+
+    if fonts_changed {
+        update_egui_fonts(&ctx, &asset_server);
     }
 }
 
@@ -502,14 +588,15 @@ impl ApplicationHandler for App {
                     1024,
                     wgpu::BufferUsages::STORAGE,
                 )),
-                self.camera_dynamic_uniform
-                    .take()
-                    .unwrap_or(DynamicBuffer::new(
+                self.camera_dynamic_uniform.take().unwrap_or_else(|| {
+                    DynamicBuffer::new_with_binding_size(
                         &self.device,
                         self.camera_layout.clone(),
                         1024,
                         wgpu::BufferUsages::STORAGE,
-                    )),
+                        std::num::NonZeroU64::new(std::mem::size_of::<CameraTransform>() as u64),
+                    )
+                }),
                 self.preload_assets,
             );
 
@@ -595,14 +682,15 @@ impl ApplicationHandler for App {
 
                 // Poll gamepad inputs once per frame and update mouse world position.
                 self.game.insert_shared_resource(process_gamepad_events());
+                let scale_factor = state.window.scale_factor() as f32;
                 let screen_pos = self
                     .game
                     .get_shared_resource::<bones::MouseScreenPosition>()
                     .and_then(|p| p.0);
-                let world_pos = screen_pos.and_then(|sp| {
+                let world_pos = screen_pos.and_then(|logical_sp| {
                     screen_to_world_2d(
                         &self.game,
-                        sp,
+                        logical_sp * scale_factor,
                         Vec2::new(state.size.width as f32, state.size.height as f32),
                     )
                 });
@@ -688,14 +776,16 @@ impl ApplicationHandler for App {
                 }
             }
             WindowEvent::CursorMoved { position, .. } => {
-                let sp = Vec2::new(position.x as f32, position.y as f32);
+                let scale_factor = state.window.scale_factor() as f32;
+                let physical_sp = Vec2::new(position.x as f32, position.y as f32);
+                let logical_sp = physical_sp / scale_factor;
                 let world_pos = screen_to_world_2d(
                     &self.game,
-                    sp,
+                    physical_sp,
                     Vec2::new(state.size.width as f32, state.size.height as f32),
                 );
                 self.game
-                    .insert_shared_resource(bones::MouseScreenPosition(Some(sp)));
+                    .insert_shared_resource(bones::MouseScreenPosition(Some(logical_sp)));
                 self.game
                     .insert_shared_resource(bones::MouseWorldPosition(world_pos));
             }
@@ -715,16 +805,12 @@ impl ApplicationHandler for App {
         _device_id: winit::event::DeviceId,
         event: winit::event::DeviceEvent,
     ) {
-        let mut movement = Vec2::default();
-
         if let winit::event::DeviceEvent::MouseMotion { delta } = event {
             let delta = Vec2::new(delta.0 as f32, delta.1 as f32);
-            movement += delta;
-        };
-
-        self.game
-            .shared_resource_mut::<bones::MouseInputs>()
-            .movement = movement;
+            self.game
+                .shared_resource_mut::<bones::MouseInputs>()
+                .movement += delta;
+        }
     }
 }
 
@@ -735,8 +821,7 @@ struct State {
     size: winit::dpi::PhysicalSize<u32>,
     surface: wgpu::Surface<'static>,
     surface_format: wgpu::TextureFormat,
-    opaque_render_pipeline: wgpu::RenderPipeline,
-    transparent_render_pipeline: wgpu::RenderPipeline,
+    sprite_render_pipeline: wgpu::RenderPipeline,
     line_render_pipeline: wgpu::RenderPipeline,
     line_buffers: line::LineBuffers,
     vertex_buffer: Arc<wgpu::Buffer>,
@@ -778,19 +863,21 @@ impl State {
             .unwrap_or(surface_caps.formats[0]);
         let view_format = surface_format.add_srgb_suffix();
 
-        // Configure surface for the first time
-        let surface_config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface_format,
-            // Request compatibility with the sRGB-format texture view we‘re going to create later.
-            view_formats: vec![view_format],
-            alpha_mode: wgpu::CompositeAlphaMode::Auto,
-            width: size.width,
-            height: size.height,
-            desired_maximum_frame_latency: 2,
-            present_mode: wgpu::PresentMode::AutoVsync,
-        };
-        surface.configure(&device, &surface_config);
+        // Configure surface for the first time (if non-zero size)
+        if size.width > 0 && size.height > 0 {
+            let surface_config = wgpu::SurfaceConfiguration {
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                format: surface_format,
+                // Request compatibility with the sRGB-format texture view we‘re going to create later.
+                view_formats: vec![view_format],
+                alpha_mode: wgpu::CompositeAlphaMode::Auto,
+                width: size.width,
+                height: size.height,
+                desired_maximum_frame_latency: 2,
+                present_mode: wgpu::PresentMode::AutoVsync,
+            };
+            surface.configure(&device, &surface_config);
+        }
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
@@ -808,9 +895,9 @@ impl State {
                 push_constant_ranges: &[],
             });
 
-        let opaque_render_pipeline =
+        let sprite_render_pipeline =
             device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Render Pipeline"),
+                label: Some("Sprite Render Pipeline"),
                 layout: Some(&render_pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &shader,
@@ -840,58 +927,6 @@ impl State {
                     conservative: false,
                 },
                 depth_stencil: None,
-                multisample: wgpu::MultisampleState {
-                    count: 1,
-                    mask: !0,
-                    alpha_to_coverage_enabled: false,
-                },
-                // If the pipeline will be used with a multiview render pass, this
-                // indicates how many array layers the attachments will have.
-                multiview: None,
-                // Useful for optimizing shader compilation on Android
-                cache: None,
-            });
-
-        let transparent_render_pipeline =
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Render Pipeline"),
-                layout: Some(&render_pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: Some("vs_main"),
-                    buffers: &[Vertex::desc()],
-                    compilation_options: Default::default(),
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: Some("fs_main"),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: view_format,
-                        blend: Some(wgpu::BlendState::ALPHA_BLENDING), //For transparent
-                        write_mask: wgpu::ColorWrites::ALL,
-                    })],
-                    compilation_options: Default::default(),
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: None,
-                    polygon_mode: wgpu::PolygonMode::Fill,
-                    // Requires Features::DEPTH_CLIP_CONTROL
-                    unclipped_depth: false,
-                    // Requires Features::CONSERVATIVE_RASTERIZATION
-                    conservative: false,
-                },
-                depth_stencil: None,
-
-                /*Some(wgpu::DepthStencilState {
-                    format: wgpu::TextureFormat::Rgba8UnormSrgb,
-                    depth_write_enabled: false, //For transparent
-                    depth_compare: wgpu::CompareFunction::LessEqual,
-                    stencil: Default::default(),
-                    bias: Default::default(),
-                }),*/
                 multisample: wgpu::MultisampleState {
                     count: 1,
                     mask: !0,
@@ -966,8 +1001,7 @@ impl State {
             size,
             surface,
             surface_format,
-            opaque_render_pipeline,
-            transparent_render_pipeline,
+            sprite_render_pipeline,
             line_render_pipeline,
             line_buffers,
             egui_renderer,
@@ -987,6 +1021,9 @@ impl State {
     }
 
     fn configure_surface(&self) {
+        if self.size.width == 0 || self.size.height == 0 {
+            return;
+        }
         let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: self.surface_format,
@@ -1002,6 +1039,10 @@ impl State {
     }
 
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+        if new_size.width == 0 || new_size.height == 0 {
+            self.size = new_size;
+            return;
+        }
         self.size = new_size;
 
         // reconfigure the surface
@@ -1009,6 +1050,10 @@ impl State {
     }
 
     fn render(&mut self, game: &mut bones::Game, atlas_pool: &mut atlas_pool::AtlasPool) {
+        if self.size.width == 0 || self.size.height == 0 {
+            return;
+        }
+
         // Create the command encoder.
         let mut encoder = self.device.create_command_encoder(&Default::default());
 
@@ -1110,7 +1155,8 @@ impl State {
             }
         }
 
-        // Ensure any newly loaded textures are registered in EguiTextures before stepping.
+        // Process hot-reloaded assets and register any newly loaded/updated textures in EguiTextures before stepping.
+        handle_asset_changes(game);
         load_egui_textures(game);
 
         // Step bones normally once assets are ready (or if preload is disabled).
@@ -1170,31 +1216,21 @@ impl State {
             b: 0.0,
             a: 1.0,
         };
-        'find_clear: for (session_name, camera_vec) in cameras_sorted.0.iter() {
-            let session = game.sessions.get(*session_name).unwrap();
-            let cameras = session.world.component::<bones::Camera>();
-            let clear_color = session.world.get_resource::<bones::ClearColor>();
-
-            for (camera_ent, _camera_size) in camera_vec {
-                let camera = cameras.get(*camera_ent).unwrap();
-                if !camera.draw_background_color {
+        for session_name in &game.sorted_session_keys {
+            if let Some(session) = game.sessions.get(*session_name) {
+                if !session.visible {
                     continue;
                 }
-
-                let color: bones_framework::render::prelude::Color =
-                    match (camera.background_color.option(), clear_color) {
-                        (Some(color), _) => color,
-                        (None, Some(color)) => color.0,
-                        (None, None) => bones::Color::BLACK,
+                if let Some(clear_color) = session.world.get_resource::<bones::ClearColor>() {
+                    let rgba = clear_color.0.as_rgba_f64();
+                    frame_clear_color = wgpu::Color {
+                        r: rgba[0],
+                        g: rgba[1],
+                        b: rgba[2],
+                        a: rgba[3],
                     };
-                let rgba = color.as_rgba_f64();
-                frame_clear_color = wgpu::Color {
-                    r: rgba[0],
-                    g: rgba[1],
-                    b: rgba[2],
-                    a: rgba[3],
-                };
-                break 'find_clear;
+                    break;
+                }
             }
         }
 
@@ -1214,28 +1250,56 @@ impl State {
                 occlusion_query_set: None,
             });
         }
+
+        let mut global_camera_idx = 0u32;
         for (session_name, camera_vec) in cameras_sorted.0.iter() {
             let session = game.sessions.get(*session_name).unwrap();
 
             let sprite_lists = session.world.resource::<SpriteLists>();
-            let atlas_handles = session.world.component::<AtlasPoolHandle>();
             let cameras = session.world.component::<bones::Camera>();
+            let clear_color = session.world.get_resource::<bones::ClearColor>();
 
             if log::log_enabled!(log::Level::Debug) {
                 log::debug!(
-                    "Render session {:?}: cameras={}, opaque={}, transparent={}, tiles={}, index_of={}",
+                    "Render session {:?}: cameras={}, sprites={}, batches={}, tiles={}",
                     session_name,
                     camera_vec.len(),
-                    sprite_lists.opaque_list.len(),
-                    sprite_lists.transparent_list.len(),
+                    sprite_lists.sprite_list.len(),
+                    sprite_lists.batches.len(),
                     sprite_lists.tile_layer.len(),
-                    sprite_lists.index_of.len(),
                 );
             }
 
             for (camera_ent, camera_size) in camera_vec {
-                // Create render passes for each camera
                 let camera = cameras.get(*camera_ent).unwrap();
+                let camera_offset =
+                    global_camera_idx * std::mem::size_of::<CameraTransform>() as u32;
+                global_camera_idx += 1;
+
+                let camera_bg_color = if camera.draw_background_color {
+                    let color: bones_framework::render::prelude::Color =
+                        match (camera.background_color.option(), clear_color.as_deref()) {
+                            (Some(color), _) => color,
+                            (None, Some(color)) => color.0,
+                            (None, None) => bones::Color::BLACK,
+                        };
+                    let rgba = color.as_rgba_f64();
+                    Some(wgpu::Color {
+                        r: rgba[0],
+                        g: rgba[1],
+                        b: rgba[2],
+                        a: rgba[3],
+                    })
+                } else {
+                    None
+                };
+
+                // If the camera has no custom sub-window viewport and wants a background color,
+                // we can clear the render target directly via LoadOp::Clear.
+                let load_op = match (camera.viewport.option(), camera_bg_color) {
+                    (None, Some(color)) => wgpu::LoadOp::Clear(color),
+                    _ => wgpu::LoadOp::Load,
+                };
 
                 let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: None,
@@ -1243,7 +1307,7 @@ impl State {
                         view: &texture_view,
                         resolve_target: None,
                         ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Load,
+                            load: load_op,
                             store: wgpu::StoreOp::Store,
                         },
                     })],
@@ -1261,99 +1325,50 @@ impl State {
                         viewport.depth_min,
                         viewport.depth_max,
                     );
+
+                    // Clear sub-window viewport if camera.draw_background_color is true
+                    if let Some(bg_draw) = self
+                        .line_buffers
+                        .camera_bg_draws
+                        .get(&(*session_name, *camera_ent))
+                    {
+                        pass.set_pipeline(&self.line_render_pipeline);
+                        pass.set_vertex_buffer(0, self.line_buffers.vertex_buffer.slice(..));
+                        pass.set_index_buffer(
+                            self.line_buffers.index_buffer.slice(..),
+                            wgpu::IndexFormat::Uint32,
+                        );
+                        pass.set_bind_group(0, self.dynamic_storage.get_bind_group(), &[]);
+                        pass.set_bind_group(
+                            1,
+                            self.camera_dynamic_uniform.get_bind_group(),
+                            &[camera_offset],
+                        );
+                        pass.draw_indexed(
+                            bg_draw.index_range.clone(),
+                            bg_draw.base_vertex,
+                            bg_draw.instance_index..bg_draw.instance_index + 1,
+                        );
+                    }
                 }
 
-                // set the quad vertex buffer (slot 0)
-                pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-                // Before your draw loops, once:
-                pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-                pass.set_bind_group(1, self.dynamic_storage.get_bind_group(), &[]);
-                pass.set_bind_group(2, self.camera_dynamic_uniform.get_bind_group(), &[]);
+                // === SPRITE PASS ===
+                if !sprite_lists.batches.is_empty() {
+                    pass.set_pipeline(&self.sprite_render_pipeline);
+                    pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+                    pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                    pass.set_bind_group(1, self.dynamic_storage.get_bind_group(), &[]);
+                    pass.set_bind_group(
+                        2,
+                        self.camera_dynamic_uniform.get_bind_group(),
+                        &[camera_offset],
+                    );
 
-                // === OPAQUE PASS ===
-                pass.set_pipeline(&self.opaque_render_pipeline);
-
-                let opaque_list = &sprite_lists.opaque_list;
-                let transparent_list = &sprite_lists.transparent_list;
-                let index_of = &sprite_lists.index_of;
-
-                // iterate through opaque_list and batch by atlas_id
-                let mut i = 0;
-                while i < opaque_list.len() {
-                    let atlas_pool_handle =
-                        atlas_handles.get(opaque_list[i]).unwrap_or_else(|| {
-                            atlas_handles
-                                .get(sprite_lists.tile_layer.get(&opaque_list[i]).unwrap().0)
-                                .unwrap()
-                        });
-                    let current_atlas = atlas_pool_handle.atlas_id;
-
-                    // find how many consecutive entries share this atlas
-                    let start = i;
-                    while i < opaque_list.len()
-                        && atlas_handles
-                            .get(opaque_list[i])
-                            .unwrap_or_else(|| {
-                                atlas_handles
-                                    .get(sprite_lists.tile_layer.get(&opaque_list[i]).unwrap().0)
-                                    .unwrap()
-                            })
-                            .atlas_id
-                            == current_atlas
-                    {
-                        i += 1;
+                    for (atlas_id, instance_range) in &sprite_lists.batches {
+                        let atlas_bg = &atlas_pool.atlases[*atlas_id].bind_group;
+                        pass.set_bind_group(0, atlas_bg, &[]);
+                        pass.draw_indexed(0..6, 0, instance_range.clone());
                     }
-                    let count = (i - start) as u32;
-                    let first_instance = index_of[&opaque_list[start]];
-
-                    // bind this atlas’s bind group (group 0)
-                    let atlas_bg = &atlas_pool.atlases[current_atlas].bind_group;
-                    pass.set_bind_group(0, atlas_bg, &[]);
-
-                    // draw a quad instanced `count` times, indexing into your storage arrays
-                    pass.draw_indexed(0..6, 0, first_instance..first_instance + count);
-                }
-
-                // === TRANSPARENT PASS ===
-                pass.set_pipeline(&self.transparent_render_pipeline);
-
-                let mut j = 0;
-                while j < transparent_list.len() {
-                    let atlas_pool_handle =
-                        atlas_handles.get(transparent_list[j]).unwrap_or_else(|| {
-                            atlas_handles
-                                .get(sprite_lists.tile_layer.get(&transparent_list[j]).unwrap().0)
-                                .unwrap()
-                        });
-                    let current_atlas = atlas_pool_handle.atlas_id;
-
-                    let start = j;
-                    while j < transparent_list.len()
-                        && atlas_handles
-                            .get(transparent_list[j])
-                            .unwrap_or_else(|| {
-                                atlas_handles
-                                    .get(
-                                        sprite_lists
-                                            .tile_layer
-                                            .get(&transparent_list[j])
-                                            .unwrap()
-                                            .0,
-                                    )
-                                    .unwrap()
-                            })
-                            .atlas_id
-                            == current_atlas
-                    {
-                        j += 1;
-                    }
-                    let count = (j - start) as u32;
-                    let first_instance = index_of[&transparent_list[start]];
-
-                    let atlas_bg = &atlas_pool.atlases[current_atlas].bind_group;
-                    pass.set_bind_group(0, atlas_bg, &[]);
-
-                    pass.draw_indexed(0..6, 0, first_instance..first_instance + count);
                 }
 
                 // === LINE (Path2d) PASS ===
@@ -1366,7 +1381,11 @@ impl State {
                             wgpu::IndexFormat::Uint32,
                         );
                         pass.set_bind_group(0, self.dynamic_storage.get_bind_group(), &[]);
-                        pass.set_bind_group(1, self.camera_dynamic_uniform.get_bind_group(), &[]);
+                        pass.set_bind_group(
+                            1,
+                            self.camera_dynamic_uniform.get_bind_group(),
+                            &[camera_offset],
+                        );
 
                         for draw in draws {
                             pass.draw_indexed(

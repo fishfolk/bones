@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{num::NonZeroU64, sync::Arc};
 
 pub struct DynamicBuffer {
     pub layout: Arc<wgpu::BindGroupLayout>,
@@ -6,6 +6,7 @@ pub struct DynamicBuffer {
     bind_group: wgpu::BindGroup,
     pub capacity: u64, // in bytes
     buffer_usage: wgpu::BufferUsages,
+    binding_size: Option<NonZeroU64>,
 }
 
 impl DynamicBuffer {
@@ -15,6 +16,18 @@ impl DynamicBuffer {
         layout: Arc<wgpu::BindGroupLayout>,
         initial_capacity: u64,
         buffer_usage: wgpu::BufferUsages,
+    ) -> Self {
+        Self::new_with_binding_size(device, layout, initial_capacity, buffer_usage, None)
+    }
+
+    /// Create with an initial capacity (in bytes) and an optional fixed binding window size
+    /// (used when the bind group layout has `has_dynamic_offset: true`).
+    pub fn new_with_binding_size(
+        device: &wgpu::Device,
+        layout: Arc<wgpu::BindGroupLayout>,
+        initial_capacity: u64,
+        buffer_usage: wgpu::BufferUsages,
+        binding_size: Option<NonZeroU64>,
     ) -> Self {
         let buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("dynamic_storage_buffer"),
@@ -26,7 +39,11 @@ impl DynamicBuffer {
             layout: &layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: buffer.as_entire_binding(),
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: &buffer,
+                    offset: 0,
+                    size: binding_size,
+                }),
             }],
             label: Some("dynamic_storage_bind_group"),
         });
@@ -36,6 +53,7 @@ impl DynamicBuffer {
             bind_group,
             capacity: initial_capacity,
             buffer_usage,
+            binding_size,
         }
     }
 
@@ -56,7 +74,11 @@ impl DynamicBuffer {
             layout: &self.layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: self.buffer.as_entire_binding(),
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: &self.buffer,
+                    offset: 0,
+                    size: self.binding_size,
+                }),
             }],
             label: Some("dynamic_storage_bind_group (resized)"),
         });

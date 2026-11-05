@@ -38,7 +38,7 @@ struct CameraUniform {
 var<storage, read> sprite_data: array<AtlasSpriteUniform>;
 
 @group(2) @binding(0)
-var<storage, read> cameras: array<CameraUniform>;
+var<storage, read> camera: CameraUniform;
 
 // Quad vertex input
 struct VertexInput {
@@ -62,31 +62,16 @@ fn vs_main(
     let inst = sprite_data[idx];
     var out: VertexOutput;
 
-    var uv_size: vec2<f32>;
-    if inst.entity_type == 1u {
-        // For atlas/tiles: use tile_size directly
-        uv_size = inst.tile_size;
-    } else {
-        // For sprites: use calculated UV size multiplied by 4096 (atlas pool size)
-        uv_size = (inst.uv_max - inst.uv_min) * 4096.0;
-    }
-    
-    // Convert UV size to world size: use a fixed scale factor instead of screen size
-    // This prevents distortion when window is resized
-    let pixel_scale = 0.001; // Adjust this value to control sprite size (smaller = smaller sprites)
-    uv_size = uv_size * pixel_scale;
-    
-    let aspect_ratio = uv_size.x / uv_size.y;
+    // Both sprites (0) and atlas/tiles (1) store their unscaled pixel size in `tile_size`.
+    let pixel_scale = 0.001;
+    let uv_size = inst.tile_size * pixel_scale;
 
-    // Scale position by UV size (not just aspect ratio)
+    // Scale position by UV size
     let scaled_position = vec3<f32>(
         vert.position.x * uv_size.x,
         vert.position.y * uv_size.y,
         vert.position.z
     );
-
-    // load the camera uniform
-    let camera = cameras[inst.camera_index];
 
     // 1) Transform should use the same pixel_scale so 1 unit = 1 pixel
     // Scale transform by pixel_scale to match sprite scaling

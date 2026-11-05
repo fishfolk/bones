@@ -32,7 +32,7 @@ struct CameraUniform {
 var<storage, read> sprite_data: array<AtlasSpriteUniform>;
 
 @group(1) @binding(0)
-var<storage, read> cameras: array<CameraUniform>;
+var<storage, read> camera: CameraUniform;
 
 struct VertexInput {
     @location(0) position: vec2<f32>,
@@ -50,7 +50,14 @@ fn vs_main(
     @builtin(instance_index) idx: u32,
 ) -> VertexOutput {
     let inst = sprite_data[idx];
-    let camera = cameras[inst.camera_index];
+    var out: VertexOutput;
+
+    // entity_type == 3u: clip-space quad for clearing a camera viewport background
+    if inst.entity_type == 3u {
+        out.clip_pos = vec4<f32>(vert.position, 0.0, 1.0);
+        out.color = inst.color_tint;
+        return out;
+    }
 
     let pixel_scale = 0.001;
     let scaled_position = vec3<f32>(
@@ -62,7 +69,6 @@ fn vs_main(
     let transform_scale = vec3<f32>(pixel_scale, pixel_scale, 1.0);
     let inst_mat = scale_translation(inst.transform, transform_scale);
 
-    var out: VertexOutput;
     out.clip_pos = camera.transform * inst_mat * vec4<f32>(scaled_position, 1.0);
     out.color = vert.color;
     return out;
