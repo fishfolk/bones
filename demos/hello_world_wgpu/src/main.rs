@@ -41,20 +41,26 @@ fn main() {
     // plugins, systems, and entities.
     game
         .sessions
-        .create_with("world", |session: &mut SessionBuilder| {
+        .create_with("world", |session: &mut Session| {
             session.install_plugin(sprite_demo_plugin);
             session.add_system_to_stage(Update, test);
             //session.add_system_to_stage(Update, menu_system);
         });
 
-    BonesWgpuRenderer::new(game).run();
+    let mut renderer = BonesWgpuRenderer::new(game);
+    if !renderer.asset_dir.exists() {
+        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        renderer.asset_dir = manifest_dir.join("assets");
+        renderer.packs_dir = manifest_dir.join("packs");
+    }
+    renderer.run();
 }
 
 /// Plugin for running the sprite demo.
-fn sprite_demo_plugin(session: &mut SessionBuilder) {
+fn sprite_demo_plugin(session: &mut Session) {
     session
         .install_plugin(DefaultSessionPlugin)
-        .add_startup_system(sprite_demo_startup)
+        .add_system_to_stage(CoreStage::Startup, sprite_demo_startup)
         .add_system_to_stage(Update, move_sprite);
 }
 

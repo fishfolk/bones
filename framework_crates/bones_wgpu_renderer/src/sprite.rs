@@ -81,9 +81,9 @@ impl AtlasSpriteUniform {
     ) -> Self {
         let mut transform = transform.clone();
         transform.translation.x +=
-            tile_layer.tile_size.x * ((index as u32 % tile_layer.grid_size.x) as f32 + 0.5);
+            atlas.tile_size.x * ((index as u32 % tile_layer.grid_size.x) as f32 + 0.5);
         transform.translation.y +=
-            tile_layer.tile_size.y * ((index as u32 / tile_layer.grid_size.x) as f32 + 0.5);
+            atlas.tile_size.y * ((index as u32 / tile_layer.grid_size.x) as f32 + 0.5);
 
         Self {
             tile_size: atlas.tile_size.into(),
@@ -370,7 +370,7 @@ pub fn update_uniforms(game: &mut bones::Game, dynamic_storage: &mut DynamicBuff
     // Build a mapping from session to base camera index in the camera uniform buffer.
     // The camera uniform buffer is populated by `update_cameras_uniform` in the same ordering.
     let mut session_camera_index: HashMap<Ustr, u32> = HashMap::new();
-    if let Some(cameras_sorted) = game.shared_resource::<Cameras>() {
+    if let Some(cameras_sorted) = game.get_shared_resource::<Cameras>() {
         let mut idx: u32 = 0;
         for (session_name, camera_vec) in cameras_sorted.0.iter() {
             if !camera_vec.is_empty() {
@@ -719,8 +719,33 @@ pub fn update_cameras_uniform(
 
             // Compute the camera view size in game pixels, then scale to the shader's "pixel units".
             let (camera_width_px, camera_height_px) = match camera.size {
+                bones::CameraSize::Fixed { width, height } => (width, height),
                 bones::CameraSize::FixedHeight(h) => (h * aspect, h),
                 bones::CameraSize::FixedWidth(w) => (w, w / aspect),
+                bones::CameraSize::Window { pixels_per_unit } => (
+                    viewport_size.x / pixels_per_unit,
+                    viewport_size.y / pixels_per_unit,
+                ),
+                bones::CameraSize::Min {
+                    min_width,
+                    min_height,
+                } => {
+                    if viewport_size.x * min_height > min_width * viewport_size.y {
+                        (min_height * aspect, min_height)
+                    } else {
+                        (min_width, min_width / aspect)
+                    }
+                }
+                bones::CameraSize::Max {
+                    max_width,
+                    max_height,
+                } => {
+                    if viewport_size.x * max_height < max_width * viewport_size.y {
+                        (max_height * aspect, max_height)
+                    } else {
+                        (max_width, max_width / aspect)
+                    }
+                }
             };
 
             let camera_width = camera_width_px * PIXEL_SCALE;
@@ -774,7 +799,7 @@ pub fn update_cameras_uniform(
 
     let device = device.borrow().unwrap();
     let queue = queue.borrow().unwrap();
-    let mut cameras = game.shared_resource_mut::<Cameras>().unwrap();
+    let mut cameras = game.shared_resource_mut::<Cameras>();
 
     cameras.0 = Vec::new();
     let mut transforms = Vec::new();

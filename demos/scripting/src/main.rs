@@ -32,6 +32,11 @@ fn main() {
         "fishfolk".into(),
         "bones.demo_scripting".into(),
     );
+    if !renderer.asset_dir.exists() {
+        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        renderer.asset_dir = manifest_dir.join("assets");
+        renderer.packs_dir = manifest_dir.join("packs");
+    }
     renderer.run();
 }
 

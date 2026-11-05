@@ -222,7 +222,7 @@ impl BonesWgpuRenderer {
 
         //Deal with asset server
         IoTaskPool::init(TaskPool::default);
-        if let Some(mut asset_server) = self.game.shared_resource_mut::<bones::AssetServer>() {
+        if let Some(mut asset_server) = self.game.get_shared_resource_mut::<bones::AssetServer>() {
             asset_server.set_game_version(self.game_version.clone());
             asset_server.set_io(asset_io(&self.asset_dir, &self.packs_dir));
 
@@ -312,9 +312,9 @@ impl BonesWgpuRenderer {
 }
 
 fn asset_load_status(game: &mut bones::Game) {
-    let asset_server = game.shared_resource::<bones::AssetServer>().unwrap();
-    let ctx = game.shared_resource::<bones::EguiCtx>().unwrap();
-    let mut function = game.shared_resource_mut::<LoadingContext>().unwrap();
+    let asset_server = game.shared_resource::<bones::AssetServer>();
+    let ctx = game.shared_resource::<bones::EguiCtx>();
+    let mut function = game.shared_resource_mut::<LoadingContext>();
 
     if asset_server.load_progress.is_finished() {
         return;
@@ -332,7 +332,7 @@ pub fn setup_egui(game: &mut bones::Game, ctx: &egui::Context) {
     // Insert the egui context as a shared resource
     game.insert_shared_resource(bones::EguiCtx(ctx.clone()));
 
-    let asset_server = game.shared_resource::<bones::AssetServer>();
+    let asset_server = game.get_shared_resource::<bones::AssetServer>();
 
     if let Some(bones_assets) = asset_server {
         update_egui_fonts(ctx, &bones_assets);
@@ -376,16 +376,16 @@ pub fn update_egui_fonts(ctx: &egui::Context, bones_assets: &bones::AssetServer)
 
 //TODO Handle asset changes
 fn load_egui_textures(game: &mut bones::Game) {
-    let asset_server = game.shared_resource::<bones::AssetServer>().unwrap();
-    let ctx = game.shared_resource::<bones::EguiCtx>().unwrap();
-    let mut egui_textures = game.shared_resource_mut::<bones::EguiTextures>().unwrap();
-    let pixel_art = game.shared_resource::<PixelArt>().unwrap();
+    let asset_server = game.shared_resource::<bones::AssetServer>();
+    let ctx = game.shared_resource::<bones::EguiCtx>();
+    let mut egui_textures = game.shared_resource_mut::<bones::EguiTextures>();
+    let pixel_art = game.shared_resource::<PixelArt>();
 
     // egui enforces its own max texture side (default is often 2048).
     // Also cap by the GPU/device limit so we don't upload textures the backend can't handle.
     let egui_max_texture_side = ctx.input(|i| i.max_texture_side) as usize;
     let device_max_texture_side = game
-        .shared_resource::<WgpuDevice>()
+        .get_shared_resource::<WgpuDevice>()
         .and_then(|d| d.0.as_ref().map(|d| d.limits().max_texture_dimension_2d as usize))
         .unwrap_or(usize::MAX);
     let max_texture_side = egui_max_texture_side.min(device_max_texture_side);
@@ -505,10 +505,11 @@ impl ApplicationHandler for App {
             setup_egui(&mut self.game, &state.egui_renderer.context().clone());
 
             // Initialize/update the Bones window resource now that we have a real window.
-            if let Some(mut bones_window) = self.game.shared_resource_mut::<bones::Window>() {
+            if let Some(mut bones_window) = self.game.get_shared_resource_mut::<bones::Window>() {
                 let logical: winit::dpi::LogicalSize<f32> =
                     window.inner_size().to_logical(window.scale_factor());
                 bones_window.size = Vec2::new(logical.width, logical.height);
+                bones_window.focused = window.has_focus();
             }
 
             self.state = Some(state);
@@ -538,7 +539,7 @@ impl ApplicationHandler for App {
                 //println!("{}", self.now.elapsed().as_secs_f32());
                 //self.now = Instant::now();
 
-                if self.game.shared_resource::<bones::ExitBones>().unwrap().0 {
+                if self.game.shared_resource::<bones::ExitBones>().0 {
                     self.state.take();
                     event_loop.exit();
                     std::process::exit(0);
@@ -548,11 +549,11 @@ impl ApplicationHandler for App {
 
                 // Clear per-frame input events after the game has been stepped/rendered.
                 if let Some(mut keyboard_inputs) =
-                    self.game.shared_resource_mut::<bones::KeyboardInputs>()
+                    self.game.get_shared_resource_mut::<bones::KeyboardInputs>()
                 {
                     keyboard_inputs.key_events.clear();
                 }
-                if let Some(mut mouse_inputs) = self.game.shared_resource_mut::<bones::MouseInputs>()
+                if let Some(mut mouse_inputs) = self.game.get_shared_resource_mut::<bones::MouseInputs>()
                 {
                     mouse_inputs.wheel_events.clear();
                     mouse_inputs.button_events.clear();
@@ -590,14 +591,14 @@ impl ApplicationHandler for App {
                     }
                 };
                 if let Some(mut keyboard_inputs) =
-                    self.game.shared_resource_mut::<bones::KeyboardInputs>()
+                    self.game.get_shared_resource_mut::<bones::KeyboardInputs>()
                 {
                     keyboard_inputs.key_events.push(ev);
                 }
             }
             WindowEvent::MouseWheel { delta, .. } => {
                 let ev: bones::MouseScrollEvent = delta.into_bones();
-                if let Some(mut mouse_inputs) = self.game.shared_resource_mut::<bones::MouseInputs>()
+                if let Some(mut mouse_inputs) = self.game.get_shared_resource_mut::<bones::MouseInputs>()
                 {
                     mouse_inputs.wheel_events.push(ev);
                 }
@@ -607,7 +608,7 @@ impl ApplicationHandler for App {
                     button: button.into_bones(),
                     state: state.into_bones(),
                 };
-                if let Some(mut mouse_inputs) = self.game.shared_resource_mut::<bones::MouseInputs>()
+                if let Some(mut mouse_inputs) = self.game.get_shared_resource_mut::<bones::MouseInputs>()
                 {
                     mouse_inputs.button_events.push(ev);
                 }
@@ -645,7 +646,6 @@ impl ApplicationHandler for App {
 
         self.game
             .shared_resource_mut::<bones::MouseInputs>()
-            .unwrap()
             .movement = movement;
     }
 }
@@ -898,12 +898,12 @@ impl State {
         // Check whether assets have finished preloading before starting the egui pass so
         // `update_egui_fonts` can register loaded font definitions before `begin_pass`.
         let assets_loaded = game
-            .shared_resource::<bones::AssetServer>()
+            .get_shared_resource::<bones::AssetServer>()
             .map(|asset_server| asset_server.load_progress.is_finished())
             .unwrap_or(true);
 
         if (!self.preload_assets || assets_loaded) && !self.egui_fonts_loaded {
-            if let Some(bones_assets) = game.shared_resource::<bones::AssetServer>() {
+            if let Some(bones_assets) = game.get_shared_resource::<bones::AssetServer>() {
                 update_egui_fonts(self.egui_renderer.context(), &bones_assets);
             }
             self.egui_fonts_loaded = true;
@@ -913,7 +913,7 @@ impl State {
         // Many games (including Jumpy) also piggyback on this hook to collect input for menus.
         let mut raw_input = self.egui_renderer.take_raw_input(&self.window);
         let input_hook = game
-            .shared_resource::<bones::EguiInputHook>()
+            .get_shared_resource::<bones::EguiInputHook>()
             .map(|h| h.0.clone());
         if let Some(input_hook) = input_hook {
             (input_hook)(game, &mut raw_input);
@@ -921,10 +921,11 @@ impl State {
         self.egui_renderer.begin_frame_with_raw_input(raw_input);
 
         // Keep the Bones window resource in sync with the actual winit window size.
-        if let Some(mut bones_window) = game.shared_resource_mut::<bones::Window>() {
+        if let Some(mut bones_window) = game.get_shared_resource_mut::<bones::Window>() {
             let logical: winit::dpi::LogicalSize<f32> =
                 self.window.inner_size().to_logical(self.window.scale_factor());
             bones_window.size = Vec2::new(logical.width, logical.height);
+            bones_window.focused = self.window.has_focus();
         }
 
         if self.preload_assets && !assets_loaded {
@@ -1005,7 +1006,7 @@ impl State {
         }
 
         // Apply fullscreen changes requested by the game.
-        if let Some(bones_window) = game.shared_resource::<bones::Window>() {
+        if let Some(bones_window) = game.get_shared_resource::<bones::Window>() {
             let want_fullscreen = bones_window.fullscreen;
             let is_fullscreen = self.window.fullscreen().is_some();
 
@@ -1025,7 +1026,7 @@ impl State {
         );
         update_uniforms(game, &mut self.dynamic_storage);
 
-        let cameras_sorted = game.shared_resource::<Cameras>().unwrap();
+        let cameras_sorted = game.shared_resource::<Cameras>();
 
         // Create texture view
         let surface_texture = self
@@ -1242,7 +1243,7 @@ impl State {
             static DEBUG_ATLAS_IDX: std::sync::Mutex<Option<usize>> = std::sync::Mutex::new(None);
             let mut debug_idx = DEBUG_ATLAS_IDX.lock().unwrap();
             let f4_pressed = game
-                .shared_resource::<bones::KeyboardInputs>()
+                .get_shared_resource::<bones::KeyboardInputs>()
                 .is_some_and(|k| {
                     k.key_events.iter().any(|e| {
                         e.key_code.option() == Some(bones::KeyCode::F4) && !e.button_state.pressed()
