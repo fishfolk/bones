@@ -1,5 +1,6 @@
 use bones_framework::prelude::Entity;
-use crossbeam_channel::bounded;
+use bones_framework::prelude::Ustr;
+use crossbeam_channel::unbounded;
 use guillotiere::{size2, AllocId, Allocation, AtlasAllocator};
 use std::sync::Arc;
 
@@ -15,8 +16,8 @@ pub struct AtlasPool {
     pub atlas_size: (u32, u32),
     pixel_art: bool,
     //Used to remove deleted textures
-    pub sender: crossbeam_channel::Sender<(Entity, usize, Allocation)>,
-    pub receiver: crossbeam_channel::Receiver<(Entity, usize, Allocation)>,
+    pub sender: crossbeam_channel::Sender<(Ustr, Entity, usize, Allocation)>,
+    pub receiver: crossbeam_channel::Receiver<(Ustr, Entity, usize, Allocation)>,
 }
 
 impl AtlasPool {
@@ -27,8 +28,7 @@ impl AtlasPool {
         max_atlases: usize,
         pixel_art: bool,
     ) -> Self {
-        // I think 100 is a good number?
-        let (sender, receiver) = bounded(1000);
+        let (sender, receiver) = unbounded();
 
         AtlasPool {
             device: device.clone(),
@@ -176,13 +176,16 @@ impl TextureAtlas {
 
     /// Attempt to allocate; returns None if sprite doesn't fit
     pub fn allocate(&mut self, size: (i32, i32)) -> Option<Allocation> {
-        self.allocated += 1;
-        self.allocator.allocate(size.into())
+        let alloc = self.allocator.allocate(size.into());
+        if alloc.is_some() {
+            self.allocated += 1;
+        }
+        alloc
     }
 
     /// Free a single rectangle back into this atlas’s free-list
     pub fn deallocate(&mut self, alloc_id: AllocId) {
-        self.allocated -= 1;
+        self.allocated = self.allocated.saturating_sub(1);
         self.allocator.deallocate(alloc_id);
     }
 }

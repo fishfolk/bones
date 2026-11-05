@@ -9,7 +9,7 @@ use crate::bones;
 
 pub struct EguiRenderer {
     state: State,
-    renderer: Renderer,
+    pub renderer: Renderer,
     frame_started: bool,
 }
 
@@ -58,8 +58,11 @@ impl EguiRenderer {
         self.context().set_pixels_per_point(v);
     }
 
-    pub fn begin_frame(&mut self, window: &Window) {
-        let raw_input = self.state.take_egui_input(window);
+    pub fn take_raw_input(&mut self, window: &Window) -> egui::RawInput {
+        self.state.take_egui_input(window)
+    }
+
+    pub fn begin_frame_with_raw_input(&mut self, raw_input: egui::RawInput) {
         self.state.egui_ctx().begin_pass(raw_input);
         self.frame_started = true;
     }

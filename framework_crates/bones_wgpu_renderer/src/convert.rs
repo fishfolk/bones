@@ -44,9 +44,9 @@ impl IntoBones<bones::MouseButton> for MouseButton {
     }
 }
 
-impl IntoBones<bones::KeyCode> for winit::keyboard::KeyCode {
-    fn into_bones(self) -> bones::KeyCode {
-        match self {
+impl IntoBones<bones::Maybe<bones::KeyCode>> for winit::keyboard::KeyCode {
+    fn into_bones(self) -> bones::Maybe<bones::KeyCode> {
+        let code = match self {
             KeyCode::Digit1 => bones::KeyCode::Key1,
             KeyCode::Digit2 => bones::KeyCode::Key2,
             KeyCode::Digit3 => bones::KeyCode::Key3,
@@ -109,8 +109,6 @@ impl IntoBones<bones::KeyCode> for winit::keyboard::KeyCode {
             KeyCode::F23 => bones::KeyCode::F23,
             KeyCode::F24 => bones::KeyCode::F24,
             KeyCode::PrintScreen => bones::KeyCode::Snapshot,
-            // Normally on the same key as PrintScreen, and we are already mapping it
-            //KeyCode::PrintScreen => bones::KeyCode::Sysrq,
             KeyCode::ScrollLock => bones::KeyCode::Scroll,
             KeyCode::Pause => bones::KeyCode::Pause,
             KeyCode::Insert => bones::KeyCode::Insert,
@@ -139,15 +137,12 @@ impl IntoBones<bones::KeyCode> for winit::keyboard::KeyCode {
             KeyCode::Numpad9 => bones::KeyCode::Numpad9,
             KeyCode::NumpadAdd => bones::KeyCode::NumpadAdd,
             KeyCode::Equal => bones::KeyCode::Equals,
-            // Winit doesn't differentiate both '+' and '=', considering they are usually
-            // on the same physical key, and we are already mapping it
-            //KeyCode::Equal => bones::KeyCode::Plus,
             KeyCode::Backslash => bones::KeyCode::Backslash,
-            // LaunchApp2 is sometimes named Calculator
             KeyCode::LaunchApp2 => bones::KeyCode::Calculator,
             KeyCode::CapsLock => bones::KeyCode::Capital,
             KeyCode::Comma => bones::KeyCode::Comma,
             KeyCode::Convert => bones::KeyCode::Convert,
+            KeyCode::NonConvert => bones::KeyCode::NoConvert,
             KeyCode::NumpadDecimal => bones::KeyCode::NumpadDecimal,
             KeyCode::NumpadDivide => bones::KeyCode::NumpadDivide,
             KeyCode::Backquote => bones::KeyCode::Grave,
@@ -162,7 +157,6 @@ impl IntoBones<bones::KeyCode> for winit::keyboard::KeyCode {
             KeyCode::Minus => bones::KeyCode::Minus,
             KeyCode::NumpadMultiply => bones::KeyCode::NumpadMultiply,
             KeyCode::AudioVolumeMute => bones::KeyCode::Mute,
-            // LaunchApp1 is sometimes named MyComputer
             KeyCode::LaunchApp1 => bones::KeyCode::MyComputer,
             KeyCode::MediaTrackNext => bones::KeyCode::NextTrack,
             KeyCode::NumpadComma => bones::KeyCode::NumpadComma,
@@ -196,40 +190,10 @@ impl IntoBones<bones::KeyCode> for winit::keyboard::KeyCode {
             KeyCode::Copy => bones::KeyCode::Copy,
             KeyCode::Paste => bones::KeyCode::Paste,
             KeyCode::Cut => bones::KeyCode::Cut,
-            // These are not on the latest winit version,
-            // need to figure out how to handle them.
-            //KeyCode:: => bones::KeyCode::AbntC1,
-            //KeyCode:: => bones::KeyCode::AbntC2,
-            //KeyCode:: => bones::KeyCode::Apostrophe,
-            //KeyCode:: => bones::KeyCode::Asterisk,
-
-            // Not sure how to implement this, maybe NonConvert?
-            //KeyCode::NonConvert => bones::KeyCode::NoConvert,
-
-            // Not sure how to implement this
-            //KeyCode:: => bones::KeyCode::At,
-            //KeyCode:: => bones::KeyCode::Ax,
-            //KeyCode:: => bones::KeyCode::Colon,
-            //KeyCode:: => bones::KeyCode::Kana,
-            //KeyCode:: => bones::KeyCode::Kanji,
-            //KeyCode:: => bones::KeyCode::Unlabeled,
-            //KeyCode:: => bones::KeyCode::Oem102,
-            //KeyCode:: => bones::KeyCode::Underline,
-            //KeyCode:: => bones::KeyCode::Stop,
-
-            // I think this is the same as PageUp and PageDown keys, but not sure.
-            // tho they are already mapped
-            //KeyCode::PageUp => bones::KeyCode::NavigateForward,
-            //KeyCode::PageDown => bones::KeyCode::NavigateBackward,
-
-            // These are named keys now on winit, need to
-            // figure out how to handle them.
-            //NamedKey::Compose => bones::KeyCode::Compose,
-            //NamedKey::Caret => bones::KeyCode::Caret,
-
-            // Not sure what this is, could be MediaApps or ContextMenu, or both
-            //KeyCode::MediaApps | KeyCode::ContextMenu => bones::KeyCode::Apps,
-            _ => unimplemented!(),
-        }
+            KeyCode::Quote => bones::KeyCode::Apostrophe,
+            KeyCode::ContextMenu => bones::KeyCode::Apps,
+            _ => return bones::Unset,
+        };
+        bones::Set(code)
     }
 }

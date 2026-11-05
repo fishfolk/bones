@@ -121,6 +121,13 @@ fn fs_main(
 
     //If this is a tiled sheet sprite, compute the sub‐cell
     if inst.entity_type == 1u {
+        // `uv` is currently in atlas-pool space (already remapped by the vertex shader).
+        // Recover the original quad UV in [0,1] (after flip) so we can do correct tile selection.
+        // Inset slightly so nearest-neighbor sampling at the 1.0 boundary does not bleed into
+        // the adjacent tile in the atlas texture.
+        let uv_span = max(inst.uv_max - inst.uv_min, vec2<f32>(1e-6, 1e-6));
+        let quad_uv = clamp((uv - inst.uv_min) / uv_span, vec2<f32>(1e-4, 1e-4), vec2<f32>(1.0 - 1e-4, 1.0 - 1e-4));
+
         // Normalize dimensions by image size
         let ts = inst.tile_size / inst.image_size;
         let ps = inst.padding / inst.image_size;
@@ -138,8 +145,11 @@ fn fs_main(
         
         // Calculate bottom-right corner of tile (exclude padding)
         let tile_max = tile_min + ts;
-        // Map UV from [0,1] to [tile_min, tile_max] (only tile area, not padding)
-        uv = mix(tile_min, tile_max, uv);
+
+        // 1) Quad UV -> tile UV (inside the atlas texture)
+        let tile_uv = mix(tile_min, tile_max, quad_uv);
+        // 2) Tile UV -> atlas-pool UV (inside the packed atlas pool rect)
+        uv = mix(inst.uv_min, inst.uv_max, tile_uv);
     }
 
     // Sample the atlas at the correct UV and apply tint
@@ -149,33 +159,10 @@ fn fs_main(
 }
 
 fn scale_translation(matrix: mat4x4<f32>, translation_scale: vec3<f32>) -> mat4x4<f32> {
-    // Extract translation from last column
-    let translation = matrix[3].xyz;
-
-    // Extract scale from basis vector lengths
-    let scale = vec3<f32>(
-        length(matrix[0].xyz),
-        length(matrix[1].xyz),
-        length(matrix[2].xyz)
-    );
-
-    // Extract Z-rotation from first column
-    let angle = atan2(matrix[0].y, matrix[0].x);
-
-    // Compute sin/cos once
-    let c = cos(angle);
-    let s = sin(angle);
-
-    // Scale translation components
-    let tx = translation.x * translation_scale.x;
-    let ty = translation.y * translation_scale.y;
-    let tz = translation.z * translation_scale.z;
-
-    // Rebuild matrix in column-major order
     return mat4x4<f32>(
-        vec4(c * scale.x, s * scale.x, 0.0, 0.0),   // Column 0
-        vec4(-s * scale.y, c * scale.y, 0.0, 0.0),  // Column 1
-        vec4(0.0, 0.0, scale.z, 0.0),               // Column 2
-        vec4(tx, ty, tz, 1.0)                       // Column 3
+        matrix[0],
+        matrix[1],
+        matrix[2],
+        vec4<f32>(matrix[3].xyz * translation_scale, matrix[3].w)
     );
 }

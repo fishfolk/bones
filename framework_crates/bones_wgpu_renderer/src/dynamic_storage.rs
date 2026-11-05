@@ -74,7 +74,7 @@ impl DynamicBuffer {
         self.ensure_capacity(device, needed_bytes);
         queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(data));
 
-        println!("DynamicBuffer: Wrote {} bytes", needed_bytes);
+        log::trace!("DynamicBuffer: wrote {} bytes", needed_bytes);
     }
 
     /// Access the bind group for binding in your render pass.
