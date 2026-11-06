@@ -29,6 +29,8 @@ impl DynamicBuffer {
         buffer_usage: wgpu::BufferUsages,
         binding_size: Option<NonZeroU64>,
     ) -> Self {
+        let min_size = binding_size.map_or(16, NonZeroU64::get);
+        let initial_capacity = initial_capacity.max(min_size);
         let buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("dynamic_storage_buffer"),
             size: initial_capacity,
@@ -92,6 +94,9 @@ impl DynamicBuffer {
         queue: &wgpu::Queue,
         data: &[T],
     ) {
+        if data.is_empty() {
+            return;
+        }
         let needed_bytes = std::mem::size_of_val(data) as u64;
         self.ensure_capacity(device, needed_bytes);
         queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(data));

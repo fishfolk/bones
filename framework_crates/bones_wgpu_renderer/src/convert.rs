@@ -186,7 +186,10 @@ impl IntoBones<bones::Maybe<bones::KeyCode>> for winit::keyboard::KeyCode {
             KeyCode::BrowserRefresh => bones::KeyCode::WebRefresh,
             KeyCode::BrowserSearch => bones::KeyCode::WebSearch,
             KeyCode::BrowserStop => bones::KeyCode::WebStop,
+            KeyCode::IntlBackslash => bones::KeyCode::Oem102,
+            KeyCode::IntlRo => bones::KeyCode::AbntC1,
             KeyCode::IntlYen => bones::KeyCode::Yen,
+            KeyCode::KanaMode => bones::KeyCode::Kana,
             KeyCode::Copy => bones::KeyCode::Copy,
             KeyCode::Paste => bones::KeyCode::Paste,
             KeyCode::Cut => bones::KeyCode::Cut,
@@ -195,5 +198,86 @@ impl IntoBones<bones::Maybe<bones::KeyCode>> for winit::keyboard::KeyCode {
             _ => return bones::Unset,
         };
         bones::Set(code)
+    }
+}
+
+#[inline]
+fn srgb_to_linear_channel(c: f32) -> f32 {
+    if c <= 0.0 {
+        c
+    } else if c <= 0.04045 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
+    }
+}
+
+/// Converts an sRGBA [`bones::Color`] into linear RGBA `f32` components suitable for
+/// rendering to an `*Srgb` render target view (matching `bones_bevy_renderer`).
+#[inline]
+pub fn color_to_linear_rgba_f32(color: bones::Color) -> [f32; 4] {
+    let [r, g, b, a] = color.as_rgba_f32();
+    [
+        srgb_to_linear_channel(r),
+        srgb_to_linear_channel(g),
+        srgb_to_linear_channel(b),
+        a,
+    ]
+}
+
+/// Converts an sRGBA [`bones::Color`] into a linear [`wgpu::Color`] for `LoadOp::Clear` on
+/// an `*Srgb` render target view.
+#[inline]
+pub fn color_to_wgpu(color: bones::Color) -> wgpu::Color {
+    let [r, g, b, a] = color_to_linear_rgba_f32(color);
+    wgpu::Color {
+        r: r as f64,
+        g: g as f64,
+        b: b as f64,
+        a: a as f64,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn srgb_to_linear_endpoints_and_midtones() {
+        assert_eq!(
+            color_to_linear_rgba_f32(bones::Color::BLACK),
+            [0.0, 0.0, 0.0, 1.0]
+        );
+        assert_eq!(
+            color_to_linear_rgba_f32(bones::Color::WHITE),
+            [1.0, 1.0, 1.0, 1.0]
+        );
+
+        let gray = color_to_linear_rgba_f32(bones::Color::rgba(0.5, 0.5, 0.5, 0.5));
+        // 0.5 sRGB -> ~0.21404114 linear, while alpha remains linear (0.5).
+        assert!((gray[0] - 0.21404114).abs() < 1e-6);
+        assert!((gray[1] - 0.21404114).abs() < 1e-6);
+        assert!((gray[2] - 0.21404114).abs() < 1e-6);
+        assert_eq!(gray[3], 0.5);
+
+        let wgpu_gray = color_to_wgpu(bones::Color::GRAY);
+        assert!((wgpu_gray.r - 0.21404114).abs() < 1e-6);
+        assert_eq!(wgpu_gray.a, 1.0);
+    }
+
+    #[test]
+    fn international_keycodes_map_to_bones() {
+        assert_eq!(
+            KeyCode::IntlBackslash.into_bones(),
+            bones::Set(bones::KeyCode::Oem102)
+        );
+        assert_eq!(
+            KeyCode::IntlRo.into_bones(),
+            bones::Set(bones::KeyCode::AbntC1)
+        );
+        assert_eq!(
+            KeyCode::KanaMode.into_bones(),
+            bones::Set(bones::KeyCode::Kana)
+        );
     }
 }

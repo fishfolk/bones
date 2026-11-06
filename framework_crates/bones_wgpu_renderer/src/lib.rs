@@ -1,12 +1,13 @@
+//! Renderer for [`bones_framework`] [`Game`][bones::Game]s using [`wgpu`] and [`winit`].
+
 use bevy_tasks::{IoTaskPool, TaskPool};
 use convert::IntoBones;
 use image::RgbaImage;
 use pollster::FutureExt;
 use std::{
-    collections::VecDeque,
+    collections::{HashSet, VecDeque},
     path::{Path, PathBuf},
     sync::Arc,
-    time::Instant,
 };
 use wgpu::util::DeviceExt;
 use winit::{
@@ -15,6 +16,9 @@ use winit::{
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     window::{Fullscreen, Window, WindowId},
 };
+
+pub use wgpu;
+pub use winit;
 
 use bones_framework::{
     glam::*,
@@ -49,23 +53,6 @@ pub mod prelude {
 #[schema(opaque)]
 struct WgpuDevice(Option<Arc<wgpu::Device>>);
 
-impl WgpuDevice {
-    fn get(&self) -> &wgpu::Device {
-        self.0.as_ref().unwrap()
-    }
-}
-
-#[derive(bones_schema::HasSchema, Default, Clone)]
-#[repr(C)]
-#[schema(opaque)]
-struct WgpuQueue(Option<Arc<wgpu::Queue>>);
-
-impl WgpuQueue {
-    fn get(&self) -> &wgpu::Queue {
-        self.0.as_ref().unwrap()
-    }
-}
-
 #[derive(bones_schema::HasSchema, Default, Clone)]
 #[repr(C)]
 struct PixelArt(bool);
@@ -85,7 +72,7 @@ struct LoadedEguiAssets {
 /// Renderer for [`bones_framework`] [`Game`][bones::Game]s using wgpu.
 pub struct BonesWgpuRenderer {
     /// Whether or not to load all assets on startup with a loading screen,
-    /// or skip straight to running the bones game immedietally.
+    /// or skip straight to running the bones game immediately.
     pub preload: bool,
     /// Optional field to implement your own loading screen. Does nothing if [`Self::preload`] = false
     pub custom_load_progress: Option<LoadingFunction>,
@@ -104,6 +91,26 @@ pub struct BonesWgpuRenderer {
     pub asset_dir: PathBuf,
     /// The path to load asset packs from.
     pub packs_dir: PathBuf,
+    /// The title of the window.
+    pub window_title: String,
+    /// The initial logical size of the window in pixels.
+    pub window_size: Vec2,
+    /// Optional minimum logical size of the window in pixels.
+    pub min_window_size: Option<Vec2>,
+    /// Whether or not the window can be resized by the user.
+    pub window_resizable: bool,
+    /// Whether or not the window should start in borderless fullscreen mode.
+    pub fullscreen: bool,
+    /// Optional icon for the window.
+    pub window_icon: Option<winit::window::Icon>,
+    /// Present mode used when configuring the swapchain surface (controls VSync).
+    pub present_mode: wgpu::PresentMode,
+}
+
+impl Default for BonesWgpuRenderer {
+    fn default() -> Self {
+        Self::new(bones::Game::default())
+    }
 }
 
 impl BonesWgpuRenderer {
@@ -118,6 +125,13 @@ impl BonesWgpuRenderer {
             app_namespace: ("local".into(), "developer".into(), "bones_demo_game".into()),
             asset_dir: PathBuf::from("assets"),
             packs_dir: PathBuf::from("packs"),
+            window_title: "App".into(),
+            window_size: Vec2::new(1280.0, 720.0),
+            min_window_size: None,
+            window_resizable: true,
+            fullscreen: false,
+            window_icon: None,
+            present_mode: wgpu::PresentMode::AutoVsync,
         }
     }
 
@@ -165,18 +179,88 @@ impl BonesWgpuRenderer {
         }
     }
 
+    /// Set the title of the window.
+    pub fn window_title(mut self, title: impl Into<String>) -> Self {
+        self.window_title = title.into();
+        self
+    }
+
+    /// Alias for [`Self::window_title`].
+    pub fn title(self, title: impl Into<String>) -> Self {
+        self.window_title(title)
+    }
+
+    /// Set the initial logical size of the window in pixels.
+    pub fn window_size(mut self, size: impl Into<Vec2>) -> Self {
+        self.window_size = size.into();
+        self
+    }
+
+    /// Set the minimum logical size of the window in pixels.
+    pub fn min_window_size(mut self, min_size: impl Into<Vec2>) -> Self {
+        self.min_window_size = Some(min_size.into());
+        self
+    }
+
+    /// Set whether or not the window can be resized by the user.
+    pub fn window_resizable(self, window_resizable: bool) -> Self {
+        Self {
+            window_resizable,
+            ..self
+        }
+    }
+
+    /// Set whether or not the window should start in borderless fullscreen mode.
+    pub fn fullscreen(self, fullscreen: bool) -> Self {
+        Self { fullscreen, ..self }
+    }
+
+    /// Set the window icon.
+    pub fn window_icon(mut self, icon: winit::window::Icon) -> Self {
+        self.window_icon = Some(icon);
+        self
+    }
+
+    /// Set the swapchain present mode.
+    pub fn present_mode(self, present_mode: wgpu::PresentMode) -> Self {
+        Self {
+            present_mode,
+            ..self
+        }
+    }
+
+    /// Enable or disable VSync (`AutoVsync` when `true`, `AutoNoVsync` when `false`).
+    pub fn vsync(self, vsync: bool) -> Self {
+        self.present_mode(if vsync {
+            wgpu::PresentMode::AutoVsync
+        } else {
+            wgpu::PresentMode::AutoNoVsync
+        })
+    }
+
     pub fn run(mut self) {
+        // wgpu uses `log` for all of its logging; initialize `env_logger` early as a fallback if
+        // the caller did not already install a logger (e.g. via `setup_logs!()`).
+        let _ = env_logger::try_init();
+
         //Start wgpu
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::default());
         let (adapter, device, queue) = async {
             let adapter = instance
-                .request_adapter(&wgpu::RequestAdapterOptions::default())
+                .request_adapter(&wgpu::RequestAdapterOptions {
+                    power_preference: wgpu::PowerPreference::HighPerformance,
+                    ..Default::default()
+                })
                 .await
                 .unwrap();
 
+            let required_limits = wgpu::Limits::default().using_resolution(adapter.limits());
             let (device, queue) = adapter
                 .request_device(
-                    &wgpu::DeviceDescriptor::default(),
+                    &wgpu::DeviceDescriptor {
+                        required_limits,
+                        ..Default::default()
+                    },
                     None, // Trace path
                 )
                 .await
@@ -272,12 +356,9 @@ impl BonesWgpuRenderer {
         //Insert wgpu resources
         self.game
             .insert_shared_resource(WgpuDevice(Some(device.clone())));
-        self.game
-            .insert_shared_resource(WgpuQueue(Some(queue.clone())));
         self.game.insert_shared_resource(PixelArt(self.pixel_art));
         self.game
             .insert_shared_resource(LoadingContext(self.custom_load_progress));
-        self.game.insert_shared_resource(Cameras(Vec::new()));
 
         //Deal with asset server
         IoTaskPool::init(TaskPool::default);
@@ -288,7 +369,7 @@ impl BonesWgpuRenderer {
             if self.preload {
                 // Load assets
                 let s = asset_server.clone();
-                println!("Loading Assets...");
+                log::info!("Loading assets...");
 
                 // Spawn a task to load the assets
                 IoTaskPool::get()
@@ -314,9 +395,10 @@ impl BonesWgpuRenderer {
         self.game
             .insert_shared_resource(bones::EguiTextures::default());
         self.game.init_shared_resource::<LoadedEguiAssets>();
-        self.game.insert_shared_resource(bones::ExitBones(false));
+        #[cfg(not(target_arch = "wasm32"))]
+        self.game.init_shared_resource::<bones::ExitBones>();
 
-        // Insert empty inputs that will be updated by the `insert_bones_input` system later.
+        // Insert empty inputs that will be updated by the window/gamepad event handlers.
         self.game.init_shared_resource::<bones::KeyboardInputs>();
         self.game.init_shared_resource::<bones::MouseInputs>();
         self.game.init_shared_resource::<bones::GamepadInputs>();
@@ -325,12 +407,19 @@ impl BonesWgpuRenderer {
             .init_shared_resource::<bones::MouseScreenPosition>();
         self.game
             .init_shared_resource::<bones::MouseWorldPosition>();
-        self.game.init_shared_resource::<bones::Window>();
+        {
+            let mut bones_window = self.game.init_shared_resource::<bones::Window>();
+            if self.fullscreen {
+                bones_window.fullscreen = true;
+            } else {
+                self.fullscreen = bones_window.fullscreen;
+            }
+            if bones_window.size == Vec2::ZERO {
+                bones_window.size = self.window_size;
+            }
+        }
         self.game
             .init_shared_resource::<bones::debug::FrameDiagState>();
-
-        // wgpu uses `log` for all of our logging, so we initialize a logger with the `env_logger` crate.
-        let _ = env_logger::try_init();
 
         let event_loop = EventLoop::builder().build().unwrap();
 
@@ -342,31 +431,44 @@ impl BonesWgpuRenderer {
         let bind_group_clone = texture_layout.clone();
         let device_clone = device.clone();
 
+        let window_config = WindowConfig {
+            title: self.window_title,
+            size: self.window_size,
+            min_size: self.min_window_size,
+            resizable: self.window_resizable,
+            fullscreen: self.fullscreen,
+            icon: self.window_icon,
+            present_mode: self.present_mode,
+        };
+
         let mut app = App {
             state: None,
-            instance,
-            adapter,
-            device,
-            queue,
-            texture_layout,
-            storage_layout: dynamic_storage.layout.clone(),
-            dynamic_storage: Some(dynamic_storage),
-            camera_layout: camera_dynamic_uniform.layout.clone(),
-            camera_dynamic_uniform: Some(camera_dynamic_uniform),
             game: self.game,
-            vertex_buffer,
-            index_buffer,
-            last_frame_instant: None,
-            frame_time_history: VecDeque::with_capacity(20),
-            rumble_manager: rumble::RumbleManager::default(),
-            preload_assets: self.preload,
             atlas_pool: atlas_pool::AtlasPool::new(
                 &device_clone,
                 &bind_group_clone,
                 (4096, 4096),
-                8,
+                64,
                 self.pixel_art,
             ),
+            storage_layout: dynamic_storage.layout.clone(),
+            dynamic_storage: Some(dynamic_storage),
+            camera_layout: camera_dynamic_uniform.layout.clone(),
+            camera_dynamic_uniform: Some(camera_dynamic_uniform),
+            texture_layout,
+            vertex_buffer,
+            index_buffer,
+            rumble_manager: rumble::RumbleManager::default(),
+            pressed_keys: HashSet::new(),
+            pressed_mouse_buttons: HashSet::new(),
+            preload_assets: self.preload,
+            window_config,
+            last_frame_instant: None,
+            frame_time_history: VecDeque::with_capacity(20),
+            queue,
+            device,
+            adapter,
+            instance,
         };
         event_loop.run_app(&mut app).unwrap();
     }
@@ -393,18 +495,14 @@ pub fn setup_egui(game: &mut bones::Game, ctx: &egui::Context) {
     // Insert the egui context as a shared resource
     game.insert_shared_resource(bones::EguiCtx(ctx.clone()));
 
-    let asset_server = game.get_shared_resource::<bones::AssetServer>();
-
-    if let Some(bones_assets) = asset_server {
-        update_egui_fonts(ctx, &bones_assets);
-
-        // Insert the bones egui textures
+    if let Some(egui_textures) = game.shared_resource_cell::<bones::EguiTextures>() {
         ctx.data_mut(|map| {
-            map.insert_temp(
-                egui::Id::NULL,
-                game.shared_resource_cell::<bones::EguiTextures>().unwrap(),
-            );
+            map.insert_temp(egui::Id::NULL, egui_textures);
         });
+    }
+
+    if let Some(bones_assets) = game.get_shared_resource::<bones::AssetServer>() {
+        update_egui_fonts(ctx, &bones_assets);
     }
 }
 
@@ -527,34 +625,116 @@ fn load_egui_textures(game: &mut bones::Game) {
     }
 }
 
-//TODO Implement proper Drop for the app
+struct WindowConfig {
+    title: String,
+    size: Vec2,
+    min_size: Option<Vec2>,
+    resizable: bool,
+    fullscreen: bool,
+    icon: Option<winit::window::Icon>,
+    present_mode: wgpu::PresentMode,
+}
+
+impl WindowConfig {
+    fn window_attributes(&self, want_fullscreen: bool) -> winit::window::WindowAttributes {
+        let mut attrs = Window::default_attributes()
+            .with_title(self.title.clone())
+            .with_resizable(self.resizable)
+            .with_window_icon(self.icon.clone());
+
+        if self.size.x > 0.0 && self.size.y > 0.0 {
+            attrs = attrs.with_inner_size(winit::dpi::LogicalSize::new(
+                self.size.x as f64,
+                self.size.y as f64,
+            ));
+        }
+
+        if let Some(min_size) = self.min_size {
+            if min_size.x > 0.0 && min_size.y > 0.0 {
+                attrs = attrs.with_min_inner_size(winit::dpi::LogicalSize::new(
+                    min_size.x as f64,
+                    min_size.y as f64,
+                ));
+            }
+        }
+
+        if want_fullscreen {
+            attrs = attrs.with_fullscreen(Some(Fullscreen::Borderless(None)));
+        }
+
+        attrs
+    }
+}
+
+fn extract_scan_code(physical_key: &winit::keyboard::PhysicalKey) -> bones::Maybe<u32> {
+    #[cfg(any(
+        target_os = "windows",
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    ))]
+    {
+        use winit::platform::scancode::PhysicalKeyExtScancode;
+        if let Some(scancode) = physical_key.to_scancode() {
+            return bones::Set(scancode);
+        }
+    }
+
+    match physical_key {
+        winit::keyboard::PhysicalKey::Code(_) => bones::Unset,
+        winit::keyboard::PhysicalKey::Unidentified(native_key_code) => match native_key_code {
+            winit::keyboard::NativeKeyCode::Android(u) => bones::Set(*u),
+            winit::keyboard::NativeKeyCode::MacOS(u) => bones::Set(*u as u32),
+            winit::keyboard::NativeKeyCode::Windows(u) => bones::Set(*u as u32),
+            winit::keyboard::NativeKeyCode::Xkb(u) => bones::Set(*u),
+            winit::keyboard::NativeKeyCode::Unidentified => bones::Unset,
+        },
+    }
+}
+
+/// Top-level winit application state.
+///
+/// Fields are ordered so dependent GPU/window resources (`state`, `game`, `atlas_pool`, buffers,
+/// layouts) drop before `queue`, `device`, `adapter`, and `instance`.
 struct App {
     state: Option<State>,
+    game: bones::Game,
     atlas_pool: atlas_pool::AtlasPool,
-    preload_assets: bool,
-    instance: Arc<wgpu::Instance>,
-    adapter: Arc<wgpu::Adapter>,
-    device: Arc<wgpu::Device>,
-    queue: Arc<wgpu::Queue>,
-    texture_layout: Arc<wgpu::BindGroupLayout>,
-    storage_layout: Arc<wgpu::BindGroupLayout>,
     dynamic_storage: Option<DynamicBuffer>,
-    camera_layout: Arc<wgpu::BindGroupLayout>,
     camera_dynamic_uniform: Option<DynamicBuffer>,
+    storage_layout: Arc<wgpu::BindGroupLayout>,
+    camera_layout: Arc<wgpu::BindGroupLayout>,
+    texture_layout: Arc<wgpu::BindGroupLayout>,
     vertex_buffer: Arc<wgpu::Buffer>,
     index_buffer: Arc<wgpu::Buffer>,
-    game: bones::Game,
-    last_frame_instant: Option<Instant>,
-    frame_time_history: VecDeque<f64>,
     rumble_manager: rumble::RumbleManager,
+    pressed_keys: HashSet<(Option<u32>, Option<bones::KeyCode>)>,
+    pressed_mouse_buttons: HashSet<bones::MouseButton>,
+    preload_assets: bool,
+    window_config: WindowConfig,
+    last_frame_instant: Option<bones::Instant>,
+    frame_time_history: VecDeque<f64>,
+    queue: Arc<wgpu::Queue>,
+    device: Arc<wgpu::Device>,
+    adapter: Arc<wgpu::Adapter>,
+    instance: Arc<wgpu::Instance>,
 }
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        // Create window object
+        let want_fullscreen = self
+            .game
+            .get_shared_resource::<bones::Window>()
+            .map(|w| w.fullscreen)
+            .unwrap_or(self.window_config.fullscreen);
+
+        // Create window object with configured title, size, icon, and fullscreen attributes
         let window = Arc::new(
             event_loop
-                .create_window(Window::default_attributes())
+                .create_window(self.window_config.window_attributes(want_fullscreen))
                 .unwrap(),
         );
 
@@ -564,14 +744,39 @@ impl ApplicationHandler for App {
 
             state.surface = self.instance.create_surface(window.clone()).unwrap();
             let cap = state.surface.get_capabilities(&self.adapter);
-            state.surface_format = cap
+            let new_format = cap
                 .formats
                 .iter()
                 .copied()
                 .find(|f| f.is_srgb())
                 .unwrap_or(cap.formats[0]);
+            let format_changed =
+                new_format.add_srgb_suffix() != state.surface_format.add_srgb_suffix();
+            state.surface_format = new_format;
+            state.supported_present_modes = cap.present_modes;
+
+            if format_changed {
+                let view_format = state.surface_format.add_srgb_suffix();
+                let (sprite_pipeline, line_pipeline) = State::create_pipelines(
+                    &self.device,
+                    &self.texture_layout,
+                    &state.dynamic_storage.layout,
+                    &state.camera_dynamic_uniform.layout,
+                    view_format,
+                );
+                state.sprite_render_pipeline = sprite_pipeline;
+                state.line_render_pipeline = line_pipeline;
+                state.egui_renderer =
+                    EguiRenderer::new(&self.device, view_format, None, 1, &window);
+                state.egui_fonts_loaded = false;
+                if let Some(mut loaded) = self.game.get_shared_resource_mut::<LoadedEguiAssets>() {
+                    loaded.cids.clear();
+                }
+                setup_egui(&mut self.game, &state.egui_renderer.context().clone());
+            }
 
             state.configure_surface();
+            state.sync_window_state(&mut self.game);
         } else {
             let state = State::new(
                 window.clone(),
@@ -582,12 +787,14 @@ impl ApplicationHandler for App {
                 self.texture_layout.clone(),
                 self.vertex_buffer.clone(),
                 self.index_buffer.clone(),
-                self.dynamic_storage.take().unwrap_or(DynamicBuffer::new(
-                    &self.device,
-                    self.storage_layout.clone(),
-                    1024,
-                    wgpu::BufferUsages::STORAGE,
-                )),
+                self.dynamic_storage.take().unwrap_or_else(|| {
+                    DynamicBuffer::new(
+                        &self.device,
+                        self.storage_layout.clone(),
+                        1024,
+                        wgpu::BufferUsages::STORAGE,
+                    )
+                }),
                 self.camera_dynamic_uniform.take().unwrap_or_else(|| {
                     DynamicBuffer::new_with_binding_size(
                         &self.device,
@@ -598,17 +805,11 @@ impl ApplicationHandler for App {
                     )
                 }),
                 self.preload_assets,
+                self.window_config.present_mode,
             );
 
             setup_egui(&mut self.game, &state.egui_renderer.context().clone());
-
-            // Initialize/update the Bones window resource now that we have a real window.
-            if let Some(mut bones_window) = self.game.get_shared_resource_mut::<bones::Window>() {
-                let logical: winit::dpi::LogicalSize<f32> =
-                    window.inner_size().to_logical(window.scale_factor());
-                bones_window.size = Vec2::new(logical.width, logical.height);
-                bones_window.focused = window.has_focus();
-            }
+            state.sync_window_state(&mut self.game);
 
             self.state = Some(state);
         }
@@ -622,7 +823,7 @@ impl ApplicationHandler for App {
             return;
         };
 
-        // Egui input handling
+        // Egui input handling (receives key repeats too so text editing works naturally)
         state
             .egui_renderer
             .handle_input(&state.get_window(), &event);
@@ -631,17 +832,73 @@ impl ApplicationHandler for App {
             WindowEvent::CloseRequested => {
                 self.state.take();
                 event_loop.exit();
-                std::process::exit(0);
+            }
+            WindowEvent::Focused(focused) => {
+                if let Some(mut bones_window) = self.game.get_shared_resource_mut::<bones::Window>()
+                {
+                    bones_window.focused = focused;
+                }
+                if !focused {
+                    // Release any held keys and mouse buttons on focus loss so controls never stick
+                    // when the user Alt-Tabs away while holding a button.
+                    if !self.pressed_keys.is_empty() {
+                        if let Some(mut keyboard_inputs) =
+                            self.game.get_shared_resource_mut::<bones::KeyboardInputs>()
+                        {
+                            for (scan_code, key_code) in self.pressed_keys.drain() {
+                                keyboard_inputs.key_events.push(bones::KeyboardEvent {
+                                    scan_code: scan_code.into(),
+                                    key_code: key_code.into(),
+                                    button_state: bones::ButtonState::Released,
+                                });
+                            }
+                        } else {
+                            self.pressed_keys.clear();
+                        }
+                    }
+                    if !self.pressed_mouse_buttons.is_empty() {
+                        if let Some(mut mouse_inputs) =
+                            self.game.get_shared_resource_mut::<bones::MouseInputs>()
+                        {
+                            for button in self.pressed_mouse_buttons.drain() {
+                                mouse_inputs.button_events.push(bones::MouseButtonEvent {
+                                    button,
+                                    state: bones::ButtonState::Released,
+                                });
+                            }
+                        } else {
+                            self.pressed_mouse_buttons.clear();
+                        }
+                    }
+                }
+            }
+            WindowEvent::ScaleFactorChanged { .. } => {
+                let size = state.window.inner_size();
+                state.resize(size);
+                if size.width > 0 && size.height > 0 {
+                    if let Some(mut bones_window) =
+                        self.game.get_shared_resource_mut::<bones::Window>()
+                    {
+                        let logical: winit::dpi::LogicalSize<f32> =
+                            size.to_logical(state.window.scale_factor());
+                        bones_window.size = Vec2::new(logical.width, logical.height);
+                    }
+                }
             }
             WindowEvent::RedrawRequested => {
-                if self.game.shared_resource::<bones::ExitBones>().0 {
+                #[cfg(not(target_arch = "wasm32"))]
+                if self
+                    .game
+                    .get_shared_resource::<bones::ExitBones>()
+                    .is_some_and(|exit| exit.0)
+                {
                     self.state.take();
                     event_loop.exit();
-                    std::process::exit(0);
+                    return;
                 }
 
                 // Update frame time diagnostics (`FrameDiagState`).
-                let now = Instant::now();
+                let now = bones::Instant::now();
                 if let Some(last) = self.last_frame_instant.replace(now) {
                     let dt_secs = now.duration_since(last).as_secs_f64();
                     if dt_secs > 0.0 {
@@ -682,7 +939,7 @@ impl ApplicationHandler for App {
 
                 // Poll gamepad inputs once per frame and update mouse world position.
                 self.game.insert_shared_resource(process_gamepad_events());
-                let scale_factor = state.window.scale_factor() as f32;
+                let scale_factor = (state.window.scale_factor() as f32).max(f32::EPSILON);
                 let screen_pos = self
                     .game
                     .get_shared_resource::<bones::MouseScreenPosition>()
@@ -691,7 +948,8 @@ impl ApplicationHandler for App {
                     screen_to_world_2d(
                         &self.game,
                         logical_sp * scale_factor,
-                        Vec2::new(state.size.width as f32, state.size.height as f32),
+                        UVec2::new(state.size.width, state.size.height),
+                        scale_factor,
                     )
                 });
                 self.game
@@ -727,28 +985,36 @@ impl ApplicationHandler for App {
                 // Reconfigures the size of the surface. We do not re-render
                 // here as this event is always followed up by redraw request.
                 state.resize(size);
+                if size.width > 0 && size.height > 0 {
+                    if let Some(mut bones_window) =
+                        self.game.get_shared_resource_mut::<bones::Window>()
+                    {
+                        let logical: winit::dpi::LogicalSize<f32> =
+                            size.to_logical(state.window.scale_factor());
+                        bones_window.size = Vec2::new(logical.width, logical.height);
+                    }
+                }
             }
             WindowEvent::KeyboardInput { event, .. } => {
-                let ev = match event.physical_key {
-                    winit::keyboard::PhysicalKey::Code(code) => bones::KeyboardEvent {
-                        scan_code: bones::Unset,
-                        key_code: code.into_bones(),
-                        button_state: event.state.into_bones(),
-                    },
-                    winit::keyboard::PhysicalKey::Unidentified(native_key_code) => {
-                        let scan_code = match native_key_code {
-                            winit::keyboard::NativeKeyCode::Android(u) => bones::Set(u),
-                            winit::keyboard::NativeKeyCode::MacOS(u) => bones::Set(u as u32),
-                            winit::keyboard::NativeKeyCode::Windows(u) => bones::Set(u as u32),
-                            winit::keyboard::NativeKeyCode::Xkb(u) => bones::Set(u),
-                            winit::keyboard::NativeKeyCode::Unidentified => bones::Unset,
-                        };
-                        bones::KeyboardEvent {
-                            scan_code,
-                            key_code: bones::Unset,
-                            button_state: event.state.into_bones(),
-                        }
-                    }
+                if event.repeat {
+                    return;
+                }
+                let scan_code = extract_scan_code(&event.physical_key);
+                let key_code = match event.physical_key {
+                    winit::keyboard::PhysicalKey::Code(code) => code.into_bones(),
+                    winit::keyboard::PhysicalKey::Unidentified(_) => bones::Unset,
+                };
+                let button_state: bones::ButtonState = event.state.into_bones();
+                let key_id = (scan_code.option(), key_code.option());
+                if button_state.pressed() {
+                    self.pressed_keys.insert(key_id);
+                } else {
+                    self.pressed_keys.remove(&key_id);
+                }
+                let ev = bones::KeyboardEvent {
+                    scan_code,
+                    key_code,
+                    button_state,
                 };
                 if let Some(mut keyboard_inputs) =
                     self.game.get_shared_resource_mut::<bones::KeyboardInputs>()
@@ -765,9 +1031,16 @@ impl ApplicationHandler for App {
                 }
             }
             WindowEvent::MouseInput { state, button, .. } => {
+                let bones_button: bones::MouseButton = button.into_bones();
+                let bones_state: bones::ButtonState = state.into_bones();
+                if bones_state.pressed() {
+                    self.pressed_mouse_buttons.insert(bones_button);
+                } else {
+                    self.pressed_mouse_buttons.remove(&bones_button);
+                }
                 let ev = bones::MouseButtonEvent {
-                    button: button.into_bones(),
-                    state: state.into_bones(),
+                    button: bones_button,
+                    state: bones_state,
                 };
                 if let Some(mut mouse_inputs) =
                     self.game.get_shared_resource_mut::<bones::MouseInputs>()
@@ -776,13 +1049,14 @@ impl ApplicationHandler for App {
                 }
             }
             WindowEvent::CursorMoved { position, .. } => {
-                let scale_factor = state.window.scale_factor() as f32;
+                let scale_factor = (state.window.scale_factor() as f32).max(f32::EPSILON);
                 let physical_sp = Vec2::new(position.x as f32, position.y as f32);
                 let logical_sp = physical_sp / scale_factor;
                 let world_pos = screen_to_world_2d(
                     &self.game,
                     physical_sp,
-                    Vec2::new(state.size.width as f32, state.size.height as f32),
+                    UVec2::new(state.size.width, state.size.height),
+                    scale_factor,
                 );
                 self.game
                     .insert_shared_resource(bones::MouseScreenPosition(Some(logical_sp)));
@@ -806,79 +1080,51 @@ impl ApplicationHandler for App {
         event: winit::event::DeviceEvent,
     ) {
         if let winit::event::DeviceEvent::MouseMotion { delta } = event {
-            let delta = Vec2::new(delta.0 as f32, delta.1 as f32);
-            self.game
-                .shared_resource_mut::<bones::MouseInputs>()
-                .movement += delta;
+            if self.state.as_ref().is_some_and(|s| s.window.has_focus()) {
+                let delta = Vec2::new(delta.0 as f32, delta.1 as f32);
+                if let Some(mut mouse_inputs) =
+                    self.game.get_shared_resource_mut::<bones::MouseInputs>()
+                {
+                    mouse_inputs.movement += delta;
+                }
+            }
         }
     }
 }
 
 struct State {
-    window: Arc<Window>,
-    device: Arc<wgpu::Device>,
-    queue: Arc<wgpu::Queue>,
-    size: winit::dpi::PhysicalSize<u32>,
-    surface: wgpu::Surface<'static>,
-    surface_format: wgpu::TextureFormat,
+    egui_renderer: EguiRenderer,
     sprite_render_pipeline: wgpu::RenderPipeline,
     line_render_pipeline: wgpu::RenderPipeline,
     line_buffers: line::LineBuffers,
-    vertex_buffer: Arc<wgpu::Buffer>,
-    index_buffer: Arc<wgpu::Buffer>,
     dynamic_storage: DynamicBuffer,
     camera_dynamic_uniform: DynamicBuffer,
-    egui_renderer: EguiRenderer,
+    vertex_buffer: Arc<wgpu::Buffer>,
+    index_buffer: Arc<wgpu::Buffer>,
+    surface: wgpu::Surface<'static>,
+    surface_format: wgpu::TextureFormat,
+    present_mode: wgpu::PresentMode,
+    supported_present_modes: Vec<wgpu::PresentMode>,
+    size: winit::dpi::PhysicalSize<u32>,
     egui_scale_factor: f32,
     egui_fonts_loaded: bool,
     preload_assets: bool,
     /// When preloading assets, we pause all sessions to avoid running user startup systems before
     /// assets exist (which would create default handles with no CID and panic on access).
     saved_session_states: Option<Vec<(bones::Ustr, bool, bool)>>,
+    queue: Arc<wgpu::Queue>,
+    device: Arc<wgpu::Device>,
+    window: Arc<Window>,
 }
 
 impl State {
-    #[allow(clippy::too_many_arguments)]
-    fn new(
-        window: Arc<Window>,
-        device: Arc<wgpu::Device>,
-        queue: Arc<wgpu::Queue>,
-        instance: &wgpu::Instance,
-        adapter: &wgpu::Adapter,
-        texture_layout: Arc<wgpu::BindGroupLayout>,
-        vertex_buffer: Arc<wgpu::Buffer>,
-        index_buffer: Arc<wgpu::Buffer>,
-        dynamic_storage: DynamicBuffer,
-        camera_dynamic_uniform: DynamicBuffer,
-        preload_assets: bool,
-    ) -> Self {
-        let size = window.inner_size();
-        let surface = instance.create_surface(window.clone()).unwrap();
-        let surface_caps = surface.get_capabilities(adapter);
-        let surface_format = surface_caps
-            .formats
-            .iter()
-            .copied()
-            .find(|f| f.is_srgb())
-            .unwrap_or(surface_caps.formats[0]);
-        let view_format = surface_format.add_srgb_suffix();
-
-        // Configure surface for the first time (if non-zero size)
-        if size.width > 0 && size.height > 0 {
-            let surface_config = wgpu::SurfaceConfiguration {
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                format: surface_format,
-                // Request compatibility with the sRGB-format texture view we‘re going to create later.
-                view_formats: vec![view_format],
-                alpha_mode: wgpu::CompositeAlphaMode::Auto,
-                width: size.width,
-                height: size.height,
-                desired_maximum_frame_latency: 2,
-                present_mode: wgpu::PresentMode::AutoVsync,
-            };
-            surface.configure(&device, &surface_config);
-        }
-
+    fn create_pipelines(
+        device: &wgpu::Device,
+        texture_layout: &wgpu::BindGroupLayout,
+        storage_layout: &wgpu::BindGroupLayout,
+        camera_layout: &wgpu::BindGroupLayout,
+        view_format: wgpu::TextureFormat,
+    ) -> (wgpu::RenderPipeline, wgpu::RenderPipeline) {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("atlas_sprite.wgsl").into()),
@@ -887,11 +1133,7 @@ impl State {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[
-                    &texture_layout,
-                    &dynamic_storage.layout,
-                    &camera_dynamic_uniform.layout,
-                ],
+                bind_group_layouts: &[texture_layout, storage_layout, camera_layout],
                 push_constant_ranges: &[],
             });
 
@@ -932,14 +1174,9 @@ impl State {
                     mask: !0,
                     alpha_to_coverage_enabled: false,
                 },
-                // If the pipeline will be used with a multiview render pass, this
-                // indicates how many array layers the attachments will have.
                 multiview: None,
-                // Useful for optimizing shader compilation on Android
                 cache: None,
             });
-
-        let egui_renderer = EguiRenderer::new(&device, view_format, None, 1, &window);
 
         let line_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Line Shader"),
@@ -948,7 +1185,7 @@ impl State {
 
         let line_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Line Render Pipeline Layout"),
-            bind_group_layouts: &[&dynamic_storage.layout, &camera_dynamic_uniform.layout],
+            bind_group_layouts: &[storage_layout, camera_layout],
             push_constant_ranges: &[],
         });
 
@@ -990,32 +1227,90 @@ impl State {
             cache: None,
         });
 
+        (sprite_render_pipeline, line_render_pipeline)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        window: Arc<Window>,
+        device: Arc<wgpu::Device>,
+        queue: Arc<wgpu::Queue>,
+        instance: &wgpu::Instance,
+        adapter: &wgpu::Adapter,
+        texture_layout: Arc<wgpu::BindGroupLayout>,
+        vertex_buffer: Arc<wgpu::Buffer>,
+        index_buffer: Arc<wgpu::Buffer>,
+        dynamic_storage: DynamicBuffer,
+        camera_dynamic_uniform: DynamicBuffer,
+        preload_assets: bool,
+        present_mode: wgpu::PresentMode,
+    ) -> Self {
+        let size = window.inner_size();
+        let surface = instance.create_surface(window.clone()).unwrap();
+        let surface_caps = surface.get_capabilities(adapter);
+        let surface_format = surface_caps
+            .formats
+            .iter()
+            .copied()
+            .find(|f| f.is_srgb())
+            .unwrap_or(surface_caps.formats[0]);
+        let supported_present_modes = surface_caps.present_modes;
+        let view_format = surface_format.add_srgb_suffix();
+
+        let (sprite_render_pipeline, line_render_pipeline) = Self::create_pipelines(
+            &device,
+            &texture_layout,
+            &dynamic_storage.layout,
+            &camera_dynamic_uniform.layout,
+            view_format,
+        );
+        let egui_renderer = EguiRenderer::new(&device, view_format, None, 1, &window);
         let line_buffers = line::LineBuffers::new(&device);
 
-        State {
-            window,
-            device: device.clone(),
-            queue,
-            size,
-            surface,
-            surface_format,
+        let state = State {
+            egui_renderer,
             sprite_render_pipeline,
             line_render_pipeline,
             line_buffers,
-            egui_renderer,
             dynamic_storage,
             camera_dynamic_uniform,
+            vertex_buffer,
+            index_buffer,
+            surface,
+            surface_format,
+            present_mode,
+            supported_present_modes,
+            size,
             egui_scale_factor: 1.0,
             egui_fonts_loaded: false,
             preload_assets,
-            vertex_buffer,
-            index_buffer,
             saved_session_states: None,
-        }
+            queue,
+            device,
+            window,
+        };
+        state.configure_surface();
+        state
     }
 
     fn get_window(&self) -> Arc<Window> {
         self.window.clone()
+    }
+
+    fn resolved_present_mode(&self) -> wgpu::PresentMode {
+        if matches!(
+            self.present_mode,
+            wgpu::PresentMode::AutoVsync | wgpu::PresentMode::AutoNoVsync
+        ) || self.supported_present_modes.contains(&self.present_mode)
+        {
+            self.present_mode
+        } else {
+            log::warn!(
+                "Requested present mode {:?} is not supported by surface; falling back to AutoVsync",
+                self.present_mode
+            );
+            wgpu::PresentMode::AutoVsync
+        }
     }
 
     fn configure_surface(&self) {
@@ -1031,7 +1326,7 @@ impl State {
             width: self.size.width,
             height: self.size.height,
             desired_maximum_frame_latency: 2,
-            present_mode: wgpu::PresentMode::AutoVsync,
+            present_mode: self.resolved_present_mode(),
         };
         self.surface.configure(&self.device, &surface_config);
     }
@@ -1047,13 +1342,65 @@ impl State {
         self.configure_surface();
     }
 
-    fn render(&mut self, game: &mut bones::Game, atlas_pool: &mut atlas_pool::AtlasPool) {
-        if self.size.width == 0 || self.size.height == 0 {
-            return;
-        }
+    fn sync_window_state(&self, game: &mut bones::Game) {
+        if let Some(mut bones_window) = game.get_shared_resource_mut::<bones::Window>() {
+            let inner_size = self.window.inner_size();
+            if inner_size.width > 0 && inner_size.height > 0 {
+                let logical: winit::dpi::LogicalSize<f32> =
+                    inner_size.to_logical(self.window.scale_factor());
+                bones_window.size = Vec2::new(logical.width, logical.height);
+            }
+            bones_window.focused = self.window.has_focus();
 
-        // Create the command encoder.
-        let mut encoder = self.device.create_command_encoder(&Default::default());
+            let want_fullscreen = bones_window.fullscreen;
+            let is_fullscreen = self.window.fullscreen().is_some();
+            if want_fullscreen && !is_fullscreen {
+                self.window
+                    .set_fullscreen(Some(Fullscreen::Borderless(self.window.current_monitor())));
+            } else if !want_fullscreen && is_fullscreen {
+                self.window.set_fullscreen(None);
+            }
+        }
+    }
+
+    fn sync_egui_scale_factor(&mut self, game: &bones::Game) {
+        for session_name in sorted_visible_sessions(game) {
+            if let Some(session) = game.sessions.get(session_name) {
+                if let Some(settings) = session.world.get_resource::<bones::EguiSettings>() {
+                    if settings.scale.is_finite() && settings.scale > 0.0 {
+                        self.egui_scale_factor = settings.scale as f32;
+                    }
+                }
+            }
+        }
+    }
+
+    fn acquire_surface_texture(&mut self) -> Option<wgpu::SurfaceTexture> {
+        match self.surface.get_current_texture() {
+            Ok(texture) => Some(texture),
+            Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+                self.configure_surface();
+                None
+            }
+            Err(wgpu::SurfaceError::Timeout) => {
+                log::warn!("Timed out acquiring next swapchain texture");
+                None
+            }
+            Err(wgpu::SurfaceError::OutOfMemory) => {
+                panic!("Swapchain out of memory");
+            }
+            Err(wgpu::SurfaceError::Other) => {
+                log::warn!("Failed to acquire swapchain texture (SurfaceError::Other)");
+                None
+            }
+        }
+    }
+
+    fn render(&mut self, game: &mut bones::Game, atlas_pool: &mut atlas_pool::AtlasPool) {
+        let is_minimized = self.size.width == 0 || self.size.height == 0;
+
+        // Keep the Bones window resource (size, focus, fullscreen) synced with the winit window.
+        self.sync_window_state(game);
 
         // Check whether assets have finished preloading before starting the egui pass so
         // `update_egui_fonts` can register loaded font definitions before `begin_pass`.
@@ -1067,27 +1414,6 @@ impl State {
                 update_egui_fonts(self.egui_renderer.context(), &bones_assets);
             }
             self.egui_fonts_loaded = true;
-        }
-
-        // Begin egui frame (and let the game mutate RawInput via EguiInputHook).
-        // Many games (including Jumpy) also piggyback on this hook to collect input for menus.
-        let mut raw_input = self.egui_renderer.take_raw_input(&self.window);
-        let input_hook = game
-            .get_shared_resource::<bones::EguiInputHook>()
-            .map(|h| h.0.clone());
-        if let Some(input_hook) = input_hook {
-            (input_hook)(game, &mut raw_input);
-        }
-        self.egui_renderer.begin_frame_with_raw_input(raw_input);
-
-        // Keep the Bones window resource in sync with the actual winit window size.
-        if let Some(mut bones_window) = game.get_shared_resource_mut::<bones::Window>() {
-            let logical: winit::dpi::LogicalSize<f32> = self
-                .window
-                .inner_size()
-                .to_logical(self.window.scale_factor());
-            bones_window.size = Vec2::new(logical.width, logical.height);
-            bones_window.focused = self.window.has_focus();
         }
 
         if self.preload_assets && !assets_loaded {
@@ -1106,13 +1432,27 @@ impl State {
                 session.active = false;
             }
 
+            if is_minimized {
+                return;
+            }
+
+            self.sync_egui_scale_factor(game);
+            let pixels_per_point = self.window.scale_factor() as f32 * self.egui_scale_factor;
+            self.egui_renderer.ppp(pixels_per_point);
+
+            // Do not invoke `EguiInputHook` during preload (matching `bones_bevy_renderer`), as
+            // user input hooks may expect preloaded assets to exist.
+            let raw_input = self.egui_renderer.take_raw_input(&self.window);
+            self.egui_renderer.begin_frame_with_raw_input(raw_input);
+
             // Render the loading UI (and do NOT step the game).
             asset_load_status(game);
 
-            let surface_texture = self
-                .surface
-                .get_current_texture()
-                .expect("failed to acquire next swapchain texture");
+            let Some(surface_texture) = self.acquire_surface_texture() else {
+                self.egui_renderer
+                    .end_frame_discard(&self.device, &self.queue, &self.window);
+                return;
+            };
             let texture_view = surface_texture
                 .texture
                 .create_view(&wgpu::TextureViewDescriptor {
@@ -1120,10 +1460,10 @@ impl State {
                     ..Default::default()
                 });
 
+            let mut encoder = self.device.create_command_encoder(&Default::default());
             let screen_descriptor = ScreenDescriptor {
                 size_in_pixels: [self.size.width, self.size.height],
-                pixels_per_point: self.window.as_ref().scale_factor() as f32
-                    * self.egui_scale_factor,
+                pixels_per_point,
             };
 
             self.egui_renderer.end_frame_and_draw(
@@ -1157,47 +1497,71 @@ impl State {
         handle_asset_changes(game);
         load_egui_textures(game);
 
-        // Step bones normally once assets are ready (or if preload is disabled).
-        game.step(Instant::now());
+        // Apply current egui scale factor BEFORE `take_raw_input` / `begin_pass` so `begin_pass`
+        // and `end_pass` use the exact same `pixels_per_point` throughout this frame.
+        self.sync_egui_scale_factor(game);
+        let pixels_per_point = self.window.scale_factor() as f32 * self.egui_scale_factor;
+        self.egui_renderer.ppp(pixels_per_point);
 
-        // Sync egui scale factor from active sessions' EguiSettings resource.
-        for session_name in &game.sorted_session_keys {
-            if let Some(session) = game.sessions.get(*session_name) {
-                if let Some(settings) = session.world.get_resource::<bones::EguiSettings>() {
-                    self.egui_scale_factor = settings.scale as f32;
+        // Begin egui frame (and let the game mutate RawInput via EguiInputHook).
+        let mut raw_input = self.egui_renderer.take_raw_input(&self.window);
+        let input_hook = game
+            .get_shared_resource::<bones::EguiInputHook>()
+            .map(|h| h.0.clone());
+        if let Some(input_hook) = input_hook {
+            (input_hook)(game, &mut raw_input);
+        }
+        self.egui_renderer.begin_frame_with_raw_input(raw_input);
+
+        // Step bones normally once assets are ready (or if preload is disabled).
+        // Note: we still step when minimized (`0x0` window) so networked/GGRS sessions stay in sync.
+        game.step(bones::Instant::now());
+
+        // Sync egui scale factor for next frame and apply any fullscreen changes requested by the game.
+        self.sync_egui_scale_factor(game);
+        self.sync_window_state(game);
+
+        if is_minimized {
+            self.egui_renderer
+                .end_frame_discard(&self.device, &self.queue, &self.window);
+            return;
+        }
+
+        // Determine the frame clear color from the highest-priority visible session's `ClearColor`.
+        let mut frame_clear_bones_color = bones::Color::BLACK;
+        for session_name in sorted_visible_sessions(game).into_iter().rev() {
+            if let Some(session) = game.sessions.get(session_name) {
+                if let Some(clear_color) = session.world.get_resource::<bones::ClearColor>() {
+                    frame_clear_bones_color = clear_color.0;
+                    break;
                 }
             }
         }
+        let frame_clear_color = convert::color_to_wgpu(frame_clear_bones_color);
 
-        // Apply fullscreen changes requested by the game.
-        if let Some(bones_window) = game.get_shared_resource::<bones::Window>() {
-            let want_fullscreen = bones_window.fullscreen;
-            let is_fullscreen = self.window.fullscreen().is_some();
+        let scale_factor = (self.window.scale_factor() as f32).max(f32::EPSILON);
+        let target_size = UVec2::new(self.size.width, self.size.height);
 
-            if want_fullscreen && !is_fullscreen {
-                self.window
-                    .set_fullscreen(Some(Fullscreen::Borderless(self.window.current_monitor())));
-            } else if !want_fullscreen && is_fullscreen {
-                self.window.set_fullscreen(None);
-            }
-        }
-
-        update_atlas_pool(game, atlas_pool);
-        sort_sprites(game);
-        update_cameras_uniform(
+        update_atlas_pool(game, atlas_pool, &self.queue);
+        let prepared_sessions = prepare_render_frame(
             game,
+            atlas_pool,
+            &self.device,
+            &self.queue,
             &mut self.camera_dynamic_uniform,
-            IVec2::new(self.size.width as i32, self.size.height as i32),
+            &mut self.dynamic_storage,
+            &mut self.line_buffers,
+            target_size,
+            scale_factor,
+            frame_clear_bones_color,
         );
-        update_uniforms(game, &mut self.dynamic_storage, &mut self.line_buffers);
 
-        let cameras_sorted = game.shared_resource::<Cameras>();
-
-        // Create texture view
-        let surface_texture = self
-            .surface
-            .get_current_texture()
-            .expect("failed to acquire next swapchain texture");
+        // Acquire swapchain texture view.
+        let Some(surface_texture) = self.acquire_surface_texture() else {
+            self.egui_renderer
+                .end_frame_discard(&self.device, &self.queue, &self.window);
+            return;
+        };
         let texture_view = surface_texture
             .texture
             .create_view(&wgpu::TextureViewDescriptor {
@@ -1207,30 +1571,8 @@ impl State {
                 ..Default::default()
             });
 
-        // Clear the frame once up-front.
-        let mut frame_clear_color = wgpu::Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 1.0,
-        };
-        for session_name in &game.sorted_session_keys {
-            if let Some(session) = game.sessions.get(*session_name) {
-                if !session.visible {
-                    continue;
-                }
-                if let Some(clear_color) = session.world.get_resource::<bones::ClearColor>() {
-                    let rgba = clear_color.0.as_rgba_f64();
-                    frame_clear_color = wgpu::Color {
-                        r: rgba[0],
-                        g: rgba[1],
-                        b: rgba[2],
-                        a: rgba[3],
-                    };
-                    break;
-                }
-            }
-        }
+        // Create the command encoder.
+        let mut encoder = self.device.create_command_encoder(&Default::default());
 
         {
             let _clear_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -1249,54 +1591,27 @@ impl State {
             });
         }
 
-        let mut global_camera_idx = 0u32;
-        for (session_name, camera_vec) in cameras_sorted.0.iter() {
-            let session = game.sessions.get(*session_name).unwrap();
+        #[derive(Clone, Copy, PartialEq, Eq)]
+        enum ActivePipeline {
+            None,
+            Sprite,
+            Line,
+        }
 
-            let sprite_lists = session.world.resource::<SpriteLists>();
-            let cameras = session.world.component::<bones::Camera>();
-            let clear_color = session.world.get_resource::<bones::ClearColor>();
-
+        for prepared in &prepared_sessions {
             if log::log_enabled!(log::Level::Debug) {
                 log::debug!(
-                    "Render session {:?}: cameras={}, sprites={}, batches={}, tiles={}",
-                    session_name,
-                    camera_vec.len(),
-                    sprite_lists.sprite_list.len(),
-                    sprite_lists.batches.len(),
-                    sprite_lists.tile_layer.len(),
+                    "Render session {:?}: cameras={}, draw_cmds={}",
+                    prepared.session_name,
+                    prepared.cameras.len(),
+                    prepared.draws.len(),
                 );
             }
 
-            for (camera_ent, camera_size) in camera_vec {
-                let camera = cameras.get(*camera_ent).unwrap();
-                let camera_offset =
-                    global_camera_idx * std::mem::size_of::<CameraTransform>() as u32;
-                global_camera_idx += 1;
-
-                let camera_bg_color = if camera.draw_background_color {
-                    let color: bones_framework::render::prelude::Color =
-                        match (camera.background_color.option(), clear_color.as_deref()) {
-                            (Some(color), _) => color,
-                            (None, Some(color)) => color.0,
-                            (None, None) => bones::Color::BLACK,
-                        };
-                    let rgba = color.as_rgba_f64();
-                    Some(wgpu::Color {
-                        r: rgba[0],
-                        g: rgba[1],
-                        b: rgba[2],
-                        a: rgba[3],
-                    })
-                } else {
-                    None
-                };
-
-                // If the camera has no custom sub-window viewport and wants a background color,
-                // we can clear the render target directly via LoadOp::Clear.
-                let load_op = match (camera.viewport.option(), camera_bg_color) {
-                    (None, Some(color)) => wgpu::LoadOp::Clear(color),
-                    _ => wgpu::LoadOp::Load,
+            for cam_draw in &prepared.cameras {
+                let load_op = match cam_draw.load_clear_color {
+                    Some(color) => wgpu::LoadOp::Clear(color),
+                    None => wgpu::LoadOp::Load,
                 };
 
                 let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -1314,22 +1629,20 @@ impl State {
                     occlusion_query_set: None,
                 });
 
-                if let Some(viewport) = camera.viewport.option() {
+                let mut active_pipeline = ActivePipeline::None;
+
+                if cam_draw.viewport.is_custom {
                     pass.set_viewport(
-                        viewport.position.x as f32,
-                        viewport.position.y as f32,
-                        camera_size.x,
-                        camera_size.y,
-                        viewport.depth_min,
-                        viewport.depth_max,
+                        cam_draw.viewport.position.x,
+                        cam_draw.viewport.position.y,
+                        cam_draw.viewport.size.x,
+                        cam_draw.viewport.size.y,
+                        cam_draw.viewport.depth_min,
+                        cam_draw.viewport.depth_max,
                     );
 
                     // Clear sub-window viewport if camera.draw_background_color is true
-                    if let Some(bg_draw) = self
-                        .line_buffers
-                        .camera_bg_draws
-                        .get(&(*session_name, *camera_ent))
-                    {
+                    if let Some(ref bg_draw) = cam_draw.viewport_bg_draw {
                         pass.set_pipeline(&self.line_render_pipeline);
                         pass.set_vertex_buffer(0, self.line_buffers.vertex_buffer.slice(..));
                         pass.set_index_buffer(
@@ -1340,52 +1653,63 @@ impl State {
                         pass.set_bind_group(
                             1,
                             self.camera_dynamic_uniform.get_bind_group(),
-                            &[camera_offset],
+                            &[cam_draw.uniform_offset],
                         );
                         pass.draw_indexed(
                             bg_draw.index_range.clone(),
                             bg_draw.base_vertex,
                             bg_draw.instance_index..bg_draw.instance_index + 1,
                         );
+                        active_pipeline = ActivePipeline::Line;
                     }
                 }
 
-                // === SPRITE PASS ===
-                if !sprite_lists.batches.is_empty() {
-                    pass.set_pipeline(&self.sprite_render_pipeline);
-                    pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-                    pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-                    pass.set_bind_group(1, self.dynamic_storage.get_bind_group(), &[]);
-                    pass.set_bind_group(
-                        2,
-                        self.camera_dynamic_uniform.get_bind_group(),
-                        &[camera_offset],
-                    );
-
-                    for (atlas_id, instance_range) in &sprite_lists.batches {
-                        let atlas_bg = &atlas_pool.atlases[*atlas_id].bind_group;
-                        pass.set_bind_group(0, atlas_bg, &[]);
-                        pass.draw_indexed(0..6, 0, instance_range.clone());
-                    }
-                }
-
-                // === LINE (Path2d) PASS ===
-                if let Some(draws) = self.line_buffers.session_draws.get(session_name) {
-                    if !draws.is_empty() {
-                        pass.set_pipeline(&self.line_render_pipeline);
-                        pass.set_vertex_buffer(0, self.line_buffers.vertex_buffer.slice(..));
-                        pass.set_index_buffer(
-                            self.line_buffers.index_buffer.slice(..),
-                            wgpu::IndexFormat::Uint32,
-                        );
-                        pass.set_bind_group(0, self.dynamic_storage.get_bind_group(), &[]);
-                        pass.set_bind_group(
-                            1,
-                            self.camera_dynamic_uniform.get_bind_group(),
-                            &[camera_offset],
-                        );
-
-                        for draw in draws {
+                for draw_cmd in &prepared.draws {
+                    match draw_cmd {
+                        SessionDrawCmd::SpriteBatch {
+                            atlas_id,
+                            instances,
+                        } => {
+                            let Some(atlas) = atlas_pool.atlases.get(*atlas_id) else {
+                                continue;
+                            };
+                            if active_pipeline != ActivePipeline::Sprite {
+                                pass.set_pipeline(&self.sprite_render_pipeline);
+                                pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+                                pass.set_index_buffer(
+                                    self.index_buffer.slice(..),
+                                    wgpu::IndexFormat::Uint16,
+                                );
+                                pass.set_bind_group(1, self.dynamic_storage.get_bind_group(), &[]);
+                                pass.set_bind_group(
+                                    2,
+                                    self.camera_dynamic_uniform.get_bind_group(),
+                                    &[cam_draw.uniform_offset],
+                                );
+                                active_pipeline = ActivePipeline::Sprite;
+                            }
+                            pass.set_bind_group(0, &atlas.bind_group, &[]);
+                            pass.draw_indexed(0..6, 0, instances.clone());
+                        }
+                        SessionDrawCmd::Line(draw) => {
+                            if active_pipeline != ActivePipeline::Line {
+                                pass.set_pipeline(&self.line_render_pipeline);
+                                pass.set_vertex_buffer(
+                                    0,
+                                    self.line_buffers.vertex_buffer.slice(..),
+                                );
+                                pass.set_index_buffer(
+                                    self.line_buffers.index_buffer.slice(..),
+                                    wgpu::IndexFormat::Uint32,
+                                );
+                                pass.set_bind_group(0, self.dynamic_storage.get_bind_group(), &[]);
+                                pass.set_bind_group(
+                                    1,
+                                    self.camera_dynamic_uniform.get_bind_group(),
+                                    &[cam_draw.uniform_offset],
+                                );
+                                active_pipeline = ActivePipeline::Line;
+                            }
                             pass.draw_indexed(
                                 draw.index_range.clone(),
                                 draw.base_vertex,
@@ -1434,17 +1758,23 @@ impl State {
                                 .show(ui, |ui| {
                                     ui.label(
                                         egui::RichText::new(format!(
-                                            "Atlas #{} ({}/{}) [{} allocs] — F4 to cycle",
+                                            "Atlas #{} ({}/{}) {}x{} [{} allocs] — F4 to cycle",
                                             atlas.id,
                                             i + 1,
                                             atlas_pool.atlases.len(),
+                                            atlas.size.0,
+                                            atlas.size.1,
                                             atlas.allocated
                                         ))
                                         .color(egui::Color32::WHITE)
                                         .strong(),
                                     );
-                                    let side = ui.ctx().screen_rect().height() * 0.85;
-                                    ui.image(egui::load::SizedTexture::new(tex_id, [side, side]));
+                                    let max_h = ui.ctx().screen_rect().height() * 0.85;
+                                    let aspect = atlas.size.0 as f32 / atlas.size.1.max(1) as f32;
+                                    ui.image(egui::load::SizedTexture::new(
+                                        tex_id,
+                                        [max_h * aspect, max_h],
+                                    ));
                                 });
                         });
                     tex_id
@@ -1452,8 +1782,7 @@ impl State {
 
             let screen_descriptor = ScreenDescriptor {
                 size_in_pixels: [self.size.width, self.size.height],
-                pixels_per_point: self.window.as_ref().scale_factor() as f32
-                    * self.egui_scale_factor,
+                pixels_per_point,
             };
 
             self.egui_renderer.end_frame_and_draw(
@@ -1548,5 +1877,217 @@ pub fn asset_io(asset_dir: &Path, packs_dir: &Path) -> impl bones::AssetIo + 'st
         let path = window.location().pathname().unwrap();
         let base = path.rsplit_once('/').map(|x| x.0).unwrap_or(&path);
         bones::WebAssetIo::new(&format!("{base}/assets"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn renderer_builder_configures_window_options() {
+        let renderer = BonesWgpuRenderer::new(bones::Game::new())
+            .window_title("Jumpy")
+            .window_size(Vec2::new(1920.0, 1080.0))
+            .min_window_size(Vec2::new(640.0, 360.0))
+            .window_resizable(false)
+            .fullscreen(true)
+            .vsync(false);
+
+        assert_eq!(renderer.window_title, "Jumpy");
+        assert_eq!(renderer.window_size, Vec2::new(1920.0, 1080.0));
+        assert_eq!(renderer.min_window_size, Some(Vec2::new(640.0, 360.0)));
+        assert!(!renderer.window_resizable);
+        assert!(renderer.fullscreen);
+        assert_eq!(renderer.present_mode, wgpu::PresentMode::AutoNoVsync);
+    }
+
+    #[test]
+    fn atlas_and_tile_indices_clamp_to_bounds() {
+        let atlas = bones::Atlas {
+            tile_size: Vec2::new(16.0, 16.0),
+            columns: 4,
+            rows: 3,
+            ..Default::default()
+        };
+        let sprite = bones::AtlasSprite {
+            index: 99,
+            atlas: bones::Handle::default(),
+            ..Default::default()
+        };
+        let uniform = AtlasSpriteUniform::from_atlas_sprite(
+            &sprite,
+            &atlas,
+            &bones::Transform::default(),
+            ([0.0, 0.0], [1.0, 1.0]),
+            Vec2::new(64.0, 48.0),
+        );
+        assert_eq!(uniform.index, 11);
+
+        let empty_atlas = bones::Atlas {
+            columns: 0,
+            rows: 0,
+            ..atlas
+        };
+        let empty_uniform = AtlasSpriteUniform::from_atlas_sprite(
+            &sprite,
+            &empty_atlas,
+            &bones::Transform::default(),
+            ([0.0, 0.0], [1.0, 1.0]),
+            Vec2::new(64.0, 48.0),
+        );
+        assert_eq!(empty_uniform.index, 0);
+    }
+
+    #[test]
+    fn physical_key_extracts_scan_code() {
+        let key = winit::keyboard::PhysicalKey::Code(winit::keyboard::KeyCode::KeyA);
+        let scancode = extract_scan_code(&key);
+        #[cfg(any(
+            target_os = "windows",
+            target_os = "macos",
+            target_os = "linux",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        ))]
+        assert!(scancode.option().is_some());
+    }
+
+    #[test]
+    fn visible_sessions_sort_by_priority_before_first_step() {
+        let mut game = bones::Game::new();
+        game.sessions
+            .create_with("overlay", |s: &mut bones::Session| {
+                s.priority = 10;
+            });
+        game.sessions
+            .create_with("world", |s: &mut bones::Session| {
+                s.priority = 0;
+            });
+        game.sessions
+            .create_with("hidden", |s: &mut bones::Session| {
+                s.priority = 5;
+                s.visible = false;
+            });
+
+        let sorted = sorted_visible_sessions(&game);
+        assert_eq!(sorted, vec![bones::ustr("world"), bones::ustr("overlay")]);
+    }
+
+    #[test]
+    fn screen_to_world_2d_respects_hidpi_window_camera() {
+        let mut game = bones::Game::new();
+        game.sessions
+            .create_with("world", |s: &mut bones::Session| {
+                let ent = s.world.resource_mut::<bones::Entities>().create();
+                s.world.component_mut::<bones::Camera>().insert(
+                    ent,
+                    bones::Camera {
+                        size: bones::CameraSize::Window {
+                            pixels_per_unit: 1.0,
+                        },
+                        ..Default::default()
+                    },
+                );
+                s.world
+                    .component_mut::<bones::Transform>()
+                    .insert(ent, bones::Transform::default());
+            });
+
+        // Bottom-right physical pixel (2560, 1440) at 2x DPI => logical (1280, 720) => (+640, -360).
+        let world = screen_to_world_2d(
+            &game,
+            Vec2::new(2560.0, 1440.0),
+            UVec2::new(2560, 1440),
+            2.0,
+        )
+        .unwrap();
+        assert!((world.x - 640.0).abs() < 1e-3);
+        assert!((world.y + 360.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn wgsl_shaders_and_pipeline_layouts_validate() {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::default());
+        let Some(adapter) = instance
+            .request_adapter(&wgpu::RequestAdapterOptions::default())
+            .block_on()
+        else {
+            // Headless environment without Vulkan/GL/software adapter; skip gracefully.
+            return;
+        };
+        let required_limits = wgpu::Limits::default().using_resolution(adapter.limits());
+        let Ok((device, _queue)) = adapter
+            .request_device(
+                &wgpu::DeviceDescriptor {
+                    required_limits,
+                    ..Default::default()
+                },
+                None,
+            )
+            .block_on()
+        else {
+            return;
+        };
+
+        let texture_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+            label: Some("test_texture_layout"),
+        });
+        let storage_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("test_storage_layout"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+        let camera_entry_size =
+            std::num::NonZeroU64::new(std::mem::size_of::<CameraTransform>() as u64);
+        let camera_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("test_camera_layout"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: true,
+                    min_binding_size: camera_entry_size,
+                },
+                count: None,
+            }],
+        });
+
+        let _pipelines = State::create_pipelines(
+            &device,
+            &texture_layout,
+            &storage_layout,
+            &camera_layout,
+            wgpu::TextureFormat::Bgra8UnormSrgb,
+        );
     }
 }

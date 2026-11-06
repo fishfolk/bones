@@ -1,126 +1,123 @@
 use bones_framework::prelude as bones;
-use crossbeam_channel::unbounded;
 use guillotiere::{size2, AllocId, Allocation, AtlasAllocator};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Weak},
-};
+use std::{collections::HashMap, sync::Arc};
 
-pub struct AtlasAllocationGuard {
-    pub image: bones::Handle<bones::Image>,
-    pub cid: bones::Cid,
-    pub atlas_id: usize,
-    pub alloc: Allocation,
-    pub sender:
-        crossbeam_channel::Sender<(bones::Handle<bones::Image>, bones::Cid, usize, Allocation)>,
-}
-
-impl Drop for AtlasAllocationGuard {
-    fn drop(&mut self) {
-        if let Err(e) = self
-            .sender
-            .send((self.image, self.cid, self.atlas_id, self.alloc))
-        {
-            log::warn!("Failed to send atlas allocation for deallocation: {:?}", e);
-        }
-    }
-}
-
+#[derive(Clone, Copy, Debug)]
 pub struct CachedAtlasAllocation {
     pub atlas_id: usize,
     pub alloc: Allocation,
     pub uv_min: [f32; 2],
     pub uv_max: [f32; 2],
     pub image_size: [f32; 2],
-    pub guard: Weak<AtlasAllocationGuard>,
+    pub last_used_generation: u64,
 }
 
-/// Code for the AtlasPool and the TextureAtlas.
-/// A pool of texture atlases, each capable of holding multiple sprites.
+/// A pool of GPU texture atlases, each capable of holding multiple packed sprites.
 pub struct AtlasPool {
     device: Arc<wgpu::Device>,
     layout: Arc<wgpu::BindGroupLayout>,
     pub atlases: Vec<TextureAtlas>,
-    next_id: usize,
     max_atlases: usize,
-    pub atlas_size: (u32, u32),
+    pub default_atlas_size: (u32, u32),
+    pub max_texture_dimension_2d: u32,
     pixel_art: bool,
+    pub generation: u64,
     pub cache: HashMap<(bones::Handle<bones::Image>, bones::Cid), CachedAtlasAllocation>,
-    // Used to remove deleted textures when their last reference drops
-    pub sender:
-        crossbeam_channel::Sender<(bones::Handle<bones::Image>, bones::Cid, usize, Allocation)>,
-    pub receiver:
-        crossbeam_channel::Receiver<(bones::Handle<bones::Image>, bones::Cid, usize, Allocation)>,
 }
 
 impl AtlasPool {
     pub fn new(
         device: &Arc<wgpu::Device>,
         layout: &Arc<wgpu::BindGroupLayout>,
-        atlas_size: (u32, u32),
+        preferred_atlas_size: (u32, u32),
         max_atlases: usize,
         pixel_art: bool,
     ) -> Self {
-        let (sender, receiver) = unbounded();
+        let max_texture_dimension_2d = device.limits().max_texture_dimension_2d;
+        let default_atlas_size = (
+            preferred_atlas_size.0.min(max_texture_dimension_2d),
+            preferred_atlas_size.1.min(max_texture_dimension_2d),
+        );
 
         AtlasPool {
             device: device.clone(),
             layout: layout.clone(),
             atlases: Vec::new(),
-            next_id: 0,
             max_atlases,
-            atlas_size,
+            default_atlas_size,
+            max_texture_dimension_2d,
             pixel_art,
+            generation: 0,
             cache: HashMap::new(),
-            sender,
-            receiver,
         }
     }
 
-    /// Allocate a rectangle of `size` in one of the atlases.
-    /// If none has room and we’re under `max_atlases`, we create a new atlas.
-    /// If at capacity and no atlas has space, returns an error.
-    pub fn allocate(&mut self, size: (i32, i32)) -> Result<(usize, Allocation), String> {
-        // 1) Try existing atlases
-        if let Some((idx, alloc)) = self
-            .atlases
-            .iter_mut()
-            .enumerate()
-            .filter_map(|(i, a)| a.allocate(size).map(|alloc| (i, alloc)))
-            .next()
-        {
-            return Ok((self.atlases[idx].id, alloc));
+    /// Allocates space for an image of `image_size` `(width, height)` in one of the atlases,
+    /// reserving a 1px extruded border on each side whenever the GPU 2D texture limit permits so
+    /// sampling never bleeds into adjacent packed sprites.
+    ///
+    /// Returns `(atlas_id, allocation, atlas_size, (pad_x, pad_y))`.
+    pub fn allocate_for_image(
+        &mut self,
+        image_size: (u32, u32),
+    ) -> Result<(usize, Allocation, (u32, u32), (u32, u32)), String> {
+        let (img_w, img_h) = image_size;
+        if img_w == 0 || img_h == 0 {
+            return Err(format!(
+                "AtlasPool: cannot allocate zero-sized image {:?}",
+                image_size
+            ));
+        }
+        if img_w > self.max_texture_dimension_2d || img_h > self.max_texture_dimension_2d {
+            return Err(format!(
+                "AtlasPool: image {:?} exceeds GPU max_texture_dimension_2d ({})",
+                image_size, self.max_texture_dimension_2d
+            ));
         }
 
-        // 2) Need a new atlas?
-        if self.atlases.len() < self.max_atlases {
-            let id = self.next_id;
-            self.next_id += 1;
+        let pad_x = u32::from(img_w.saturating_add(2) <= self.max_texture_dimension_2d);
+        let pad_y = u32::from(img_h.saturating_add(2) <= self.max_texture_dimension_2d);
+        let alloc_w = img_w + 2 * pad_x;
+        let alloc_h = img_h + 2 * pad_y;
+        let alloc_size = (alloc_w as i32, alloc_h as i32);
 
-            let mut atlas = TextureAtlas::new(
-                &self.device,
-                &self.layout,
-                id,
-                self.atlas_size,
-                self.pixel_art,
+        // 1) Try existing atlases
+        for (idx, atlas) in self.atlases.iter_mut().enumerate() {
+            if let Some(alloc) = atlas.allocate(alloc_size) {
+                return Ok((idx, alloc, atlas.size, (pad_x, pad_y)));
+            }
+        }
+
+        // 2) Need a new atlas (grow beyond `default_atlas_size` if a large image requires it)
+        if self.atlases.len() < self.max_atlases {
+            let id = self.atlases.len();
+            let atlas_size = (
+                self.default_atlas_size.0.max(alloc_w),
+                self.default_atlas_size.1.max(alloc_h),
             );
-            let alloc = atlas
-                .allocate(size)
-                .expect("Newly-created atlas must fit the requested sprite size");
+
+            let mut atlas =
+                TextureAtlas::new(&self.device, &self.layout, id, atlas_size, self.pixel_art);
+            let alloc = atlas.allocate(alloc_size).ok_or_else(|| {
+                format!(
+                    "AtlasPool: newly created {:?} atlas could not fit {:?}",
+                    atlas_size, alloc_size
+                )
+            })?;
             self.atlases.push(atlas);
-            return Ok((id, alloc));
+            return Ok((id, alloc, atlas_size, (pad_x, pad_y)));
         }
 
         // 3) All atlases full
         Err(format!(
-            "AtlasPool: all {} atlases are full, cannot allocate size {:?}",
-            self.max_atlases, size
+            "AtlasPool: all {} atlases are full, cannot allocate image {:?}",
+            self.max_atlases, image_size
         ))
     }
 
     /// Frees the given allocation back into its atlas, making space reusable.
     pub fn deallocate(&mut self, atlas_id: usize, alloc: Allocation) -> bool {
-        if let Some(atlas) = self.atlases.iter_mut().find(|a| a.id == atlas_id) {
+        if let Some(atlas) = self.atlases.get_mut(atlas_id) {
             atlas.deallocate(alloc.id);
             true
         } else {
@@ -129,8 +126,75 @@ impl AtlasPool {
     }
 }
 
+/// Builds a 256-byte row-aligned RGBA8 upload buffer with `pad_x`/`pad_y` extruded edge texels so
+/// linear and nearest sampling at UV borders never bleed across packed atlas neighbors.
+pub fn build_extruded_rgba_upload(
+    raw_rgba: &[u8],
+    w: u32,
+    h: u32,
+    pad_x: u32,
+    pad_y: u32,
+) -> (Vec<u8>, u32, u32, u32) {
+    let upload_w = w + 2 * pad_x;
+    let upload_h = h + 2 * pad_y;
+    let unpadded_src_stride = (w as usize) * 4;
+    let unpadded_dst_stride = (upload_w as usize) * 4;
+    let padded_stride = unpadded_dst_stride.div_ceil(256) * 256;
+    let mut padded_data = vec![0u8; padded_stride * (upload_h as usize)];
+
+    let write_row = |dst_row_slice: &mut [u8], src_row: &[u8]| {
+        let inner_start = (pad_x as usize) * 4;
+        let inner_end = inner_start + unpadded_src_stride;
+        dst_row_slice[inner_start..inner_end].copy_from_slice(src_row);
+        if pad_x > 0 && w > 0 {
+            let first_px = &src_row[0..4];
+            let last_px = &src_row[unpadded_src_stride - 4..unpadded_src_stride];
+            for px in 0..(pad_x as usize) {
+                dst_row_slice[px * 4..(px + 1) * 4].copy_from_slice(first_px);
+                let right_start = inner_end + px * 4;
+                dst_row_slice[right_start..right_start + 4].copy_from_slice(last_px);
+            }
+        }
+    };
+
+    for row in 0..(h as usize) {
+        let src_offset = row * unpadded_src_stride;
+        let src_row = &raw_rgba[src_offset..src_offset + unpadded_src_stride];
+        let dst_row = (pad_y as usize) + row;
+        let dst_offset = dst_row * padded_stride;
+        write_row(
+            &mut padded_data[dst_offset..dst_offset + unpadded_dst_stride],
+            src_row,
+        );
+    }
+
+    if pad_y > 0 && h > 0 {
+        let first_src_row = &raw_rgba[0..unpadded_src_stride];
+        let last_src_offset = ((h as usize) - 1) * unpadded_src_stride;
+        let last_src_row = &raw_rgba[last_src_offset..last_src_offset + unpadded_src_stride];
+
+        for py in 0..(pad_y as usize) {
+            let top_offset = py * padded_stride;
+            write_row(
+                &mut padded_data[top_offset..top_offset + unpadded_dst_stride],
+                first_src_row,
+            );
+
+            let bot_row = (pad_y as usize) + (h as usize) + py;
+            let bot_offset = bot_row * padded_stride;
+            write_row(
+                &mut padded_data[bot_offset..bot_offset + unpadded_dst_stride],
+                last_src_row,
+            );
+        }
+    }
+
+    (padded_data, upload_w, upload_h, padded_stride as u32)
+}
+
 pub struct TextureAtlas {
     pub id: usize,
+    pub size: (u32, u32),
     pub allocator: AtlasAllocator, // guillotiere packing
     pub texture: wgpu::Texture,    // the GPU texture
     pub view: wgpu::TextureView,
@@ -168,17 +232,18 @@ impl TextureAtlas {
         });
 
         let view = texture.create_view(&Default::default());
+        let filter_mode = if pixel_art {
+            wgpu::FilterMode::Nearest
+        } else {
+            wgpu::FilterMode::Linear
+        };
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: if pixel_art {
-                wgpu::FilterMode::Nearest
-            } else {
-                wgpu::FilterMode::Linear
-            },
-            min_filter: wgpu::FilterMode::Nearest,
-            mipmap_filter: wgpu::FilterMode::Nearest,
+            mag_filter: filter_mode,
+            min_filter: filter_mode,
+            mipmap_filter: filter_mode,
             ..Default::default()
         });
 
@@ -200,6 +265,7 @@ impl TextureAtlas {
 
         TextureAtlas {
             id,
+            size,
             allocator,
             texture,
             view,
@@ -221,5 +287,41 @@ impl TextureAtlas {
     pub fn deallocate(&mut self, alloc_id: AllocId) {
         self.allocated = self.allocated.saturating_sub(1);
         self.allocator.deallocate(alloc_id);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extruded_upload_replicates_edges_and_aligns_rows() {
+        // 2x2 image: TL=red, TR=green, BL=blue, BR=white
+        let raw = [
+            255, 0, 0, 255, 0, 255, 0, 255, // row 0
+            0, 0, 255, 255, 255, 255, 255, 255, // row 1
+        ];
+        let (buf, up_w, up_h, stride) = build_extruded_rgba_upload(&raw, 2, 2, 1, 1);
+        assert_eq!((up_w, up_h, stride), (4, 4, 256));
+        assert_eq!(buf.len(), 256 * 4);
+
+        let px = |x: usize, y: usize| -> [u8; 4] {
+            let off = y * (stride as usize) + x * 4;
+            [buf[off], buf[off + 1], buf[off + 2], buf[off + 3]]
+        };
+
+        // Corners and edges match nearest interior pixel
+        assert_eq!(px(0, 0), [255, 0, 0, 255]);
+        assert_eq!(px(1, 0), [255, 0, 0, 255]);
+        assert_eq!(px(2, 0), [0, 255, 0, 255]);
+        assert_eq!(px(3, 0), [0, 255, 0, 255]);
+
+        assert_eq!(px(1, 1), [255, 0, 0, 255]);
+        assert_eq!(px(2, 1), [0, 255, 0, 255]);
+        assert_eq!(px(1, 2), [0, 0, 255, 255]);
+        assert_eq!(px(2, 2), [255, 255, 255, 255]);
+
+        assert_eq!(px(0, 3), [0, 0, 255, 255]);
+        assert_eq!(px(3, 3), [255, 255, 255, 255]);
     }
 }

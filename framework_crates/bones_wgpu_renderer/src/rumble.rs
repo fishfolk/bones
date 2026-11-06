@@ -1,8 +1,8 @@
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use bones_framework::{
     input::gilrs::GILRS_CONTEXT,
-    prelude::{GamepadRumbleIntensity, GamepadRumbleRequest, GamepadsRumble},
+    prelude::{GamepadRumbleIntensity, GamepadRumbleRequest, GamepadsRumble, Instant},
 };
 use gilrs::{
     ff::{BaseEffect, BaseEffectType, Effect, EffectBuilder, Replay, Ticks},
@@ -29,7 +29,7 @@ impl RumbleManager {
             return;
         }
 
-        let mut gilrs = GILRS_CONTEXT.lock().unwrap();
+        let mut gilrs = GILRS_CONTEXT.lock().unwrap_or_else(|e| e.into_inner());
         while let Some(request) = rumble.requests.pop_front() {
             match request {
                 GamepadRumbleRequest::AddRumble {
@@ -62,9 +62,13 @@ impl RumbleManager {
         duration: f32,
         now: Instant,
     ) {
-        if duration <= 0.0 || (intensity.strong_motor() <= 0.0 && intensity.weak_motor() <= 0.0) {
+        if !duration.is_finite()
+            || duration <= 0.0
+            || (intensity.strong_motor() <= 0.0 && intensity.weak_motor() <= 0.0)
+        {
             return;
         }
+        let duration = duration.min(3600.0);
 
         let Some((gamepad_id, _)) = gilrs
             .gamepads()

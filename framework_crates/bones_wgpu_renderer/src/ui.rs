@@ -27,13 +27,14 @@ impl EguiRenderer {
     ) -> EguiRenderer {
         let egui_context = Context::default();
 
+        let max_texture_side = device.limits().max_texture_dimension_2d as usize;
         let egui_state = egui_winit::State::new(
             egui_context,
             egui::viewport::ViewportId::ROOT,
             &window,
             Some(window.scale_factor() as f32),
             None,
-            Some(2 * 1024), // default dimension is 2048
+            Some(max_texture_side),
         );
         let egui_renderer = Renderer::new(
             device,
@@ -116,6 +117,28 @@ impl EguiRenderer {
             .render(&mut rpass.forget_lifetime(), &tris, &screen_descriptor);
         for x in &full_output.textures_delta.free {
             self.renderer.free_texture(x)
+        }
+
+        self.frame_started = false;
+    }
+
+    /// Ends an active egui pass when the swapchain surface cannot be rendered to (e.g. minimized
+    /// window with `0x0` size), still applying texture deltas so font/image uploads are not lost.
+    pub fn end_frame_discard(&mut self, device: &Device, queue: &Queue, window: &Window) {
+        if !self.frame_started {
+            return;
+        }
+
+        let full_output = self.state.egui_ctx().end_pass();
+        self.state
+            .handle_platform_output(window, full_output.platform_output);
+
+        for (id, image_delta) in &full_output.textures_delta.set {
+            self.renderer
+                .update_texture(device, queue, *id, image_delta);
+        }
+        for x in &full_output.textures_delta.free {
+            self.renderer.free_texture(x);
         }
 
         self.frame_started = false;

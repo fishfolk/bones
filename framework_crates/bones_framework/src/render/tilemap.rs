@@ -62,6 +62,7 @@ impl EntityGridMap {
     /// Returns `None` is no `Entity` assigned to that position.
     ///
     /// Panics if the position is out of the grid bounds.
+    #[track_caller]
     pub fn get(&self, pos: UVec2) -> Option<Entity> {
         let idx = self.index(pos);
         self.tiles.get(idx as usize).cloned().flatten()
@@ -73,14 +74,17 @@ impl EntityGridMap {
     /// Returns `None` if the position is out of the grid bounds or there is no
     /// `Entity` assigned to that position.
     pub fn try_get(&self, pos: UVec2) -> Option<Entity> {
-        self.try_index(pos).and_then(|idx| self.tiles[idx as usize])
+        self.try_index(pos)
+            .and_then(|idx| self.tiles.get(idx as usize).copied().flatten())
     }
 
     /// Get the position on the grid with the given entity index.
     ///
     /// Panics if the index is out of the grid bounds.
+    #[track_caller]
     pub fn pos(&self, idx: u32) -> UVec2 {
-        if idx as usize >= self.tiles.len() {
+        let grid_len = (self.grid_size.x as usize).saturating_mul(self.grid_size.y as usize);
+        if self.grid_size.x == 0 || idx as usize >= self.tiles.len().min(grid_len) {
             panic!("index out of grid bounds")
         }
         let y = idx / self.grid_size.x;
@@ -92,7 +96,8 @@ impl EntityGridMap {
     ///
     /// Returns `None` if the index is out of the grid bounds.
     pub fn try_pos(&self, idx: u32) -> Option<UVec2> {
-        if idx as usize >= self.tiles.len() {
+        let grid_len = (self.grid_size.x as usize).saturating_mul(self.grid_size.y as usize);
+        if self.grid_size.x == 0 || idx as usize >= self.tiles.len().min(grid_len) {
             None
         } else {
             let y = idx / self.grid_size.x;
@@ -106,15 +111,15 @@ impl EntityGridMap {
     #[inline]
     #[track_caller]
     pub fn index(&self, pos: UVec2) -> u32 {
-        if pos.x + 1 > self.grid_size.x || pos.y + 1 > self.grid_size.y {
-            panic!("grid postion out of bounds")
+        if pos.x >= self.grid_size.x || pos.y >= self.grid_size.y {
+            panic!("grid position out of bounds")
         }
         self.grid_size.x * pos.y + pos.x
     }
     /// Try to get the index of the tile at the given position.
     #[inline]
     pub fn try_index(&self, pos: UVec2) -> Option<u32> {
-        if pos.x + 1 > self.grid_size.x || pos.y + 1 > self.grid_size.y {
+        if pos.x >= self.grid_size.x || pos.y >= self.grid_size.y {
             None
         } else {
             Some(self.grid_size.x * pos.y + pos.x)
@@ -122,6 +127,7 @@ impl EntityGridMap {
     }
 
     /// Set the tile at the given position, to a certain entity.
+    #[track_caller]
     pub fn set(&mut self, pos: UVec2, entity: Option<Entity>) {
         self.ensure_space();
 
@@ -192,4 +198,36 @@ impl EntityGridMap {
     }
 }
 
-// TODO: add tests for EntityGridMap
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn entity_grid_map_try_get_and_bounds() {
+        let mut entities = Entities::default();
+        let e1 = entities.create();
+        let mut grid = EntityGridMap::new(UVec2::new(4, 3));
+        grid.set(UVec2::new(3, 2), Some(e1));
+
+        assert_eq!(grid.get(UVec2::new(3, 2)), Some(e1));
+        assert_eq!(grid.try_get(UVec2::new(3, 2)), Some(e1));
+        assert_eq!(grid.try_get(UVec2::new(4, 2)), None);
+        assert_eq!(grid.try_get(UVec2::new(3, 3)), None);
+        assert_eq!(grid.try_get(UVec2::new(u32::MAX, u32::MAX)), None);
+
+        // Unallocated `tiles` Vec with non-zero `grid_size` must not panic in `try_get` / `try_pos`.
+        let sparse = EntityGridMap {
+            tiles: Vec::new(),
+            grid_size: UVec2::new(4, 3),
+        };
+        assert_eq!(sparse.try_get(UVec2::new(0, 0)), None);
+        assert_eq!(sparse.try_pos(0), None);
+
+        // Zero-width grid with stale tiles must not divide by zero in `try_pos`.
+        let zero_width = EntityGridMap {
+            tiles: vec![Some(e1)],
+            grid_size: UVec2::new(0, 3),
+        };
+        assert_eq!(zero_width.try_pos(0), None);
+    }
+}

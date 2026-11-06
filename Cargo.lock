@@ -953,7 +953,6 @@ dependencies = [
  "bones_framework",
  "bones_schema",
  "bytemuck",
- "crossbeam-channel",
  "directories",
  "egui",
  "egui-wgpu",

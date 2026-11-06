@@ -38,10 +38,16 @@ mod wasm {
                 return default();
             };
 
-            let Ok(loaded) = serde_yaml::from_str::<LoadedStorage>(&data) else {
-                return default();
-            };
-            loaded.0
+            match serde_yaml::from_str::<LoadedStorage>(&data) {
+                Ok(loaded) => loaded.0,
+                Err(e) => {
+                    log::error!(
+                        "Error deserializing storage from localStorage, ignoring data, \
+                        it will be overwritten when saved: {e:?}"
+                    );
+                    default()
+                }
+            }
         }
     }
 }
@@ -68,6 +74,9 @@ mod native {
 
     impl StorageApi for StorageBackend {
         fn save(&mut self, data: Vec<SchemaBox>) {
+            if let Some(parent) = self.storage_path.parent() {
+                std::fs::create_dir_all(parent).expect("Failed to create storage directory");
+            }
             let file = std::fs::OpenOptions::new()
                 .write(true)
                 .truncate(true)
@@ -103,7 +112,9 @@ mod native {
                     }
                 }
             } else {
-                std::fs::create_dir_all(self.storage_path.parent().unwrap()).unwrap();
+                if let Some(parent) = self.storage_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
                 default()
             }
         }
@@ -158,15 +169,15 @@ impl<'de> Visitor<'de> for LoadedStorageVisitor {
                 .iter()
                 .find(|schema| schema.full_name.as_ref() == type_name)
             else {
-                log::error!(
-                    "\n\nCannot find schema registration for `{}` while loading persisted \
-                        storage. This means you that you need to call \
-                        `{}::schema()` to register your persisted storage type before \
-                        creating the `BonesWgpuRenderer` or that there is data from an old \
-                        version of the app inside of the persistent storage file.\n\n",
-                    type_name,
-                    type_name,
+                log::warn!(
+                    "Cannot find schema registration for `{type_name}` while loading persisted \
+                    storage. Make sure `{type_name}::register_schema()` is called before creating \
+                    `BonesWgpuRenderer`, or ignore this warning if `{type_name}` is stale data \
+                    from an older version of the app (it will be skipped and removed on next save)."
                 );
+                // Must consume the entry's value before continuing so serde's `MapAccess` stays
+                // aligned and does not misread the value (e.g. `"test"`) as the next map key.
+                let _ = map.next_value::<serde::de::IgnoredAny>()?;
                 continue;
             };
 

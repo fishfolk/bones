@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::ops::Range;
 
 use bones_framework::glam::Vec2;
@@ -8,7 +7,7 @@ use lyon::tessellation::{
     BuffersBuilder, StrokeOptions, StrokeTessellator, StrokeVertex, VertexBuffers,
 };
 
-use crate::bones::{self, Path2d};
+use crate::bones::Path2d;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -39,6 +38,7 @@ impl Vertex {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct LineDrawCall {
     pub index_range: Range<u32>,
     pub base_vertex: i32,
@@ -50,8 +50,6 @@ pub struct LineBuffers {
     vertex_capacity: u64,
     pub index_buffer: wgpu::Buffer,
     index_capacity: u64,
-    pub session_draws: HashMap<bones::Ustr, Vec<LineDrawCall>>,
-    pub camera_bg_draws: HashMap<(bones::Ustr, bones::Entity), LineDrawCall>,
 }
 
 impl LineBuffers {
@@ -75,8 +73,6 @@ impl LineBuffers {
             vertex_capacity: Self::INITIAL_CAPACITY,
             index_buffer,
             index_capacity: Self::INITIAL_CAPACITY,
-            session_draws: HashMap::new(),
-            camera_bg_draws: HashMap::new(),
         }
     }
 
@@ -119,23 +115,36 @@ impl LineBuffers {
     }
 }
 
-// Helper function to process line breaks
+/// Splits `path.points` into disconnected polyline subpaths according to `path.line_breaks`.
+///
+/// Each index `i` in `line_breaks` starts a new subpath at `points[i]` (i.e. `points[i - 1]` is
+/// not connected to `points[i]`), matching `bones_bevy_renderer` and `jumpy`'s debug line builder.
 fn process_segments(path: &Path2d) -> Vec<&[Vec2]> {
     let mut segments = Vec::new();
+    if path.points.len() < 2 {
+        return segments;
+    }
+
     let mut line_breaks = path.line_breaks.clone();
     line_breaks.sort_unstable();
     line_breaks.dedup();
 
     let mut start = 0;
     for &break_point in &line_breaks {
-        let end = break_point;
-        if start <= end && end < path.points.len() {
-            let segment = &path.points[start..=end];
+        if break_point == 0 {
+            continue;
+        }
+        let end = break_point.min(path.points.len());
+        if start < end {
+            let segment = &path.points[start..end];
             if segment.len() >= 2 {
                 segments.push(segment);
             }
         }
-        start = end + 1;
+        start = end;
+        if start >= path.points.len() {
+            break;
+        }
     }
 
     if start < path.points.len() {
@@ -151,7 +160,7 @@ fn process_segments(path: &Path2d) -> Vec<&[Vec2]> {
 // Tessellate path into vertex/index buffers
 pub fn tessellate_path(path: &Path2d) -> VertexBuffers<Vertex, u32> {
     let mut geometry = VertexBuffers::new();
-    if path.points.len() < 2 || path.thickness <= 0.0 {
+    if path.points.len() < 2 || path.thickness <= 0.0 || !path.thickness.is_finite() {
         return geometry;
     }
 
@@ -161,8 +170,12 @@ pub fn tessellate_path(path: &Path2d) -> VertexBuffers<Vertex, u32> {
     }
 
     let mut lyon_path_builder = Path::builder();
+    let mut has_valid_segment = false;
 
     for segment in segments {
+        if !segment.iter().all(|p| p.is_finite()) {
+            continue;
+        }
         let mut points = segment.iter();
         if let Some(first) = points.next() {
             lyon_path_builder.begin(Point::new(first.x, first.y));
@@ -170,23 +183,69 @@ pub fn tessellate_path(path: &Path2d) -> VertexBuffers<Vertex, u32> {
                 lyon_path_builder.line_to(Point::new(point.x, point.y));
             }
             lyon_path_builder.end(false);
+            has_valid_segment = true;
         }
+    }
+
+    if !has_valid_segment {
+        return geometry;
     }
 
     let lyon_path = lyon_path_builder.build();
     let options = StrokeOptions::default().with_line_width(path.thickness);
-    let color = path.color.as_rgba_f32();
+    let color = crate::convert::color_to_linear_rgba_f32(path.color);
 
-    StrokeTessellator::new()
-        .tessellate_path(
-            &lyon_path,
-            &options,
-            &mut BuffersBuilder::new(&mut geometry, |vertex: StrokeVertex| Vertex {
-                position: vertex.position().to_array(),
-                color,
-            }),
-        )
-        .expect("Path tessellation failed");
+    if let Err(err) = StrokeTessellator::new().tessellate_path(
+        &lyon_path,
+        &options,
+        &mut BuffersBuilder::new(&mut geometry, |vertex: StrokeVertex| Vertex {
+            position: vertex.position().to_array(),
+            color,
+        }),
+    ) {
+        log::warn!("Path2d tessellation failed: {err:?}");
+        geometry.vertices.clear();
+        geometry.indices.clear();
+    }
 
     geometry
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn process_segments_splits_before_line_break_indices() {
+        let a = Vec2::new(0.0, 0.0);
+        let b = Vec2::new(10.0, 0.0);
+        let c = Vec2::new(20.0, 20.0);
+        let d = Vec2::new(30.0, 20.0);
+
+        // Matches `jumpy`'s `RapierDebugBackend`: push two endpoints, then push `points.len()`.
+        let path = Path2d {
+            points: vec![a, b, c, d],
+            line_breaks: vec![2, 4],
+            thickness: 2.0,
+            ..Default::default()
+        };
+        let segs = process_segments(&path);
+        assert_eq!(segs, vec![&[a, b][..], &[c, d][..]]);
+
+        let geom = tessellate_path(&path);
+        assert!(!geom.vertices.is_empty());
+        assert!(!geom.indices.is_empty());
+    }
+
+    #[test]
+    fn tessellate_path_ignores_non_finite_geometry() {
+        let bad = Path2d {
+            points: vec![Vec2::ZERO, Vec2::new(f32::NAN, 5.0)],
+            thickness: 2.0,
+            ..Default::default()
+        };
+        let geom = tessellate_path(&bad);
+        assert!(geom.vertices.is_empty());
+        assert!(geom.indices.is_empty());
+    }
 }
