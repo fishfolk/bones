@@ -744,7 +744,7 @@ impl App {
             state.egui_renderer.context().data_mut(|map| map.clear());
         }
         app.game.insert_shared_resource(WgpuDevice(None));
-        app.game.sessions.map.clear();
+        app.game.sessions = Default::default();
         app.game.shared_resources.clear();
         drop(app.game);
 
