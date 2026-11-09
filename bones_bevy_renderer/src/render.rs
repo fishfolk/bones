@@ -47,7 +47,7 @@ impl BonesImageIds {
         bevy_egui_textures: &mut bevy_egui::EguiUserTextures,
     ) {
         for entry in bones_assets.store.asset_ids.iter() {
-            let handle = entry.key();
+            let handle: &bones::UntypedHandle = entry.key();
             let cid = entry.value();
             let mut asset = bones_assets.store.assets.get_mut(cid).unwrap();
             if let Ok(image) = asset.data.try_cast_mut::<bones::Image>() {
@@ -77,7 +77,8 @@ impl BonesImageIds {
         if let bones::Image::Data(data) = taken_image {
             let handle = bevy_images.add(Image::from_dynamic(data, true));
             let egui_texture = bevy_egui_textures.add_image(handle.clone());
-            bones_egui_textures.insert(bones_handle, egui_texture);
+            // Broke when updating bones egui to 0.30
+            //bones_egui_textures.insert(bones_handle, egui_texture);
             map.insert(*next_id, handle);
             *image = bones::Image::External(*next_id);
             *next_id += 1;

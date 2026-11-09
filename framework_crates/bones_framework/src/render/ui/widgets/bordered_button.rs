@@ -16,8 +16,8 @@ pub struct BorderedButton<'a> {
     default_border: Option<&'a BorderImageMeta>,
     on_focus_border: Option<&'a BorderImageMeta>,
     on_click_border: Option<&'a BorderImageMeta>,
-    margin: egui::style::Margin,
-    padding: egui::style::Margin,
+    margin: egui::epaint::Marginf,
+    padding: egui::epaint::Marginf,
 }
 
 impl<'a> BorderedButton<'a> {
@@ -78,7 +78,7 @@ impl<'a> BorderedButton<'a> {
 
     /// Set the margin. This will be applied on the outside of the border.
     #[must_use = "You must call .show() to render the button"]
-    pub fn margin(mut self, margin: impl Into<egui::style::Margin>) -> Self {
+    pub fn margin(mut self, margin: impl Into<egui::epaint::Marginf>) -> Self {
         self.margin = margin.into();
 
         self
@@ -86,7 +86,7 @@ impl<'a> BorderedButton<'a> {
 
     /// Set the padding. This will be applied on the inside of the border.
     #[must_use = "You must call .show() to render the button"]
-    pub fn padding(mut self, padding: impl Into<egui::style::Margin>) -> Self {
+    pub fn padding(mut self, padding: impl Into<egui::epaint::Marginf>) -> Self {
         self.padding = padding.into();
 
         self
@@ -153,13 +153,26 @@ impl<'a> Widget for BorderedButton<'a> {
         let total_extra = padding.sum() + margin.sum();
 
         let wrap_width = ui.available_width() - total_extra.x;
-        let text = text.into_galley(ui, wrap, wrap_width, TextStyle::Button);
+        let text = text.into_galley(
+            ui,
+            if let Some(wrap) = wrap {
+                if wrap {
+                    Some(egui::TextWrapMode::Wrap)
+                } else {
+                    None
+                }
+            } else {
+                None
+            },
+            wrap_width,
+            TextStyle::Button,
+        );
 
         let mut desired_size = text.size() + total_extra;
         desired_size = desired_size.at_least(egui::vec2(min_size.x, min_size.y));
 
         let (rect, response) = ui.allocate_at_least(desired_size, sense);
-        response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, text.text()));
+        response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, text.text()));
 
         // Focus the button automatically when it is hovered and the mouse is moving
         if response.hovered()
@@ -199,7 +212,7 @@ impl<'a> Widget for BorderedButton<'a> {
 
             if let Some(border) = border {
                 let texture = ui.data(|map| {
-                    map.get_temp::<AtomicResource<EguiTextures>>(egui::Id::null())
+                    map.get_temp::<AtomicResource<EguiTextures>>(egui::Id::NULL)
                         .unwrap()
                         .borrow()
                         .unwrap()
@@ -209,7 +222,10 @@ impl<'a> Widget for BorderedButton<'a> {
                     .add(BorderedFrame::new(border).paint(texture, border_rect));
             }
 
-            text.paint_with_visuals(ui.painter(), label_pos, visuals);
+            // OLD
+            //text.paint_with_visuals(ui.painter(), label_pos, visuals);
+
+            ui.painter().galley(label_pos, text, visuals.text_color());
         }
 
         response

@@ -11,7 +11,7 @@
 
 use async_channel::{Receiver, Sender};
 use bones_asset::HasSchema;
-use egui::CollapsingHeader;
+use egui::{CollapsingHeader, Vec2b};
 use egui_plot::{Bar, BarChart, GridMark, Plot};
 use ggrs::{NetworkStats, PlayerHandle};
 use once_cell::sync::Lazy;
@@ -300,7 +300,7 @@ pub fn network_debug_window(
                         .allow_boxed_zoom(false)
                         .include_x(min_display_frame)
                         .include_x(max_display_frame)
-                        .auto_bounds_y()
+                        .auto_bounds(Vec2b::new(false, true))
                         .include_y(max_prediction_window as f64)
                         .show_axes([false, true])
                         .y_grid_spacer(move |_grid_input| {

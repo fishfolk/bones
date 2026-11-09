@@ -1,5 +1,5 @@
-use bones_bevy_renderer::BonesBevyRenderer;
 use bones_framework::prelude::*;
+use bones_wgpu_renderer::BonesWgpuRenderer;
 
 //
 // NOTE: You must run this example from within the `demos/asset_packs` folder. Also, be sure to
@@ -53,7 +53,13 @@ fn main() {
         // Add our menu system to the update stage
         .add_system_to_stage(Update, menu_system);
 
-    BonesBevyRenderer::new(game).app().run();
+    let mut renderer = BonesWgpuRenderer::new(game);
+    if !renderer.asset_dir.exists() {
+        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        renderer.asset_dir = manifest_dir.join("assets");
+        renderer.packs_dir = manifest_dir.join("packs");
+    }
+    renderer.run();
 }
 
 /// System to render the home menu.
@@ -63,7 +69,7 @@ fn menu_system(
     all_packs: AllPacksData<GameMeta, PackMeta>,
 ) {
     egui::CentralPanel::default()
-        .frame(egui::Frame::none().outer_margin(egui::Margin::same(32.0)))
+        .frame(egui::Frame::new().outer_margin(egui::epaint::Marginf::same(32.0)))
         .show(&egui_ctx, |ui| {
             // Use the title that has been loaded from the asset
             ui.heading(&core_meta.title);

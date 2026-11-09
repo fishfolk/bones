@@ -1,0 +1,283 @@
+use bones_framework::glam::Vec2;
+use bones_framework::prelude::{self as bones};
+use winit::event::{MouseButton, MouseScrollDelta};
+use winit::{event::ElementState, keyboard::KeyCode};
+
+pub trait IntoBones<T> {
+    fn into_bones(self) -> T;
+}
+
+impl IntoBones<bones::MouseScrollEvent> for MouseScrollDelta {
+    fn into_bones(self) -> bones::MouseScrollEvent {
+        match self {
+            MouseScrollDelta::LineDelta(x, y) => bones::MouseScrollEvent {
+                movement: Vec2::new(x, y),
+                unit: bones::MouseScrollUnit::Lines,
+            },
+            MouseScrollDelta::PixelDelta(physical_position) => bones::MouseScrollEvent {
+                movement: Vec2::new(physical_position.x as f32, physical_position.y as f32),
+                unit: bones::MouseScrollUnit::Pixels,
+            },
+        }
+    }
+}
+
+impl IntoBones<bones::ButtonState> for ElementState {
+    fn into_bones(self) -> bones::ButtonState {
+        match self {
+            ElementState::Pressed => bones::ButtonState::Pressed,
+            ElementState::Released => bones::ButtonState::Released,
+        }
+    }
+}
+
+impl IntoBones<bones::MouseButton> for MouseButton {
+    fn into_bones(self) -> bones::MouseButton {
+        match self {
+            MouseButton::Left => bones::MouseButton::Left,
+            MouseButton::Right => bones::MouseButton::Right,
+            MouseButton::Middle => bones::MouseButton::Middle,
+            MouseButton::Back => bones::MouseButton::Back,
+            MouseButton::Forward => bones::MouseButton::Forward,
+            MouseButton::Other(i) => bones::MouseButton::Other(i),
+        }
+    }
+}
+
+impl IntoBones<bones::Maybe<bones::KeyCode>> for winit::keyboard::KeyCode {
+    fn into_bones(self) -> bones::Maybe<bones::KeyCode> {
+        let code = match self {
+            KeyCode::Digit1 => bones::KeyCode::Key1,
+            KeyCode::Digit2 => bones::KeyCode::Key2,
+            KeyCode::Digit3 => bones::KeyCode::Key3,
+            KeyCode::Digit4 => bones::KeyCode::Key4,
+            KeyCode::Digit5 => bones::KeyCode::Key5,
+            KeyCode::Digit6 => bones::KeyCode::Key6,
+            KeyCode::Digit7 => bones::KeyCode::Key7,
+            KeyCode::Digit8 => bones::KeyCode::Key8,
+            KeyCode::Digit9 => bones::KeyCode::Key9,
+            KeyCode::Digit0 => bones::KeyCode::Key0,
+            KeyCode::KeyA => bones::KeyCode::A,
+            KeyCode::KeyB => bones::KeyCode::B,
+            KeyCode::KeyC => bones::KeyCode::C,
+            KeyCode::KeyD => bones::KeyCode::D,
+            KeyCode::KeyE => bones::KeyCode::E,
+            KeyCode::KeyF => bones::KeyCode::F,
+            KeyCode::KeyG => bones::KeyCode::G,
+            KeyCode::KeyH => bones::KeyCode::H,
+            KeyCode::KeyI => bones::KeyCode::I,
+            KeyCode::KeyJ => bones::KeyCode::J,
+            KeyCode::KeyK => bones::KeyCode::K,
+            KeyCode::KeyL => bones::KeyCode::L,
+            KeyCode::KeyM => bones::KeyCode::M,
+            KeyCode::KeyN => bones::KeyCode::N,
+            KeyCode::KeyO => bones::KeyCode::O,
+            KeyCode::KeyP => bones::KeyCode::P,
+            KeyCode::KeyQ => bones::KeyCode::Q,
+            KeyCode::KeyR => bones::KeyCode::R,
+            KeyCode::KeyS => bones::KeyCode::S,
+            KeyCode::KeyT => bones::KeyCode::T,
+            KeyCode::KeyU => bones::KeyCode::U,
+            KeyCode::KeyV => bones::KeyCode::V,
+            KeyCode::KeyW => bones::KeyCode::W,
+            KeyCode::KeyX => bones::KeyCode::X,
+            KeyCode::KeyY => bones::KeyCode::Y,
+            KeyCode::KeyZ => bones::KeyCode::Z,
+            KeyCode::Escape => bones::KeyCode::Escape,
+            KeyCode::F1 => bones::KeyCode::F1,
+            KeyCode::F2 => bones::KeyCode::F2,
+            KeyCode::F3 => bones::KeyCode::F3,
+            KeyCode::F4 => bones::KeyCode::F4,
+            KeyCode::F5 => bones::KeyCode::F5,
+            KeyCode::F6 => bones::KeyCode::F6,
+            KeyCode::F7 => bones::KeyCode::F7,
+            KeyCode::F8 => bones::KeyCode::F8,
+            KeyCode::F9 => bones::KeyCode::F9,
+            KeyCode::F10 => bones::KeyCode::F10,
+            KeyCode::F11 => bones::KeyCode::F11,
+            KeyCode::F12 => bones::KeyCode::F12,
+            KeyCode::F13 => bones::KeyCode::F13,
+            KeyCode::F14 => bones::KeyCode::F14,
+            KeyCode::F15 => bones::KeyCode::F15,
+            KeyCode::F16 => bones::KeyCode::F16,
+            KeyCode::F17 => bones::KeyCode::F17,
+            KeyCode::F18 => bones::KeyCode::F18,
+            KeyCode::F19 => bones::KeyCode::F19,
+            KeyCode::F20 => bones::KeyCode::F20,
+            KeyCode::F21 => bones::KeyCode::F21,
+            KeyCode::F22 => bones::KeyCode::F22,
+            KeyCode::F23 => bones::KeyCode::F23,
+            KeyCode::F24 => bones::KeyCode::F24,
+            KeyCode::PrintScreen => bones::KeyCode::Snapshot,
+            KeyCode::ScrollLock => bones::KeyCode::Scroll,
+            KeyCode::Pause => bones::KeyCode::Pause,
+            KeyCode::Insert => bones::KeyCode::Insert,
+            KeyCode::Home => bones::KeyCode::Home,
+            KeyCode::Delete => bones::KeyCode::Delete,
+            KeyCode::End => bones::KeyCode::End,
+            KeyCode::PageDown => bones::KeyCode::PageDown,
+            KeyCode::PageUp => bones::KeyCode::PageUp,
+            KeyCode::ArrowLeft => bones::KeyCode::Left,
+            KeyCode::ArrowUp => bones::KeyCode::Up,
+            KeyCode::ArrowRight => bones::KeyCode::Right,
+            KeyCode::ArrowDown => bones::KeyCode::Down,
+            KeyCode::Backspace => bones::KeyCode::Back,
+            KeyCode::Enter => bones::KeyCode::Return,
+            KeyCode::Space => bones::KeyCode::Space,
+            KeyCode::NumLock => bones::KeyCode::Numlock,
+            KeyCode::Numpad0 => bones::KeyCode::Numpad0,
+            KeyCode::Numpad1 => bones::KeyCode::Numpad1,
+            KeyCode::Numpad2 => bones::KeyCode::Numpad2,
+            KeyCode::Numpad3 => bones::KeyCode::Numpad3,
+            KeyCode::Numpad4 => bones::KeyCode::Numpad4,
+            KeyCode::Numpad5 => bones::KeyCode::Numpad5,
+            KeyCode::Numpad6 => bones::KeyCode::Numpad6,
+            KeyCode::Numpad7 => bones::KeyCode::Numpad7,
+            KeyCode::Numpad8 => bones::KeyCode::Numpad8,
+            KeyCode::Numpad9 => bones::KeyCode::Numpad9,
+            KeyCode::NumpadAdd => bones::KeyCode::NumpadAdd,
+            KeyCode::Equal => bones::KeyCode::Equals,
+            KeyCode::Backslash => bones::KeyCode::Backslash,
+            KeyCode::LaunchApp2 => bones::KeyCode::Calculator,
+            KeyCode::CapsLock => bones::KeyCode::Capital,
+            KeyCode::Comma => bones::KeyCode::Comma,
+            KeyCode::Convert => bones::KeyCode::Convert,
+            KeyCode::NonConvert => bones::KeyCode::NoConvert,
+            KeyCode::NumpadDecimal => bones::KeyCode::NumpadDecimal,
+            KeyCode::NumpadDivide => bones::KeyCode::NumpadDivide,
+            KeyCode::Backquote => bones::KeyCode::Grave,
+            KeyCode::AltLeft => bones::KeyCode::AltLeft,
+            KeyCode::BracketLeft => bones::KeyCode::BracketLeft,
+            KeyCode::ControlLeft => bones::KeyCode::ControlLeft,
+            KeyCode::ShiftLeft => bones::KeyCode::ShiftLeft,
+            KeyCode::SuperLeft => bones::KeyCode::SuperLeft,
+            KeyCode::LaunchMail => bones::KeyCode::Mail,
+            KeyCode::MediaSelect => bones::KeyCode::MediaSelect,
+            KeyCode::MediaStop => bones::KeyCode::MediaStop,
+            KeyCode::Minus => bones::KeyCode::Minus,
+            KeyCode::NumpadMultiply => bones::KeyCode::NumpadMultiply,
+            KeyCode::AudioVolumeMute => bones::KeyCode::Mute,
+            KeyCode::LaunchApp1 => bones::KeyCode::MyComputer,
+            KeyCode::MediaTrackNext => bones::KeyCode::NextTrack,
+            KeyCode::NumpadComma => bones::KeyCode::NumpadComma,
+            KeyCode::NumpadEnter => bones::KeyCode::NumpadEnter,
+            KeyCode::NumpadEqual => bones::KeyCode::NumpadEquals,
+            KeyCode::Period => bones::KeyCode::Period,
+            KeyCode::MediaPlayPause => bones::KeyCode::PlayPause,
+            KeyCode::Power => bones::KeyCode::Power,
+            KeyCode::MediaTrackPrevious => bones::KeyCode::PrevTrack,
+            KeyCode::AltRight => bones::KeyCode::AltRight,
+            KeyCode::BracketRight => bones::KeyCode::BracketRight,
+            KeyCode::ControlRight => bones::KeyCode::ControlRight,
+            KeyCode::ShiftRight => bones::KeyCode::ShiftRight,
+            KeyCode::SuperRight => bones::KeyCode::SuperRight,
+            KeyCode::Semicolon => bones::KeyCode::Semicolon,
+            KeyCode::Slash => bones::KeyCode::Slash,
+            KeyCode::Sleep => bones::KeyCode::Sleep,
+            KeyCode::NumpadSubtract => bones::KeyCode::NumpadSubtract,
+            KeyCode::Tab => bones::KeyCode::Tab,
+            KeyCode::AudioVolumeDown => bones::KeyCode::VolumeDown,
+            KeyCode::AudioVolumeUp => bones::KeyCode::VolumeUp,
+            KeyCode::WakeUp => bones::KeyCode::Wake,
+            KeyCode::BrowserBack => bones::KeyCode::WebBack,
+            KeyCode::BrowserFavorites => bones::KeyCode::WebFavorites,
+            KeyCode::BrowserForward => bones::KeyCode::WebForward,
+            KeyCode::BrowserHome => bones::KeyCode::WebHome,
+            KeyCode::BrowserRefresh => bones::KeyCode::WebRefresh,
+            KeyCode::BrowserSearch => bones::KeyCode::WebSearch,
+            KeyCode::BrowserStop => bones::KeyCode::WebStop,
+            KeyCode::IntlBackslash => bones::KeyCode::Oem102,
+            KeyCode::IntlRo => bones::KeyCode::AbntC1,
+            KeyCode::IntlYen => bones::KeyCode::Yen,
+            KeyCode::KanaMode => bones::KeyCode::Kana,
+            KeyCode::Copy => bones::KeyCode::Copy,
+            KeyCode::Paste => bones::KeyCode::Paste,
+            KeyCode::Cut => bones::KeyCode::Cut,
+            KeyCode::Quote => bones::KeyCode::Apostrophe,
+            KeyCode::ContextMenu => bones::KeyCode::Apps,
+            _ => return bones::Unset,
+        };
+        bones::Set(code)
+    }
+}
+
+#[inline]
+fn srgb_to_linear_channel(c: f32) -> f32 {
+    if c <= 0.0 {
+        c
+    } else if c <= 0.04045 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
+    }
+}
+
+/// Converts an sRGBA [`bones::Color`] into linear RGBA `f32` components suitable for
+/// rendering to an `*Srgb` render target view (matching `bones_bevy_renderer`).
+#[inline]
+pub fn color_to_linear_rgba_f32(color: bones::Color) -> [f32; 4] {
+    let [r, g, b, a] = color.as_rgba_f32();
+    [
+        srgb_to_linear_channel(r),
+        srgb_to_linear_channel(g),
+        srgb_to_linear_channel(b),
+        a,
+    ]
+}
+
+/// Converts an sRGBA [`bones::Color`] into a linear [`wgpu::Color`] for `LoadOp::Clear` on
+/// an `*Srgb` render target view.
+#[inline]
+pub fn color_to_wgpu(color: bones::Color) -> wgpu::Color {
+    let [r, g, b, a] = color_to_linear_rgba_f32(color);
+    wgpu::Color {
+        r: r as f64,
+        g: g as f64,
+        b: b as f64,
+        a: a as f64,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn srgb_to_linear_endpoints_and_midtones() {
+        assert_eq!(
+            color_to_linear_rgba_f32(bones::Color::BLACK),
+            [0.0, 0.0, 0.0, 1.0]
+        );
+        assert_eq!(
+            color_to_linear_rgba_f32(bones::Color::WHITE),
+            [1.0, 1.0, 1.0, 1.0]
+        );
+
+        let gray = color_to_linear_rgba_f32(bones::Color::rgba(0.5, 0.5, 0.5, 0.5));
+        // 0.5 sRGB -> ~0.21404114 linear, while alpha remains linear (0.5).
+        assert!((gray[0] - 0.21404114).abs() < 1e-6);
+        assert!((gray[1] - 0.21404114).abs() < 1e-6);
+        assert!((gray[2] - 0.21404114).abs() < 1e-6);
+        assert_eq!(gray[3], 0.5);
+
+        let wgpu_gray = color_to_wgpu(bones::Color::GRAY);
+        assert!((wgpu_gray.r - 0.21404114).abs() < 1e-6);
+        assert_eq!(wgpu_gray.a, 1.0);
+    }
+
+    #[test]
+    fn international_keycodes_map_to_bones() {
+        assert_eq!(
+            KeyCode::IntlBackslash.into_bones(),
+            bones::Set(bones::KeyCode::Oem102)
+        );
+        assert_eq!(
+            KeyCode::IntlRo.into_bones(),
+            bones::Set(bones::KeyCode::AbntC1)
+        );
+        assert_eq!(
+            KeyCode::KanaMode.into_bones(),
+            bones::Set(bones::KeyCode::Kana)
+        );
+    }
+}

@@ -49,8 +49,16 @@ impl FileAssetIo {
     /// Create a new [`FileAssetIo`].
     pub fn new(core_dir: &std::path::Path, packs_dir: &std::path::Path) -> Self {
         let cwd = std::env::current_dir().unwrap();
-        let core_dir = cwd.join(core_dir);
-        let packs_dir = cwd.join(packs_dir);
+        let base_dir = if !cwd.join(core_dir).exists() {
+            std::env::var_os("CARGO_MANIFEST_DIR")
+                .map(PathBuf::from)
+                .filter(|manifest_dir| manifest_dir.join(core_dir).exists())
+                .unwrap_or(cwd)
+        } else {
+            cwd
+        };
+        let core_dir = base_dir.join(core_dir);
+        let packs_dir = base_dir.join(packs_dir);
         Self {
             core_dir: core_dir.clone(),
             packs_dir: packs_dir.clone(),

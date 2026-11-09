@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use bones_bevy_renderer::BonesBevyRenderer;
 use bones_framework::prelude::*;
+use bones_wgpu_renderer::BonesWgpuRenderer;
 
 #[derive(HasSchema, Default, Clone)]
 #[type_data(metadata_asset("game"))]
@@ -26,13 +26,18 @@ fn main() {
         .create("launch")
         .add_system_to_stage(CoreStage::Startup, launch_game_session);
 
-    let mut renderer = BonesBevyRenderer::new(game);
+    let mut renderer = BonesWgpuRenderer::new(game);
     renderer.app_namespace = (
         "org".into(),
         "fishfolk".into(),
         "bones.demo_scripting".into(),
     );
-    renderer.app().run();
+    if !renderer.asset_dir.exists() {
+        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        renderer.asset_dir = manifest_dir.join("assets");
+        renderer.packs_dir = manifest_dir.join("packs");
+    }
+    renderer.run();
 }
 
 fn launch_game_session(

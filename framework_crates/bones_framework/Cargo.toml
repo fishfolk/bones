@@ -123,9 +123,9 @@ serde      = { version = "1.0", features = ["derive"] }
 image = { version = "0.24", default-features = false }
 
 # Gui
-egui       = { version = "0.23", optional = true }
-egui_plot  = "0.23"
-ttf-parser = { version = "0.24", default-features = false, optional = true }
+egui       = { version = "0.31", optional = true }
+egui_plot  = "0.31"
+ttf-parser = { version = "0.24", default-features = false, features = ["std"], optional = true }
 
 # Audio
 kira = { version = "0.9.4", features = ["cpal"], default-features = false, optional = true }
