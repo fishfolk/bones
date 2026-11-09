@@ -428,9 +428,6 @@ impl BonesWgpuRenderer {
         // process.
         event_loop.set_control_flow(ControlFlow::Poll);
 
-        let bind_group_clone = texture_layout.clone();
-        let device_clone = device.clone();
-
         let window_config = WindowConfig {
             title: self.window_title,
             size: self.window_size,
@@ -441,16 +438,18 @@ impl BonesWgpuRenderer {
             present_mode: self.present_mode,
         };
 
-        let mut app = App {
+        let atlas_pool = atlas_pool::AtlasPool::new(
+            &device,
+            &texture_layout,
+            (4096, 4096),
+            64,
+            self.pixel_art,
+        );
+
+        let mut app = App(Some(AppState {
             state: None,
             game: self.game,
-            atlas_pool: atlas_pool::AtlasPool::new(
-                &device_clone,
-                &bind_group_clone,
-                (4096, 4096),
-                64,
-                self.pixel_art,
-            ),
+            atlas_pool,
             storage_layout: dynamic_storage.layout.clone(),
             dynamic_storage: Some(dynamic_storage),
             camera_layout: camera_dynamic_uniform.layout.clone(),
@@ -469,8 +468,9 @@ impl BonesWgpuRenderer {
             device,
             adapter,
             instance,
-        };
+        }));
         event_loop.run_app(&mut app).unwrap();
+        app.shutdown();
     }
 }
 
@@ -697,9 +697,12 @@ fn extract_scan_code(physical_key: &winit::keyboard::PhysicalKey) -> bones::Mayb
 
 /// Top-level winit application state.
 ///
-/// Fields are ordered so dependent GPU/window resources (`state`, `game`, `atlas_pool`, buffers,
-/// layouts) drop before `queue`, `device`, `adapter`, and `instance`.
-struct App {
+/// Wrapped in an `Option` so all GPU, window, and game resources can be deterministically
+/// torn down inside [`ApplicationHandler::exiting`] while the display server (`ActiveEventLoop`)
+/// is still alive.
+struct App(Option<AppState>);
+
+struct AppState {
     state: Option<State>,
     game: bones::Game,
     atlas_pool: atlas_pool::AtlasPool,
@@ -723,7 +726,100 @@ struct App {
     instance: Arc<wgpu::Instance>,
 }
 
+impl App {
+    fn shutdown(&mut self) {
+        let Some(mut app) = self.0.take() else {
+            return;
+        };
+
+        // 1. Wait for all in-flight GPU work to complete before freeing any textures or surfaces.
+        let _ = app.device.poll(wgpu::Maintain::Wait);
+
+        // 2. Clear egui texture handles and drop game sessions/resources so game shutdown hooks
+        // (such as saving chunks in `ChunkWorld::drop` and joining `WorldIoWorker`) run cleanly.
+        if let Some(mut egui_textures) = app.game.get_shared_resource_mut::<bones::EguiTextures>() {
+            egui_textures.0.clear();
+        }
+        if let Some(state) = app.state.as_ref() {
+            state.egui_renderer.context().data_mut(|map| map.clear());
+        }
+        app.game.insert_shared_resource(WgpuDevice(None));
+        app.game.sessions.map.clear();
+        app.game.shared_resources.clear();
+        drop(app.game);
+
+        // 3. Keep `Arc<Window>` alive while dropping `State` (`egui_renderer` / `smithay-clipboard`,
+        // render pipelines, line buffers, and `wgpu::Surface`).
+        let window = app.state.as_ref().map(|s| s.window.clone());
+        if let Some(mut state) = app.state.take() {
+            state.egui_renderer.free_pending_textures();
+            let _ = app.device.poll(wgpu::Maintain::Wait);
+            drop(state);
+        }
+
+        // 4. Drop remaining GPU buffers, bind group layouts, and sprite atlases while `device` is alive.
+        drop(app.atlas_pool);
+        drop(app.dynamic_storage);
+        drop(app.camera_dynamic_uniform);
+        drop(app.storage_layout);
+        drop(app.camera_layout);
+        drop(app.texture_layout);
+        drop(app.vertex_buffer);
+        drop(app.index_buffer);
+        drop(app.rumble_manager);
+
+        // 5. Poll device one final time and drop queue -> device -> adapter -> instance
+        // while `window` and `ActiveEventLoop` (Wayland/X11 display) are still alive.
+        let _ = app.device.poll(wgpu::Maintain::Wait);
+        drop(app.queue);
+        drop(app.device);
+        drop(app.adapter);
+        drop(app.instance);
+
+        // 6. Drop the window last, right before `EventLoop` closes the display connection.
+        drop(window);
+    }
+}
+
+impl Drop for App {
+    fn drop(&mut self) {
+        self.shutdown();
+    }
+}
+
 impl ApplicationHandler for App {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        let Some(this) = self.0.as_mut() else {
+            return;
+        };
+        this.resumed(event_loop);
+    }
+
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, id: WindowId, event: WindowEvent) {
+        let Some(this) = self.0.as_mut() else {
+            return;
+        };
+        this.window_event(event_loop, id, event);
+    }
+
+    fn device_event(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        device_id: winit::event::DeviceId,
+        event: winit::event::DeviceEvent,
+    ) {
+        let Some(this) = self.0.as_mut() else {
+            return;
+        };
+        this.device_event(event_loop, device_id, event);
+    }
+
+    fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
+        self.shutdown();
+    }
+}
+
+impl AppState {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let want_fullscreen = self
             .game
@@ -818,6 +914,11 @@ impl ApplicationHandler for App {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
+        if matches!(event, WindowEvent::CloseRequested) {
+            event_loop.exit();
+            return;
+        }
+
         let Some(state) = self.state.as_mut() else {
             // State may already be dropped during shutdown.
             return;
@@ -830,7 +931,6 @@ impl ApplicationHandler for App {
 
         match event {
             WindowEvent::CloseRequested => {
-                self.state.take();
                 event_loop.exit();
             }
             WindowEvent::Focused(focused) => {
@@ -892,7 +992,6 @@ impl ApplicationHandler for App {
                     .get_shared_resource::<bones::ExitBones>()
                     .is_some_and(|exit| exit.0)
                 {
-                    self.state.take();
                     event_loop.exit();
                     return;
                 }
