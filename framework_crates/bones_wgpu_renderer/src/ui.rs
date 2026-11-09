@@ -11,6 +11,7 @@ pub struct EguiRenderer {
     state: State,
     pub renderer: Renderer,
     frame_started: bool,
+    pending_free: Vec<egui::TextureId>,
 }
 
 impl EguiRenderer {
@@ -48,6 +49,7 @@ impl EguiRenderer {
             state: egui_state,
             renderer: egui_renderer,
             frame_started: false,
+            pending_free: Vec::new(),
         }
     }
 
@@ -115,11 +117,21 @@ impl EguiRenderer {
 
         self.renderer
             .render(&mut rpass.forget_lifetime(), &tris, &screen_descriptor);
-        for x in &full_output.textures_delta.free {
-            self.renderer.free_texture(x)
-        }
+        self.pending_free.extend(full_output.textures_delta.free);
 
         self.frame_started = false;
+    }
+
+    /// Free textures marked for destruction **after** `queue.submit` so `wgpu` does not validate a
+    /// command buffer or pending `queue.write_texture` against an already-destroyed texture.
+    pub fn free_pending_textures(&mut self) {
+        for id in self.pending_free.drain(..) {
+            self.renderer.free_texture(&id);
+        }
+    }
+
+    pub fn defer_free_texture(&mut self, id: egui::TextureId) {
+        self.pending_free.push(id);
     }
 
     /// Ends an active egui pass when the swapchain surface cannot be rendered to (e.g. minimized
@@ -137,9 +149,12 @@ impl EguiRenderer {
             self.renderer
                 .update_texture(device, queue, *id, image_delta);
         }
-        for x in &full_output.textures_delta.free {
-            self.renderer.free_texture(x);
+        if !full_output.textures_delta.set.is_empty() && !full_output.textures_delta.free.is_empty()
+        {
+            queue.submit([]);
         }
+        self.pending_free.extend(full_output.textures_delta.free);
+        self.free_pending_textures();
 
         self.frame_started = false;
     }

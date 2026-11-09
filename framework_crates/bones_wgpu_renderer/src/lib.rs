@@ -1476,6 +1476,7 @@ impl State {
             );
 
             self.queue.submit([encoder.finish()]);
+            self.egui_renderer.free_pending_textures();
             self.window.pre_present_notify();
             surface_texture.present();
             return;
@@ -1795,12 +1796,13 @@ impl State {
             );
 
             if let Some(tex_id) = temp_tex_id {
-                self.egui_renderer.renderer.free_texture(&tex_id);
+                self.egui_renderer.defer_free_texture(tex_id);
             }
         }
 
         // Submit the command queue.
         self.queue.submit([encoder.finish()]);
+        self.egui_renderer.free_pending_textures();
         self.window.pre_present_notify();
         surface_texture.present();
     }
